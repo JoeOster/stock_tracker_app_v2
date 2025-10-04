@@ -44,7 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelAiBtn = document.getElementById('cancel-ai-btn');
 
     // STATE
-    let settings = { apiKey: "" };
+    let settings = { 
+        apiKey: "",
+        takeProfitPercent: null,
+        stopLossPercent: null
+    };
     let currentView = { type: 'date', value: null };
     let activityMap = new Map();
     let allTimeChart=null, fiveDayChart=null, dateRangeChart=null, zoomedChart=null;
@@ -108,14 +112,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // SETTINGS & DATE HELPERS
-    function saveSettings() { localStorage.setItem('stockTrackerSettings', JSON.stringify(settings)); }
-    function loadSettings() { const saved = localStorage.getItem('stockTrackerSettings'); if(saved) { settings = JSON.parse(saved); } apiKeyInput.value = settings.apiKey; }
+    function saveSettings() { 
+        localStorage.setItem('stockTrackerSettings', JSON.stringify(settings)); 
+    }
+    function loadSettings() { 
+        const saved = localStorage.getItem('stockTrackerSettings'); 
+        if(saved) { 
+            // Merge saved settings with defaults to ensure new settings are not lost
+            settings = { ...settings, ...JSON.parse(saved) }; 
+        } 
+        apiKeyInput.value = settings.apiKey; 
+        document.getElementById('take-profit-percent').value = settings.takeProfitPercent;
+        document.getElementById('stop-loss-percent').value = settings.stopLossPercent;
+    }
     function getCurrentESTDateString() { const f = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }); const p = f.formatToParts(new Date()); return `${p.find(x=>x.type==='year').value}-${p.find(x=>x.type==='month').value}-${p.find(x=>x.type==='day').value}`; }
     function getTradingDays(c) { let d = []; let cd = new Date(getCurrentESTDateString() + 'T12:00:00Z'); while (d.length < c) { const dow = cd.getUTCDay(); if (dow > 0 && dow < 6) { d.push(cd.toISOString().split('T')[0]); } cd.setUTCDate(cd.getUTCDate() - 1); } return d.reverse(); }
     
     // UI RENDERING
     function renderTabs() { /* Unchanged */ }
-    async function renderDailyReport(date) { /* Unchanged */ }
+    async function renderDailyReport(date) { 
+        const response = await fetch(`/api/positions/${date}`); 
+        const data = await response.json(); 
+        if (!data || !data.dailyTransactions || !data.endOfDayPositions) { console.error("Received invalid data from server for daily report:", data); tableElement.innerHTML = '<tr><td colspan="8">Error: Could not load report data from the server.</td></tr>'; return; } 
+        tableTitle.textContent = `Activity Report for ${new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`; 
+        logBody.innerHTML = ''; 
+        summaryBody.innerHTML = ''; 
+        if (data.dailyTransactions.length === 0) { 
+            logBody.innerHTML = '<tr><td colspan="10">No transactions logged for this day.</td></tr>'; 
+        } else { 
+            data.dailyTransactions.forEach(tx => { 
+                const realizedPL = tx.transaction_type === 'SELL' ? tx.realizedPL : 0; 
+                let suggestProfit = '', suggestLoss = '';
+                if (tx.transaction_type === 'BUY' && settings.takeProfitPercent > 0 && settings.stopLossPercent > 0) {
+                    const profitPrice = tx.price * (1 + settings.takeProfitPercent / 100);
+                    const lossPrice = tx.price * (1 - settings.stopLossPercent / 100);
+                    suggestProfit = `<span class="positive">$${profitPrice.toFixed(2)}</span>`;
+                    suggestLoss = `<span class="negative">$${lossPrice.toFixed(2)}</span>`;
+                }
+                const row = logBody.insertRow(); 
+                row.innerHTML = `<td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td>${tx.quantity}</td><td>$${tx.price.toFixed(2)}</td><td class="${realizedPL >= 0 ? 'positive' : 'negative'}">${realizedPL !== undefined ? realizedPL.toFixed(2) : '0.00'}</td><td>${suggestProfit}</td><td>${suggestLoss}</td><td>${tx.limit_price_up ? '$' + tx.limit_price_up.toFixed(2) : ''}</td><td>${tx.limit_price_down ? '$' + tx.limit_price_down.toFixed(2) : ''}</td>`; 
+            }); 
+        } 
+        if (data.endOfDayPositions.length === 0) { 
+            summaryBody.innerHTML = '<tr><td colspan="7">No open positions at the end of this day.</td></tr>'; 
+            portfolioSummary.querySelector('span').textContent = '$0.00'; 
+        } else { 
+            activityMap.clear(); 
+            const sortedPositions = data.endOfDayPositions.sort((a,b) => { if(a.ticker < b.ticker) return -1; if(a.ticker > b.ticker) return 1; if(a.exchange < b.exchange) return -1; if(a.exchange > b.exchange) return 1; return b.net_quantity - a.net_quantity; }); 
+            sortedPositions.forEach(p => { 
+                const key = `${p.ticker}-${p.exchange}`; 
+                activityMap.set(key, { ...p, costBasis: p.weighted_avg_cost, closingQty: p.net_quantity }); 
+                const row = summaryBody.insertRow(); 
+                row.dataset.key = key; 
+                row.innerHTML = `<td>${p.ticker}</td><td>${p.exchange}</td><td>${p.net_quantity}</td><td>$${p.weighted_avg_cost.toFixed(2)}</td><td class="current-price">Loading...</td><td class="current-value">Loading...</td><td class="unrealized-pl">Loading...</td>`; 
+            }); 
+        } 
+        populatePricesFromCache(); 
+    }
     async function renderLedger() { /* Unchanged */ }
     async function renderOverviewPage() { /* Unchanged */ }
     function renderChart(snapshots) { /* Unchanged */ }
@@ -176,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
     transactionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // --- UPDATED: Collects advanced options ---
         const formData = {
             transaction_date: document.getElementById('transaction-date').value,
             ticker: document.getElementById('ticker').value.toUpperCase(),
@@ -205,6 +257,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    saveSettingsBtn.addEventListener('click', () => { 
+        settings.apiKey = apiKeyInput.value.trim(); 
+        settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || null;
+        settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || null;
+        saveSettings(); 
+        settingsModal.classList.remove('visible'); 
+        handleTabClick(currentView.type, currentView.value); 
+    });
+
     // AI SCREENSHOT PROCESSING LOGIC
     processScreenshotBtn.addEventListener('click', async () => {
         const file = screenshotFileInput.files[0];
@@ -271,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     approveAiBtn.addEventListener('click', async () => {
-        // Read the potentially edited data from the table
         const updatedTransactions = [];
         const rows = aiConfirmationTableBody.querySelectorAll('tr');
         rows.forEach(row => {
@@ -279,7 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
             row.querySelectorAll('td').forEach(cell => {
                 tx[cell.dataset.field] = cell.textContent;
             });
-            // Basic type conversion
             tx.quantity = parseFloat(tx.quantity);
             tx.price = parseFloat(tx.price);
             updatedTransactions.push(tx);
@@ -298,8 +357,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const result = await response.json();
                 alert(result.message);
-                cancelAiBtn.click(); // Hide and clear the form
-                await renderLedger(); // Refresh ledger view
+                cancelAiBtn.click();
+                await renderLedger();
             } catch (error) {
                 console.error('Failed to save AI transactions:', error);
                 alert(`Error: ${error.message}`);
@@ -311,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- (All other event listeners and full function definitions are included below for safety) ---
     const allOtherFunctions = () => {
         renderTabs = function() { tabsContainer.innerHTML = ''; const tradingDays = getTradingDays(6); tradingDays.forEach(day => { const tab = document.createElement('div'); tab.className = 'tab'; tab.textContent = new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }); tab.dataset.date = day; if (day === currentView.value && currentView.type === 'date') tab.classList.add('active'); tab.addEventListener('click', () => handleTabClick('date', day)); tabsContainer.appendChild(tab); }); const overviewTab = document.createElement('div'); overviewTab.className = 'tab pl-tab'; overviewTab.textContent = 'Overall P&L'; if (currentView.type === 'overview') overviewTab.classList.add('active'); overviewTab.addEventListener('click', () => handleTabClick('overview', null)); tabsContainer.appendChild(overviewTab); };
-        renderDailyReport = async function(date) { const response = await fetch(`/api/positions/${date}`); const data = await response.json(); if (!data || !data.dailyTransactions || !data.endOfDayPositions) { console.error("Received invalid data from server for daily report:", data); tableElement.innerHTML = '<tr><td colspan="8">Error: Could not load report data from the server.</td></tr>'; return; } tableTitle.textContent = `Activity Report for ${new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`; logBody.innerHTML = ''; summaryBody.innerHTML = ''; if (data.dailyTransactions.length === 0) { logBody.innerHTML = '<tr><td colspan="10">No transactions logged for this day.</td></tr>'; } else { data.dailyTransactions.forEach(tx => { const realizedPL = tx.transaction_type === 'SELL' ? tx.realizedPL : 0; const row = logBody.insertRow(); row.innerHTML = `<td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td>${tx.quantity}</td><td>$${tx.price.toFixed(2)}</td><td class="${realizedPL >= 0 ? 'positive' : 'negative'}">${realizedPL !== undefined ? realizedPL.toFixed(2) : '0.00'}</td><td></td><td></td><td>${tx.limit_price_up ? '$' + tx.limit_price_up.toFixed(2) : ''}</td><td>${tx.limit_price_down ? '$' + tx.limit_price_down.toFixed(2) : ''}</td>`; }); } if (data.endOfDayPositions.length === 0) { summaryBody.innerHTML = '<tr><td colspan="7">No open positions at the end of this day.</td></tr>'; portfolioSummary.querySelector('span').textContent = '$0.00'; } else { activityMap.clear(); const sortedPositions = data.endOfDayPositions.sort((a,b) => { if(a.ticker < b.ticker) return -1; if(a.ticker > b.ticker) return 1; if(a.exchange < b.exchange) return -1; if(a.exchange > b.exchange) return 1; return b.net_quantity - a.net_quantity; }); sortedPositions.forEach(p => { const key = `${p.ticker}-${p.exchange}`; activityMap.set(key, { ...p, costBasis: p.weighted_avg_cost, closingQty: p.net_quantity }); const row = summaryBody.insertRow(); row.dataset.key = key; row.innerHTML = `<td>${p.ticker}</td><td>${p.exchange}</td><td>${p.net_quantity}</td><td>$${p.weighted_avg_cost.toFixed(2)}</td><td class="current-price">Loading...</td><td class="current-value">Loading...</td><td class="unrealized-pl">Loading...</td>`; }); } populatePricesFromCache(); };
         renderLedger = async function() { const response = await fetch('/api/transactions'); allTransactions = await response.json(); allTransactions.sort((a, b) => { const col = ledgerSort.column; const dir = ledgerSort.direction === 'asc' ? 1 : -1; if (col === 'quantity' || col === 'price') return (a[col] - b[col]) * dir; return a[col].localeCompare(b[col]) * dir; }); document.querySelectorAll('#ledger-table thead th[data-sort]').forEach(th => { th.classList.remove('sorted-asc', 'sorted-desc'); if (th.dataset.sort === ledgerSort.column) { th.classList.add(ledgerSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc'); } }); ledgerTableBody.innerHTML = ''; allTransactions.forEach(tx => { const row = ledgerTableBody.insertRow(); row.innerHTML = `<td>${tx.transaction_date}</td><td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td>${tx.quantity}</td><td>$${tx.price.toFixed(2)}</td><td class="actions-cell"><button class="modify-btn" data-id="${tx.id}">Edit</button><button class="delete-btn" data-id="${tx.id}">Delete</button></td>`; }); };
         renderOverviewPage = async function() { const plResponse = await fetch('/api/realized_pl'); const plData = await plResponse.json(); const plBody = Object.entries(plData.byExchange).map(([exchange, pl]) => `<tr><td>${exchange}</td><td class="${pl >= 0 ? 'positive' : 'negative'}">$${pl.toFixed(2)}</td></tr>`).join(''); plSummaryTable.innerHTML = `<thead><tr><th>Exchange</th><th>Realized P/L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="<strong>${plData.total >= 0 ? 'positive' : 'negative'}">$${plData.total.toFixed(2)}</strong></td></tr></tbody>`; const snapshotResponse = await fetch('/api/snapshots'); allSnapshots = await snapshotResponse.json(); renderAllTimeChart(allSnapshots); renderFiveDayChart(allSnapshots); renderDateRangeChart(allSnapshots); renderSnapshotHistory(allSnapshots); await renderLedger(); };
         renderAllTimeChart = function(snapshots) { if(allTimeChart) allTimeChart.destroy(); allTimeChart = createChart(allTimeChartCtx, snapshots); };
@@ -322,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
         populatePricesFromCache = function() { let totalPortfolioValue = 0; activityMap.forEach((stock, key) => { const row = document.querySelector(`#positions-summary-body [data-key="${key}"]`); if (row) { const livePrice = priceCache.get(stock.ticker); if (livePrice) { const currentValue = stock.closingQty * livePrice; const unrealizedPL = currentValue - (stock.closingQty * stock.costBasis); totalPortfolioValue += currentValue; row.querySelector('.current-price').textContent = `$${livePrice.toFixed(2)}`; row.querySelector('.current-value').textContent = `$${currentValue.toFixed(2)}`; const unrealizedCell = row.querySelector('.unrealized-pl'); unrealizedCell.textContent = `$${unrealizedPL.toFixed(2)}`; unrealizedCell.className = `unrealized-pl ${unrealizedPL >= 0 ? 'positive' : 'negative'}`; } } }); const summarySpan = portfolioSummary.querySelector('span'); if (summarySpan) { summarySpan.textContent = `$${totalPortfolioValue.toFixed(2)}`; summarySpan.className = totalPortfolioValue >= 0 ? 'positive' : 'negative'; } };
         snapshotForm.addEventListener('submit', async (e) => { e.preventDefault(); const formData = { snapshot_date: document.getElementById('snapshot-date').value, exchange: document.getElementById('snapshot-exchange').value, value: parseFloat(document.getElementById('snapshot-value').value) }; if (!formData.exchange || !formData.snapshot_date || isNaN(formData.value)) return alert('Please fill out all fields correctly.'); await fetch('/api/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) }); snapshotForm.reset(); document.getElementById('snapshot-date').value = getCurrentESTDateString(); if (currentView.type === 'overview') await renderOverviewPage(); });
         settingsBtn.addEventListener('click', () => settingsModal.classList.add('visible'));
-        saveSettingsBtn.addEventListener('click', () => { settings.apiKey = apiKeyInput.value.trim(); saveSettings(); settingsModal.classList.remove('visible'); handleTabClick(currentView.type, currentView.value); });
         document.querySelector('#ledger-table thead').addEventListener('click', (e) => { const newSortColumn = e.target.dataset.sort; if (!newSortColumn) return; if (ledgerSort.column === newSortColumn) { ledgerSort.direction = ledgerSort.direction === 'asc' ? 'desc' : 'asc'; } else { ledgerSort.column = newSortColumn; ledgerSort.direction = 'asc'; } renderLedger(); });
         ledgerTableBody.addEventListener('click', async (e) => { const id = e.target.dataset.id; if (!id) return; if (e.target.classList.contains('delete-btn')) { if (e.target.dataset.type === 'snapshot') { if (confirm('Are you sure you want to delete this snapshot?')) { await fetch(`/api/snapshots/${id}`, { method: 'DELETE' }); renderOverviewPage(); } } else { if (confirm('Are you sure you want to delete this transaction?')) { await fetch(`/api/transactions/${id}`, { method: 'DELETE' }); handleTabClick('overview', null); } } } if (e.target.classList.contains('modify-btn')) { const tx = allTransactions.find(t => t.id == id); if (tx) { document.getElementById('edit-id').value = tx.id; document.getElementById('edit-date').value = tx.transaction_date; document.getElementById('edit-ticker').value = tx.ticker; const exchangeSelect = document.getElementById('edit-exchange'); exchangeSelect.innerHTML = document.getElementById('exchange').innerHTML; exchangeSelect.value = tx.exchange; document.getElementById('edit-type').value = tx.transaction_type; document.getElementById('edit-quantity').value = tx.quantity; document.getElementById('edit-price').value = tx.price; document.getElementById('edit-limit-price-up').value = tx.limit_price_up; document.getElementById('edit-limit-price-down').value = tx.limit_price_down; document.getElementById('edit-limit-expiration').value = tx.limit_expiration; editModal.classList.add('visible'); } } });
         editForm.addEventListener('submit', async (e) => { e.preventDefault(); const id = document.getElementById('edit-id').value; const updatedTx = { transaction_date: document.getElementById('edit-date').value, ticker: document.getElementById('edit-ticker').value.toUpperCase(), exchange: document.getElementById('edit-exchange').value, transaction_type: document.getElementById('edit-type').value, quantity: parseFloat(document.getElementById('edit-quantity').value), price: parseFloat(document.getElementById('edit-price').value), limit_price_up: parseFloat(document.getElementById('edit-limit-price-up').value) || null, limit_price_down: parseFloat(document.getElementById('edit-limit-price-down').value) || null, limit_expiration: document.getElementById('edit-limit-expiration').value || null }; await fetch(`/api/transactions/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTx) }); editModal.classList.remove('visible'); handleTabClick('overview', null); });
@@ -343,7 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
             initializeScheduler();
             checkForDailyActivity();
 
-            // Populate limit order expiration dropdowns
             const expirationSelects = [document.getElementById('limit-expiration'), document.getElementById('edit-limit-expiration')];
             const expirationOptions = document.querySelector('#limit-expiration').innerHTML;
             expirationSelects.forEach(sel => sel.innerHTML = expirationOptions);
