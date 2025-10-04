@@ -117,13 +117,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function loadSettings() { 
         const saved = localStorage.getItem('stockTrackerSettings'); 
-        if(saved) { 
-            // Merge saved settings with defaults to ensure new settings are not lost
+        if(saved) {
             settings = { ...settings, ...JSON.parse(saved) }; 
         } 
+        
         apiKeyInput.value = settings.apiKey; 
-        document.getElementById('take-profit-percent').value = settings.takeProfitPercent;
-        document.getElementById('stop-loss-percent').value = settings.stopLossPercent;
+        
+        // --- UPDATED: Set default values in the UI ---
+        const takeProfitInput = document.getElementById('take-profit-percent');
+        const stopLossInput = document.getElementById('stop-loss-percent');
+
+        // If a value is saved, use it. Otherwise, display '8' as a default placeholder.
+        takeProfitInput.value = settings.takeProfitPercent !== null ? settings.takeProfitPercent : '8';
+        stopLossInput.value = settings.stopLossPercent !== null ? settings.stopLossPercent : '8';
     }
     function getCurrentESTDateString() { const f = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }); const p = f.formatToParts(new Date()); return `${p.find(x=>x.type==='year').value}-${p.find(x=>x.type==='month').value}-${p.find(x=>x.type==='day').value}`; }
     function getTradingDays(c) { let d = []; let cd = new Date(getCurrentESTDateString() + 'T12:00:00Z'); while (d.length < c) { const dow = cd.getUTCDay(); if (dow > 0 && dow < 6) { d.push(cd.toISOString().split('T')[0]); } cd.setUTCDate(cd.getUTCDate() - 1); } return d.reverse(); }
@@ -263,7 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
         settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || null;
         saveSettings(); 
         settingsModal.classList.remove('visible'); 
-        handleTabClick(currentView.type, currentView.value); 
+        // Re-render the current view to reflect any changes in suggestions
+        if (currentView.type === 'date') {
+            renderDailyReport(currentView.value);
+        }
     });
 
     // AI SCREENSHOT PROCESSING LOGIC
