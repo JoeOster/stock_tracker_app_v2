@@ -2,96 +2,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Tracker script loaded. Initializing...");
 
-    // --- DOM SELECTORS (Unchanged) ---
-    // ... all selectors from previous version
-
-    // --- STATE ---
-    let settings = { apiKey: "" };
-    let currentView = { type: 'date', value: null };
-    let activityMap = new Map();
-    let valueChart = null;
-    let priceCache = new Map();
-    let isApiLimitReached = false;
-    // ... all other state variables
-
-    // --- UPDATED API TIMER & SCHEDULER ---
-    const SCHEDULED_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
-    let nextApiCallTimestamp = 0; // Will be set on first market open call
-    let marketOpenCalledForDay = '', marketCloseCalledForDay = '';
-    
-    function initializeScheduler() {
-        setInterval(() => {
-            const now = new Date();
-            const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-            const estHours = estTime.getHours();
-            const estMinutes = estTime.getMinutes();
-            const dayOfWeek = estTime.getDay();
-            const todayStr = `${estTime.getFullYear()}-${estTime.getMonth()}-${estTime.getDate()}`;
-
-            if (marketOpenCalledForDay !== todayStr) marketOpenCalledForDay = '';
-            if (marketCloseCalledForDay !== todayStr) marketCloseCalledForDay = '';
-
-            const isTradingDay = dayOfWeek > 0 && dayOfWeek < 6;
-            const isMarketHours = (estHours > 9 || (estHours === 9 && estMinutes >= 30)) && estHours < 16;
-            
-            let triggerUpdate = false;
-
-            if (isTradingDay && isMarketHours) {
-                // --- Market Hours Logic ---
-                if (refreshPricesBtn.disabled === false) {
-                    refreshPricesBtn.disabled = true;
-                    refreshPricesBtn.textContent = 'Auto-Refreshing';
-                }
-
-                if (!marketOpenCalledForDay) {
-                    console.log("Market is open! Triggering initial price update.");
-                    triggerUpdate = true;
-                    marketOpenCalledForDay = todayStr;
-                    // Set the timestamp for the first 30-min interval AFTER the open call
-                    nextApiCallTimestamp = Date.now() + SCHEDULED_INTERVAL_MS;
-                } else if (Date.now() >= nextApiCallTimestamp) {
-                    console.log("30-minute scheduled update triggered.");
-                    triggerUpdate = true;
-                }
-                
-                let secondsRemaining = Math.max(0, Math.round((nextApiCallTimestamp - Date.now()) / 1000));
-                apiTimerEl.textContent = new Date(secondsRemaining * 1000).toISOString().substr(14, 5);
-
-            } else {
-                // --- Outside Market Hours Logic ---
-                if (refreshPricesBtn.disabled === true && !isApiLimitReached) {
-                    refreshPricesBtn.disabled = false;
-                    refreshPricesBtn.textContent = 'Refresh Prices';
-                }
-                apiTimerEl.textContent = "Market Closed";
-                
-                if (isTradingDay && estHours >= 16 && !marketCloseCalledForDay) {
-                    console.log("Market is closed! Triggering final price update.");
-                    triggerUpdate = true;
-                    marketCloseCalledForDay = todayStr;
-                }
-            }
-
-            if (triggerUpdate) {
-                updateAllPrices();
-                // Only reset the timer if it was a scheduled interval call
-                if (Date.now() >= nextApiCallTimestamp) {
-                    nextApiCallTimestamp = Date.now() + SCHEDULED_INTERVAL_MS;
-                }
-            }
-        }, 1000); // Master clock ticks every second
-    }
-    
-    // --- (The rest of the script is unchanged. The full version is pasted below.) ---
-});
-
-
-// ===================================================================================
-// === PASTE THIS ENTIRE BLOCK INTO public/script.js ===
-// ===================================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("Tracker script loaded. Initializing...");
-
     // DOM SELECTORS
     const tabsContainer = document.getElementById('tabs-container');
     const transactionForm = document.getElementById('add-transaction-form');
@@ -124,6 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshPricesBtn = document.getElementById('refresh-prices-btn');
     const csvFileInput = document.getElementById('csv-file-input');
     
+    // AI Screenshot Processing Selectors
+    const screenshotFileInput = document.getElementById('screenshot-file-input');
+    const processScreenshotBtn = document.getElementById('process-screenshot-btn');
+    const aiStatus = document.getElementById('ai-status');
+    const aiConfirmationContainer = document.getElementById('ai-confirmation-container');
+    const aiConfirmationTableBody = document.querySelector('#ai-confirmation-table tbody');
+    const approveAiBtn = document.getElementById('approve-ai-btn');
+    const cancelAiBtn = document.getElementById('cancel-ai-btn');
+
     // STATE
     let settings = { apiKey: "" };
     let currentView = { type: 'date', value: null };
@@ -133,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let priceCache = new Map();
     let ledgerSort = { column: 'transaction_date', direction: 'asc' };
     let isApiLimitReached = false;
+    let aiExtractedTransactions = []; // To store transactions from AI
 
     // API TIMER & SCHEDULER
     const SCHEDULED_INTERVAL_MS = 30 * 60 * 1000;
@@ -264,6 +184,109 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // AI SCREENSHOT PROCESSING LOGIC
+    processScreenshotBtn.addEventListener('click', async () => {
+        const file = screenshotFileInput.files[0];
+        if (!file) {
+            aiStatus.textContent = 'Please select a file first.';
+            return;
+        }
+        aiStatus.textContent = 'Processing with AI...';
+        processScreenshotBtn.disabled = true;
+        
+        const formData = new FormData();
+        formData.append('screenshot', file);
+
+        try {
+            const response = await fetch('/api/process-screenshot', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to process image.');
+            }
+
+            const data = await response.json();
+            aiExtractedTransactions = data; // Store data
+            renderAiConfirmation(data);
+            aiStatus.textContent = 'Review the extracted data below.';
+        } catch (error) {
+            console.error('Screenshot processing error:', error);
+            aiStatus.textContent = `Error: ${error.message}`;
+        } finally {
+            processScreenshotBtn.disabled = false;
+        }
+    });
+
+    function renderAiConfirmation(transactions) {
+        aiConfirmationTableBody.innerHTML = '';
+        if (!transactions || transactions.length === 0) {
+            aiConfirmationContainer.style.display = 'none';
+            return;
+        }
+
+        transactions.forEach((tx, index) => {
+            const row = aiConfirmationTableBody.insertRow();
+            row.dataset.index = index;
+            row.innerHTML = `
+                <td contenteditable="true" data-field="transaction_date">${tx.transaction_date || ''}</td>
+                <td contenteditable="true" data-field="ticker">${tx.ticker || ''}</td>
+                <td contenteditable="true" data-field="exchange">${tx.exchange || ''}</td>
+                <td contenteditable="true" data-field="transaction_type">${tx.transaction_type || ''}</td>
+                <td contenteditable="true" data-field="quantity">${tx.quantity || ''}</td>
+                <td contenteditable="true" data-field="price">${tx.price || ''}</td>
+            `;
+        });
+        aiConfirmationContainer.style.display = 'block';
+    }
+    
+    cancelAiBtn.addEventListener('click', () => {
+        aiConfirmationContainer.style.display = 'none';
+        aiExtractedTransactions = [];
+        screenshotFileInput.value = ''; // Clear file input
+        aiStatus.textContent = '';
+    });
+    
+    approveAiBtn.addEventListener('click', async () => {
+        // Read the potentially edited data from the table
+        const updatedTransactions = [];
+        const rows = aiConfirmationTableBody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const tx = {};
+            row.querySelectorAll('td').forEach(cell => {
+                tx[cell.dataset.field] = cell.textContent;
+            });
+            // Basic type conversion
+            tx.quantity = parseFloat(tx.quantity);
+            tx.price = parseFloat(tx.price);
+            updatedTransactions.push(tx);
+        });
+
+        if (updatedTransactions.length > 0) {
+            try {
+                const response = await fetch('/api/transactions/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedTransactions)
+                });
+                 if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to save transactions.');
+                }
+                const result = await response.json();
+                alert(result.message);
+                cancelAiBtn.click(); // Hide and clear the form
+                await renderLedger(); // Refresh ledger view
+            } catch (error) {
+                console.error('Failed to save AI transactions:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+    });
+
+
     // --- (All other event listeners and full function definitions are included below for safety) ---
     const allOtherFunctions = () => {
         renderTabs = function() { tabsContainer.innerHTML = ''; const tradingDays = getTradingDays(6); tradingDays.forEach(day => { const tab = document.createElement('div'); tab.className = 'tab'; tab.textContent = new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }); tab.dataset.date = day; if (day === currentView.value && currentView.type === 'date') tab.classList.add('active'); tab.addEventListener('click', () => handleTabClick('date', day)); tabsContainer.appendChild(tab); }); const overviewTab = document.createElement('div'); overviewTab.className = 'tab pl-tab'; overviewTab.textContent = 'Overall P&L'; if (currentView.type === 'overview') overviewTab.classList.add('active'); overviewTab.addEventListener('click', () => handleTabClick('overview', null)); tabsContainer.appendChild(overviewTab); };
