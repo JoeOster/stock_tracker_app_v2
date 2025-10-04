@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Stock Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>Live Stock Tracker</h1>
+        <div id="api-timer-container">
+            Next Update: <span id="api-timer">--:--</span>
+        </div>
+        <button id="settings-btn" title="Settings">⚙️</button>
+    </div>
+
+    <div id="tabs-container" class="tabs"></div>
+
+    <div class="container">
+        <h2>Log a New Transaction</h2>
+        <form id="add-transaction-form">
+            <input type="date" id="transaction-date" required>
+            <input type="text" id="ticker" placeholder="Ticker" required>
+            <select id="exchange" required>
+                <option value="" disabled selected>Select Exchange</option>
+                <option value="Fidelity">Fidelity</option>
+                <option value="Robinhood">Robinhood</option>
+                <option value="E-Trade">E-Trade</option>
+                <option value="Other">Other</option>
+            </select>
+            <select id="transaction-type">
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+            </select>
+            <input type="number" id="quantity" placeholder="Quantity" step="any" required>
+            <input type="number" id="price" placeholder="Price Per Share" step="any" required>
+            <button type="submit">Log Transaction</button>
+            
+            <details class="advanced-options">
+                <summary>Advanced Options (Set Limit Orders)</summary>
+                <div class="form-grid">
+                    <input type="number" id="limit-price-up" placeholder="Take Profit Limit ($)" step="any">
+                    <input type="number" id="limit-price-down" placeholder="Stop Loss Limit ($)" step="any">
+                    <select id="limit-expiration">
+                        <option value="">Expiration...</option>
+                        <option value="DAY">Good for Day</option>
+                        <option value="GTC">Good 'til Canceled (GTC)</option>
+                    </select>
+                </div>
+            </details>
+        </form>
+    </div>
+
+    <div id="table-container" class="container">
+        <h2 id="table-title"></h2>
+        <table id="stock-table">
+            <thead>
+                <tr>
+                    <th colspan="10" style="text-align:center; background-color:#f8f9f9;">Daily Transaction Log</th>
+                </tr>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Exchange</th>
+                    <th>Action</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Realized P/L</th>
+                    <th>Suggest Profit</th>
+                    <th>Suggest Loss</th>
+                    <th>My Limit Up</th>
+                    <th>My Limit Down</th>
+                </tr>
+            </thead>
+            <tbody id="log-body"></tbody>
+            <tfoot id="log-footer"></tfoot>
+
+            <thead>
+                <tr>
+                    <th colspan="7" style="text-align:center; background-color:#e8f6f3;" id="positions-summary-title">End of Day Open Positions</th>
+                </tr>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Exchange</th>
+                    <th>Open Position</th>
+                    <th>Cost Basis</th>
+                    <th>Current Price</th>
+                    <th>Current Value</th>
+                    <th>Unrealized P/L</th>
+                </tr>
+            </thead>
+            <tbody id="positions-summary-body"></tbody>
+        </table>
+        <div id="portfolio-summary">
+            <button id="refresh-prices-btn">Refresh Prices</button>
+            <h3>Total Open Value: <span>$0.00</span></h3>
+        </div>
+    </div>
+    
+    <div id="overview-container" class="container" style="display: none;">
+        <div class="chart-grid"> <div class="chart-container"> <h2>All Time Value</h2> <canvas id="all-time-chart" class="zoomable-chart"></canvas> </div> <div class="chart-container"> <h2>Recent Activity</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div> <div class="chart-container"> <div class="date-range-header"> <h2>Date Range</h2> <div class="date-range-inputs"> <input type="date" id="chart-start-date"> <span>to</span> <input type="date" id="chart-end-date"> </div> </div> <canvas id="date-range-chart" class="zoomable-chart"></canvas> </div> </div>
+        <div class="snapshot-container"> <div class="snapshot-form-container"> <h3>Log Account Value Snapshot</h3> <form id="add-snapshot-form"> <input type="date" id="snapshot-date" required> <select id="snapshot-exchange" required></select> <input type="number" id="snapshot-value" placeholder="Total Account Value" step="any" required> <button type="submit">Save Snapshot</button> </form> </div> <div class="snapshot-history-container"> <h3>Snapshot History</h3> <table id="snapshot-history-table"> <thead> <tr> <th>Date</th> <th>Exchange</th> <th>Value</th> <th>Actions</th> </tr> </thead> <tbody></tbody> </table> </div> </div>
+        <div class="pl-summary-container"> <h3>Realized P&L Summary</h3> <table id="pl-summary-table"></table> </div>
+        <div id="ledger-container"> <h2>Transaction Ledger</h2> <div class="import-section"> <div class="import-container"> <h3>Import from CSV</h3> <label for="csv-file-input">Select a .csv file:</label> <input type="file" id="csv-file-input" accept=".csv"> <small>Format: date,ticker,exchange,type,quantity,price</small> </div> <div class="import-container"> <h3>Import from Screenshot (AI)</h3> <label for="screenshot-file-input">Select an image file:</label> <input type="file" id="screenshot-file-input" accept="image/*"> <button id="process-screenshot-btn">Process Screenshot</button> <small id="ai-status"></small> </div> </div> <div id="ai-confirmation-container" style="display: none;"> <h3>Review AI Results</h3> <p>Click on any cell to make corrections before saving.</p> <table id="ai-confirmation-table"> <thead> <tr> <th>Date</th> <th>Ticker</th> <th>Exchange</th> <th>Type</th> <th>Quantity</th> <th>Price</th> </tr> </thead> <tbody></tbody> </table> <div class="confirmation-actions"> <button id="approve-ai-btn">Approve & Save Transactions</button> <button id="cancel-ai-btn" class="delete-btn">Cancel</button> </div> </div> <table id="ledger-table"> <thead> <tr> <th data-sort="transaction_date">Date</th> <th data-sort="ticker">Ticker</th> <th data-sort="exchange">Exchange</th> <th data-sort="transaction_type">Type</th> <th data-sort="quantity">Quantity</th> <th data-sort="price">Price</th> <th>Actions</th> </tr> </thead> <tbody></tbody> </table> </div>
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Settings</h2>
+            <div class="settings-input-group"> <label for="api-key-input">Alpha Vantage API Key</label> <input type="password" id="api-key-input" placeholder="Enter your API key"> </div>
+            <div class="settings-input-group"> <label for="take-profit-percent">Suggest Profit %</label> <input type="number" id="take-profit-percent" step="any" placeholder="e.g., 8"> </div>
+            <div class="settings-input-group"> <label for="stop-loss-percent">Suggest Loss %</label> <input type="number" id="stop-loss-percent" step="any" placeholder="e.g., 8"> </div>
+            <button id="save-settings-button">Save Settings</button>
+        </div>
+    </div>
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Edit Transaction</h2>
+            <form id="edit-transaction-form">
+                <input type="hidden" id="edit-id">
+                <div class="form-group"><label>Date</label><input type="date" id="edit-date" required></div>
+                <div class="form-group"><label>Ticker</label><input type="text" id="edit-ticker" required></div>
+                <div class="form-group"><label>Exchange</label><select id="edit-exchange" required></select></div>
+                <div class="form-group"><label>Type</label><select id="edit-type"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
+                <div class="form-group"><label>Quantity</label><input type="number" id="edit-quantity" step="any" required></div>
+                <div class="form-group"><label>Price</label><input type="number" id="edit-price" step="any" required></div>
+                <fieldset> <legend>Limit Orders</legend> <div class="form-group"><label>Take Profit Limit ($)</label><input type="number" id="edit-limit-price-up" step="any"></div> <div class="form-group"><label>Stop Loss Limit ($)</label><input type="number" id="edit-limit-price-down" step="any"></div> <div class="form-group"><label>Expiration</label><select id="edit-limit-expiration"></select></div> </fieldset>
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+    <div id="no-activity-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>No Transactions Logged Today</h2>
+            <p>You haven't logged any buy or sell transactions for today, a trading day.</p>
+            <div class="confirm-group"> <input type="checkbox" id="confirm-no-activity"> <label for="confirm-no-activity">I can confirm I had no activity today.</label> </div>
+            <button id="confirm-no-activity-btn">Dismiss for Today</button>
+        </div>
+    </div>
+    <div id="chart-zoom-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close-button">&times;</span>
+            <canvas id="zoomed-chart"></canvas>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
