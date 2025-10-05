@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Stock Tracker</title>
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js" integrity="sha512-UXumZrZNiOwnTcZSHLOfcTs0aos2MzBWHXOHOuB0J/R44QB0dwY5JgfbvljXcklVf65Gc4El6RjZ+lnwd2az2g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js" integrity="sha512-wUYbRPLV5zs6IqvWd88HIqZU/b8TBx+I8LEioQ/UC0t5EMCLApqhIAnUg7EsAzdbhhdgW07TqYDdH3QEXRcPOQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 </head>
+
 <body>
     <div class="header">
         <h1>Live Stock Tracker</h1>
@@ -115,19 +120,24 @@
             <button id="save-settings-button">Save Settings</button>
         </div>
     </div>
-    <div id="edit-modal" class="modal">
+<div id="edit-modal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h2>Edit Transaction</h2>
             <form id="edit-transaction-form">
                 <input type="hidden" id="edit-id">
-                <div class="form-group"><label>Date</label><input type="date" id="edit-date" required></div>
-                <div class="form-group"><label>Ticker</label><input type="text" id="edit-ticker" required></div>
-                <div class="form-group"><label>Exchange</label><select id="edit-exchange" required></select></div>
-                <div class="form-group"><label>Type</label><select id="edit-type"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
-                <div class="form-group"><label>Quantity</label><input type="number" id="edit-quantity" step="any" required></div>
-                <div class="form-group"><label>Price</label><input type="number" id="edit-price" step="any" required></div>
-                <fieldset> <legend>Limit Orders</legend> <div class="form-group"><label>Take Profit Limit ($)</label><input type="number" id="edit-limit-price-up" step="any"></div> <div class="form-group"><label>Stop Loss Limit ($)</label><input type="number" id="edit-limit-price-down" step="any"></div> <div class="form-group"><label>Expiration</label><select id="edit-limit-expiration"></select></div> </fieldset>
+                <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div>
+                <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div>
+                <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div>
+                <div class="form-group"><label for="edit-type">Type</label><select id="edit-type"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
+                <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div>
+                <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div>
+                <fieldset>
+                    <legend>Limit Orders</legend>
+                    <div class="form-group"><label for="edit-limit-price-up">Take Profit Limit ($)</label><input type="number" id="edit-limit-price-up" step="any"></div>
+                    <div class="form-group"><label for="edit-limit-price-down">Stop Loss Limit ($)</label><input type="number" id="edit-limit-price-down" step="any"></div>
+                    <div class="form-group"><label for="edit-limit-expiration">Expiration</label><select id="edit-limit-expiration"></select></div>
+                </fieldset>
                 <button type="submit">Save Changes</button>
             </form>
         </div>
