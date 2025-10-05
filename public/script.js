@@ -3,6 +3,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Tracker script loaded. Initializing...");
 
     // DOM SELECTORS
+    const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
+    const ledgerFilterStart = document.getElementById('ledger-filter-start');
+    const ledgerFilterEnd = document.getElementById('ledger-filter-end');
+    const ledgerClearFiltersBtn = document.getElementById('ledger-clear-filters-btn');
     const tabsContainer = document.getElementById('tabs-container');
     const transactionForm = document.getElementById('add-transaction-form');
     const tableContainer = document.getElementById('table-container');
@@ -67,6 +71,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return isNegative ? `(${formattedNumber})` : formattedNumber;
     }
 
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, duration);
+    }
+
     // MERGED API SCHEDULER
     const SCHEDULED_INTERVAL_MS = 30 * 60 * 1000;
     let nextApiCallTimestamp = 0;
@@ -126,6 +143,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Scheduled 23:00 EST update triggered.");
                 triggerUpdate = true;
                 updateAt2300CalledForDay = todayStr;
+                // --- Fixed Time Trigger Logic ---
+            // Trigger at 23:00 EST (11 PM)
+            if (estHours === 23 && updateAt2300CalledForDay !== todayStr) {
+                console.log("Scheduled 23:00 EST update triggered.");
+                fetch('/api/tasks/update-prices', { method: 'POST' }); // <-- ADD THIS LINE
+                triggerUpdate = true;
+                updateAt2300CalledForDay = todayStr;
+            }
             }
             if (estHours === 8 && updateAt0800CalledForDay !== todayStr) {
                 console.log("Scheduled 08:00 EST update triggered.");
@@ -176,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         overviewTab.addEventListener('click', () => handleTabClick('overview', null));
         tabsContainer.appendChild(overviewTab);
     }
-    async function renderDailyReport(date) { 
+async function renderDailyReport(date) { 
         const response = await fetch(`/api/positions/${date}`); 
         const data = await response.json();
         tableTitle.textContent = `Activity Report for ${new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`; 
@@ -212,9 +237,23 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { 
             activityMap.clear(); 
             const sortedPositions = data.endOfDayPositions.sort((a,b) => a.ticker.localeCompare(b.ticker) || a.exchange.localeCompare(b.exchange));
+            
+            const today = new Date(getCurrentESTDateString() + 'T00:00:00Z');
+
             sortedPositions.forEach(p => { 
                 const key = `${p.ticker}-${p.exchange}`; 
                 activityMap.set(key, { ...p, costBasis: p.weighted_avg_cost, closingQty: p.net_quantity }); 
+                
+                let priceHTML = 'N/A';
+                if (p.last_price) {
+                    priceHTML = formatAccounting(p.last_price);
+                    const lastUpdatedDate = new Date(p.last_updated);
+                    if (lastUpdatedDate < today) {
+                        const dateString = lastUpdatedDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit'});
+                        priceHTML += ` <small class="stale-data">(as of ${dateString})</small>`;
+                    }
+                }
+
                 const row = summaryBody.insertRow(); 
                 row.dataset.key = key; 
                 row.innerHTML = `
@@ -222,30 +261,85 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${p.exchange}</td>
                     <td class="numeric">${formatAccounting(p.net_quantity, false)}</td>
                     <td class="numeric">${formatAccounting(p.weighted_avg_cost)}</td>
-                    <td class="numeric current-price">Loading...</td>
-                    <td class="numeric current-value">Loading...</td>
-                    <td class="numeric unrealized-pl">Loading...</td>`;
+                    <td class="numeric current-price"><div class="loader"></div></td>
+                    <td class="numeric current-value"><div class="loader"></div></td>
+                    <td class="numeric unrealized-pl"><div class="loader"></div></td>`;
             }); 
         } 
         populatePricesFromCache(); 
     }
+
+    function populatePricesFromCache() { 
+        let totalPortfolioValue = 0; 
+        activityMap.forEach((stock, key) => { 
+            const row = document.querySelector(`#positions-summary-body [data-key="${key}"]`); 
+            if (row) { 
+                // Use live price if available, otherwise fall back to last known price
+                const priceToUse = priceCache.get(stock.ticker) || stock.last_price;
+
+                if (priceToUse !== undefined && priceToUse !== null) { 
+                    const currentValue = stock.closingQty * priceToUse; 
+                    const unrealizedPL = currentValue - (stock.closingQty * stock.costBasis); 
+                    totalPortfolioValue += currentValue;
+
+                    // If the price came from the live cache, it's fresh, so just show the price.
+                    // Otherwise, the stale data indicator from renderDailyReport will remain.
+                    if (priceCache.has(stock.ticker)) {
+                        row.querySelector('.current-price').innerHTML = formatAccounting(priceToUse);
+                    }
+                    
+                    row.querySelector('.current-value').innerHTML = formatAccounting(currentValue);
+                    row.querySelector('.unrealized-pl').innerHTML = formatAccounting(unrealizedPL);
+                } 
+            } 
+        }); 
+        const summarySpan = portfolioSummary.querySelector('span'); 
+        if (summarySpan) { 
+            summarySpan.innerHTML = `<strong>${formatAccounting(totalPortfolioValue)}</strong>`;
+        } 
+    }
+
     async function renderLedger() {
-        const response = await fetch('/api/transactions');
-        allTransactions = await response.json();
-        allTransactions.sort((a, b) => {
+        // Fetch fresh data only if we don't have it, otherwise use cached data
+        if (allTransactions.length === 0) {
+            const response = await fetch('/api/transactions');
+            allTransactions = await response.json();
+        }
+
+        const filterTicker = ledgerFilterTicker.value.toUpperCase().trim();
+        const filterStart = ledgerFilterStart.value;
+        const filterEnd = ledgerFilterEnd.value;
+
+        // Apply filters
+        const filteredTransactions = allTransactions.filter(tx => {
+            const tickerMatch = filterTicker ? tx.ticker.toUpperCase().includes(filterTicker) : true;
+            const startDateMatch = filterStart ? tx.transaction_date >= filterStart : true;
+            const endDateMatch = filterEnd ? tx.transaction_date <= filterEnd : true;
+            return tickerMatch && startDateMatch && endDateMatch;
+        });
+
+        // Sort the filtered data
+        filteredTransactions.sort((a, b) => {
             const col = ledgerSort.column;
             const dir = ledgerSort.direction === 'asc' ? 1 : -1;
             if (col === 'quantity' || col === 'price') return (a[col] - b[col]) * dir;
             return a[col].localeCompare(b[col]) * dir;
-        });
+    });
+
         document.querySelectorAll('#ledger-table thead th[data-sort]').forEach(th => {
             th.classList.remove('sorted-asc', 'sorted-desc');
             if (th.dataset.sort === ledgerSort.column) {
                 th.classList.add(ledgerSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
             }
         });
+
         ledgerTableBody.innerHTML = '';
-        allTransactions.forEach(tx => {
+        if (filteredTransactions.length === 0) {
+            ledgerTableBody.innerHTML = '<tr><td colspan="7">No transactions match the current filters.</td></tr>';
+            return;
+        }
+
+        filteredTransactions.forEach(tx => {
             const row = ledgerTableBody.insertRow();
             row.innerHTML = `
                 <td>${tx.transaction_date}</td>
@@ -257,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="actions-cell"><button class="modify-btn" data-id="${tx.id}">Edit</button><button class="delete-btn" data-id="${tx.id}">Delete</button></td>`;
         });
     }
+    
     async function renderOverviewPage() { 
         const plResponse = await fetch('/api/realized_pl');
         const plData = await plResponse.json();
@@ -285,7 +380,40 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFiveDayChart(snapshots) { const fiveTradingDays = getTradingDays(5); const startDate = fiveTradingDays[0]; const endDate = getCurrentESTDateString(); const filteredSnapshots = snapshots.filter(s => s.snapshot_date >= startDate && s.snapshot_date <= endDate); if(fiveDayChart) fiveDayChart.destroy(); fiveDayChart = createChart(fiveDayChartCtx, filteredSnapshots); }
     function renderDateRangeChart(snapshots) { const start = chartStartDate.value, end = chartEndDate.value; let filteredSnapshots = snapshots; if (start && end) { filteredSnapshots = snapshots.filter(s => s.snapshot_date >= start && s.snapshot_date <= end); } if(dateRangeChart) dateRangeChart.destroy(); dateRangeChart = createChart(dateRangeChartCtx, filteredSnapshots); }
     function createChart(ctx, snapshots) { const datasets = {}; const labels = [...new Set(snapshots.map(s => s.snapshot_date))].sort(); const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6']; let colorIndex = 0; snapshots.forEach(s => { if (!datasets[s.exchange]) { datasets[s.exchange] = { label: s.exchange, data: [], fill: false, borderColor: colors[colorIndex++ % colors.length], tension: 0.1 }; } }); for (const ex in datasets) { datasets[ex].data = labels.map(l => snapshots.find(s => s.snapshot_date === l && s.exchange === ex)?.value ?? null); } return new Chart(ctx, { type: 'line', data: { labels: labels, datasets: Object.values(datasets) }, options: { spanGaps: true, responsive: true, maintainAspectRatio: true, scales: { y: { ticks: { callback: function(value) { return '$' + value.toLocaleString(); } } } } } }); }
+    async function renderPortfolioOverview() {
+        const overviewBody = document.getElementById('portfolio-overview-body');
+        overviewBody.innerHTML = ''; // Clear previous data
 
+        try {
+            const response = await fetch('/api/portfolio/overview');
+            const data = await response.json();
+
+            if (data.length === 0) {
+                overviewBody.innerHTML = '<tr><td colspan="6">No open positions to display.</td></tr>';
+                return;
+            }
+
+            for (const pos of data) {
+                const priceToUse = priceCache.get(pos.ticker) || pos.last_price;
+                const totalValue = pos.total_quantity * priceToUse;
+                const totalCost = pos.total_quantity * pos.weighted_avg_cost;
+                const unrealizedPL = totalValue - totalCost;
+
+                const row = overviewBody.insertRow();
+                row.innerHTML = `
+                    <td>${pos.ticker}</td>
+                    <td class="numeric">${formatAccounting(pos.total_quantity, false)}</td>
+                    <td class="numeric">${formatAccounting(pos.weighted_avg_cost)}</td>
+                    <td class="numeric">${formatAccounting(priceToUse)}</td>
+                    <td class="numeric">${formatAccounting(totalValue)}</td>
+                    <td class="numeric">${formatAccounting(unrealizedPL)}</td>
+                `;
+            }
+        } catch (error) {
+            console.error("Failed to render portfolio overview:", error);
+            overviewBody.innerHTML = '<tr><td colspan="6">Error loading portfolio overview.</td></tr>';
+        }
+    }
     // DATA FETCHING & DISPLAY
     function populatePricesFromCache() { 
         let totalPortfolioValue = 0; 
@@ -308,15 +436,58 @@ document.addEventListener('DOMContentLoaded', () => {
             summarySpan.innerHTML = `<strong>${formatAccounting(totalPortfolioValue)}</strong>`;
         } 
     }
-    async function updateAllPrices() {
-        if (isApiLimitReached) { return; }
-        if (activityMap.size === 0 || !settings.apiKey) { portfolioSummary.querySelector('span').innerHTML = '<strong>$0.00</strong>'; document.querySelectorAll('.current-price, .current-value, .unrealized-pl').forEach(el => { if (el.textContent === 'Loading...') el.textContent = 'N/A'; }); return; }
+
+async function updateAllPrices() {
+        const spinnerCells = document.querySelectorAll('.current-price, .current-value, .unrealized-pl');
+
+        if (isApiLimitReached) {
+            spinnerCells.forEach(cell => { if (cell.querySelector('.loader')) { cell.innerHTML = 'API Limit'; } });
+            return;
+        }
+        
+        if (activityMap.size === 0 || !settings.apiKey) {
+            portfolioSummary.querySelector('span').innerHTML = '<strong>$0.00</strong>';
+            spinnerCells.forEach(el => { if (el.querySelector('.loader')) { el.innerHTML = 'N/A'; } });
+            return;
+        }
+
+        const priceUpdateTimeout = setTimeout(() => {
+            console.warn("Price update timed out after 10 seconds. Replacing spinners with '--'.");
+            spinnerCells.forEach(cell => { if (cell.querySelector('.loader')) { cell.innerHTML = '--'; } });
+        }, 10000);
+
         console.log("Fetching latest prices...");
-        const tickersToFetch = [...new Set(Array.from(activityMap.values()).map(s => s.ticker))];
-        const prices = await Promise.all(tickersToFetch.map(ticker => fetchStockPrice(ticker)));
-        tickersToFetch.forEach((ticker, index) => { if (prices[index] !== null) priceCache.set(ticker, prices[index]); });
-        populatePricesFromCache();
+        try {
+            const tickersToFetch = [...new Set(Array.from(activityMap.values()).map(s => s.ticker))];
+            const prices = await Promise.all(tickersToFetch.map(ticker => fetchStockPrice(ticker)));
+            
+            clearTimeout(priceUpdateTimeout); // Always clear the timeout once the fetch process completes
+
+            // --- NEW: Check if all API calls failed ---
+            const allFailed = prices.every(p => p === null);
+
+            if (allFailed) {
+                console.warn("All price fetches failed. Displaying '--'.");
+                spinnerCells.forEach(cell => {
+                    if (cell.querySelector('.loader')) {
+                        cell.innerHTML = '--';
+                    }
+                });
+                return; // Stop further processing
+            }
+
+            tickersToFetch.forEach((ticker, index) => {
+                if (prices[index] !== null) {
+                    priceCache.set(ticker, prices[index]);
+                }
+            });
+            populatePricesFromCache();
+        } catch (error) {
+            clearTimeout(priceUpdateTimeout);
+            console.error("An error occurred during updateAllPrices:", error);
+        }
     }
+
     async function fetchStockPrice(ticker) {
         if (!settings.apiKey) { console.warn("Price fetch skipped: No API key."); return null; }
         try {
@@ -371,9 +542,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // EVENT LISTENERS
-    csvFileInput.addEventListener('change', (e) => {
+   // Ledger Filter Listeners
+    ledgerFilterTicker.addEventListener('input', renderLedger);
+    ledgerFilterStart.addEventListener('change', renderLedger);
+    ledgerFilterEnd.addEventListener('change', renderLedger);
+    ledgerClearFiltersBtn.addEventListener('click', () => {
+        ledgerFilterTicker.value = '';
+        ledgerFilterStart.value = '';
+        ledgerFilterEnd.value = '';
+        renderLedger();
+    });
+     
+   csvFileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if (!file) { return; }
+        if (!file) return;
         const reader = new FileReader();
         reader.onload = async (event) => {
             const csv = event.target.result;
@@ -390,33 +572,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (transactions.length > 0) {
                 try {
-                    const response = await fetch('/api/transactions/batch', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(transactions)
-                    });
+                    const response = await fetch('/api/transactions/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transactions) });
                     const result = await response.json();
                     if (!response.ok) { throw new Error(result.message || 'Failed to import transactions.'); }
-                    alert(result.message);
-                    if (currentView.type === 'overview') {
-                        await renderOverviewPage();
-                    }
+                    showToast(result.message, 'success');
+                    if (currentView.type === 'overview') { await renderOverviewPage(); }
                 } catch (error) {
                     console.error('CSV Import Error:', error);
-                    alert(`Error importing CSV: ${error.message}`);
+                    showToast(`Error importing CSV: ${error.message}`, 'error');
                 }
             } else {
-                alert('No valid transactions found in the selected file. Please ensure the format is: date,ticker,exchange,type,quantity,price');
+                showToast('No valid transactions found in the file.', 'error');
             }
             e.target.value = '';
         };
         reader.readAsText(file);
     });
+
+
     transactionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitButton = transactionForm.querySelector('button[type="submit"]');
         const formData = {
             transaction_date: document.getElementById('transaction-date').value,
-            ticker: document.getElementById('ticker').value.toUpperCase(),
+            ticker: document.getElementById('ticker').value.toUpperCase().trim(),
             exchange: document.getElementById('exchange').value,
             transaction_type: document.getElementById('transaction-type').value,
             quantity: parseFloat(document.getElementById('quantity').value),
@@ -425,38 +604,68 @@ document.addEventListener('DOMContentLoaded', () => {
             limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
             limit_expiration: document.getElementById('limit-expiration').value || null
         };
-        if (!formData.exchange) return alert('Please select an exchange.');
-        await fetch('/api/transactions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-        transactionForm.reset();
-        document.getElementById('transaction-date').value = formData.transaction_date;
-        if (currentView.type === 'date') {
-            await renderDailyReport(currentView.value);
+        if (!formData.ticker) { return showToast('Ticker symbol is required.', 'error'); }
+        if (!formData.exchange) { return showToast('Please select an exchange.', 'error'); }
+        if (isNaN(formData.quantity) || formData.quantity <= 0) { return showToast('Quantity must be a positive number.', 'error'); }
+        if (isNaN(formData.price) || formData.price <= 0) { return showToast('Price must be a positive number.', 'error'); }
+        submitButton.classList.add('btn-in-progress');
+        try {
+            await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+            transactionForm.reset();
+            document.getElementById('transaction-date').value = formData.transaction_date;
+            if (currentView.type === 'date') { await renderDailyReport(currentView.value); }
+        } catch (error) {
+            console.error('Error logging transaction:', error);
+            showToast('Failed to log transaction.', 'error');
+        } finally {
+            submitButton.classList.remove('btn-in-progress');
         }
     });
-    saveSettingsBtn.addEventListener('click', () => { 
-        settings.apiKey = apiKeyInput.value.trim(); 
-        settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || null;
-        settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || null;
-        saveSettings(); 
-        settingsModal.classList.remove('visible'); 
-        if (currentView.type === 'date') {
-            renderDailyReport(currentView.value);
-        }
+
+
+saveSettingsBtn.addEventListener('click', () => { 
+        saveSettingsBtn.classList.add('btn-in-progress'); // Add in-progress state
+
+        // Use a timeout to make the spinner visible, as localStorage is very fast
+        setTimeout(() => {
+            settings.apiKey = apiKeyInput.value.trim(); 
+            settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || null;
+            settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || null;
+            saveSettings(); 
+            
+            settingsModal.classList.remove('visible'); 
+            saveSettingsBtn.classList.remove('btn-in-progress'); // Remove in-progress state
+
+            if (currentView.type === 'date') {
+                renderDailyReport(currentView.value);
+            }
+        }, 300); // 300ms delay
     });
-    processScreenshotBtn.addEventListener('click', async () => {
+
+processScreenshotBtn.addEventListener('click', async () => {
         const file = screenshotFileInput.files[0];
-        if (!file) { aiStatus.textContent = 'Please select a file first.'; return; }
+        if (!file) {
+            aiStatus.textContent = 'Please select a file first.';
+            return;
+        }
         aiStatus.textContent = 'Processing with AI...';
+        processScreenshotBtn.classList.add('btn-in-progress');
         processScreenshotBtn.disabled = true;
+        
         const formData = new FormData();
         formData.append('screenshot', file);
+
         try {
-            const response = await fetch('/api/process-screenshot', { method: 'POST', body: formData });
-            if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Failed to process image.'); }
+            const response = await fetch('/api/process-screenshot', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to process image.');
+            }
+
             const data = await response.json();
             aiExtractedTransactions = data;
             renderAiConfirmation(data);
@@ -465,6 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Screenshot processing error:', error);
             aiStatus.textContent = `Error: ${error.message}`;
         } finally {
+            processScreenshotBtn.classList.remove('btn-in-progress');
             processScreenshotBtn.disabled = false;
         }
     });
@@ -474,6 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
         screenshotFileInput.value = '';
         aiStatus.textContent = '';
     });
+
     approveAiBtn.addEventListener('click', async () => {
         const updatedTransactions = [];
         const rows = aiConfirmationTableBody.querySelectorAll('tr');
@@ -489,15 +700,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/transactions/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTransactions) });
                 if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Failed to save transactions.'); }
                 const result = await response.json();
-                alert(result.message);
+                showToast(result.message, 'success');
                 cancelAiBtn.click();
                 await renderLedger();
             } catch (error) {
                 console.error('Failed to save AI transactions:', error);
-                alert(`Error: ${error.message}`);
+                showToast(`Error: ${error.message}`, 'error');
             }
         }
     });
+
     settingsBtn.addEventListener('click', () => settingsModal.classList.add('visible'));
     document.querySelector('#ledger-table thead').addEventListener('click', (e) => {
         const newSortColumn = e.target.dataset.sort;
@@ -577,15 +789,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 3000);
     });
+
     confirmNoActivityBtn.addEventListener('click', () => {
         if (document.getElementById('confirm-no-activity').checked) {
             const today = getCurrentESTDateString();
             localStorage.setItem(`activity-ack-${today}`, 'true');
             noActivityModal.classList.remove('visible');
         } else {
-            alert('Please check the box to confirm.');
+            showToast('Please check the box to confirm.', 'info');
         }
     });
+    
     snapshotForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = {
@@ -593,16 +807,21 @@ document.addEventListener('DOMContentLoaded', () => {
             exchange: document.getElementById('snapshot-exchange').value,
             value: parseFloat(document.getElementById('snapshot-value').value)
         };
-        if (!formData.exchange || !formData.snapshot_date || isNaN(formData.value)) return alert('Please fill out all fields correctly.');
+        if (!formData.exchange || !formData.snapshot_date || isNaN(formData.value)) {
+            return showToast('Please fill out all snapshot fields correctly.', 'error');
+        }
         await fetch('/api/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+        showToast('Snapshot saved!', 'success');
         snapshotForm.reset();
         document.getElementById('snapshot-date').value = getCurrentESTDateString();
         if (currentView.type === 'overview') await renderOverviewPage();
     });
 
 
+
     // APP INITIALIZATION
-    function initialize() {
+// APP INITIALIZATION
+    async function initialize() {
         isApiLimitReached = false;
         loadSettings();
         const today = getCurrentESTDateString();
@@ -613,10 +832,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const expirationSelects = [document.getElementById('limit-expiration'), document.getElementById('edit-limit-expiration')];
         const expirationOptions = document.querySelector('#limit-expiration').innerHTML;
         expirationSelects.forEach(sel => sel.innerHTML = expirationOptions);
-        handleTabClick('date', today);
+
+        await handleTabClick('date', today); // Add await here
+        updateAllPrices(); 
         initializeScheduler();
         checkForDailyActivity();
     }
 
     initialize();
+
 });

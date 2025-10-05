@@ -60,10 +60,85 @@ function calculateRealizedPL(transactions) {
     return { byExchange: realizedByExchange, total: totalRealized, plBySellTransactionId };
 }
 
+async function updatePositionsAndPrices(db) {
+    console.log("Starting end-of-day position and price update...");
+    try {
+        // Step 1: Calculate all current open positions from the transactions table
+        const openPositionsQuery = `
+            WITH CostBasis AS (
+                SELECT ticker, exchange, SUM(price * quantity) / SUM(quantity) as weighted_avg_cost
+                FROM transactions
+                WHERE transaction_type = 'BUY'
+                GROUP BY ticker, exchange
+            ), NetQuantity AS (
+                SELECT ticker, exchange, SUM(CASE WHEN transaction_type = 'BUY' THEN quantity ELSE -quantity END) as net_quantity
+                FROM transactions
+                GROUP BY ticker, exchange
+            )
+            SELECT nq.ticker, nq.exchange, nq.net_quantity, cb.weighted_avg_cost
+            FROM NetQuantity nq
+            JOIN CostBasis cb ON nq.ticker = cb.ticker AND nq.exchange = cb.exchange
+            WHERE nq.net_quantity > 0.00001;
+        `;
+        const openPositions = await db.all(openPositionsQuery);
+
+        // Step 2: Clear the old positions table and insert the newly calculated ones
+        await db.run('BEGIN TRANSACTION');
+        await db.run('DELETE FROM positions');
+        const insertPosition = await db.prepare('INSERT INTO positions (ticker, exchange, quantity, cost_basis) VALUES (?, ?, ?, ?)');
+        for (const pos of openPositions) {
+            await insertPosition.run(pos.ticker, pos.exchange, pos.net_quantity, pos.weighted_avg_cost);
+        }
+        await insertPosition.finalize();
+        await db.run('COMMIT');
+        console.log(`Updated ${openPositions.length} positions in the database.`);
+
+        // Step 3: Get a unique list of tickers from our open positions
+        const uniqueTickers = [...new Set(openPositions.map(p => p.ticker))];
+        if (uniqueTickers.length === 0) {
+            console.log("No open positions to update prices for.");
+            return;
+        }
+
+        // Step 4: Fetch the latest price for each ticker from the API
+        console.log(`Fetching prices for ${uniqueTickers.length} tickers...`);
+        let pricesUpdated = 0;
+        for (const ticker of uniqueTickers) {
+            if (!process.env.ALPHA_VANTAGE_API_KEY) {
+                console.warn("No Alpha Vantage API Key found in .env, skipping price fetch.");
+                continue;
+            }
+            try {
+                const response = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`);
+                const data = await response.json();
+                if (data['Global Quote'] && data['Global Quote']['05. price']) {
+                    const price = parseFloat(data['Global Quote']['05. price']);
+                    const now = new Date().toISOString();
+                    
+                    // Step 5: Save the fetched price and timestamp into the stock_prices table
+                    await db.run('INSERT OR REPLACE INTO stock_prices (ticker, last_price, last_updated) VALUES (?, ?, ?)', [ticker, price, now]);
+                    pricesUpdated++;
+                } else {
+                    console.warn(`Could not fetch price for ${ticker}. Response:`, data);
+                }
+            } catch (apiError) {
+                console.error(`Error fetching price for ${ticker}:`, apiError);
+            }
+        }
+        console.log(`Successfully updated prices for ${pricesUpdated} tickers.`);
+        console.log("End-of-day update process finished.");
+
+    } catch (error) {
+        console.error("Critical error during updatePositionsAndPrices:", error);
+        await db.run('ROLLBACK'); // Rollback any partial transaction
+    }
+}
+
 async function startServer() {
     const db = await setupDatabase();
 
     // Get daily positions and transactions for a specific date
+// Get daily positions and transactions for a specific date
     app.get('/api/positions/:date', async (req, res) => {
         try {
             const selectedDate = req.params.date;
@@ -77,9 +152,10 @@ async function startServer() {
                 }
             });
             
+            // This query is now enhanced with a JOIN to our new price table
             const endOfDayPositionsQuery = `
                 WITH CostBasis AS (
-                    SELECT ticker, exchange, CASE WHEN SUM(quantity) > 0 THEN SUM(price * quantity) / SUM(quantity) ELSE 0 END as weighted_avg_cost
+                    SELECT ticker, exchange, SUM(price * quantity) / SUM(quantity) as weighted_avg_cost
                     FROM transactions
                     WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?)
                     GROUP BY ticker, exchange
@@ -89,9 +165,16 @@ async function startServer() {
                     WHERE date(transaction_date) <= date(?)
                     GROUP BY ticker, exchange
                 )
-                SELECT nq.ticker, nq.exchange, nq.net_quantity, COALESCE(cb.weighted_avg_cost, 0) as weighted_avg_cost
+                SELECT 
+                    nq.ticker, 
+                    nq.exchange, 
+                    nq.net_quantity, 
+                    COALESCE(cb.weighted_avg_cost, 0) as weighted_avg_cost,
+                    sp.last_price,
+                    sp.last_updated
                 FROM NetQuantity nq
                 LEFT JOIN CostBasis cb ON nq.ticker = cb.ticker AND nq.exchange = cb.exchange
+                LEFT JOIN stock_prices sp ON nq.ticker = sp.ticker
                 WHERE nq.net_quantity > 0.00001;
             `;
             const endOfDayPositions = await db.all(endOfDayPositionsQuery, selectedDate, selectedDate);
@@ -202,6 +285,28 @@ async function startServer() {
         }
     });
 
+    // Get a consolidated portfolio overview
+    app.get('/api/portfolio/overview', async (req, res) => {
+        try {
+            const query = `
+                SELECT
+                    p.ticker,
+                    SUM(p.quantity) as total_quantity,
+                    SUM(p.quantity * p.cost_basis) / SUM(p.quantity) as weighted_avg_cost,
+                    sp.last_price
+                FROM positions p
+                LEFT JOIN stock_prices sp ON p.ticker = sp.ticker
+                GROUP BY p.ticker
+                ORDER BY p.ticker;
+            `;
+            const overview = await db.all(query);
+            res.json(overview);
+        } catch (error) {
+            console.error("Failed to get portfolio overview:", error);
+            res.status(500).json({ message: "Error fetching portfolio overview." });
+        }
+    });
+
     // Get all account value snapshots
     app.get('/api/snapshots', async (req, res) => {
         try {
@@ -261,6 +366,13 @@ async function startServer() {
             console.error("AI processing error:", error);
             res.status(500).json({ message: "Error processing image with AI." });
         }
+    });
+
+// Task endpoint to trigger the end-of-day update process
+    app.post('/api/tasks/update-prices', async (req, res) => {
+        // Run the update in the background; don't make the client wait
+        updatePositionsAndPrices(db); 
+        res.status(202).json({ message: "Price update process initiated." });
     });
 
     app.listen(PORT, () => {

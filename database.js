@@ -58,6 +58,7 @@ async function setup() {
     });
 
     // Create base tables if they don't exist
+    // This now includes the limit order columns from the first migration
     await db.exec(`
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +67,10 @@ async function setup() {
             transaction_type TEXT NOT NULL,
             quantity REAL NOT NULL,
             price REAL NOT NULL,
-            transaction_date TEXT NOT NULL
+            transaction_date TEXT NOT NULL,
+            limit_price_up REAL,
+            limit_price_down REAL,
+            limit_expiration TEXT
         )
     `);
 
