@@ -64,13 +64,13 @@
                     <th>Ticker</th>
                     <th>Exchange</th>
                     <th>Action</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th>Realized P/L</th>
-                    <th>Suggest Profit</th>
-                    <th>Suggest Loss</th>
-                    <th>My Limit Up</th>
-                    <th>My Limit Down</th>
+                    <th class="numeric">Qty</th>
+                    <th class="numeric">Price</th>
+                    <th class="numeric">Realized P/L</th>
+                    <th class="numeric">Suggest Profit</th>
+                    <th class="numeric">Suggest Loss</th>
+                    <th class="numeric">My Limit Up</th>
+                    <th class="numeric">My Limit Down</th>
                 </tr>
             </thead>
             <tbody id="log-body"></tbody>
@@ -83,11 +83,11 @@
                 <tr>
                     <th>Ticker</th>
                     <th>Exchange</th>
-                    <th>Open Position</th>
-                    <th>Cost Basis</th>
-                    <th>Current Price</th>
-                    <th>Current Value</th>
-                    <th>Unrealized P/L</th>
+                    <th class="numeric">Open Position</th>
+                    <th class="numeric">Cost Basis</th>
+                    <th class="numeric">Current Price</th>
+                    <th class="numeric">Current Value</th>
+                    <th class="numeric">Unrealized P/L</th>
                 </tr>
             </thead>
             <tbody id="positions-summary-body"></tbody>
@@ -100,9 +100,9 @@
     
     <div id="overview-container" class="container" style="display: none;">
         <div class="chart-grid"> <div class="chart-container"> <h2>All Time Value</h2> <canvas id="all-time-chart" class="zoomable-chart"></canvas> </div> <div class="chart-container"> <h2>Recent Activity</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div> <div class="chart-container"> <div class="date-range-header"> <h2>Date Range</h2> <div class="date-range-inputs"> <input type="date" id="chart-start-date"> <span>to</span> <input type="date" id="chart-end-date"> </div> </div> <canvas id="date-range-chart" class="zoomable-chart"></canvas> </div> </div>
-        <div class="snapshot-container"> <div class="snapshot-form-container"> <h3>Log Account Value Snapshot</h3> <form id="add-snapshot-form"> <input type="date" id="snapshot-date" required> <select id="snapshot-exchange" required></select> <input type="number" id="snapshot-value" placeholder="Total Account Value" step="any" required> <button type="submit">Save Snapshot</button> </form> </div> <div class="snapshot-history-container"> <h3>Snapshot History</h3> <table id="snapshot-history-table"> <thead> <tr> <th>Date</th> <th>Exchange</th> <th>Value</th> <th>Actions</th> </tr> </thead> <tbody></tbody> </table> </div> </div>
+        <div class="snapshot-container"> <div class="snapshot-form-container"> <h3>Log Account Value Snapshot</h3> <form id="add-snapshot-form"> <input type="date" id="snapshot-date" required> <select id="snapshot-exchange" required></select> <input type="number" id="snapshot-value" placeholder="Total Account Value" step="any" required> <button type="submit">Save Snapshot</button> </form> </div> <div class="snapshot-history-container"> <h3>Snapshot History</h3> <table id="snapshot-history-table"> <thead> <tr> <th>Date</th> <th>Exchange</th> <th class="numeric">Value</th> <th>Actions</th> </tr> </thead> <tbody></tbody> </table> </div> </div>
         <div class="pl-summary-container"> <h3>Realized P&L Summary</h3> <table id="pl-summary-table"></table> </div>
-        <div id="ledger-container"> <h2>Transaction Ledger</h2> <div class="import-section"> <div class="import-container"> <h3>Import from CSV</h3> <label for="csv-file-input">Select a .csv file:</label> <input type="file" id="csv-file-input" accept=".csv"> <small>Format: date,ticker,exchange,type,quantity,price</small> </div> <div class="import-container"> <h3>Import from Screenshot (AI)</h3> <label for="screenshot-file-input">Select an image file:</label> <input type="file" id="screenshot-file-input" accept="image/*"> <button id="process-screenshot-btn">Process Screenshot</button> <small id="ai-status"></small> </div> </div> <div id="ai-confirmation-container" style="display: none;"> <h3>Review AI Results</h3> <p>Click on any cell to make corrections before saving.</p> <table id="ai-confirmation-table"> <thead> <tr> <th>Date</th> <th>Ticker</th> <th>Exchange</th> <th>Type</th> <th>Quantity</th> <th>Price</th> </tr> </thead> <tbody></tbody> </table> <div class="confirmation-actions"> <button id="approve-ai-btn">Approve & Save Transactions</button> <button id="cancel-ai-btn" class="delete-btn">Cancel</button> </div> </div> <table id="ledger-table"> <thead> <tr> <th data-sort="transaction_date">Date</th> <th data-sort="ticker">Ticker</th> <th data-sort="exchange">Exchange</th> <th data-sort="transaction_type">Type</th> <th data-sort="quantity">Quantity</th> <th data-sort="price">Price</th> <th>Actions</th> </tr> </thead> <tbody></tbody> </table> </div>
+        <div id="ledger-container"> <h2>Transaction Ledger</h2> <div class="import-section"> <div class="import-container"> <h3>Import from CSV</h3> <label for="csv-file-input">Select a .csv file:</label> <input type="file" id="csv-file-input" accept=".csv"> <small>Format: date,ticker,exchange,type,quantity,price</small> </div> <div class="import-container"> <h3>Import from Screenshot (AI)</h3> <label for="screenshot-file-input">Select an image file:</label> <input type="file" id="screenshot-file-input" accept="image/*"> <button id="process-screenshot-btn">Process Screenshot</button> <small id="ai-status"></small> </div> </div> <div id="ai-confirmation-container" style="display: none;"> <h3>Review AI Results</h3> <p>Click on any cell to make corrections before saving.</p> <table id="ai-confirmation-table"> <thead> <tr> <th>Date</th> <th>Ticker</th> <th>Exchange</th> <th>Type</th> <th class="numeric">Quantity</th> <th class="numeric">Price</th> </tr> </thead> <tbody></tbody> </table> <div class="confirmation-actions"> <button id="approve-ai-btn">Approve & Save Transactions</button> <button id="cancel-ai-btn" class="delete-btn">Cancel</button> </div> </div> <table id="ledger-table"> <thead> <tr> <th data-sort="transaction_date">Date</th> <th data-sort="ticker">Ticker</th> <th data-sort="exchange">Exchange</th> <th data-sort="transaction_type">Type</th> <th class="numeric" data-sort="quantity">Quantity</th> <th class="numeric" data-sort="price">Price</th> <th>Actions</th> </tr> </thead> <tbody></tbody> </table> </div>
     </div>
 
     <div id="settings-modal" class="modal">

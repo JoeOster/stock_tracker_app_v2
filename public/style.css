@@ -13,6 +13,7 @@ table{width:100%;border-collapse:collapse;min-width:1200px}
 #pl-summary-table, #snapshot-history-table {min-width:auto;margin:0 auto;width:auto}
 th,td{border:1px solid #ddd;padding:12px;text-align:left;white-space:nowrap}
 th{background-color:#ecf0f1;font-weight:700}
+th.numeric, td.numeric {text-align: right;}
 tbody tr:nth-child(even){background-color:#f9f9f9}
 #ledger-table thead th[data-sort]{cursor:pointer}
 #ledger-table thead th[data-sort]:hover{background-color:#dfe6e9}
