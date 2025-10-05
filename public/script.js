@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return isNegative ? `(${formattedNumber})` : formattedNumber;
     }
 
-    // --- MERGED API SCHEDULER ---
+    // MERGED API SCHEDULER
     const SCHEDULED_INTERVAL_MS = 30 * 60 * 1000;
     let nextApiCallTimestamp = 0;
     let marketOpenCalledForDay = '', marketCloseCalledForDay = '';
@@ -83,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const dayOfWeek = estTime.getDay();
             const todayStr = `${estTime.getFullYear()}-${estTime.getMonth()}-${estTime.getDate()}`;
 
-            // Reset all daily flags if the day has changed
             if (marketOpenCalledForDay !== todayStr) marketOpenCalledForDay = '';
             if (marketCloseCalledForDay !== todayStr) marketCloseCalledForDay = '';
             if (updateAt2300CalledForDay !== todayStr) updateAt2300CalledForDay = '';
@@ -94,13 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let triggerUpdate = false;
 
-            // --- Market Hours Logic ---
             if (isMarketHours) {
                 if (refreshPricesBtn.disabled === false) {
                     refreshPricesBtn.disabled = true;
                     refreshPricesBtn.textContent = 'Auto-Refreshing';
                 }
-
                 if (!marketOpenCalledForDay) {
                     console.log("Market is open! Triggering initial price update.");
                     triggerUpdate = true;
@@ -110,18 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log("30-minute scheduled update triggered.");
                     triggerUpdate = true;
                 }
-                
                 let secondsRemaining = Math.max(0, Math.round((nextApiCallTimestamp - Date.now()) / 1000));
                 apiTimerEl.textContent = `Next: ${new Date(secondsRemaining * 1000).toISOString().substr(14, 5)}`;
-
-            } else { // --- Outside Market Hours Logic ---
+            } else {
                 if (refreshPricesBtn.disabled === true && !isApiLimitReached) {
                     refreshPricesBtn.disabled = false;
                     refreshPricesBtn.textContent = 'Refresh Prices';
                 }
                 apiTimerEl.textContent = "Market Closed";
-                
-                // Market Close Trigger
                 if (isTradingDay && estHours >= 16 && !marketCloseCalledForDay) {
                     console.log("Market is closed! Triggering final price update.");
                     triggerUpdate = true;
@@ -129,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // --- Fixed Time Trigger Logic ---
             if (estHours === 23 && updateAt2300CalledForDay !== todayStr) {
                 console.log("Scheduled 23:00 EST update triggered.");
                 triggerUpdate = true;
@@ -141,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateAt0800CalledForDay = todayStr;
             }
 
-            // --- Execute Update ---
             if (triggerUpdate) {
                 updateAllPrices();
                 if (Date.now() >= nextApiCallTimestamp && isMarketHours) {
@@ -165,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getCurrentESTDateString() { const f = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }); const p = f.formatToParts(new Date()); return `${p.find(x=>x.type==='year').value}-${p.find(x=>x.type==='month').value}-${p.find(x=>x.type==='day').value}`; }
     function getTradingDays(c) { let d = []; let cd = new Date(getCurrentESTDateString() + 'T12:00:00Z'); while (d.length < c) { const dow = cd.getUTCDay(); if (dow > 0 && dow < 6) { d.push(cd.toISOString().split('T')[0]); } cd.setUTCDate(cd.getUTCDate() - 1); } return d.reverse(); }
     
-    // --- UI RENDERING FUNCTIONS (FULL IMPLEMENTATION) ---
+    // UI RENDERING FUNCTIONS
     function renderTabs() {
         tabsContainer.innerHTML = '';
         const tradingDays = getTradingDays(6);
@@ -185,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
         overviewTab.addEventListener('click', () => handleTabClick('overview', null));
         tabsContainer.appendChild(overviewTab);
     }
-
     async function renderDailyReport(date) { 
         const response = await fetch(`/api/positions/${date}`); 
         const data = await response.json();
@@ -239,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } 
         populatePricesFromCache(); 
     }
-
     async function renderLedger() {
         const response = await fetch('/api/transactions');
         allTransactions = await response.json();
@@ -268,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="actions-cell"><button class="modify-btn" data-id="${tx.id}">Edit</button><button class="delete-btn" data-id="${tx.id}">Delete</button></td>`;
         });
     }
-
     async function renderOverviewPage() { 
         const plResponse = await fetch('/api/realized_pl');
         const plData = await plResponse.json();
@@ -282,7 +270,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSnapshotHistory(allSnapshots);
         await renderLedger();
     }
-
     function renderSnapshotHistory(snapshots) { 
         snapshotHistoryTableBody.innerHTML = ''; 
         [...snapshots].reverse().forEach(s => { 
@@ -294,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="actions-cell"><button class="delete-btn" data-id="${s.id}" data-type="snapshot">Delete</button></td>`; 
         }); 
     }
-
     function renderAllTimeChart(snapshots) { if(allTimeChart) allTimeChart.destroy(); allTimeChart = createChart(allTimeChartCtx, snapshots); }
     function renderFiveDayChart(snapshots) { const fiveTradingDays = getTradingDays(5); const startDate = fiveTradingDays[0]; const endDate = getCurrentESTDateString(); const filteredSnapshots = snapshots.filter(s => s.snapshot_date >= startDate && s.snapshot_date <= endDate); if(fiveDayChart) fiveDayChart.destroy(); fiveDayChart = createChart(fiveDayChartCtx, filteredSnapshots); }
     function renderDateRangeChart(snapshots) { const start = chartStartDate.value, end = chartEndDate.value; let filteredSnapshots = snapshots; if (start && end) { filteredSnapshots = snapshots.filter(s => s.snapshot_date >= start && s.snapshot_date <= end); } if(dateRangeChart) dateRangeChart.destroy(); dateRangeChart = createChart(dateRangeChartCtx, filteredSnapshots); }
@@ -385,6 +371,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // EVENT LISTENERS
+    csvFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) { return; }
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const csv = event.target.result;
+            const lines = csv.split('\n').filter(line => line);
+            const transactions = [];
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                const columns = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (columns.length < 6) continue;
+                const [transaction_date, ticker, exchange, transaction_type, quantity, price] = columns.map(c => c.trim().replace(/"/g, ''));
+                if (transaction_date && ticker && exchange && transaction_type && !isNaN(parseFloat(quantity)) && !isNaN(parseFloat(price))) {
+                    transactions.push({ transaction_date, ticker, exchange, transaction_type, quantity: parseFloat(quantity), price: parseFloat(price) });
+                }
+            }
+            if (transactions.length > 0) {
+                try {
+                    const response = await fetch('/api/transactions/batch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(transactions)
+                    });
+                    const result = await response.json();
+                    if (!response.ok) { throw new Error(result.message || 'Failed to import transactions.'); }
+                    alert(result.message);
+                    if (currentView.type === 'overview') {
+                        await renderOverviewPage();
+                    }
+                } catch (error) {
+                    console.error('CSV Import Error:', error);
+                    alert(`Error importing CSV: ${error.message}`);
+                }
+            } else {
+                alert('No valid transactions found in the selected file. Please ensure the format is: date,ticker,exchange,type,quantity,price');
+            }
+            e.target.value = '';
+        };
+        reader.readAsText(file);
+    });
     transactionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = {
@@ -495,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (confirm('Are you sure you want to delete this transaction?')) {
                     await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-                    handleTabClick(currentView.type, currentView.value); // Refresh current view
+                    handleTabClick(currentView.type, currentView.value);
                 }
             }
         }
