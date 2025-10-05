@@ -60,34 +60,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const absoluteValue = Math.abs(number);
         let options = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
         if (!isCurrency) {
-            options.maximumFractionDigits = 5; // --- THIS IS THE FIX (was a colon) ---
+            options.maximumFractionDigits = 5;
         }
         let formattedNumber = absoluteValue.toLocaleString('en-US', options);
         if (isCurrency) { formattedNumber = '$' + formattedNumber; }
         return isNegative ? `(${formattedNumber})` : formattedNumber;
     }
 
-    // API TIMER & SCHEDULER
+    // --- MERGED API SCHEDULER ---
     const SCHEDULED_INTERVAL_MS = 30 * 60 * 1000;
     let nextApiCallTimestamp = 0;
     let marketOpenCalledForDay = '', marketCloseCalledForDay = '';
-    
+    let updateAt2300CalledForDay = '';
+    let updateAt0800CalledForDay = '';
+
     function initializeScheduler() {
         setInterval(() => {
             const now = new Date();
             const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-            const estHours = estTime.getHours(), estMinutes = estTime.getMinutes(), dayOfWeek = estTime.getDay();
+            const estHours = estTime.getHours();
+            const estMinutes = estTime.getMinutes();
+            const dayOfWeek = estTime.getDay();
             const todayStr = `${estTime.getFullYear()}-${estTime.getMonth()}-${estTime.getDate()}`;
-            if (marketOpenCalledForDay !== todayStr) { marketOpenCalledForDay = ''; }
-            if (marketCloseCalledForDay !== todayStr) { marketCloseCalledForDay = ''; }
+
+            // Reset all daily flags if the day has changed
+            if (marketOpenCalledForDay !== todayStr) marketOpenCalledForDay = '';
+            if (marketCloseCalledForDay !== todayStr) marketCloseCalledForDay = '';
+            if (updateAt2300CalledForDay !== todayStr) updateAt2300CalledForDay = '';
+            if (updateAt0800CalledForDay !== todayStr) updateAt0800CalledForDay = '';
+
             const isTradingDay = dayOfWeek > 0 && dayOfWeek < 6;
-            const isMarketHours = (estHours > 9 || (estHours === 9 && estMinutes >= 30)) && estHours < 16;
+            const isMarketHours = isTradingDay && (estHours > 9 || (estHours === 9 && estMinutes >= 30)) && estHours < 16;
+            
             let triggerUpdate = false;
-            if (isTradingDay && isMarketHours) {
+
+            // --- Market Hours Logic ---
+            if (isMarketHours) {
                 if (refreshPricesBtn.disabled === false) {
                     refreshPricesBtn.disabled = true;
                     refreshPricesBtn.textContent = 'Auto-Refreshing';
                 }
+
                 if (!marketOpenCalledForDay) {
                     console.log("Market is open! Triggering initial price update.");
                     triggerUpdate = true;
@@ -97,23 +110,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log("30-minute scheduled update triggered.");
                     triggerUpdate = true;
                 }
+                
                 let secondsRemaining = Math.max(0, Math.round((nextApiCallTimestamp - Date.now()) / 1000));
-                apiTimerEl.textContent = new Date(secondsRemaining * 1000).toISOString().substr(14, 5);
-            } else {
+                apiTimerEl.textContent = `Next: ${new Date(secondsRemaining * 1000).toISOString().substr(14, 5)}`;
+
+            } else { // --- Outside Market Hours Logic ---
                 if (refreshPricesBtn.disabled === true && !isApiLimitReached) {
                     refreshPricesBtn.disabled = false;
                     refreshPricesBtn.textContent = 'Refresh Prices';
                 }
                 apiTimerEl.textContent = "Market Closed";
+                
+                // Market Close Trigger
                 if (isTradingDay && estHours >= 16 && !marketCloseCalledForDay) {
                     console.log("Market is closed! Triggering final price update.");
                     triggerUpdate = true;
                     marketCloseCalledForDay = todayStr;
                 }
             }
+            
+            // --- Fixed Time Trigger Logic ---
+            if (estHours === 23 && updateAt2300CalledForDay !== todayStr) {
+                console.log("Scheduled 23:00 EST update triggered.");
+                triggerUpdate = true;
+                updateAt2300CalledForDay = todayStr;
+            }
+            if (estHours === 8 && updateAt0800CalledForDay !== todayStr) {
+                console.log("Scheduled 08:00 EST update triggered.");
+                triggerUpdate = true;
+                updateAt0800CalledForDay = todayStr;
+            }
+
+            // --- Execute Update ---
             if (triggerUpdate) {
                 updateAllPrices();
-                if (Date.now() >= nextApiCallTimestamp) {
+                if (Date.now() >= nextApiCallTimestamp && isMarketHours) {
                     nextApiCallTimestamp = Date.now() + SCHEDULED_INTERVAL_MS;
                 }
             }
@@ -134,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getCurrentESTDateString() { const f = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }); const p = f.formatToParts(new Date()); return `${p.find(x=>x.type==='year').value}-${p.find(x=>x.type==='month').value}-${p.find(x=>x.type==='day').value}`; }
     function getTradingDays(c) { let d = []; let cd = new Date(getCurrentESTDateString() + 'T12:00:00Z'); while (d.length < c) { const dow = cd.getUTCDay(); if (dow > 0 && dow < 6) { d.push(cd.toISOString().split('T')[0]); } cd.setUTCDate(cd.getUTCDate() - 1); } return d.reverse(); }
     
-    // UI RENDERING FUNCTIONS
+    // --- UI RENDERING FUNCTIONS (FULL IMPLEMENTATION) ---
     function renderTabs() {
         tabsContainer.innerHTML = '';
         const tradingDays = getTradingDays(6);
@@ -333,7 +364,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tableContainer.style.display = 'block';
             overviewContainer.style.display = 'none';
             await renderDailyReport(value);
-            await updateAllPrices();
         } else {
             tableContainer.style.display = 'none';
             overviewContainer.style.display = 'block';
