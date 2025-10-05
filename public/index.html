@@ -125,9 +125,30 @@
         </table>
     </div>
 
-    <div id="settings-modal" class="modal">
-        <div class="modal-content"> <span class="close-button">&times;</span> <h2>Settings</h2> <div class="settings-input-group"> <label for="api-key-input">Alpha Vantage API Key</label> <input type="password" id="api-key-input" placeholder="Enter your API key"> </div> <div class="settings-input-group"> <label for="take-profit-percent">Suggest Profit %</label> <input type="number" id="take-profit-percent" step="any" placeholder="e.g., 8"> </div> <div class="settings-input-group"> <label for="stop-loss-percent">Suggest Loss %</label> <input type="number" id="stop-loss-percent" step="any" placeholder="e.g., 8"> </div> <button id="save-settings-button">Save Settings</button> </div>
+<div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Settings</h2>
+            <div class="settings-input-group">
+                <label for="finnhub-api-key-input">Finnhub API Key (Primary)</label>
+                <input type="password" id="finnhub-api-key-input" placeholder="Enter Finnhub API Key">
+            </div>
+            <div class="settings-input-group">
+                <label for="alpha-vantage-api-key-input">Alpha Vantage API Key (Backup)</label>
+                <input type="password" id="alpha-vantage-api-key-input" placeholder="Enter Alpha Vantage API Key">
+            </div>
+            <div class="settings-input-group">
+                <label for="take-profit-percent">Suggest Profit %</label>
+                <input type="number" id="take-profit-percent" step="any" placeholder="e.g., 8">
+            </div>
+            <div class="settings-input-group">
+                <label for="stop-loss-percent">Suggest Loss %</label>
+                <input type="number" id="stop-loss-percent" step="any" placeholder="e.g., 8">
+            </div>
+            <button id="save-settings-button">Save Settings</button>
+        </div>
     </div>
+
     <div id="edit-modal" class="modal">
         <div class="modal-content"> <span class="close-button">&times;</span> <h2>Edit Transaction</h2> <form id="edit-transaction-form"> <input type="hidden" id="edit-id"> <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div> <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div> <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div> <div class="form-group"><label for="edit-type">Type</label><select id="edit-type"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div> <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div> <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div> <fieldset> <legend>Limit Orders</legend> <div class="form-group"><label for="edit-limit-price-up">Take Profit Limit ($)</label><input type="number" id="edit-limit-price-up" step="any"></div> <div class="form-group"><label for="edit-limit-price-down">Stop Loss Limit ($)</label><input type="number" id="edit-limit-price-down" step="any"></div> <div class="form-group"><label for="edit-limit-expiration">Expiration</label><select id="edit-limit-expiration"></select></div> </fieldset> <button type="submit">Save Changes</button> </form> </div>
     </div>
@@ -139,6 +160,10 @@
     </div>
 
     <div id="toast-container"></div>
-    <script src="script.js" defer></script>
+
+    <script src="ui.js" defer></script>
+    <script src="api.js" defer></script>
+    <script src="scheduler.js" defer></script>
+    <script src="app.js" defer></script>
 </body>
 </html>
