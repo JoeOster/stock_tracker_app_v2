@@ -38,8 +38,16 @@ tbody tr:nth-child(even){background-color:#f9f9f9}
 .tab{padding:10px 15px;cursor:pointer;border:1px solid transparent;border-bottom:none;margin-bottom:-2px}
 .tab:hover{background-color:#f0f0f0}
 .tab.active{border-color:#ccc;border-bottom:2px solid #fff;background-color:#fff;border-radius:4px 4px 0 0;font-weight:700}
-.tab.pl-tab{margin-left:auto;border-color:#27ae60;color:#27ae60}
-.tab.pl-tab.active{background-color:#27ae60;color:#fff}
+/* Replace .tab.pl-tab and .tab.pl-tab.active with these */
+.tab.master-tab {
+    border-color: #3498db;
+    color: #3498db;
+}
+
+.tab.master-tab.active {
+    background-color: #3498db;
+    color: #fff;
+}
 .form-group{text-align:left;margin-bottom:10px}.form-group label{display:block;margin-bottom:5px;font-weight:bold}
 .form-group input,.form-group select{width:100%;padding:8px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px}
 .snapshot-container{display:flex;flex-wrap:wrap;gap:30px;margin-bottom:40px}.snapshot-form-container,.snapshot-history-container{flex:1;min-width:400px}
