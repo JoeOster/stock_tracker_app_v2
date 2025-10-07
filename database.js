@@ -45,7 +45,7 @@ async function runMigrations(db) {
         } catch (error) {
             await db.exec('ROLLBACK');
             console.error(`Failed to apply migration ${migrationFile}:`, error);
-            throw error; // Stop the server from starting if a migration fails
+            throw error;
         }
     }
 }
@@ -57,8 +57,6 @@ async function setup() {
         driver: sqlite3.Database
     });
 
-    // Create base tables if they don't exist
-    // This now includes the limit order columns from the first migration
     await db.exec(`
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +68,10 @@ async function setup() {
             transaction_date TEXT NOT NULL,
             limit_price_up REAL,
             limit_price_down REAL,
-            limit_expiration TEXT
+            limit_expiration TEXT,
+            parent_buy_id INTEGER,
+            original_quantity REAL,
+            quantity_remaining REAL
         )
     `);
 
@@ -84,7 +85,23 @@ async function setup() {
         )
     `);
     
-    // Run migrations to apply any new schema changes
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS exchanges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        )
+    `);
+
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS historical_prices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            date TEXT NOT NULL,
+            close_price REAL NOT NULL,
+            UNIQUE(ticker, date)
+        )
+    `);
+
     await runMigrations(db);
 
     return db;

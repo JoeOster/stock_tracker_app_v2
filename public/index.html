@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Stock Tracker</title>
     <link rel="stylesheet" href="style.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
 </head>
 <body>
     <div class="header">
@@ -20,63 +18,41 @@
 
     <div id="tabs-container" class="tabs"></div>
 
-    <div id="add-transaction-container" class="container" style="display: none;">
-        <h2>Log a New Transaction</h2>
-        <form id="add-transaction-form">
-            <input type="date" id="transaction-date" required>
-            <input type="text" id="ticker" placeholder="Ticker" required>
-            <select id="exchange" required>
-                <option value="" disabled selected>Select Exchange</option>
-                <option value="Fidelity">Fidelity</option>
-                <option value="Robinhood">Robinhood</option>
-                <option value="E-Trade">E-Trade</option>
-                <option value="Other">Other</option>
-            </select>
-            <select id="transaction-type">
-                <option value="BUY">BUY</option>
-                <option value="SELL">SELL</option>
-            </select>
-            <input type="number" id="quantity" placeholder="Quantity" step="any" min="0.00001" required>
-            <input type="number" id="price" placeholder="Price Per Share" step="any" min="0.01" required>
-            <button type="submit">Log Transaction</button>
-            <details class="advanced-options">
-                <summary>Advanced Options (Set Limit Orders)</summary>
-                <div class="form-grid">
-                    <input type="number" id="limit-price-up" placeholder="Take Profit Limit ($)" step="any" min="0">
-                    <input type="number" id="limit-price-down" placeholder="Stop Loss Limit ($)" step="any" min="0">
-                    <select id="limit-expiration">
-                        <option value="">Expiration...</option>
-                        <option value="DAY">Good for Day</option>
-                        <option value="GTC">Good 'til Canceled (GTC)</option>
-                    </select>
-                </div>
-            </details>
-        </form>
+    <div class="custom-date-container">
+        <label for="custom-date-picker">View a specific date:</label>
+        <input type="date" id="custom-date-picker">
     </div>
 
     <div id="daily-report-container" class="container" style="display: none;">
         <h2 id="table-title"></h2>
+        <div id="daily-performance-summary"></div>
         <table id="stock-table">
             <thead>
                 <tr><th colspan="10" style="text-align:center; background-color:#f8f9f9;">Daily Transaction Log</th></tr>
                 <tr>
-                    <th>Ticker</th><th>Exchange</th><th>Action</th><th class="numeric">Qty</th><th class="numeric">Price</th><th class="numeric">Realized P/L</th>
+                    <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Action</th><th class="numeric" data-sort="quantity" data-type="numeric">Qty</th><th class="numeric" data-sort="price" data-type="numeric">Price</th><th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
                     <th class="numeric">Suggest Profit</th><th class="numeric">Suggest Loss</th><th class="numeric">My Limit Up</th><th class="numeric">My Limit Down</th>
                 </tr>
             </thead>
             <tbody id="log-body"></tbody>
             <thead>
-                <tr><th colspan="7" style="text-align:center; background-color:#e8f6f3;" id="positions-summary-title">End of Day Open Positions</th></tr>
+                <tr><th colspan="9" style="text-align:center; background-color:#e8f6f3;" id="positions-summary-title">Open Lots</th></tr>
                 <tr>
-                    <th>Ticker</th><th>Exchange</th><th class="numeric">Open Position</th><th class="numeric">Cost Basis</th>
-                    <th class="numeric">Current Price</th><th class="numeric">Current Value</th><th class="numeric">Unrealized P/L</th>
+                    <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="purchase_date">Purchase Date</th><th class="numeric" data-sort="cost_basis" data-type="numeric">Cost Basis</th>
+                    <th class="numeric" data-sort="original_quantity" data-type="numeric">Orig. Qty</th><th class="numeric" data-sort="quantity_remaining" data-type="numeric">Rem. Qty</th><th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th><th class="numeric" data-sort="unrealized-pl" data-type="numeric">Unrealized P/L</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody id="positions-summary-body"></tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7" style="text-align: right; font-weight: bold;">Total Unrealized P/L</td>
+                    <td id="unrealized-pl-total" class="numeric">--</td>
+                    <td></td>
+                </tr>
+            </tfoot>
         </table>
         <div id="portfolio-summary">
             <button id="refresh-prices-btn">Refresh Prices</button>
-            <h3>Total Open Value: <span>$0.00</span></h3>
         </div>
     </div>
     
@@ -93,31 +69,53 @@
                 <tbody id="portfolio-overview-body"></tbody>
             </table>
         </div>
-        <div class="snapshot-container">
-            <div class="snapshot-form-container"> <h3>Log Account Value Snapshot</h3> <form id="add-snapshot-form"> <input type="date" id="snapshot-date" required> <select id="snapshot-exchange" required></select> <input type="number" id="snapshot-value" placeholder="Total Account Value" step="any" required> <button type="submit">Save Snapshot</button> </form> </div>
-            <div class="snapshot-history-container"> <h3>Snapshot History</h3> <table id="snapshot-history-table"> <thead> <tr> <th>Date</th> <th>Exchange</th> <th class="numeric">Value</th> <th>Actions</th> </tr> </thead> <tbody></tbody> </table> </div>
-        </div>
         <div class="pl-summary-container"> <h3>Realized P&L Summary</h3> <table id="pl-summary-table"></table> </div>
     </div>
 
     <div id="ledger-page-container" class="container" style="display: none;">
         <h2>Transaction Ledger</h2>
-        <div class="ledger-filters">
-            <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
-            <div class="date-range-inputs"> <label for="ledger-filter-start">From:</label> <input type="date" id="ledger-filter-start"> <label for="ledger-filter-end">To:</label> <input type="date" id="ledger-filter-end"> </div>
-            <button id="ledger-clear-filters-btn">Clear Filters</button>
+        <div id="add-transaction-container" class="container">
+            <h2>Log a New Transaction</h2>
+            <form id="add-transaction-form">
+                <input type="date" id="transaction-date" required>
+                <input type="text" id="ticker" placeholder="Ticker" required>
+                <select id="exchange" required>
+                    <option value="" disabled selected>Select Exchange</option>
+                </select>
+                <select id="transaction-type">
+                    <option value="BUY">BUY</option>
+                    <option value="SELL">SELL</option>
+                </select>
+                <input type="number" id="quantity" placeholder="Quantity" step="any" min="0.00001" required>
+                <input type="number" id="price" placeholder="Price Per Share" step="any" min="0.01" required>
+                <button type="submit">Log Transaction</button>
+                <details class="advanced-options">
+                    <summary>Advanced Options (Set Limit Orders)</summary>
+                    <div class="form-grid">
+                        <input type="number" id="limit-price-up" placeholder="Take Profit Limit ($)" step="any" min="0">
+                        <input type="number" id="limit-price-down" placeholder="Stop Loss Limit ($)" step="any" min="0">
+                        <select id="limit-expiration"></select>
+                    </div>
+                </details>
+            </form>
         </div>
-        <div class="import-section">
-            <div class="import-container"> <h3>Import from CSV</h3> <label for="csv-file-input">Select a .csv file:</label> <input type="file" id="csv-file-input" accept=".csv"> <small>Format: date,ticker,exchange,type,quantity,price</small> </div>
-            <div class="import-container"> <h3>Import from Screenshot (AI)</h3> <label for="screenshot-file-input">Select an image file:</label> <input type="file" id="screenshot-file-input" accept="image/*"> <button id="process-screenshot-btn">Process Screenshot</button> <small id="ai-status"></small> </div>
-        </div>
-        <div id="ai-confirmation-container" style="display: none;">
-            <h3>Review AI Results</h3> <p>Click on any cell to make corrections before saving.</p>
-            <table id="ai-confirmation-table">
-                <thead><tr><th>Date</th><th>Ticker</th><th>Exchange</th><th>Type</th><th class="numeric">Quantity</th><th class="numeric">Price</th></tr></thead>
-                <tbody></tbody>
-            </table>
-            <div class="confirmation-actions"> <button id="approve-ai-btn">Approve & Save</button> <button id="cancel-ai-btn" class="delete-btn">Cancel</button> </div>
+        <div class="ledger-controls">
+            <div class="ledger-filters">
+                <h3>Filter Transactions</h3>
+                <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
+                <div class="date-range-inputs">
+                    <label for="ledger-filter-start">From:</label><input type="date" id="ledger-filter-start">
+                    <label for="ledger-filter-end">To:</label><input type="date" id="ledger-filter-end">
+                </div>
+                <button id="ledger-clear-filters-btn">Clear Filters</button>
+            </div>
+            <div class="import-section">
+                <h3>Import from CSV</h3>
+                <label for="csv-file-input">Select a .csv file:</label>
+                <input type="file" id="csv-file-input" accept=".csv">
+                <button id="import-csv-btn">Import CSV</button>
+                <small>Format: date,ticker,exchange,type,quantity,price</small>
+            </div>
         </div>
         <table id="ledger-table">
             <thead><tr><th data-sort="transaction_date">Date</th><th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Type</th><th class="numeric" data-sort="quantity">Quantity</th><th class="numeric" data-sort="price">Price</th><th>Actions</th></tr></thead>
@@ -125,18 +123,12 @@
         </table>
     </div>
 
-<div id="settings-modal" class="modal">
+    <div id="toast-container"></div>
+    
+    <div id="settings-modal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h2>Settings</h2>
-            <div class="settings-input-group">
-                <label for="finnhub-api-key-input">Finnhub API Key (Primary)</label>
-                <input type="password" id="finnhub-api-key-input" placeholder="Enter Finnhub API Key">
-            </div>
-            <div class="settings-input-group">
-                <label for="alpha-vantage-api-key-input">Alpha Vantage API Key (Backup)</label>
-                <input type="password" id="alpha-vantage-api-key-input" placeholder="Enter Alpha Vantage API Key">
-            </div>
             <div class="settings-input-group">
                 <label for="take-profit-percent">Suggest Profit %</label>
                 <input type="number" id="take-profit-percent" step="any" placeholder="e.g., 8">
@@ -145,6 +137,24 @@
                 <label for="stop-loss-percent">Suggest Loss %</label>
                 <input type="number" id="stop-loss-percent" step="any" placeholder="e.g., 8">
             </div>
+            <hr>
+            <div class="settings-input-group">
+                <label for="market-hours-interval">Market Hours Refresh (min)</label>
+                <input type="number" id="market-hours-interval" step="1" min="1" placeholder="e.g., 2">
+            </div>
+            <div class="settings-input-group">
+                <label for="after-hours-interval">After Hours Refresh (min)</label>
+                <input type="number" id="after-hours-interval" step="1" min="5" placeholder="e.g., 15">
+            </div>
+            <hr>
+            <div class="exchange-management-container">
+                <h3>Manage Exchanges</h3>
+                <ul id="exchange-list"></ul>
+                <div class="add-exchange-form">
+                    <input type="text" id="new-exchange-name" placeholder="New Exchange Name">
+                    <button id="add-exchange-btn">Add</button>
+                </div>
+            </div>
             <button id="save-settings-button">Save Settings</button>
         </div>
     </div>
@@ -152,14 +162,42 @@
     <div id="edit-modal" class="modal">
         <div class="modal-content"> <span class="close-button">&times;</span> <h2>Edit Transaction</h2> <form id="edit-transaction-form"> <input type="hidden" id="edit-id"> <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div> <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div> <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div> <div class="form-group"><label for="edit-type">Type</label><select id="edit-type"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div> <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div> <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div> <fieldset> <legend>Limit Orders</legend> <div class="form-group"><label for="edit-limit-price-up">Take Profit Limit ($)</label><input type="number" id="edit-limit-price-up" step="any"></div> <div class="form-group"><label for="edit-limit-price-down">Stop Loss Limit ($)</label><input type="number" id="edit-limit-price-down" step="any"></div> <div class="form-group"><label for="edit-limit-expiration">Expiration</label><select id="edit-limit-expiration"></select></div> </fieldset> <button type="submit">Save Changes</button> </form> </div>
     </div>
+
     <div id="no-activity-modal" class="modal">
         <div class="modal-content"> <span class="close-button">&times;</span> <h2>No Transactions Logged Today</h2> <p>You haven't logged any buy or sell transactions for today, a trading day.</p> <div class="confirm-group"> <input type="checkbox" id="confirm-no-activity"> <label for="confirm-no-activity">I can confirm I had no activity today.</label> </div> <button id="confirm-no-activity-btn">Dismiss for Today</button> </div>
     </div>
+
     <div id="chart-zoom-modal" class="modal">
         <div class="modal-content modal-large"> <span class="close-button">&times;</span> <canvas id="zoomed-chart"></canvas> </div>
     </div>
 
-    <div id="toast-container"></div>
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="confirm-modal-title">Confirm Action</h2>
+            <p id="confirm-modal-body">Are you sure you want to proceed?</p>
+            <div class="confirmation-actions" style="margin-top: 20px;">
+                <button id="confirm-modal-confirm-btn" class="delete-btn">Confirm</button>
+                <button id="confirm-modal-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sell-from-position-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Sell from Position</h2>
+            <form id="sell-from-position-form">
+                <input type="hidden" id="sell-parent-buy-id">
+                <div class="form-group"><label>Ticker</label><p id="sell-ticker-display" class="form-static-text"></p></div>
+                <div class="form-group"><label>Exchange</label><p id="sell-exchange-display" class="form-static-text"></p></div>
+                <div class="form-group"><label for="sell-quantity">Quantity to Sell</label><input type="number" id="sell-quantity" step="any" required min="0.00001"></div>
+                 <div class="form-group"><label for="sell-price">Price Per Share</label><input type="number" id="sell-price" step="any" required min="0.01"></div>
+                <div class="form-group"><label for="sell-date">Transaction Date</label><input type="date" id="sell-date" required></div>
+                <button type="submit">Confirm Sale</button>
+            </form>
+        </div>
+    </div>
+
 
     <script src="ui.js" defer></script>
     <script src="api.js" defer></script>
