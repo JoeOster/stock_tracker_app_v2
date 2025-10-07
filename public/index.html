@@ -10,9 +10,7 @@
 <body>
     <div class="header">
         <h1>Live Stock Tracker</h1>
-        <div id="api-timer-container">
-            Next Update: <span id="api-timer">--:--</span>
-        </div>
+        <div id="api-timer-container">Next Update: <span id="api-timer">--:--</span></div>
         <button id="settings-btn" title="Settings">⚙️</button>
     </div>
 
@@ -36,18 +34,23 @@
             </thead>
             <tbody id="log-body"></tbody>
             <thead>
-                <tr><th colspan="9" style="text-align:center; background-color:#e8f6f3;" id="positions-summary-title">Open Lots</th></tr>
+                <tr><th colspan="11" style="text-align:center; background-color:#e8f6f3;" id="positions-summary-title">Open Lots</th></tr>
                 <tr>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="purchase_date">Purchase Date</th><th class="numeric" data-sort="cost_basis" data-type="numeric">Cost Basis</th>
-                    <th class="numeric" data-sort="original_quantity" data-type="numeric">Orig. Qty</th><th class="numeric" data-sort="quantity_remaining" data-type="numeric">Rem. Qty</th><th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th><th class="numeric" data-sort="unrealized-pl" data-type="numeric">Unrealized P/L</th><th>Actions</th>
+                    <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Rem. Qty</th><th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
+                    <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($)</th>
+                    <th class="numeric" data-sort="unrealized-pl-percent" data-type="numeric">Unrealized P/L (%)</th>
+                    <th class="numeric">Limit Up</th>
+                    <th class="numeric">Limit Down</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="positions-summary-body"></tbody>
             <tfoot>
                 <tr>
-                    <td colspan="7" style="text-align: right; font-weight: bold;">Total Unrealized P/L</td>
+                    <td colspan="6" style="text-align: right; font-weight: bold;">Total Unrealized P/L</td>
                     <td id="unrealized-pl-total" class="numeric">--</td>
-                    <td></td>
+                    <td colspan="4"></td>
                 </tr>
             </tfoot>
         </table>
@@ -59,18 +62,40 @@
     <div id="charts-container" class="container" style="display: none;">
         <div class="chart-grid">
             <div class="chart-container"> <h2>All Time Value</h2> <canvas id="all-time-chart" class="zoomable-chart"></canvas> </div>
-            <div class="chart-container"> <h2>Recent Activity</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div>
+            <div class="chart-container"> <h2>Past Five Day Report</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div>
             <div class="chart-container"> <div class="date-range-header"> <h2>Date Range</h2> <div class="date-range-inputs"> <input type="date" id="chart-start-date"> <span>to</span> <input type="date" id="chart-end-date"> </div> </div> <canvas id="date-range-chart" class="zoomable-chart"></canvas> </div>
         </div>
         <div class="portfolio-overview-container container">
             <h2>Portfolio Overview</h2>
-            <table id="portfolio-overview-table">
-                <thead><tr><th>Ticker</th><th class="numeric">Total Quantity</th><th class="numeric">Avg. Cost Basis</th><th class="numeric">Current Price</th><th class="numeric">Total Value</th><th class="numeric">Total Unrealized P/L</th></tr></thead>
-                <tbody id="portfolio-overview-body"></tbody>
-            </table>
+<table id="portfolio-overview-table">
+    <thead>
+        <tr>
+            <th>Ticker</th>
+            <th class="numeric">Total Quantity</th>
+            <th class="numeric">Avg. Cost Basis</th>
+            <th class="numeric">Current Price</th>
+            <th class="numeric">Day's Change ($)</th> <th class="numeric">Day's Change (%)</th> <th class="numeric">Total Value</th>
+            <th class="numeric">Total Unrealized P/L</th>
+        </tr>
+    </thead>
+    <tbody id="portfolio-overview-body"></tbody>
+</table>
         </div>
-        <div class="pl-summary-container"> <h3>Realized P&L Summary</h3> <table id="pl-summary-table"></table> </div>
+<div class="pl-summary-grid">
+    <div class="pl-summary-container">
+        <h3>Lifetime Realized P&L Summary</h3>
+        <table id="pl-summary-table"></table>
     </div>
+    <div class="pl-summary-container">
+        <h3>Realized P&L by Date Range</h3>
+        <div class="date-range-inputs">
+            <input type="date" id="pl-start-date">
+            <span>to</span>
+            <input type="date" id="pl-end-date">
+        </div>
+        <table id="pl-summary-ranged-table"></table>
+    </div>
+</div>    </div>
 
     <div id="ledger-page-container" class="container" style="display: none;">
         <h2>Transaction Ledger</h2>
@@ -93,8 +118,9 @@
                     <summary>Advanced Options (Set Limit Orders)</summary>
                     <div class="form-grid">
                         <input type="number" id="limit-price-up" placeholder="Take Profit Limit ($)" step="any" min="0">
+                        <input type="date" id="limit-up-expiration">
                         <input type="number" id="limit-price-down" placeholder="Stop Loss Limit ($)" step="any" min="0">
-                        <select id="limit-expiration"></select>
+                        <input type="date" id="limit-down-expiration">
                     </div>
                 </details>
             </form>
@@ -117,6 +143,14 @@
                 <small>Format: date,ticker,exchange,type,quantity,price</small>
             </div>
         </div>
+        <div class="ledger-controls">
+            </div>
+        
+        <div id="ledger-summary-container"></div>
+
+        <table id="ledger-table">
+            </table>
+    </div>
         <table id="ledger-table">
             <thead><tr><th data-sort="transaction_date">Date</th><th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Type</th><th class="numeric" data-sort="quantity">Quantity</th><th class="numeric" data-sort="price">Price</th><th>Actions</th></tr></thead>
             <tbody></tbody>
@@ -159,12 +193,46 @@
         </div>
     </div>
 
-    <div id="edit-modal" class="modal">
-        <div class="modal-content"> <span class="close-button">&times;</span> <h2>Edit Transaction</h2> <form id="edit-transaction-form"> <input type="hidden" id="edit-id"> <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div> <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div> <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div> <div class="form-group"><label for="edit-type">Type</label><select id="edit-type"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div> <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div> <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div> <fieldset> <legend>Limit Orders</legend> <div class="form-group"><label for="edit-limit-price-up">Take Profit Limit ($)</label><input type="number" id="edit-limit-price-up" step="any"></div> <div class="form-group"><label for="edit-limit-price-down">Stop Loss Limit ($)</label><input type="number" id="edit-limit-price-down" step="any"></div> <div class="form-group"><label for="edit-limit-expiration">Expiration</label><select id="edit-limit-expiration"></select></div> </fieldset> <button type="submit">Save Changes</button> </form> </div>
-    </div>
+<div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 id="edit-modal-title">Edit Transaction</h2>
+            <form id="edit-transaction-form">
+                <input type="hidden" id="edit-id">
 
-    <div id="no-activity-modal" class="modal">
-        <div class="modal-content"> <span class="close-button">&times;</span> <h2>No Transactions Logged Today</h2> <p>You haven't logged any buy or sell transactions for today, a trading day.</p> <div class="confirm-group"> <input type="checkbox" id="confirm-no-activity"> <label for="confirm-no-activity">I can confirm I had no activity today.</label> </div> <button id="confirm-no-activity-btn">Dismiss for Today</button> </div>
+                <fieldset id="edit-core-fields">
+                    <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div>
+                    <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div>
+                    <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div>
+                    <div class="form-group"><label for="edit-type">Type</label><select id="edit-type"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
+                    <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div>
+                    <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div>
+                </fieldset>
+            
+                <fieldset id="edit-limit-fields">
+                    <legend>Limit Orders</legend>
+                    <div class="form-group">
+                        <label for="edit-limit-price-up">Take Profit Limit ($)</label>
+                        <input type="number" id="edit-limit-price-up" step="any">
+                    </div>
+                    <div class="form-group form-group-with-button">
+                        <label for="edit-limit-up-expiration">Take Profit Expiration</label>
+                        <input type="date" id="edit-limit-up-expiration">
+                        <button type="button" class="clear-limit-btn" data-target="up" title="Clear Take Profit Limit">&times;</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-limit-price-down">Stop Loss Limit ($)</label>
+                        <input type="number" id="edit-limit-price-down" step="any">
+                    </div>
+                    <div class="form-group form-group-with-button">
+                        <label for="edit-limit-down-expiration">Stop Loss Expiration</label>
+                        <input type="date" id="edit-limit-down-expiration">
+                        <button type="button" class="clear-limit-btn" data-target="down" title="Clear Stop Loss Limit">&times;</button>
+                    </div>
+                </fieldset> 
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
     </div>
 
     <div id="chart-zoom-modal" class="modal">
@@ -198,10 +266,6 @@
         </div>
     </div>
 
-
-    <script src="ui.js" defer></script>
-    <script src="api.js" defer></script>
-    <script src="scheduler.js" defer></script>
-    <script src="app.js" defer></script>
+    <script type="module" src="app-main.js" defer></script>
 </body>
 </html>

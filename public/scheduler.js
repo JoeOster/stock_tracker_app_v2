@@ -1,13 +1,16 @@
-// scheduler.js - v2.3
-let nextApiCallTimestamp = 0;
+// public/scheduler.js
+import { updatePricesForView } from './api.js';
 
-function initializeScheduler(state) {
+let nextApiCallTimestamp = 0; // This variable holds the timestamp for the next scheduled API call.
+
+export function initializeScheduler(state) {
     const refreshPricesBtn = document.getElementById('refresh-prices-btn');
     const apiTimerEl = document.getElementById('api-timer');
 
     setInterval(async () => {
         if (state.currentView.type !== 'date' || state.activityMap.size === 0) {
             apiTimerEl.textContent = "Auto-refresh paused";
+            if (refreshPricesBtn) refreshPricesBtn.disabled = false;
             return;
         }
 
@@ -29,14 +32,14 @@ function initializeScheduler(state) {
         }
 
         if (isMarketHours) {
-            if (!refreshPricesBtn.disabled) {
+            if (refreshPricesBtn && !refreshPricesBtn.disabled) {
                 refreshPricesBtn.disabled = true;
                 refreshPricesBtn.textContent = 'Auto-Refreshing';
             }
             let secondsRemaining = Math.max(0, Math.round((nextApiCallTimestamp - Date.now()) / 1000));
             apiTimerEl.textContent = `Next: ${new Date(secondsRemaining * 1000).toISOString().substr(14, 5)}`;
         } else {
-             if (refreshPricesBtn.disabled) {
+             if (refreshPricesBtn && refreshPricesBtn.disabled) {
                 refreshPricesBtn.disabled = false;
                 refreshPricesBtn.textContent = 'Refresh Prices';
             }
