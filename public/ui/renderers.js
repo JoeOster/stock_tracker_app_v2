@@ -38,7 +38,7 @@ export function renderTabs(currentView) {
 export function renderLedger(allTransactions, ledgerSort) {
     const ledgerTableBody = document.querySelector('#ledger-table tbody');
     if(!ledgerTableBody) return;
-
+    
     // --- Filter Logic (Unchanged) ---
     const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
     const ledgerFilterStart = document.getElementById('ledger-filter-start');
@@ -53,19 +53,17 @@ export function renderLedger(allTransactions, ledgerSort) {
         return tickerMatch && startDateMatch && endDateMatch;
     });
 
-    // --- Summary Calculation Logic (New) ---
+    // --- NEW: Summary Calculation Logic ---
     const summaryContainer = document.getElementById('ledger-summary-container');
     if (summaryContainer) {
-        let totalBuys = 0, totalSells = 0, netQuantity = 0, totalCost = 0, totalProceeds = 0;
+        let totalBuys = 0, totalSells = 0, totalCost = 0, totalProceeds = 0;
         filteredTransactions.forEach(tx => {
             const amount = tx.quantity * tx.price;
             if (tx.transaction_type === 'BUY') {
                 totalBuys++;
-                netQuantity += tx.quantity;
                 totalCost += amount;
-            } else {
+            } else { // SELL
                 totalSells++;
-                netQuantity -= tx.quantity;
                 totalProceeds += amount;
             }
         });
@@ -89,10 +87,11 @@ export function renderLedger(allTransactions, ledgerSort) {
         if (th.dataset.sort === ledgerSort.column) { th.classList.add(ledgerSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc'); }
     });
 
-    // --- Table Rendering with Date Grouping (Updated) ---
+    // --- UPDATED: Table Rendering with Date Grouping ---
     ledgerTableBody.innerHTML = '';
     if (filteredTransactions.length === 0) {
         ledgerTableBody.innerHTML = '<tr><td colspan="7">No transactions match the current filters.</td></tr>';
+        if (summaryContainer) summaryContainer.innerHTML = ''; // Clear summary if no results
         return;
     }
     let lastDate = null;

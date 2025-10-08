@@ -161,3 +161,32 @@ tbody tr:nth-child(even){background-color:#f9f9f9}
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 30px;
 }
+/* --- Ledger Enhancement Styles --- */
+/* Styles for the new summary box above the ledger table */
+#ledger-summary-container {
+    padding: 15px;
+    margin: 0 0 20px 0;
+    background-color: #f8f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 20px;
+    text-align: center;
+}
+#ledger-summary-container div h4 {
+    margin: 0 0 5px 0;
+    color: #555;
+    font-size: 0.9em;
+    text-transform: uppercase;
+}
+#ledger-summary-container div p {
+    margin: 0;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+/* This class will be added by JavaScript to create a visual separator between dates */
+.new-date-group td {
+    border-top: 2px solid #3498db;
+}
