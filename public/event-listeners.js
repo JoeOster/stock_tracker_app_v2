@@ -3,26 +3,7 @@ import { updateAllPrices } from './api.js';
 import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity } from './ui/helpers.js';
 import { renderLedger, renderSnapshotsPage } from './ui/renderers.js';
 
-function populateAllExchangeDropdowns() {
-    const exchangeSelects = document.querySelectorAll('select[id*="exchange"]');
-    exchangeSelects.forEach(select => {
-        const currentVal = select.value;
-        select.innerHTML = '';
-        const defaultOption = document.createElement('option');
-        defaultOption.value = "";
-        defaultOption.textContent = "Select Exchange";
-        defaultOption.disabled = true;
-        select.appendChild(defaultOption);
 
-        state.allExchanges.forEach(ex => {
-            const option = document.createElement('option');
-            option.value = ex.name;
-            option.textContent = ex.name;
-            select.appendChild(option);
-        });
-        select.value = currentVal;
-    });
-}
 
 export function initializeEventListeners() {
     const dailyReportContainer = document.getElementById('daily-report-container');

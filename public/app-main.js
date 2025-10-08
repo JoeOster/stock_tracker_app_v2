@@ -169,6 +169,27 @@ async function fetchAndRenderExchanges() {
         showToast('Could not load exchanges.', 'error');
     }
 }
+function populateAllExchangeDropdowns() {
+    // This selector targets all exchange dropdowns in the app
+    const exchangeSelects = document.querySelectorAll('select[id*="exchange"]');
+    exchangeSelects.forEach(select => {
+        const currentVal = select.value;
+        select.innerHTML = '';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = "";
+        defaultOption.textContent = "Select Exchange";
+        defaultOption.disabled = true;
+        select.appendChild(defaultOption);
+
+        state.allExchanges.forEach(ex => {
+            const option = document.createElement('option');
+            option.value = ex.name;
+            option.textContent = ex.name;
+            select.appendChild(option);
+        });
+        select.value = currentVal;
+    });
+}
 
 export function renderExchangeManagementList() {
     const list = document.getElementById('exchange-list');
