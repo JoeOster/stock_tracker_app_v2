@@ -64,17 +64,25 @@ export async function refreshLedger() {
 
 // Updated saveSettings to handle the theme string
 export function saveSettings() {
+    const oldTheme = state.settings.theme; // Get the theme before changes
+
+    // Read all settings from the form
     state.settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || 0;
     state.settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || 0;
     state.settings.marketHoursInterval = parseInt(document.getElementById('market-hours-interval').value) || 2;
     state.settings.afterHoursInterval = parseInt(document.getElementById('after-hours-interval').value) || 15;
-    // Set theme based on checkbox
-    state.settings.theme = document.getElementById('dark-mode-checkbox').checked ? 'dark' : 'light';
+    state.settings.theme = document.getElementById('theme-selector').value;
     
+    // Save to localStorage
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
     
-    // Apply theme by setting a data-attribute on the body
-    document.body.setAttribute('data-theme', state.settings.theme);
+    // Apply the theme to the body
+    document.body.dataset.theme = state.settings.theme;
+
+    // If the theme changed and we are on the charts page, refresh the charts
+    if (state.settings.theme !== oldTheme && state.currentView.type === 'charts') {
+        switchView('charts');
+    }
 }
 
 export function sortTableByColumn(th, tbody) {

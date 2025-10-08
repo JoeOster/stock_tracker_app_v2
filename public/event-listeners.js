@@ -101,16 +101,7 @@ export function initializeEventListeners() {
         settingsModal.classList.remove('visible');
     });
 
-const themeSelector = document.getElementById('theme-selector');
-    if(themeSelector) {
-        themeSelector.addEventListener('change', () => {
-            saveSettings();
-            // Re-render the current view to update charts
-            if(state.currentView.type === 'charts') {
-                switchView('charts');
-            }
-        });
-    }
+
 
     importCsvBtn.addEventListener('click', () => {
         const file = csvFileInput.files[0];

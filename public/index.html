@@ -222,10 +222,16 @@
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h2>Settings</h2>
-            <div class="settings-input-group dark-mode-toggle">
-                <label for="dark-mode-checkbox">Dark Mode</label>
-                <input type="checkbox" id="dark-mode-checkbox">
-            </div><div class="settings-input-group">
+            <div class="settings-input-group">
+                <label for="theme-selector">Theme</label>
+                <select id="theme-selector">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="sepia">Sepia</option>
+                    <option value="contrast">High Contrast</option>
+                </select>
+            </div>
+            <div class="settings-input-group">
                 <label for="take-profit-percent">Suggest Profit %</label>
                 <input type="number" id="take-profit-percent" step="any" placeholder="e.g., 8">
             </div>
