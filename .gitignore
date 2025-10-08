@@ -20,3 +20,8 @@ tracker.db
 # System files
 .DS_Store
 Thumbs.db
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
