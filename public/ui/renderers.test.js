@@ -1,21 +1,58 @@
-module.exports = {
-  // Default environment for all tests is Node.js (for our API tests)
-  testEnvironment: 'node',
-  
-  // Use a different environment for files matching a specific path
-  projects: [
-    {
-      displayName: 'backend',
-      testEnvironment: 'node',
-      testMatch: ['<rootDir>/tests/**/*.test.js'],
-      globalSetup: './tests/setup.js',
-      globalTeardown: './tests/teardown.js',
+/**
+ * @jest-environment jsdom
+ */
+
+import { renderTabs } from './renderers.js';
+import { getTradingDays, getActivePersistentDates } from './helpers.js';
+
+// Mock the dependencies to isolate the renderTabs function
+jest.mock('./helpers.js', () => ({
+    getTradingDays: jest.fn(),
+    getActivePersistentDates: jest.fn(),
+}));
+
+// Mock the app-main module to break the circular dependency
+jest.mock('../app-main.js', () => ({
+    state: {
+        settings: { theme: 'light' },
+        allAccountHolders: [],
+        selectedAccountHolderId: 'all'
     },
-    {
-      displayName: 'frontend',
-      testEnvironment: 'jest-environment-jsdom',
-      testMatch: ['<rootDir>/public/**/*.test.js'],
-    },
-  ],
-};
+}));
+
+describe('renderTabs', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '<div id="tabs-container"></div>';
+        getTradingDays.mockReturnValue(['2025-10-08', '2025-10-07']); // Mocking 2 date tabs
+        getActivePersistentDates.mockReturnValue([]);
+    });
+
+    it('should render all static and dynamic tabs correctly', () => {
+        const mockCurrentView = { type: 'date', value: '2025-10-08' };
+        
+        renderTabs(mockCurrentView);
+
+        const tabsContainer = document.getElementById('tabs-container');
+        const tabs = tabsContainer.querySelectorAll('.tab');
+
+        // CORRECTED: We expect 2 date tabs + 3 static tabs (Charts, Ledger, Snapshots) = 5 total
+        expect(tabs.length).toBe(5);
+
+        // Check for the static tabs by their text content
+        expect(tabsContainer.textContent).toContain('Charts');
+        expect(tabsContainer.textContent).toContain('Ledger');
+        expect(tabsContainer.textContent).toContain('Snapshots');
+    });
+
+    it('should correctly apply the "active" class to the current view tab', () => {
+        const mockCurrentView = { type: 'charts', value: null };
+
+        renderTabs(mockCurrentView);
+
+        const activeTab = document.querySelector('.tab.active');
+        
+        expect(activeTab).not.toBeNull();
+        expect(activeTab.textContent).toBe('Charts');
+    });
+});
 
