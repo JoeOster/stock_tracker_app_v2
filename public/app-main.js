@@ -1,4 +1,4 @@
-// public/app-main.js - v2.9.2 (Corrected)
+// public/app-main.js - v2.9.3 (Corrected Price Population)
 import { initializeEventListeners } from './event-listeners.js';
 import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage } from './ui/renderers.js';
 import { updatePricesForView } from './api.js';
@@ -22,17 +22,19 @@ export const state = {
 export async function switchView(viewType, viewValue) {
     state.currentView = { type: viewType, value: viewValue };
     renderTabs(state.currentView);
+    document.getElementById('global-account-holder-filter').value = state.selectedAccountHolderId;
 
     document.querySelectorAll('.page-container').forEach(c => c.style.display = 'none');
 
     if (viewType === 'date') {
         document.getElementById('daily-report-container').style.display = 'block';
         await renderDailyReport(viewValue, state.activityMap);
+        // GUARANTEED ORDER: Fetch prices, then populate the table.
         await updatePricesForView(viewValue, state.activityMap, state.priceCache);
     } else if (viewType === 'charts') {
         document.getElementById('charts-container').style.display = 'block';
         await new Promise(resolve => setTimeout(resolve, 50));
-        await refreshSnapshots(); // This line ensures we fetch the correct data first
+        await refreshSnapshots();
         await renderChartsPage(state);
     } else if (viewType === 'ledger') {
         document.getElementById('ledger-page-container').style.display = 'block';
@@ -165,7 +167,34 @@ export async function fetchAndPopulateAccountHolders() {
 
 async function runEodFailoverCheck() {
     console.log("Running EOD failover check...");
-    // ... (rest of function is unchanged)
+    const todayStr = getCurrentESTDateString();
+    let lastRunStr = localStorage.getItem('lastEodRunDate');
+    if (!lastRunStr) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        lastRunStr = new Date(yesterday).toLocaleDateString('en-CA');
+        localStorage.setItem('lastEodRunDate', lastRunStr);
+        return;
+    }
+    const lastRunDate = new Date(lastRunStr + 'T12:00:00Z');
+    const today = new Date(todayStr + 'T12:00:00Z');
+    const missedDates = [];
+    for (let d = new Date(lastRunDate); d < today; d.setUTCDate(d.getUTCDate() + 1)) {
+        if (d.getTime() === lastRunDate.getTime()) continue;
+        const dayOfWeek = d.getUTCDay();
+        if (dayOfWeek > 0 && dayOfWeek < 6) {
+             missedDates.push(d.toLocaleDateString('en-CA'));
+        }
+    }
+    if (missedDates.length > 0) {
+        showToast(`Capturing missed EOD prices for ${missedDates.length} day(s)...`, 'info');
+        const promises = missedDates.map(date => 
+            fetch(`/api/tasks/capture-eod/${date}`, { method: 'POST' })
+        );
+        await Promise.all(promises);
+        showToast('EOD data is now up to date.', 'success');
+    }
+    localStorage.setItem('lastEodRunDate', todayStr);
 }
 
 export function renderExchangeManagementList() {
@@ -194,7 +223,7 @@ export function renderAccountHolderManagementList() {
     list.innerHTML = '';
     state.allAccountHolders.forEach(holder => {
         const li = document.createElement('li');
-li.dataset.id = holder.id;
+        li.dataset.id = holder.id;
         li.innerHTML = `
             <span class="holder-name">${holder.name}</span>
             <input type="text" class="edit-holder-input" value="${holder.name}" style="display: none;">
@@ -240,6 +269,15 @@ async function initialize() {
     
     const transactionDateInput = document.getElementById('transaction-date');
     if(transactionDateInput) transactionDateInput.value = today;
+    
+    const globalHolderFilter = document.getElementById('global-account-holder-filter');
+    if(globalHolderFilter.options.length > 1) {
+        const firstHolder = state.allAccountHolders[0];
+        if(firstHolder) {
+            globalHolderFilter.value = firstHolder.id;
+            state.selectedAccountHolderId = firstHolder.id;
+        }
+    }
     
     await switchView('date', viewDate);
     initializeScheduler(state);

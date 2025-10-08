@@ -46,10 +46,10 @@ export function renderLedger(allTransactions, ledgerSort) {
     const ledgerTableBody = document.querySelector('#ledger-table tbody');
     if(!ledgerTableBody) return;
     
+    // --- Filter Logic (Unchanged) ---
     const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
     const ledgerFilterStart = document.getElementById('ledger-filter-start');
     const ledgerFilterEnd = document.getElementById('ledger-filter-end');
-    
     const filterTicker = ledgerFilterTicker.value.toUpperCase().trim();
     const filterStart = ledgerFilterStart.value;
     const filterEnd = ledgerFilterEnd.value;
@@ -61,39 +61,45 @@ export function renderLedger(allTransactions, ledgerSort) {
         return tickerMatch && startDateMatch && endDateMatch;
     });
 
+    // --- CORRECTED Summary Calculation Logic ---
     const summaryContainer = document.getElementById('ledger-summary-container');
     if (summaryContainer) {
-        let totalBuys = 0, totalSells = 0, totalCost = 0, totalProceeds = 0;
+        let buyCount = 0;
+        let sellCount = 0;
+        let totalCost = 0;
+        let totalProceeds = 0;
+
         filteredTransactions.forEach(tx => {
-            const amount = tx.quantity * tx.price;
             if (tx.transaction_type === 'BUY') {
-                totalBuys++;
-                totalCost += amount;
-            } else { // SELL
-                totalSells++;
-                totalProceeds += amount;
+                buyCount++;
+                totalCost += tx.quantity * tx.price;
+            } else if (tx.transaction_type === 'SELL') {
+                sellCount++;
+                totalProceeds += tx.quantity * tx.price;
             }
         });
+
         summaryContainer.innerHTML = `
-            <div><h4>Buy Transactions</h4><p>${totalBuys}</p></div>
-            <div><h4>Sell Transactions</h4><p>${totalSells}</p></div>
+            <div><h4>Buy Transactions</h4><p>${buyCount}</p></div>
+            <div><h4>Sell Transactions</h4><p>${sellCount}</p></div>
             <div><h4>Total Cost</h4><p>${formatAccounting(totalCost)}</p></div>
             <div><h4>Total Proceeds</h4><p>${formatAccounting(totalProceeds)}</p></div>
         `;
     }
 
+    // --- Sorting Logic (Unchanged) ---
     filteredTransactions.sort((a, b) => {
         const col = ledgerSort.column;
         const dir = ledgerSort.direction === 'asc' ? 1 : -1;
         if (col === 'quantity' || col === 'price') return (a[col] - b[col]) * dir;
         return a[col].localeCompare(b[col]) * dir;
     });
-
     document.querySelectorAll('#ledger-table thead th[data-sort]').forEach(th => {
         th.classList.remove('sorted-asc', 'sorted-desc');
         if (th.dataset.sort === ledgerSort.column) { th.classList.add(ledgerSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc'); }
     });
 
+    // --- Table Rendering with Date Grouping (Unchanged) ---
     ledgerTableBody.innerHTML = '';
     if (filteredTransactions.length === 0) {
         ledgerTableBody.innerHTML = '<tr><td colspan="7">No transactions match the current filters.</td></tr>';
@@ -110,6 +116,8 @@ export function renderLedger(allTransactions, ledgerSort) {
         lastDate = tx.transaction_date;
     });
 }
+
+
 
 export async function renderChartsPage(state) {
     const plSummaryTable = document.getElementById('pl-summary-table');
@@ -140,7 +148,7 @@ export async function renderChartsPage(state) {
                      return;
                 }
                 const plBody = plData.byExchange.map(row => `<tr><td>${row.exchange}</td><td class="numeric">${formatAccounting(row.total_pl)}</td></tr>`).join('');
-                rangedTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P/L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
+                rangedTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P&L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
             }
         } catch (error) {
             console.error("Failed to render Ranged P&L Summary:", error);
@@ -153,11 +161,9 @@ export async function renderChartsPage(state) {
         if (plResponse.ok) {
             const plData = await plResponse.json();
             const plBody = plData.byExchange.map(row => `<tr><td>${row.exchange}</td><td class="numeric">${formatAccounting(row.total_pl)}</td></tr>`).join('');
-            plSummaryTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P/L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
+            plSummaryTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P&L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
         }
-    } catch (error) { console.error("Failed to render P/L Summary:", error); }
-    
-    // This function now uses the pre-fetched snapshot data from the main state
+    } catch (error) { console.error("Failed to render P&L Summary:", error); }
     
     const fiveDayChartCtx = document.getElementById('five-day-chart')?.getContext('2d');
     const dateRangeChartCtx = document.getElementById('date-range-chart')?.getContext('2d');
@@ -391,7 +397,11 @@ export function populatePricesFromCache(activityMap, priceCache) {
         const plDollarCell = row.querySelector('.unrealized-pl-dollar');
         const plPercentCell = row.querySelector('.unrealized-pl-percent');
 
-        if (priceToUse !== undefined && priceToUse !== null) {
+        if (priceToUse === 'invalid') {
+            if (priceCell) priceCell.innerHTML = `<span class="negative">Invalid</span>`;
+            if (plDollarCell) plDollarCell.innerHTML = '--';
+            if (plPercentCell) plPercentCell.innerHTML = '--';
+        } else if (priceToUse !== undefined && priceToUse !== null) {
             const currentValue = lot.quantity_remaining * priceToUse;
             const costOfRemaining = lot.quantity_remaining * lot.cost_basis;
             const unrealizedPL = currentValue - costOfRemaining;
