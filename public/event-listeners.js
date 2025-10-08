@@ -19,11 +19,14 @@ export function initializeEventListeners() {
     const addExchangeBtn = document.getElementById('add-exchange-btn');
     const newExchangeNameInput = document.getElementById('new-exchange-name');
     const globalHolderFilter = document.getElementById('global-account-holder-filter');
+    const accountHolderList = document.getElementById('account-holder-list');
+    const addAccountHolderBtn = document.getElementById('add-account-holder-btn');
+    const newAccountHolderNameInput = document.getElementById('new-account-holder-name');
+
 
     // --- Global Filter Listener ---
     globalHolderFilter.addEventListener('change', (e) => {
         state.selectedAccountHolderId = e.target.value;
-        // Refresh the current view to apply the new filter
         switchView(state.currentView.type, state.currentView.value);
     });
     
@@ -48,6 +51,26 @@ export function initializeEventListeners() {
             switchView('date', selectedDate);
         }
     });
+
+    // --- NEW: Ledger Filter Listeners ---
+    const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
+    const ledgerFilterStart = document.getElementById('ledger-filter-start');
+    const ledgerFilterEnd = document.getElementById('ledger-filter-end');
+    const ledgerClearFiltersBtn = document.getElementById('ledger-clear-filters-btn');
+
+    const applyLedgerFilters = () => renderLedger(state.allTransactions, state.ledgerSort);
+
+    ledgerFilterTicker.addEventListener('input', applyLedgerFilters);
+    ledgerFilterStart.addEventListener('input', applyLedgerFilters);
+    ledgerFilterEnd.addEventListener('input', applyLedgerFilters);
+
+    ledgerClearFiltersBtn.addEventListener('click', () => {
+        ledgerFilterTicker.value = '';
+        ledgerFilterStart.value = '';
+        ledgerFilterEnd.value = '';
+        applyLedgerFilters();
+    });
+    // --- END NEW BLOCK ---
 
     transactionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -140,7 +163,7 @@ export function initializeEventListeners() {
 
     settingsBtn.addEventListener('click', () => {
         renderExchangeManagementList();
-        renderAccountHolderManagementList(); // We will build this in a later step
+        renderAccountHolderManagementList();
         settingsModal.classList.add('visible');
     });
     
@@ -305,10 +328,10 @@ export function initializeEventListeners() {
             quantity: parseFloat(document.getElementById('edit-quantity').value),
             price: parseFloat(document.getElementById('edit-price').value),
             transaction_date: document.getElementById('edit-date').value,
-            limit_price_up: parseFloat(document.getElementById('edit-limit-price-up').value) || null,
-            limit_up_expiration: document.getElementById('edit-limit-up-expiration').value || null,
-            limit_price_down: parseFloat(document.getElementById('edit-limit-price-down').value) || null,
-            limit_down_expiration: document.getElementById('edit-limit-down-expiration').value || null,
+            limit_price_up: parseFloat(document.getElementById('limit-price-up').value) || null,
+            limit_up_expiration: document.getElementById('limit-up-expiration').value || null,
+            limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
+            limit_down_expiration: document.getElementById('limit-down-expiration').value || null,
         };
 
         const lotData = state.activityMap.get(`lot-${id}`);
@@ -408,61 +431,62 @@ export function initializeEventListeners() {
         }
     });
 
-        const addAccountHolderBtn = document.getElementById('add-account-holder-btn');
-    const newAccountHolderNameInput = document.getElementById('new-account-holder-name');
-    const accountHolderList = document.getElementById('account-holder-list');
-
-    addAccountHolderBtn.addEventListener('click', async () => {
-        const name = newAccountHolderNameInput.value.trim();
-        if (!name) return showToast('Account holder name cannot be empty.', 'error');
-        try {
-            const res = await fetch('/api/account_holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-            if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-            
-            await fetchAndPopulateAccountHolders(); // Re-fetch and update all dropdowns
-            
-            newAccountHolderNameInput.value = '';
-            renderAccountHolderManagementList(); // Re-render the list in settings
-            showToast('Account holder added!', 'success');
-        } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
-    });
-
-    accountHolderList.addEventListener('click', async (e) => {
-        const li = e.target.closest('li');
-        if (!li) return;
-        const id = li.dataset.id;
-        const nameInput = li.querySelector('.edit-holder-input');
-
-        if (e.target.matches('.edit-holder-btn')) {
-            li.querySelector('.holder-name').style.display = 'none';
-            e.target.style.display = 'none';
-            nameInput.style.display = 'inline-block';
-            li.querySelector('.save-holder-btn').style.display = 'inline-block';
-            nameInput.focus();
-        } else if (e.target.matches('.save-holder-btn')) {
-            const newName = nameInput.value.trim();
-            if (!newName) return showToast('Name cannot be empty.', 'error');
+    if (addAccountHolderBtn) {
+        addAccountHolderBtn.addEventListener('click', async () => {
+            const name = newAccountHolderNameInput.value.trim();
+            if (!name) return showToast('Account holder name cannot be empty.', 'error');
             try {
-                const res = await fetch(`/api/account_holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+                const res = await fetch('/api/account_holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                 
                 await fetchAndPopulateAccountHolders();
+                
+                newAccountHolderNameInput.value = '';
                 renderAccountHolderManagementList();
-                showToast('Account holder updated!', 'success');
+                showToast('Account holder added!', 'success');
             } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
-        } else if (e.target.matches('.delete-holder-btn')) {
-            showConfirmationModal('Delete Account Holder?', 'This cannot be undone.', async () => {
+        });
+    }
+
+    if (accountHolderList) {
+        accountHolderList.addEventListener('click', async (e) => {
+            const li = e.target.closest('li');
+            if (!li) return;
+            const id = li.dataset.id;
+            const nameInput = li.querySelector('.edit-holder-input');
+
+            if (e.target.matches('.edit-holder-btn')) {
+                li.querySelector('.holder-name').style.display = 'none';
+                e.target.style.display = 'none';
+                nameInput.style.display = 'inline-block';
+                li.querySelector('.save-holder-btn').style.display = 'inline-block';
+                nameInput.focus();
+            } else if (e.target.matches('.save-holder-btn')) {
+                const newName = nameInput.value.trim();
+                if (!newName) return showToast('Name cannot be empty.', 'error');
                 try {
-                    const res = await fetch(`/api/account_holders/${id}`, { method: 'DELETE' });
+                    const res = await fetch(`/api/account_holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                     
                     await fetchAndPopulateAccountHolders();
                     renderAccountHolderManagementList();
-                    showToast('Account holder deleted.', 'success');
+                    showToast('Account holder updated!', 'success');
                 } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
-            });
-        }
-    });
+            } else if (e.target.matches('.delete-holder-btn')) {
+                showConfirmationModal('Delete Account Holder?', 'This cannot be undone.', async () => {
+                    try {
+                        const res = await fetch(`/api/account_holders/${id}`, { method: 'DELETE' });
+                        if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                        
+                        await fetchAndPopulateAccountHolders();
+                        renderAccountHolderManagementList();
+                        showToast('Account holder deleted.', 'success');
+                    } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+                });
+            }
+        });
+    }
+
     const addSnapshotForm = document.getElementById('add-snapshot-form');
     if (addSnapshotForm) {
         addSnapshotForm.addEventListener('submit', async (e) => {
