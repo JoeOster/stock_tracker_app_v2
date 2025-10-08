@@ -1,20 +1,5 @@
-// server.js - v2.4.2 (Definitive Baseline)
-process.on('uncaughtException', (error, origin) => {
-  console.log('----- An uncaught exception occurred -----');
-  console.log(error);
-  console.log('Exception origin:', origin);
-  process.exit(1); // Exit the process with an error code
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.log('----- An unhandled rejection occurred -----');
-  console.log(reason);
-  console.log('Promise:', promise);
-  process.exit(1); // Exit the process with an error code
-});
-
+// server.js - v2.8 (Refactored for Testing)
 const express = require('express');
-
 require('dotenv').config();
 const fetch = require('node-fetch');
 const cron = require('node-cron');
@@ -25,61 +10,61 @@ const PORT = 3000;
 app.use(express.json());
 app.use(express.static('public'));
 
-async function captureEodPrices(db, dateToProcess) {
-    console.log(`[EOD Process] Running for date: ${dateToProcess}`);
-    try {
-        const soldTickers = await db.all(`SELECT DISTINCT ticker FROM transactions WHERE transaction_date = ? AND transaction_type = 'SELL'`, dateToProcess);
-        if (soldTickers.length === 0) {
-            console.log(`[EOD Process] No stocks sold on ${dateToProcess}.`);
-            return;
-        }
-        for (const { ticker } of soldTickers) {
-            const remaining = await db.get(`SELECT SUM(quantity_remaining) as total FROM transactions WHERE ticker = ?`, ticker);
-            if (remaining && remaining.total < 0.00001) {
-                const existingPrice = await db.get('SELECT id FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, dateToProcess]);
-                if (existingPrice) continue;
-                console.log(`[EOD Process] Position for ${ticker} closed. Fetching closing price...`);
-                const apiKey = process.env.FINNHUB_API_KEY;
-                const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
-                if (apiRes.ok) {
-                    const data = await apiRes.json();
-                    const closePrice = (data && data.c > 0) ? data.c : null;
-                    if (closePrice) {
-                        await db.run('INSERT INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)', [ticker, dateToProcess, closePrice]);
-                        console.log(`[EOD Process] Froze price for ${ticker} at ${closePrice} for ${dateToProcess}.`);
+// This function now sets up the app but does not start the server listening
+async function setupApp() {
+    const db = await setupDatabase();
+
+    // The cron job for EOD prices should only run for the live server, not during tests
+    if (process.env.NODE_ENV !== 'test') {
+        cron.schedule('2 16 * * 1-5', () => {
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+            console.log('[CRON] Triggered ideal EOD process.');
+            captureEodPrices(db, today);
+        }, { timezone: "America/New_York" });
+    }
+
+    async function captureEodPrices(db, dateToProcess) {
+        console.log(`[EOD Process] Running for date: ${dateToProcess}`);
+        try {
+            const soldTickers = await db.all(`SELECT DISTINCT ticker FROM transactions WHERE transaction_date = ? AND transaction_type = 'SELL'`, dateToProcess);
+            if (soldTickers.length === 0) {
+                console.log(`[EOD Process] No stocks sold on ${dateToProcess}.`);
+                return;
+            }
+            for (const { ticker } of soldTickers) {
+                const remaining = await db.get(`SELECT SUM(quantity_remaining) as total FROM transactions WHERE ticker = ?`, ticker);
+                if (remaining && remaining.total < 0.00001) {
+                    const existingPrice = await db.get('SELECT id FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, dateToProcess]);
+                    if (existingPrice) continue;
+                    console.log(`[EOD Process] Position for ${ticker} closed. Fetching closing price...`);
+                    const apiKey = process.env.FINNHUB_API_KEY;
+                    const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
+                    if (apiRes.ok) {
+                        const data = await apiRes.json();
+                        const closePrice = (data && data.c > 0) ? data.c : null;
+                        if (closePrice) {
+                            await db.run('INSERT INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)', [ticker, dateToProcess, closePrice]);
+                            console.log(`[EOD Process] Froze price for ${ticker} at ${closePrice} for ${dateToProcess}.`);
+                        }
                     }
                 }
             }
+        } catch (error) {
+            console.error(`[EOD Process] Error for ${dateToProcess}:`, error);
         }
-    } catch (error) {
-        console.error(`[EOD Process] Error for ${dateToProcess}:`, error);
     }
-}
-
-async function startServer() {
-    const db = await setupDatabase();
-    cron.schedule('2 16 * * 1-5', () => {
-        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-        console.log('[CRON] Triggered ideal EOD process.');
-        captureEodPrices(db, today);
-    }, { timezone: "America/New_York" });
-
-app.post('/api/prices/batch', async (req, res) => {
-    console.log('--- ENTERED /api/prices/batch ENDPOINT ---');
-    try {
+    
+    // --- ALL API ROUTES GO HERE ---
+    
+    app.post('/api/prices/batch', async (req, res) => {
         const { tickers, date } = req.body;
-        console.log(`Received request for tickers: ${tickers.join(', ')} on date: ${date}`);
-
         if (!tickers || !Array.isArray(tickers)) {
             return res.status(400).json({ message: 'Invalid request body, expected a "tickers" array.' });
         }
 
         const prices = {};
         const apiKey = process.env.FINNHUB_API_KEY;
-        if (!apiKey) {
-            console.error('FATAL: Finnhub API key is not configured.');
-            return res.status(500).json({ message: "API key not configured on server." });
-        }
+        if (!apiKey) return res.status(500).json({ message: "API key not configured on server." });
 
         for (const ticker of tickers) {
             try {
@@ -94,26 +79,18 @@ app.post('/api/prices/batch', async (req, res) => {
                     const data = await apiRes.json();
                     prices[ticker] = (data && data.c > 0) ? data.c : null;
                 } else {
-                    console.warn(`API call for ${ticker} failed with status: ${apiRes.status}`);
                     prices[ticker] = null;
                 }
                 
                 await new Promise(resolve => setTimeout(resolve, 150));
 
-            } catch (innerError) {
-                console.error(`Error processing ticker ${ticker} inside batch loop:`, innerError);
+            } catch (error) {
+                console.error(`Error fetching price for ${ticker} in batch:`, error);
                 prices[ticker] = null;
             }
         }
-        
-        console.log('--- SUCCESSFULLY FINISHED BATCH, SENDING PRICES ---');
         res.json(prices);
-
-    } catch (outerError) {
-        console.error('--- FATAL ERROR in /api/prices/batch ---', outerError);
-        res.status(500).json({ message: 'A fatal error occurred on the server. Check terminal logs.' });
-    }
-});
+    });
 
     app.post('/api/tasks/capture-eod/:date', async (req, res) => {
         const { date } = req.params;
@@ -142,85 +119,23 @@ app.post('/api/prices/batch', async (req, res) => {
         }
     });
 
-app.put('/api/transactions/:id', async (req, res) => {
-    try {
-        const { exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration } = req.body;
-        const ticker = req.body.ticker ? req.body.ticker.toUpperCase() : null;
-        
-        console.log('--- RECEIVED UPDATE REQUEST ---');
-        console.log(`Editing transaction ID: ${req.params.id}`);
-        console.log(`New quantity from form: ${quantity}`);
-
-        const originalTx = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
-        if (!originalTx) {
-            return res.status(404).json({ message: 'Transaction not found.' });
-        }
-        
-        console.log('--- DATA BEFORE UPDATE ---');
-        console.log('Original transaction from DB:', originalTx);
-
-        // Prepare for the final update
-        const finalUpdate = {
-            id: req.params.id,
-            ticker: ticker,
-            exchange: exchange,
-            transaction_type: transaction_type,
-            quantity: quantity,
-            price: price,
-            transaction_date: transaction_date,
-            limit_price_up: (limit_price_up !== null && limit_price_up !== '' && !isNaN(parseFloat(limit_price_up))) ? parseFloat(limit_price_up) : null,
-            limit_down_expiration: limit_down_expiration || null,
-            limit_price_down: (limit_price_down !== null && limit_price_down !== '' && !isNaN(parseFloat(limit_price_down))) ? parseFloat(limit_price_down) : null,
-            limit_up_expiration: limit_up_expiration || null,
-            original_quantity: originalTx.original_quantity,
-            quantity_remaining: originalTx.quantity_remaining
-        };
-
-        if (transaction_type === 'BUY') {
-            console.log('--- CALCULATING NEW QUANTITY FOR A BUY ---');
-            const quantitySold = originalTx.original_quantity - originalTx.quantity_remaining;
-            console.log(`Quantity sold from this lot: ${quantitySold}`);
-
-            const newRemaining = quantity - quantitySold;
-            console.log(`New remaining quantity calculated: ${newRemaining}`);
-            
-            if (newRemaining < 0) {
-                return res.status(400).json({ message: 'Update would result in negative remaining quantity.' });
+    app.put('/api/exchanges/:id', async (req, res) => {
+        const { name } = req.body;
+        if (!name || name.trim() === '') { return res.status(400).json({ message: 'Exchange name cannot be empty.' }); }
+        try {
+            const oldExchange = await db.get('SELECT name FROM exchanges WHERE id = ?', req.params.id);
+            if(oldExchange) {
+                await db.run('BEGIN TRANSACTION');
+                await db.run('UPDATE transactions SET exchange = ? WHERE exchange = ?', [name, oldExchange.name]);
+                await db.run('UPDATE exchanges SET name = ? WHERE id = ?', [name, req.params.id]);
+                await db.run('COMMIT');
             }
-            finalUpdate.original_quantity = quantity;
-            finalUpdate.quantity_remaining = newRemaining;
-            
-        } else if (transaction_type === 'SELL' && originalTx.parent_buy_id) {
-            const quantityChange = quantity - originalTx.quantity;
-            const parentBuy = await db.get('SELECT * FROM transactions WHERE id = ?', originalTx.parent_buy_id);
-            if (parentBuy.quantity_remaining - quantityChange < 0) {
-                return res.status(400).json({ message: 'Update would result in negative remaining quantity on parent.' });
-            }
-            await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [quantityChange, originalTx.parent_buy_id]);
+            res.json({ message: 'Exchange updated successfully.' });
+        } catch (error) {
+            await db.run('ROLLBACK');
+            res.status(500).json({ message: 'Error updating exchange.' });
         }
-        
-        console.log('--- DATA TO BE SAVED ---');
-        console.log('Final update object:', finalUpdate);
-
-        const query = `UPDATE transactions 
-                       SET ticker = ?, exchange = ?, transaction_type = ?, quantity = ?, price = ?, transaction_date = ?, 
-                           limit_price_up = ?, limit_price_down = ?, limit_up_expiration = ?, limit_down_expiration = ?,
-                           original_quantity = ?, quantity_remaining = ?
-                       WHERE id = ?`;
-        await db.run(query, [
-            finalUpdate.ticker, finalUpdate.exchange, finalUpdate.transaction_type, finalUpdate.quantity, finalUpdate.price, finalUpdate.transaction_date,
-            finalUpdate.limit_price_up, finalUpdate.limit_price_down, finalUpdate.limit_up_expiration, finalUpdate.limit_down_expiration,
-            finalUpdate.original_quantity, finalUpdate.quantity_remaining,
-            finalUpdate.id
-        ]);
-            
-        console.log('--- UPDATE COMPLETE ---');
-        res.json({ message: 'Transaction updated.' });
-    } catch (error) {
-        console.error('Failed to update transaction:', error);
-        res.status(500).json({ message: 'Error updating transaction.' });
-    }
-});
+    });
 
     app.delete('/api/exchanges/:id', async (req, res) => {
         try {
@@ -363,47 +278,76 @@ app.put('/api/transactions/:id', async (req, res) => {
         }
     });
 
-app.put('/api/transactions/:id', async (req, res) => {
-    try {
-        const { exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration } = req.body;
-        const ticker = req.body.ticker ? req.body.ticker.toUpperCase() : null;
-        const originalTx = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
-        if (!originalTx) return res.status(404).json({ message: 'Transaction not found.' });
-
-        if (transaction_type === 'BUY') {
-            const childSales = await db.all('SELECT * FROM transactions WHERE parent_buy_id = ?', req.params.id);
-            for (const sale of childSales) {
-                if (new Date(sale.transaction_date) < new Date(transaction_date)) return res.status(400).json({ message: 'Buy date cannot be after any of its sell dates.' });
+    app.put('/api/transactions/:id', async (req, res) => {
+        try {
+            const { exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration } = req.body;
+            const ticker = req.body.ticker ? req.body.ticker.toUpperCase() : null;
+            
+            const originalTx = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
+            if (!originalTx) {
+                return res.status(404).json({ message: 'Transaction not found.' });
             }
+    
+            // Prepare for the final update
+            const finalUpdate = {
+                id: req.params.id,
+                ticker: ticker,
+                exchange: exchange,
+                transaction_type: transaction_type,
+                quantity: quantity,
+                price: price,
+                transaction_date: transaction_date,
+                limit_price_up: (limit_price_up !== null && limit_price_up !== '' && !isNaN(parseFloat(limit_price_up))) ? parseFloat(limit_price_up) : null,
+                limit_down_expiration: limit_down_expiration || null,
+                limit_price_down: (limit_price_down !== null && limit_price_down !== '' && !isNaN(parseFloat(limit_price_down))) ? parseFloat(limit_price_down) : null,
+                limit_up_expiration: limit_up_expiration || null,
+                original_quantity: originalTx.original_quantity,
+                quantity_remaining: originalTx.quantity_remaining
+            };
+    
+            if (transaction_type === 'BUY') {
+                const childSales = await db.all('SELECT * FROM transactions WHERE parent_buy_id = ?', req.params.id);
+                for (const sale of childSales) {
+                    if (new Date(sale.transaction_date) < new Date(transaction_date)) {
+                        return res.status(400).json({ message: 'Buy date cannot be after any of its sell dates.' });
+                    }
+                }
+                
+                const quantitySold = originalTx.original_quantity - originalTx.quantity_remaining;
+                const newRemaining = quantity - quantitySold;
+                if (newRemaining < 0) {
+                    return res.status(400).json({ message: 'Update would result in negative remaining quantity.' });
+                }
+                finalUpdate.original_quantity = quantity;
+                finalUpdate.quantity_remaining = newRemaining;
+                
+            } else if (transaction_type === 'SELL' && originalTx.parent_buy_id) {
+                const quantityChange = quantity - originalTx.quantity;
+                const parentBuy = await db.get('SELECT * FROM transactions WHERE id = ?', originalTx.parent_buy_id);
+                if (parentBuy.quantity_remaining - quantityChange < 0) {
+                    return res.status(400).json({ message: 'Update would result in negative remaining quantity on parent.' });
+                }
+                await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [quantityChange, originalTx.parent_buy_id]);
+            }
+            
+            const query = `UPDATE transactions 
+                           SET ticker = ?, exchange = ?, transaction_type = ?, quantity = ?, price = ?, transaction_date = ?, 
+                               limit_price_up = ?, limit_price_down = ?, limit_up_expiration = ?, limit_down_expiration = ?,
+                               original_quantity = ?, quantity_remaining = ?
+                           WHERE id = ?`;
+            await db.run(query, [
+                finalUpdate.ticker, finalUpdate.exchange, finalUpdate.transaction_type, finalUpdate.quantity, finalUpdate.price, finalUpdate.transaction_date,
+                finalUpdate.limit_price_up, finalUpdate.limit_price_down, finalUpdate.limit_up_expiration, finalUpdate.limit_down_expiration,
+                finalUpdate.original_quantity, finalUpdate.quantity_remaining,
+                finalUpdate.id
+            ]);
+                
+            res.json({ message: 'Transaction updated.' });
+        } catch (error) {
+            console.error('Failed to update transaction:', error);
+            res.status(500).json({ message: 'Error updating transaction.' });
         }
-
-        // NOTE: 'BEGIN TRANSACTION' is removed from here
-
-        if (originalTx.transaction_type === 'BUY') {
-            const quantitySold = originalTx.original_quantity - originalTx.quantity_remaining;
-            const newRemaining = quantity - quantitySold;            if (newRemaining < 0) { return res.status(400).json({ message: 'Update would result in negative remaining quantity.' }); }
-            await db.run('UPDATE transactions SET original_quantity = ?, quantity_remaining = ? WHERE id = ?', [quantity, newRemaining, req.params.id]);
-        } else if (originalTx.transaction_type === 'SELL' && originalTx.parent_buy_id) {
-            const quantityChange = quantity - originalTx.quantity;
-            const parentBuy = await db.get('SELECT * FROM transactions WHERE id = ?', originalTx.parent_buy_id);
-            if (parentBuy.quantity_remaining - quantityChange < 0) { return res.status(400).json({ message: 'Update would result in negative remaining quantity on parent.' }); }
-            await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [quantityChange, originalTx.parent_buy_id]);
-        }
-        
-        const safeLimitUp = (limit_price_up !== null && limit_price_up !== '' && !isNaN(parseFloat(limit_price_up))) ? parseFloat(limit_price_up) : null;
-        const safeLimitDown = (limit_price_down !== null && limit_price_down !== '' && !isNaN(parseFloat(limit_price_down))) ? parseFloat(limit_price_down) : null;
-
-        const query = `UPDATE transactions SET ticker = ?, exchange = ?, transaction_type = ?, quantity = ?, price = ?, transaction_date = ?, limit_price_up = ?, limit_price_down = ?, limit_up_expiration = ?, limit_down_expiration = ? WHERE id = ?`;
-        await db.run(query, [ticker, exchange, transaction_type, quantity, price, transaction_date, safeLimitUp, safeLimitDown, limit_up_expiration || null, limit_down_expiration || null, req.params.id]);
-        
-        // NOTE: 'COMMIT' is removed from here
-        res.json({ message: 'Transaction updated.' });
-    } catch (error) {
-        // NOTE: 'ROLLBACK' is removed from here
-        console.error('Failed to update transaction:', error);
-        res.status(500).json({ message: 'Error updating transaction.' });
-    }
-});
+    });
 
     app.delete('/api/transactions/:id', async (req, res) => {
         try {
@@ -455,58 +399,34 @@ app.put('/api/transactions/:id', async (req, res) => {
             if (insert) await insert.finalize();
         }
     });
-app.post('/api/realized_pl/summary', async (req, res) => {
-    try {
-        const { startDate, endDate } = req.body;
-        if (!startDate || !endDate) {
-            return res.status(400).json({ message: 'Start date and end date are required.' });
+
+    app.get('/api/portfolio/overview', async (req, res) => {
+        try {
+            const overviewQuery = `
+                SELECT p.ticker, SUM(p.quantity_remaining) as total_quantity,
+                       SUM(p.quantity_remaining * p.cost_basis) / SUM(p.quantity_remaining) as weighted_avg_cost
+                FROM (
+                    SELECT id, ticker, price as cost_basis, quantity_remaining FROM transactions
+                    WHERE transaction_type = 'BUY' AND COALESCE(quantity_remaining, 0) > 0.00001
+                ) p GROUP BY p.ticker ORDER BY p.ticker;
+            `;
+            const overview = await db.all(overviewQuery);
+    
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            for (const pos of overview) {
+                const priceRecord = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date <= ? ORDER BY date DESC LIMIT 1', [pos.ticker, yesterdayStr]);
+                pos.previous_close = priceRecord ? priceRecord.close_price : null;
+            }
+    
+            res.json(overview);
+        } catch (error) {
+            console.error("Failed to get portfolio overview:", error);
+            res.status(500).json({ message: "Error fetching portfolio overview." });
         }
-
-        const query = `
-            SELECT s.exchange, SUM((s.price - b.price) * s.quantity) as total_pl
-            FROM transactions s JOIN transactions b ON s.parent_buy_id = b.id
-            WHERE s.transaction_type = 'SELL'
-              AND s.transaction_date >= ? 
-              AND s.transaction_date <= ?
-            GROUP BY s.exchange;
-        `;
-        const byExchangeRows = await db.all(query, [startDate, endDate]);
-        const byExchange = byExchangeRows.map(row => ({ exchange: row.exchange, total_pl: row.total_pl }));
-        const total = byExchange.reduce((sum, row) => sum + row.total_pl, 0);
-        res.json({ byExchange, total });
-    } catch (error) {
-        console.error("Failed to get ranged realized P&L summary:", error);
-        res.status(500).json({ message: "Error fetching ranged realized P&L summary." });
-    }
-});
-
-app.get('/api/portfolio/overview', async (req, res) => {
-    try {
-        const overviewQuery = `
-            SELECT p.ticker, SUM(p.quantity_remaining) as total_quantity,
-                   SUM(p.quantity_remaining * p.cost_basis) / SUM(p.quantity_remaining) as weighted_avg_cost
-            FROM (
-                SELECT id, ticker, price as cost_basis, quantity_remaining FROM transactions
-                WHERE transaction_type = 'BUY' AND COALESCE(quantity_remaining, 0) > 0.00001
-            ) p GROUP BY p.ticker ORDER BY p.ticker;
-        `;
-        const overview = await db.all(overviewQuery);
-
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        
-        for (const pos of overview) {
-            const priceRecord = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date <= ? ORDER BY date DESC LIMIT 1', [pos.ticker, yesterdayStr]);
-            pos.previous_close = priceRecord ? priceRecord.close_price : null;
-        }
-
-        res.json(overview);
-    } catch (error) {
-        console.error("Failed to get portfolio overview:", error);
-        res.status(500).json({ message: "Error fetching portfolio overview." });
-    }
-});
+    });
 
     app.get('/api/snapshots', async (req, res) => {
         try {
@@ -539,46 +459,59 @@ app.get('/api/portfolio/overview', async (req, res) => {
             res.status(500).json({ message: 'Error deleting snapshot' });
         }
     });
+    
+    app.post('/api/realized_pl/summary', async (req, res) => {
+        try {
+            const { startDate, endDate } = req.body;
+            if (!startDate || !endDate) {
+                return res.status(400).json({ message: 'Start date and end date are required.' });
+            }
+    
+            const query = `
+                SELECT s.exchange, SUM((s.price - b.price) * s.quantity) as total_pl
+                FROM transactions s JOIN transactions b ON s.parent_buy_id = b.id
+                WHERE s.transaction_type = 'SELL'
+                  AND s.transaction_date >= ? 
+                  AND s.transaction_date <= ?
+                GROUP BY s.exchange;
+            `;
+            const byExchangeRows = await db.all(query, [startDate, endDate]);
+            const byExchange = byExchangeRows.map(row => ({ exchange: row.exchange, total_pl: row.total_pl }));
+            const total = byExchange.reduce((sum, row) => sum + row.total_pl, 0);
+            res.json({ byExchange, total });
+        } catch (error) {
+            console.error("Failed to get ranged realized P&L summary:", error);
+            res.status(500).json({ message: "Error fetching ranged realized P&L summary." });
+        }
+    });
+
     app.get('/api/transaction/:id', async (req, res) => {
-    try {
-        const transaction = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
-        if (transaction) {
-            res.json(transaction);
-        } else {
-            res.status(404).json({ message: 'Transaction not found' });
+        try {
+            const transaction = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
+            if (transaction) {
+                res.json(transaction);
+            } else {
+                res.status(404).json({ message: 'Transaction not found' });
+            }
+        } catch (error) {
+            console.error('Error fetching single transaction:', error);
+            res.status(500).json({ message: 'Error fetching transaction.' });
         }
-    } catch (error) {
-        console.error('Error fetching single transaction:', error);
-        res.status(500).json({ message: 'Error fetching transaction.' });
-    }
-});
-app.post('/api/realized_pl/summary', async (req, res) => {
-    try {
-        const { startDate, endDate } = req.body;
-        if (!startDate || !endDate) {
-            return res.status(400).json({ message: 'Start date and end date are required.' });
-        }
+    });
 
-        const query = `
-            SELECT s.exchange, SUM((s.price - b.price) * s.quantity) as total_pl
-            FROM transactions s JOIN transactions b ON s.parent_buy_id = b.id
-            WHERE s.transaction_type = 'SELL'
-              AND s.transaction_date >= ? 
-              AND s.transaction_date <= ?
-            GROUP BY s.exchange;
-        `;
-        const byExchangeRows = await db.all(query, [startDate, endDate]);
-        const byExchange = byExchangeRows.map(row => ({ exchange: row.exchange, total_pl: row.total_pl }));
-        const total = byExchange.reduce((sum, row) => sum + row.total_pl, 0);
-        res.json({ byExchange, total });
-    } catch (error) {
-        console.error("Failed to get ranged realized P&L summary:", error);
-        res.status(500).json({ message: "Error fetching ranged realized P&L summary." });
-    }
-});
+    return { app, db }; // Return both app and db instance
+}
 
-    app.listen(PORT, () => {
-        console.log(`Server is running! Open your browser and go to http://localhost:${PORT}`);
+// This block only runs when you execute "node server.js"
+// It ensures the server doesn't start when imported by test files.
+if (require.main === module) {
+    setupApp().then(({ app }) => { // Destructure to get app
+        app.listen(PORT, () => {
+            console.log(`Server is running! Open your browser and go to http://localhost:${PORT}`);
+        });
     });
 }
-startServer();
+
+// Export the setup function for testing purposes
+module.exports = setupApp;
+

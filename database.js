@@ -52,11 +52,15 @@ async function runMigrations(db) {
 
 
 async function setup() {
+    // Dynamically choose the database file based on the environment
+    const dbPath = process.env.NODE_ENV === 'test' ? './test-tracker.db' : './tracker.db';
+
     const db = await open({
-        filename: './tracker.db',
+        filename: dbPath,
         driver: sqlite3.Database
     });
 
+    // This is now the minimal base schema. All other columns will be added by migrations.
     await db.exec(`
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,12 +70,7 @@ async function setup() {
             quantity REAL NOT NULL,
             price REAL NOT NULL,
             transaction_date TEXT NOT NULL,
-            limit_price_up REAL,
-            limit_price_down REAL,
-            limit_expiration TEXT,
-            parent_buy_id INTEGER,
-            original_quantity REAL,
-            quantity_remaining REAL
+            original_quantity REAL
         )
     `);
 
@@ -106,5 +105,6 @@ async function setup() {
 
     return db;
 }
+
 
 module.exports = setup;
