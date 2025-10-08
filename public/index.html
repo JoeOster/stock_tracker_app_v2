@@ -7,11 +7,17 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body data-theme="light">
     <div class="header">
+        <div class="global-controls">
+            <div class="account-holder-filter-container">
+                <label for="global-account-holder-filter">Viewing:</label>
+                <select id="global-account-holder-filter" class="account-holder-select"></select>
+            </div>
+            <button id="settings-btn" title="Settings">⚙️</button>
+        </div>
         <h1>Live Stock Tracker</h1>
         <div id="api-timer-container">Next Update: <span id="api-timer">--:--</span></div>
-        <button id="settings-btn" title="Settings">⚙️</button>
     </div>
 
     <div id="tabs-container" class="tabs"></div>
@@ -21,19 +27,21 @@
         <input type="date" id="custom-date-picker">
     </div>
 
-    <div id="daily-report-container" class="container" style="display: none;">
+    <div id="daily-report-container" class="container page-container" style="display: none;">
         <h2 id="table-title"></h2>
         <div id="daily-performance-summary"></div>
         <table id="stock-table">
             <thead>
-            <tr><th colspan="10" class="table-section-header">Daily Transaction Log</th></tr>                <tr>
+                <tr><th colspan="11" class="table-section-header">Daily Transaction Log</th></tr>
+                <tr>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Action</th><th class="numeric" data-sort="quantity" data-type="numeric">Qty</th><th class="numeric" data-sort="price" data-type="numeric">Price</th><th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
-                    <th class="numeric">Suggest Profit</th><th class="numeric">Suggest Loss</th><th class="numeric">My Limit Up</th><th class="numeric">My Limit Down</th>
+                    <th class="numeric">Suggest Profit</th><th class="numeric">Suggest Loss</th><th class="numeric">My Limit Up</th><th class="numeric">My Limit Down</th><th></th>
                 </tr>
             </thead>
             <tbody id="log-body"></tbody>
             <thead>
-        <tr><th colspan="11" class="table-section-header" id="positions-summary-title">Open Lots</th></tr>                <tr>
+                <tr><th colspan="11" class="table-section-header" id="positions-summary-title">Open Lots</th></tr>
+                <tr>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="purchase_date">Purchase Date</th><th class="numeric" data-sort="cost_basis" data-type="numeric">Cost Basis</th>
                     <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Rem. Qty</th><th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
                     <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($)</th>
@@ -57,10 +65,10 @@
         </div>
     </div>
     
-    <div id="charts-container" class="container" style="display: none;">
+    <div id="charts-container" class="container page-container" style="display: none;">
         <div class="chart-grid">
             <div class="chart-container"> <h2>All Time Value</h2> <canvas id="all-time-chart" class="zoomable-chart"></canvas> </div>
-            <div class="chart-container"> <h2>Past Five Day Report</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div>
+            <div class="chart-container"> <h2>Past Five Days</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div>
             <div class="chart-container"> <div class="date-range-header"> <h2>Date Range</h2> <div class="date-range-inputs"> <input type="date" id="chart-start-date"> <span>to</span> <input type="date" id="chart-end-date"> </div> </div> <canvas id="date-range-chart" class="zoomable-chart"></canvas> </div>
         </div>
         <div class="portfolio-overview-container container">
@@ -81,46 +89,32 @@
                 <tbody id="portfolio-overview-body"></tbody>
             </table>
         </div>
-<div class="pl-summary-grid">
-        <div class="pl-summary-container">
-            <h3>Lifetime Realized P&L Summary</h3>
-            <table id="pl-summary-table"></table>
-        </div>
-        <div class="pl-summary-container">
-            <h3>Realized P&L by Date Range</h3>
-            <div class="date-range-inputs">
-                <input type="date" id="pl-start-date">
-                <span>to</span>
-                <input type="date" id="pl-end-date">
+        <div class="pl-summary-grid">
+            <div class="pl-summary-container">
+                <h3>Lifetime Realized P&L Summary</h3>
+                <table id="pl-summary-table"></table>
             </div>
-            <table id="pl-summary-ranged-table"></table>
+            <div class="pl-summary-container">
+                <h3>Realized P&L by Date Range</h3>
+                <div class="date-range-inputs">
+                    <input type="date" id="pl-start-date">
+                    <span>to</span>
+                    <input type="date" id="pl-end-date">
+                </div>
+                <table id="pl-summary-ranged-table"></table>
+            </div>
         </div>
     </div>
-    <div class="pl-summary-container">
-        <h3>Lifetime Realized P&L Summary</h3>
-        <table id="pl-summary-table"></table>
-    </div>
-    <div class="pl-summary-container">
-        <h3>Realized P&L by Date Range</h3>
-        <div class="date-range-inputs">
-            <input type="date" id="pl-start-date">
-            <span>to</span>
-            <input type="date" id="pl-end-date">
-        </div>
-        <table id="pl-summary-ranged-table"></table>
-    </div>
-</div>    </div>
 
-    <div id="ledger-page-container" class="container" style="display: none;">
+    <div id="ledger-page-container" class="container page-container" style="display: none;">
         <h2>Transaction Ledger</h2>
         <div id="add-transaction-container" class="container">
             <h2>Log a New Transaction</h2>
             <form id="add-transaction-form">
+                <select id="add-tx-account-holder" class="account-holder-select" required></select>
                 <input type="date" id="transaction-date" required>
                 <input type="text" id="ticker" placeholder="Ticker" required>
-                <select id="exchange" required>
-                    <option value="" disabled selected>Select Exchange</option>
-                </select>
+                <select id="exchange" required></select>
                 <select id="transaction-type">
                     <option value="BUY">BUY</option>
                     <option value="SELL">SELL</option>
@@ -151,30 +145,24 @@
             </div>
             <div class="import-section">
                 <h3>Import from CSV</h3>
+                <div class="form-group">
+                    <label for="import-account-holder">Import into Account:</label>
+                    <select id="import-account-holder" class="account-holder-select" required></select>
+                </div>
                 <label for="csv-file-input">Select a .csv file:</label>
                 <input type="file" id="csv-file-input" accept=".csv">
                 <button id="import-csv-btn">Import CSV</button>
                 <small>Format: date,ticker,exchange,type,quantity,price</small>
             </div>
         </div>
-        <div class="ledger-controls">
-            </div>
-        
         <div id="ledger-summary-container"></div>
-        <table id="ledger-table">
-            </table>
-    </div>
         <table id="ledger-table">
             <thead><tr><th data-sort="transaction_date">Date</th><th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Type</th><th class="numeric" data-sort="quantity">Quantity</th><th class="numeric" data-sort="price">Price</th><th>Actions</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
 
-    <!-- ... after ledger-page-container ... -->
-    </div>
-
-    <!-- ADD THIS ENTIRE NEW PAGE CONTAINER -->
-    <div id="snapshots-page-container" class="container" style="display: none;">
+    <div id="snapshots-page-container" class="container page-container" style="display: none;">
         <h2>Account Value Snapshots</h2>
         <p class="subtitle">Log the total value of your brokerage accounts (including cash and positions) on a specific date to track overall portfolio growth. This data populates the historical charts.</p>
         
@@ -183,13 +171,16 @@
                 <h3>Log a New Snapshot</h3>
                 <form id="add-snapshot-form">
                     <div class="form-group">
+                        <label for="snapshot-account-holder">Account Holder</label>
+                        <select id="snapshot-account-holder" class="account-holder-select" required></select>
+                    </div>
+                    <div class="form-group">
                         <label for="snapshot-date">Snapshot Date</label>
                         <input type="date" id="snapshot-date" required>
                     </div>
                     <div class="form-group">
                         <label for="snapshot-exchange">Exchange</label>
                         <select id="snapshot-exchange" required>
-                            <option value="" disabled selected>Select Exchange</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -257,6 +248,15 @@
                     <button id="add-exchange-btn">Add</button>
                 </div>
             </div>
+            <hr>
+            <div class="account-holder-management-container">
+                <h3>Manage Account Holders</h3>
+                <ul id="account-holder-list"></ul>
+                <div class="add-account-holder-form">
+                    <input type="text" id="new-account-holder-name" placeholder="New Holder Name">
+                    <button id="add-account-holder-btn">Add</button>
+                </div>
+            </div>
             <button id="save-settings-button">Save Settings</button>
         </div>
     </div>
@@ -269,6 +269,7 @@
                 <input type="hidden" id="edit-id">
 
                 <fieldset id="edit-core-fields">
+                    <div class="form-group"><label for="edit-account-holder">Account Holder</label><select id="edit-account-holder" class="account-holder-select" required></select></div>
                     <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div>
                     <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div>
                     <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div>
@@ -337,3 +338,4 @@
     <script type="module" src="app-main.js" defer></script>
 </body>
 </html>
+

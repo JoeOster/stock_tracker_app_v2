@@ -1,3 +1,4 @@
+// public/app-main.js - v2.9.1 (Corrected)
 import { initializeEventListeners } from './event-listeners.js';
 import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage } from './ui/renderers.js';
 import { updatePricesForView } from './api.js';
@@ -12,6 +13,8 @@ export const state = {
     allTransactions: [],
     allSnapshots: [],
     allExchanges: [],
+    allAccountHolders: [],
+    selectedAccountHolderId: 'all',
     ledgerSort: { column: 'transaction_date', direction: 'desc' },
     allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
 };
@@ -20,10 +23,7 @@ export async function switchView(viewType, viewValue) {
     state.currentView = { type: viewType, value: viewValue };
     renderTabs(state.currentView);
 
-    document.getElementById('daily-report-container').style.display = 'none';
-    document.getElementById('charts-container').style.display = 'none';
-    document.getElementById('ledger-page-container').style.display = 'none';
-    document.getElementById('snapshots-page-container').style.display = 'none';
+    document.querySelectorAll('.page-container').forEach(c => c.style.display = 'none');
 
     if (viewType === 'date') {
         document.getElementById('daily-report-container').style.display = 'block';
@@ -35,50 +35,45 @@ export async function switchView(viewType, viewValue) {
         await renderChartsPage(state);
     } else if (viewType === 'ledger') {
         document.getElementById('ledger-page-container').style.display = 'block';
-        if (state.allTransactions.length === 0) {
-            await refreshLedger();
-        } else {
-            renderLedger(state.allTransactions, state.ledgerSort);
-        }
+        await refreshLedger();
     } else if (viewType === 'snapshots') {
         document.getElementById('snapshots-page-container').style.display = 'block';
-        if (state.allSnapshots.length === 0) {
-            try {
-                const res = await fetch('/api/snapshots');
-                if(res.ok) state.allSnapshots = await res.json();
-            } catch (e) { console.error("Could not fetch snapshots", e); }
-        }
-        renderSnapshotsPage(state);
+        await refreshSnapshots();
+        renderSnapshotsPage();
     }
 }
 
 export async function refreshLedger() {
     try {
-        const res = await fetch('/api/transactions');
+        const res = await fetch(`/api/transactions?holder=${state.selectedAccountHolderId}`);
         if (!res.ok) throw new Error('Failed to fetch latest transactions');
         state.allTransactions = await res.json();
         renderLedger(state.allTransactions, state.ledgerSort);
     } catch (error) { console.error("Failed to refresh ledger:", error); showToast("Could not refresh the ledger.", "error"); }
 }
 
+export async function refreshSnapshots() {
+     try {
+        const res = await fetch(`/api/snapshots?holder=${state.selectedAccountHolderId}`);
+        if(res.ok) state.allSnapshots = await res.json();
+    } catch (e) { console.error("Could not fetch snapshots", e); }
+}
+
 export function saveSettings() {
     const oldTheme = state.settings.theme;
-
     state.settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || 0;
     state.settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || 0;
     state.settings.marketHoursInterval = parseInt(document.getElementById('market-hours-interval').value) || 2;
     state.settings.afterHoursInterval = parseInt(document.getElementById('after-hours-interval').value) || 15;
     state.settings.theme = document.getElementById('theme-selector').value;
-    
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
-    
     document.body.dataset.theme = state.settings.theme;
-
     if (state.settings.theme !== oldTheme && state.currentView.type === 'charts') {
         switchView('charts');
     }
 }
 
+// --- THIS FUNCTION HAS BEEN RESTORED ---
 export function sortTableByColumn(th, tbody) {
     const column = th.cellIndex;
     const dataType = th.dataset.type || 'string';
@@ -103,70 +98,16 @@ export function sortTableByColumn(th, tbody) {
     tbody.append(...rows);
 }
 
-export function showConfirmationModal(title, body, onConfirm) {
-    const confirmModal = document.getElementById('confirm-modal');
-    if (!confirmModal) return;
-    document.getElementById('confirm-modal-title').textContent = title;
-    document.getElementById('confirm-modal-body').textContent = body;
-    const confirmBtn = document.getElementById('confirm-modal-confirm-btn');
-    const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
-    const newConfirmBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    const closeModal = () => confirmModal.classList.remove('visible');
-    newConfirmBtn.addEventListener('click', () => { onConfirm(); closeModal(); }, { once: true });
-    cancelBtn.addEventListener('click', closeModal, { once: true });
-    confirmModal.classList.add('visible');
-}
-
-async function runEodFailoverCheck() {
-    console.log("Running EOD failover check...");
-    const todayStr = getCurrentESTDateString();
-    let lastRunStr = localStorage.getItem('lastEodRunDate');
-
-    if (!lastRunStr) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        lastRunStr = new Date(yesterday).toLocaleDateString('en-CA');
-        localStorage.setItem('lastEodRunDate', lastRunStr);
-        return;
-    }
-
-    const lastRunDate = new Date(lastRunStr + 'T12:00:00Z');
-    const today = new Date(todayStr + 'T12:00:00Z');
-    
-    const missedDates = [];
-    for (let d = new Date(lastRunDate); d < today; d.setUTCDate(d.getUTCDate() + 1)) {
-        if (d.getTime() === lastRunDate.getTime()) continue;
-        const dayOfWeek = d.getUTCDay();
-        if (dayOfWeek > 0 && dayOfWeek < 6) {
-             missedDates.push(d.toLocaleDateString('en-CA'));
-        }
-    }
-
-    if (missedDates.length > 0) {
-        showToast(`Capturing missed EOD prices for ${missedDates.length} day(s)...`, 'info');
-        const promises = missedDates.map(date => 
-            fetch(`/api/tasks/capture-eod/${date}`, { method: 'POST' })
-        );
-        await Promise.all(promises);
-        showToast('EOD data is now up to date.', 'success');
-    }
-    
-    localStorage.setItem('lastEodRunDate', todayStr);
-}
-
 export async function fetchAndRenderExchanges() {
     try {
         const response = await fetch('/api/exchanges');
         state.allExchanges = await response.json();
-        // This function call is now correct
         populateAllExchangeDropdowns(); 
     } catch (error) {
         showToast('Could not load exchanges.', 'error');
     }
 }
 
-// This function now correctly lives in app-main.js
 function populateAllExchangeDropdowns() {
     const exchangeSelects = document.querySelectorAll('select[id*="exchange"]');
     exchangeSelects.forEach(select => {
@@ -177,7 +118,6 @@ function populateAllExchangeDropdowns() {
         defaultOption.textContent = "Select Exchange";
         defaultOption.disabled = true;
         select.appendChild(defaultOption);
-
         state.allExchanges.forEach(ex => {
             const option = document.createElement('option');
             option.value = ex.name;
@@ -186,6 +126,73 @@ function populateAllExchangeDropdowns() {
         });
         select.value = currentVal;
     });
+}
+
+export async function fetchAndPopulateAccountHolders() {
+    try {
+        const response = await fetch('/api/account_holders');
+        state.allAccountHolders = await response.json();
+        
+        const holderSelects = document.querySelectorAll('.account-holder-select');
+        holderSelects.forEach(select => {
+            select.innerHTML = ''; 
+            
+            if(select.id === 'global-account-holder-filter') {
+                const allOption = document.createElement('option');
+                allOption.value = 'all';
+                allOption.textContent = 'All Accounts';
+                select.appendChild(allOption);
+            } else {
+                 const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "Select Holder";
+                defaultOption.disabled = true;
+                select.appendChild(defaultOption);
+            }
+
+            state.allAccountHolders.forEach(holder => {
+                const option = document.createElement('option');
+                option.value = holder.id;
+                option.textContent = holder.name;
+                select.appendChild(option);
+            });
+        });
+
+    } catch (error) {
+        showToast('Could not load account holders.', 'error');
+    }
+}
+
+async function runEodFailoverCheck() {
+    console.log("Running EOD failover check...");
+    const todayStr = getCurrentESTDateString();
+    let lastRunStr = localStorage.getItem('lastEodRunDate');
+    if (!lastRunStr) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        lastRunStr = new Date(yesterday).toLocaleDateString('en-CA');
+        localStorage.setItem('lastEodRunDate', lastRunStr);
+        return;
+    }
+    const lastRunDate = new Date(lastRunStr + 'T12:00:00Z');
+    const today = new Date(todayStr + 'T12:00:00Z');
+    const missedDates = [];
+    for (let d = new Date(lastRunDate); d < today; d.setUTCDate(d.getUTCDate() + 1)) {
+        if (d.getTime() === lastRunDate.getTime()) continue;
+        const dayOfWeek = d.getUTCDay();
+        if (dayOfWeek > 0 && dayOfWeek < 6) {
+             missedDates.push(d.toLocaleDateString('en-CA'));
+        }
+    }
+    if (missedDates.length > 0) {
+        showToast(`Capturing missed EOD prices for ${missedDates.length} day(s)...`, 'info');
+        const promises = missedDates.map(date => 
+            fetch(`/api/tasks/capture-eod/${date}`, { method: 'POST' })
+        );
+        await Promise.all(promises);
+        showToast('EOD data is now up to date.', 'success');
+    }
+    localStorage.setItem('lastEodRunDate', todayStr);
 }
 
 export function renderExchangeManagementList() {
@@ -208,16 +215,34 @@ export function renderExchangeManagementList() {
     });
 }
 
+export function renderAccountHolderManagementList() {
+    const list = document.getElementById('account-holder-list');
+    if (!list) return;
+    list.innerHTML = '';
+    state.allAccountHolders.forEach(holder => {
+        const li = document.createElement('li');
+        li.dataset.id = holder.id;
+        li.innerHTML = `
+            <span class="holder-name">${holder.name}</span>
+            <input type="text" class="edit-holder-input" value="${holder.name}" style="display: none;">
+            <div class="holder-actions">
+                <button class="edit-holder-btn">Edit</button>
+                <button class="save-holder-btn" style="display: none;">Save</button>
+                <button class="delete-holder-btn delete-btn">Delete</button>
+            </div>
+        `;
+        list.appendChild(li);
+    });
+}
+
 async function initialize() {
     const loadSettings = () => {
         const savedSettings = localStorage.getItem('stockTrackerSettings');
         if (savedSettings) { state.settings = { ...state.settings, ...JSON.parse(savedSettings) }; }
-
         document.getElementById('take-profit-percent').value = state.settings.takeProfitPercent;
         document.getElementById('stop-loss-percent').value = state.settings.stopLossPercent;
         document.getElementById('market-hours-interval').value = state.settings.marketHoursInterval;
         document.getElementById('after-hours-interval').value = state.settings.afterHoursInterval;
-        
         const themeSelector = document.getElementById('theme-selector');
         if(themeSelector) {
             themeSelector.value = state.settings.theme;
@@ -226,6 +251,7 @@ async function initialize() {
     }
     loadSettings();
     await fetchAndRenderExchanges();
+    await fetchAndPopulateAccountHolders();
     
     initializeEventListeners();
     await runEodFailoverCheck();

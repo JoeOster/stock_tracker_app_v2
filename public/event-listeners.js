@@ -1,10 +1,9 @@
-import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, showConfirmationModal, renderExchangeManagementList, fetchAndRenderExchanges } from './app-main.js';
+import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList } from './app-main.js';
 import { updateAllPrices } from './api.js';
-import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity } from './ui/helpers.js';
+import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity, showConfirmationModal } from './ui/helpers.js';
 import { renderLedger, renderSnapshotsPage } from './ui/renderers.js';
 
 export function initializeEventListeners() {
-    const dailyReportContainer = document.getElementById('daily-report-container');
     const transactionForm = document.getElementById('add-transaction-form');
     const editModal = document.getElementById('edit-modal');
     const editForm = document.getElementById('edit-transaction-form');
@@ -19,7 +18,15 @@ export function initializeEventListeners() {
     const exchangeList = document.getElementById('exchange-list');
     const addExchangeBtn = document.getElementById('add-exchange-btn');
     const newExchangeNameInput = document.getElementById('new-exchange-name');
+    const globalHolderFilter = document.getElementById('global-account-holder-filter');
 
+    // --- Global Filter Listener ---
+    globalHolderFilter.addEventListener('change', (e) => {
+        state.selectedAccountHolderId = e.target.value;
+        // Refresh the current view to apply the new filter
+        switchView(state.currentView.type, state.currentView.value);
+    });
+    
     tabsContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('master-tab')) {
             const viewType = e.target.dataset.viewType;
@@ -45,6 +52,7 @@ export function initializeEventListeners() {
     transactionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const transaction = {
+            account_holder_id: document.getElementById('add-tx-account-holder').value,
             transaction_date: document.getElementById('transaction-date').value,
             ticker: document.getElementById('ticker').value.toUpperCase().trim(),
             exchange: document.getElementById('exchange').value,
@@ -92,7 +100,10 @@ export function initializeEventListeners() {
 
     importCsvBtn.addEventListener('click', () => {
         const file = csvFileInput.files[0];
+        const accountHolderId = document.getElementById('import-account-holder').value;
         if (!file) { return showToast('Please select a CSV file.', 'error'); }
+        if (!accountHolderId) { return showToast('Please select an account holder to import into.', 'error'); }
+
         const reader = new FileReader();
         reader.onload = async (event) => {
             const transactions = [];
@@ -112,7 +123,11 @@ export function initializeEventListeners() {
             }
             if (transactions.length > 0) {
                 try {
-                    const response = await fetch('/api/transactions/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transactions) });
+                    const response = await fetch('/api/transactions/batch', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ transactions, account_holder_id: accountHolderId }) 
+                    });
                     if (!response.ok) { const err = await response.json(); throw new Error(err.message); }
                     showToast(`${transactions.length} transactions imported!`, 'success');
                     csvFileInput.value = '';
@@ -125,6 +140,7 @@ export function initializeEventListeners() {
 
     settingsBtn.addEventListener('click', () => {
         renderExchangeManagementList();
+        renderAccountHolderManagementList(); // We will build this in a later step
         settingsModal.classList.add('visible');
     });
     
@@ -138,7 +154,7 @@ export function initializeEventListeners() {
         renderLedger(state.allTransactions, state.ledgerSort);
     });
     
-    dailyReportContainer.addEventListener('click', (e) => {
+    document.getElementById('daily-report-container').addEventListener('click', (e) => {
         const th = e.target.closest('th[data-sort]');
         if (th) {
             const thead = th.closest('thead');
@@ -169,6 +185,7 @@ export function initializeEventListeners() {
             const lotData = state.activityMap.get(`lot-${id}`);
             if (lotData) {
                 document.getElementById('edit-id').value = lotData.id;
+                document.getElementById('edit-account-holder').value = lotData.account_holder_id;
                 document.getElementById('edit-date').value = lotData.purchase_date;
                 document.getElementById('edit-ticker').value = lotData.ticker;
                 document.getElementById('edit-exchange').value = lotData.exchange;
@@ -217,6 +234,7 @@ export function initializeEventListeners() {
             const tx = state.allTransactions.find(t => t.id == id);
             if (tx) {
                 document.getElementById('edit-id').value = tx.id;
+                document.getElementById('edit-account-holder').value = tx.account_holder_id;
                 document.getElementById('edit-date').value = tx.transaction_date;
                 document.getElementById('edit-ticker').value = tx.ticker;
                 document.getElementById('edit-exchange').value = tx.exchange;
@@ -250,8 +268,14 @@ export function initializeEventListeners() {
             transaction_date: document.getElementById('sell-date').value,
             ticker: document.getElementById('sell-ticker-display').textContent,
             exchange: document.getElementById('sell-exchange-display').textContent,
-            transaction_type: 'SELL'
+            transaction_type: 'SELL',
+            account_holder_id: state.selectedAccountHolderId === 'all' ? null : state.selectedAccountHolderId
         };
+
+        if(!sellDetails.account_holder_id) {
+            return showToast('Please select a specific account holder before logging a sale.', 'error');
+        }
+
         const submitButton = sellFromPositionForm.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         try {
@@ -274,6 +298,7 @@ export function initializeEventListeners() {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
         const updatedTransaction = {
+            account_holder_id: document.getElementById('edit-account-holder').value,
             ticker: document.getElementById('edit-ticker').value.toUpperCase().trim(),
             exchange: document.getElementById('edit-exchange').value,
             transaction_type: document.getElementById('edit-type').value,
@@ -281,9 +306,9 @@ export function initializeEventListeners() {
             price: parseFloat(document.getElementById('edit-price').value),
             transaction_date: document.getElementById('edit-date').value,
             limit_price_up: parseFloat(document.getElementById('edit-limit-price-up').value) || null,
-            limit_up_expiration: document.getElementById('limit-up-expiration').value || null,
-            limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
-            limit_down_expiration: document.getElementById('limit-down-expiration').value || null,
+            limit_up_expiration: document.getElementById('edit-limit-up-expiration').value || null,
+            limit_price_down: parseFloat(document.getElementById('edit-limit-price-down').value) || null,
+            limit_down_expiration: document.getElementById('edit-limit-down-expiration').value || null,
         };
 
         const lotData = state.activityMap.get(`lot-${id}`);
@@ -311,31 +336,8 @@ export function initializeEventListeners() {
 
             if (state.currentView.type === 'ledger') {
                 await refreshLedger();
-            } else if (state.currentView.type === 'date' && lotData) {
-                const freshDataRes = await fetch(`/api/transaction/${id}`);
-                if (freshDataRes.ok) {
-                    const freshTx = await freshDataRes.json();
-                    lotData.cost_basis = freshTx.price;
-                    lotData.original_quantity = freshTx.original_quantity;
-                    lotData.quantity_remaining = freshTx.quantity_remaining;
-                    lotData.limit_price_up = freshTx.limit_price_up;
-                    lotData.limit_up_expiration = freshTx.limit_up_expiration;
-                    lotData.limit_price_down = freshTx.limit_price_down;
-                    lotData.limit_down_expiration = freshTx.limit_down_expiration;
-                    
-                    const rowToUpdate = document.querySelector(`tr[data-key="lot-${id}"]`);
-                    if(rowToUpdate) {
-                        let limitUpText = lotData.limit_price_up ? formatAccounting(lotData.limit_price_up) : '--';
-                        if (lotData.limit_price_up && lotData.limit_up_expiration) { limitUpText += ` on ${lotData.limit_up_expiration}`; }
-                        let limitDownText = lotData.limit_price_down ? formatAccounting(lotData.limit_price_down) : '--';
-                        if (lotData.limit_price_down && lotData.limit_down_expiration) { limitDownText += ` on ${lotData.limit_down_expiration}`; }
-
-                        rowToUpdate.querySelector('td:nth-child(4)').innerHTML = formatAccounting(lotData.cost_basis);
-                        rowToUpdate.querySelector('td:nth-child(5)').innerHTML = formatQuantity(lotData.quantity_remaining);
-                        rowToUpdate.querySelector('td:nth-child(9)').innerHTML = limitUpText;
-                        rowToUpdate.querySelector('td:nth-child(10)').innerHTML = limitDownText;
-                    }
-                }
+            } else if (state.currentView.type === 'date') {
+                 await switchView(state.currentView.type, state.currentView.value);
             }
         } catch (error) {
             showToast(`Error updating transaction: ${error.message}`, 'error');
@@ -356,19 +358,16 @@ export function initializeEventListeners() {
             document.getElementById('edit-limit-down-expiration').value = '';
         }
     });
-    
-addExchangeBtn.addEventListener('click', async () => {
+
+    addExchangeBtn.addEventListener('click', async () => {
         const name = newExchangeNameInput.value.trim();
         if (!name) return showToast('Exchange name cannot be empty.', 'error');
         try {
             const res = await fetch('/api/exchanges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
             if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-            
-            // This now correctly calls the master function to update all dropdowns
             await fetchAndRenderExchanges(); 
-            
             newExchangeNameInput.value = '';
-            renderExchangeManagementList(); // Re-renders the list in the settings modal
+            renderExchangeManagementList();
             showToast('Exchange added!', 'success');
         } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
     });
@@ -377,16 +376,13 @@ addExchangeBtn.addEventListener('click', async () => {
         const li = e.target.closest('li');
         if (!li) return;
         const id = li.dataset.id;
-        const nameSpan = li.querySelector('.exchange-name');
         const nameInput = li.querySelector('.edit-exchange-input');
-        const editBtn = li.querySelector('.edit-exchange-btn');
-        const saveBtn = li.querySelector('.save-exchange-btn');
 
         if (e.target.matches('.edit-exchange-btn')) {
-            nameSpan.style.display = 'none';
-            editBtn.style.display = 'none';
+            li.querySelector('.exchange-name').style.display = 'none';
+            e.target.style.display = 'none';
             nameInput.style.display = 'inline-block';
-            saveBtn.style.display = 'inline-block';
+            li.querySelector('.save-exchange-btn').style.display = 'inline-block';
             nameInput.focus();
         } else if (e.target.matches('.save-exchange-btn')) {
             const newName = nameInput.value.trim();
@@ -394,10 +390,8 @@ addExchangeBtn.addEventListener('click', async () => {
             try {
                 const res = await fetch(`/api/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                
-                // This now correctly calls the master function to update all dropdowns
                 await fetchAndRenderExchanges();
-                await refreshLedger(); // Refresh ledger in case transaction exchanges were renamed
+                await refreshLedger();
                 renderExchangeManagementList();
                 showToast('Exchange updated!', 'success');
             } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
@@ -406,8 +400,6 @@ addExchangeBtn.addEventListener('click', async () => {
                 try {
                     const res = await fetch(`/api/exchanges/${id}`, { method: 'DELETE' });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                    
-                    // This now correctly calls the master function to update all dropdowns
                     await fetchAndRenderExchanges();
                     renderExchangeManagementList();
                     showToast('Exchange deleted.', 'success');
@@ -416,11 +408,67 @@ addExchangeBtn.addEventListener('click', async () => {
         }
     });
 
+        const addAccountHolderBtn = document.getElementById('add-account-holder-btn');
+    const newAccountHolderNameInput = document.getElementById('new-account-holder-name');
+    const accountHolderList = document.getElementById('account-holder-list');
+
+    addAccountHolderBtn.addEventListener('click', async () => {
+        const name = newAccountHolderNameInput.value.trim();
+        if (!name) return showToast('Account holder name cannot be empty.', 'error');
+        try {
+            const res = await fetch('/api/account_holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+            
+            await fetchAndPopulateAccountHolders(); // Re-fetch and update all dropdowns
+            
+            newAccountHolderNameInput.value = '';
+            renderAccountHolderManagementList(); // Re-render the list in settings
+            showToast('Account holder added!', 'success');
+        } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+    });
+
+    accountHolderList.addEventListener('click', async (e) => {
+        const li = e.target.closest('li');
+        if (!li) return;
+        const id = li.dataset.id;
+        const nameInput = li.querySelector('.edit-holder-input');
+
+        if (e.target.matches('.edit-holder-btn')) {
+            li.querySelector('.holder-name').style.display = 'none';
+            e.target.style.display = 'none';
+            nameInput.style.display = 'inline-block';
+            li.querySelector('.save-holder-btn').style.display = 'inline-block';
+            nameInput.focus();
+        } else if (e.target.matches('.save-holder-btn')) {
+            const newName = nameInput.value.trim();
+            if (!newName) return showToast('Name cannot be empty.', 'error');
+            try {
+                const res = await fetch(`/api/account_holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                
+                await fetchAndPopulateAccountHolders();
+                renderAccountHolderManagementList();
+                showToast('Account holder updated!', 'success');
+            } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+        } else if (e.target.matches('.delete-holder-btn')) {
+            showConfirmationModal('Delete Account Holder?', 'This cannot be undone.', async () => {
+                try {
+                    const res = await fetch(`/api/account_holders/${id}`, { method: 'DELETE' });
+                    if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                    
+                    await fetchAndPopulateAccountHolders();
+                    renderAccountHolderManagementList();
+                    showToast('Account holder deleted.', 'success');
+                } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+            });
+        }
+    });
     const addSnapshotForm = document.getElementById('add-snapshot-form');
     if (addSnapshotForm) {
         addSnapshotForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const snapshot = {
+                account_holder_id: document.getElementById('snapshot-account-holder').value,
                 snapshot_date: document.getElementById('snapshot-date').value,
                 exchange: document.getElementById('snapshot-exchange').value,
                 value: parseFloat(document.getElementById('snapshot-value').value)
@@ -428,11 +476,8 @@ addExchangeBtn.addEventListener('click', async () => {
             try {
                 const res = await fetch('/api/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snapshot) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                
-                const freshSnapshots = await fetch('/api/snapshots');
-                state.allSnapshots = await freshSnapshots.json();
-                renderSnapshotsPage(state);
-                
+                await refreshSnapshots();
+                renderSnapshotsPage();
                 addSnapshotForm.reset();
                 showToast('Snapshot saved!', 'success');
             } catch (error) {
@@ -451,10 +496,8 @@ addExchangeBtn.addEventListener('click', async () => {
                      try {
                         const res = await fetch(`/api/snapshots/${id}`, { method: 'DELETE' });
                         if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-
                         state.allSnapshots = state.allSnapshots.filter(s => s.id != id);
-                        renderSnapshotsPage(state);
-
+                        renderSnapshotsPage();
                         showToast('Snapshot deleted.', 'success');
                     } catch (error) {
                         showToast(`Error: ${error.message}`, 'error');
