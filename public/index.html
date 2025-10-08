@@ -26,16 +26,14 @@
         <div id="daily-performance-summary"></div>
         <table id="stock-table">
             <thead>
-                <tr><th colspan="10" style="text-align:center; background-color:#f8f9f9;">Daily Transaction Log</th></tr>
-                <tr>
+            <tr><th colspan="10" class="table-section-header">Daily Transaction Log</th></tr>                <tr>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Action</th><th class="numeric" data-sort="quantity" data-type="numeric">Qty</th><th class="numeric" data-sort="price" data-type="numeric">Price</th><th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
                     <th class="numeric">Suggest Profit</th><th class="numeric">Suggest Loss</th><th class="numeric">My Limit Up</th><th class="numeric">My Limit Down</th>
                 </tr>
             </thead>
             <tbody id="log-body"></tbody>
             <thead>
-                <tr><th colspan="11" style="text-align:center; background-color:#e8f6f3;" id="positions-summary-title">Open Lots</th></tr>
-                <tr>
+        <tr><th colspan="11" class="table-section-header" id="positions-summary-title">Open Lots</th></tr>                <tr>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="purchase_date">Purchase Date</th><th class="numeric" data-sort="cost_basis" data-type="numeric">Cost Basis</th>
                     <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Rem. Qty</th><th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
                     <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($)</th>
@@ -66,22 +64,38 @@
             <div class="chart-container"> <div class="date-range-header"> <h2>Date Range</h2> <div class="date-range-inputs"> <input type="date" id="chart-start-date"> <span>to</span> <input type="date" id="chart-end-date"> </div> </div> <canvas id="date-range-chart" class="zoomable-chart"></canvas> </div>
         </div>
         <div class="portfolio-overview-container container">
-            <h2>Portfolio Overview</h2>
-<table id="portfolio-overview-table">
-    <thead>
-        <tr>
-            <th>Ticker</th>
-            <th class="numeric">Total Quantity</th>
-            <th class="numeric">Avg. Cost Basis</th>
-            <th class="numeric">Current Price</th>
-            <th class="numeric">Day's Change ($)</th> <th class="numeric">Day's Change (%)</th> <th class="numeric">Total Value</th>
-            <th class="numeric">Total Unrealized P/L</th>
-        </tr>
-    </thead>
-    <tbody id="portfolio-overview-body"></tbody>
-</table>
+            <h2>Portfolio Overview <span id="overview-date"></span></h2>
+            <table id="portfolio-overview-table">
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th class="numeric">Total Quantity</th>
+                        <th class="numeric">Avg. Cost Basis</th>
+                        <th class="numeric">Current Price</th>
+                        <th class="numeric">Day's Change ($)</th>
+                        <th class="numeric">Day's Change (%)</th>
+                        <th class="numeric">Total Value</th>
+                        <th class="numeric">Total Unrealized P/L</th>
+                    </tr>
+                </thead>
+                <tbody id="portfolio-overview-body"></tbody>
+            </table>
         </div>
 <div class="pl-summary-grid">
+        <div class="pl-summary-container">
+            <h3>Lifetime Realized P&L Summary</h3>
+            <table id="pl-summary-table"></table>
+        </div>
+        <div class="pl-summary-container">
+            <h3>Realized P&L by Date Range</h3>
+            <div class="date-range-inputs">
+                <input type="date" id="pl-start-date">
+                <span>to</span>
+                <input type="date" id="pl-end-date">
+            </div>
+            <table id="pl-summary-ranged-table"></table>
+        </div>
+    </div>
     <div class="pl-summary-container">
         <h3>Lifetime Realized P&L Summary</h3>
         <table id="pl-summary-table"></table>
@@ -156,13 +170,62 @@
         </table>
     </div>
 
+    <!-- ... after ledger-page-container ... -->
+    </div>
+
+    <!-- ADD THIS ENTIRE NEW PAGE CONTAINER -->
+    <div id="snapshots-page-container" class="container" style="display: none;">
+        <h2>Account Value Snapshots</h2>
+        <p class="subtitle">Log the total value of your brokerage accounts (including cash and positions) on a specific date to track overall portfolio growth. This data populates the historical charts.</p>
+        
+        <div class="snapshot-content-grid">
+            <div id="add-snapshot-container">
+                <h3>Log a New Snapshot</h3>
+                <form id="add-snapshot-form">
+                    <div class="form-group">
+                        <label for="snapshot-date">Snapshot Date</label>
+                        <input type="date" id="snapshot-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="snapshot-exchange">Exchange</label>
+                        <select id="snapshot-exchange" required>
+                            <option value="" disabled selected>Select Exchange</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="snapshot-value">Total Account Value ($)</label>
+                        <input type="number" id="snapshot-value" step="any" min="0" placeholder="e.g., 25000.50" required>
+                    </div>
+                    <button type="submit">Save Snapshot</button>
+                </form>
+            </div>
+            <div id="list-snapshots-container">
+                 <h3>Existing Snapshots</h3>
+                <table id="snapshots-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Exchange</th>
+                            <th class="numeric">Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
     
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h2>Settings</h2>
-            <div class="settings-input-group">
+            <div class="settings-input-group dark-mode-toggle">
+                <label for="dark-mode-checkbox">Dark Mode</label>
+                <input type="checkbox" id="dark-mode-checkbox">
+            </div><div class="settings-input-group">
                 <label for="take-profit-percent">Suggest Profit %</label>
                 <input type="number" id="take-profit-percent" step="any" placeholder="e.g., 8">
             </div>

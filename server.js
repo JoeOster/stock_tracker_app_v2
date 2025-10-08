@@ -1,5 +1,20 @@
 // server.js - v2.4.2 (Definitive Baseline)
+process.on('uncaughtException', (error, origin) => {
+  console.log('----- An uncaught exception occurred -----');
+  console.log(error);
+  console.log('Exception origin:', origin);
+  process.exit(1); // Exit the process with an error code
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.log('----- An unhandled rejection occurred -----');
+  console.log(reason);
+  console.log('Promise:', promise);
+  process.exit(1); // Exit the process with an error code
+});
+
 const express = require('express');
+
 require('dotenv').config();
 const fetch = require('node-fetch');
 const cron = require('node-cron');
@@ -49,15 +64,22 @@ async function startServer() {
         captureEodPrices(db, today);
     }, { timezone: "America/New_York" });
 
-    app.post('/api/prices/batch', async (req, res) => {
+app.post('/api/prices/batch', async (req, res) => {
+    console.log('--- ENTERED /api/prices/batch ENDPOINT ---');
+    try {
         const { tickers, date } = req.body;
+        console.log(`Received request for tickers: ${tickers.join(', ')} on date: ${date}`);
+
         if (!tickers || !Array.isArray(tickers)) {
             return res.status(400).json({ message: 'Invalid request body, expected a "tickers" array.' });
         }
 
         const prices = {};
         const apiKey = process.env.FINNHUB_API_KEY;
-        if (!apiKey) return res.status(500).json({ message: "API key not configured on server." });
+        if (!apiKey) {
+            console.error('FATAL: Finnhub API key is not configured.');
+            return res.status(500).json({ message: "API key not configured on server." });
+        }
 
         for (const ticker of tickers) {
             try {
@@ -72,18 +94,26 @@ async function startServer() {
                     const data = await apiRes.json();
                     prices[ticker] = (data && data.c > 0) ? data.c : null;
                 } else {
+                    console.warn(`API call for ${ticker} failed with status: ${apiRes.status}`);
                     prices[ticker] = null;
                 }
                 
                 await new Promise(resolve => setTimeout(resolve, 150));
 
-            } catch (error) {
-                console.error(`Error fetching price for ${ticker} in batch:`, error);
+            } catch (innerError) {
+                console.error(`Error processing ticker ${ticker} inside batch loop:`, innerError);
                 prices[ticker] = null;
             }
         }
+        
+        console.log('--- SUCCESSFULLY FINISHED BATCH, SENDING PRICES ---');
         res.json(prices);
-    });
+
+    } catch (outerError) {
+        console.error('--- FATAL ERROR in /api/prices/batch ---', outerError);
+        res.status(500).json({ message: 'A fatal error occurred on the server. Check terminal logs.' });
+    }
+});
 
     app.post('/api/tasks/capture-eod/:date', async (req, res) => {
         const { date } = req.params;
@@ -520,6 +550,30 @@ app.get('/api/portfolio/overview', async (req, res) => {
     } catch (error) {
         console.error('Error fetching single transaction:', error);
         res.status(500).json({ message: 'Error fetching transaction.' });
+    }
+});
+app.post('/api/realized_pl/summary', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.body;
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start date and end date are required.' });
+        }
+
+        const query = `
+            SELECT s.exchange, SUM((s.price - b.price) * s.quantity) as total_pl
+            FROM transactions s JOIN transactions b ON s.parent_buy_id = b.id
+            WHERE s.transaction_type = 'SELL'
+              AND s.transaction_date >= ? 
+              AND s.transaction_date <= ?
+            GROUP BY s.exchange;
+        `;
+        const byExchangeRows = await db.all(query, [startDate, endDate]);
+        const byExchange = byExchangeRows.map(row => ({ exchange: row.exchange, total_pl: row.total_pl }));
+        const total = byExchange.reduce((sum, row) => sum + row.total_pl, 0);
+        res.json({ byExchange, total });
+    } catch (error) {
+        console.error("Failed to get ranged realized P&L summary:", error);
+        res.status(500).json({ message: "Error fetching ranged realized P&L summary." });
     }
 });
 

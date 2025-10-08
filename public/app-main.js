@@ -1,12 +1,12 @@
-// public/app-main.js - v2.4.1 (Definitive)
 import { initializeEventListeners } from './event-listeners.js';
-import { renderTabs, renderDailyReport, renderLedger, renderChartsPage } from './ui/renderers.js';
+import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage } from './ui/renderers.js';
 import { updatePricesForView } from './api.js';
 import { getCurrentESTDateString, showToast } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
 
 export const state = {
-    settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15 },
+    // State now uses a 'theme' string instead of a boolean
+    settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15, theme: 'light' },
     currentView: { type: null, value: null },
     activityMap: new Map(),
     priceCache: new Map(),
@@ -24,6 +24,7 @@ export async function switchView(viewType, viewValue) {
     document.getElementById('daily-report-container').style.display = 'none';
     document.getElementById('charts-container').style.display = 'none';
     document.getElementById('ledger-page-container').style.display = 'none';
+    document.getElementById('snapshots-page-container').style.display = 'none';
 
     if (viewType === 'date') {
         document.getElementById('daily-report-container').style.display = 'block';
@@ -40,6 +41,15 @@ export async function switchView(viewType, viewValue) {
         } else {
             renderLedger(state.allTransactions, state.ledgerSort);
         }
+    } else if (viewType === 'snapshots') {
+        document.getElementById('snapshots-page-container').style.display = 'block';
+        if (state.allSnapshots.length === 0) {
+            try {
+                const res = await fetch('/api/snapshots');
+                if(res.ok) state.allSnapshots = await res.json();
+            } catch (e) { console.error("Could not fetch snapshots", e); }
+        }
+        renderSnapshotsPage(state);
     }
 }
 
@@ -52,12 +62,19 @@ export async function refreshLedger() {
     } catch (error) { console.error("Failed to refresh ledger:", error); showToast("Could not refresh the ledger.", "error"); }
 }
 
+// Updated saveSettings to handle the theme string
 export function saveSettings() {
+    state.settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || 0;
+    state.settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || 0;
+    state.settings.marketHoursInterval = parseInt(document.getElementById('market-hours-interval').value) || 2;
+    state.settings.afterHoursInterval = parseInt(document.getElementById('after-hours-interval').value) || 15;
+    // Set theme based on checkbox
+    state.settings.theme = document.getElementById('dark-mode-checkbox').checked ? 'dark' : 'light';
+    
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
-    document.getElementById('take-profit-percent').value = state.settings.takeProfitPercent;
-    document.getElementById('stop-loss-percent').value = state.settings.stopLossPercent;
-    document.getElementById('market-hours-interval').value = state.settings.marketHoursInterval;
-    document.getElementById('after-hours-interval').value = state.settings.afterHoursInterval;
+    
+    // Apply theme by setting a data-attribute on the body
+    document.body.setAttribute('data-theme', state.settings.theme);
 }
 
 export function sortTableByColumn(th, tbody) {
@@ -119,7 +136,7 @@ async function runEodFailoverCheck() {
     for (let d = new Date(lastRunDate); d < today; d.setUTCDate(d.getUTCDate() + 1)) {
         if (d.getTime() === lastRunDate.getTime()) continue;
         const dayOfWeek = d.getUTCDay();
-        if (dayOfWeek > 0 && dayOfWeek < 6) { // Only check for weekdays
+        if (dayOfWeek > 0 && dayOfWeek < 6) {
              missedDates.push(d.toLocaleDateString('en-CA'));
         }
     }
@@ -140,43 +157,49 @@ async function fetchAndRenderExchanges() {
     try {
         const response = await fetch('/api/exchanges');
         state.allExchanges = await response.json();
-        populateAllExchangeDropdowns(); 
     } catch (error) {
         showToast('Could not load exchanges.', 'error');
     }
 }
 
-function populateAllExchangeDropdowns() {
-    const exchangeSelects = document.querySelectorAll('#exchange, #edit-exchange');
-    exchangeSelects.forEach(select => {
-        const currentVal = select.value;
-        select.innerHTML = '';
-        const defaultOption = document.createElement('option');
-        defaultOption.value = "";
-        defaultOption.textContent = "Select Exchange";
-        defaultOption.disabled = true;
-        select.appendChild(defaultOption);
-
-        state.allExchanges.forEach(ex => {
-            const option = document.createElement('option');
-            option.value = ex.name;
-            option.textContent = ex.name;
-            select.appendChild(option);
-        });
-        select.value = currentVal;
+export function renderExchangeManagementList() {
+    const list = document.getElementById('exchange-list');
+    if (!list) return;
+    list.innerHTML = '';
+    state.allExchanges.forEach(ex => {
+        const li = document.createElement('li');
+        li.dataset.id = ex.id;
+        li.innerHTML = `
+            <span class="exchange-name">${ex.name}</span>
+            <input type="text" class="edit-exchange-input" value="${ex.name}" style="display: none;">
+            <div class="exchange-actions">
+                <button class="edit-exchange-btn">Edit</button>
+                <button class="save-exchange-btn" style="display: none;">Save</button>
+                <button class="delete-exchange-btn delete-btn">Delete</button>
+            </div>
+        `;
+        list.appendChild(li);
     });
 }
 
-
-
 async function initialize() {
+    // Updated loadSettings to handle the theme string
     const loadSettings = () => {
         const savedSettings = localStorage.getItem('stockTrackerSettings');
         if (savedSettings) { state.settings = { ...state.settings, ...JSON.parse(savedSettings) }; }
+
         document.getElementById('take-profit-percent').value = state.settings.takeProfitPercent;
         document.getElementById('stop-loss-percent').value = state.settings.stopLossPercent;
         document.getElementById('market-hours-interval').value = state.settings.marketHoursInterval;
         document.getElementById('after-hours-interval').value = state.settings.afterHoursInterval;
+        
+        const darkModeCheckbox = document.getElementById('dark-mode-checkbox');
+        if(darkModeCheckbox) {
+            // Set checkbox based on the theme string
+            darkModeCheckbox.checked = state.settings.theme === 'dark';
+        }
+        // Apply theme by setting a data-attribute on the body
+        document.body.setAttribute('data-theme', state.settings.theme);
     }
     loadSettings();
     await fetchAndRenderExchanges();
@@ -199,23 +222,6 @@ async function initialize() {
     await switchView('date', viewDate);
     initializeScheduler(state);
 }
-export function renderExchangeManagementList() {
-    const list = document.getElementById('exchange-list');
-    if (!list) return;
-    list.innerHTML = '';
-    state.allExchanges.forEach(ex => {
-        const li = document.createElement('li');
-        li.dataset.id = ex.id;
-        li.innerHTML = `
-            <span class="exchange-name">${ex.name}</span>
-            <input type="text" class="edit-exchange-input" value="${ex.name}" style="display: none;">
-            <div class="exchange-actions">
-                <button class="edit-exchange-btn">Edit</button>
-                <button class="save-exchange-btn" style="display: none;">Save</button>
-                <button class="delete-exchange-btn delete-btn">Delete</button>
-            </div>
-        `;
-        list.appendChild(li);
-    });
-}
+
 initialize();
+

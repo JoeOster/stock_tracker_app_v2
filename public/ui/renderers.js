@@ -33,6 +33,12 @@ export function renderTabs(currentView) {
     ledgerTab.textContent = 'Ledger';
     if (currentView.type === 'ledger') ledgerTab.classList.add('active');
     tabsContainer.appendChild(ledgerTab);
+        const snapshotsTab = document.createElement('div');
+    snapshotsTab.className = 'tab master-tab';
+    snapshotsTab.dataset.viewType = 'snapshots';
+    snapshotsTab.textContent = 'Snapshots';
+    if (currentView.type === 'snapshots') snapshotsTab.classList.add('active');
+    tabsContainer.appendChild(snapshotsTab);
 }
 
 export function renderLedger(allTransactions, ledgerSort) {
@@ -110,6 +116,13 @@ export async function renderChartsPage(state) {
     const allTimeChartCtx = document.getElementById('all-time-chart')?.getContext('2d');
     if (!plSummaryTable || !allTimeChartCtx) return;
 
+    // --- ADDED: Logic to set the date in the overview header ---
+    const overviewDateSpan = document.getElementById('overview-date');
+    if(overviewDateSpan) {
+        const today = new Date(getCurrentESTDateString() + 'T12:00:00Z');
+        overviewDateSpan.textContent = `(as of ${today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })})`;
+    }
+
     async function renderRangedPLSummary() {
         const startDate = document.getElementById('pl-start-date').value;
         const endDate = document.getElementById('pl-end-date').value;
@@ -128,7 +141,7 @@ export async function renderChartsPage(state) {
                      return;
                 }
                 const plBody = plData.byExchange.map(row => `<tr><td>${row.exchange}</td><td class="numeric">${formatAccounting(row.total_pl)}</td></tr>`).join('');
-                rangedTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P/L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
+                rangedTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P&L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
             }
         } catch (error) {
             console.error("Failed to render Ranged P&L Summary:", error);
@@ -203,7 +216,7 @@ export async function renderPortfolioOverview(priceCache) {
             if(unrealizedPL) totalUnrealizedPL += unrealizedPL;
 
             const dayChangeAmount = priceToUse && pos.previous_close ? (priceToUse - pos.previous_close) * pos.total_quantity : null;
-            const dayChangePercent = priceToUse && pos.previous_close ? ((priceToUse - pos.previous_close) / pos.previous_close) * 100 : null;
+            const dayChangePercent = priceToUse && pos.previous_close && pos.previous_close !== 0 ? ((priceToUse - pos.previous_close) / pos.previous_close) * 100 : null;
 
             overviewBody.insertRow().innerHTML = `
                 <td>${pos.ticker}</td>
@@ -358,5 +371,48 @@ export function populatePricesFromCache(activityMap, priceCache) {
     if (totalPlCell) {
         totalPlCell.innerHTML = `<strong>${formatAccounting(totalUnrealizedPL)}</strong>`;
         totalPlCell.className = `numeric ${totalUnrealizedPL >= 0 ? 'positive' : 'negative'}`;
+    }
+}
+export function renderSnapshotsPage(state) {
+    // Populate exchange dropdown
+    const exchangeSelect = document.getElementById('snapshot-exchange');
+    if (exchangeSelect) {
+        const currentVal = exchangeSelect.value;
+        exchangeSelect.innerHTML = '<option value="" disabled selected>Select Exchange</option>';
+        state.allExchanges.forEach(ex => {
+            const option = document.createElement('option');
+            option.value = ex.name;
+            option.textContent = ex.name;
+            exchangeSelect.appendChild(option);
+        });
+        exchangeSelect.value = currentVal;
+    }
+
+    // Populate snapshots table
+    const tableBody = document.querySelector('#snapshots-table tbody');
+    if (tableBody) {
+        tableBody.innerHTML = '';
+        if (state.allSnapshots.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4">No snapshots have been logged yet.</td></tr>';
+            return;
+        }
+        // Sort by date descending, then by exchange
+        const sortedSnapshots = [...state.allSnapshots].sort((a, b) => {
+            if (a.snapshot_date > b.snapshot_date) return -1;
+            if (a.snapshot_date < b.snapshot_date) return 1;
+            return a.exchange.localeCompare(b.exchange);
+        });
+
+        sortedSnapshots.forEach(snap => {
+            const row = tableBody.insertRow();
+            row.innerHTML = `
+                <td>${snap.snapshot_date}</td>
+                <td>${snap.exchange}</td>
+                <td class="numeric">${formatAccounting(snap.value)}</td>
+                <td class="actions-cell">
+                    <button class="delete-snapshot-btn delete-btn" data-id="${snap.id}">Delete</button>
+                </td>
+            `;
+        });
     }
 }

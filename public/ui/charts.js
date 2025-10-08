@@ -1,5 +1,14 @@
-// public/ui/charts.js
 import { getTradingDays, getCurrentESTDateString } from './helpers.js';
+
+// This helper function generates a consistent color from any string
+function stringToHslColor(str, s = 75, l = 60) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = hash % 360;
+    return `hsl(${h}, ${s}%, ${l}%)`;
+}
 
 export function renderAllTimeChart(ctx, chartInstance, snapshots, state) {
     if(chartInstance) chartInstance.destroy();
@@ -39,37 +48,55 @@ export function createChart(ctx, snapshots, state) {
         return null;
     }
     
-    const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#34495e', '#1abc9c'];
-    let colorIndex = 0;
+    // --- THIS IS THE NEW THEME-AWARE LOGIC ---
+    const isDarkMode = state.settings.darkMode;
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.7)' : '#666';
 
-    snapshots.forEach(s => {
-        if (!datasets[s.exchange]) {
-            datasets[s.exchange] = { 
-                label: s.exchange, data: [], fill: false, 
-                borderColor: colors[colorIndex++ % colors.length], tension: 0.1 
-            };
-        }
+    const exchangeNames = [...new Set(snapshots.map(s => s.exchange))];
+    
+    exchangeNames.forEach(exchangeName => {
+        datasets[exchangeName] = {
+            label: exchangeName,
+            data: [],
+            fill: false,
+            borderColor: stringToHslColor(exchangeName),
+            tension: 0.1
+        };
+
+        const valueMap = new Map(
+            snapshots
+                .filter(s => s.exchange === exchangeName)
+                .map(s => [s.snapshot_date, s.value])
+        );
+
+        datasets[exchangeName].data = labels.map(label => valueMap.get(label) ?? null);
     });
-
-    for (const ex in datasets) {
-        datasets[ex].data = labels.map(l => snapshots.find(s => s.snapshot_date === l && s.exchange === ex)?.value ?? null);
-    }
 
     return new Chart(ctx, {
         type: 'line',
         data: { labels: labels, datasets: Object.values(datasets) },
         options: {
-            spanGaps: true, responsive: true, maintainAspectRatio: false,
-            scales: { y: { ticks: { callback: function(value) { return '$' + value.toLocaleString(); } } } },
-
-            // --- THIS SECTION IS ADDED ---
-            plugins: {
-                legend: {
-                    position: 'bottom', // This moves the legend to the bottom
+            spanGaps: true,
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                y: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
                 }
             },
-            // --- END OF ADDED SECTION ---
-
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: textColor
+                    }
+                }
+            },
             onClick: (e, elements, chart) => {
                 const chartZoomModal = document.getElementById('chart-zoom-modal');
                 const zoomedChartCtx = document.getElementById('zoomed-chart').getContext('2d');
@@ -81,3 +108,4 @@ export function createChart(ctx, snapshots, state) {
         }
     });
 }
+

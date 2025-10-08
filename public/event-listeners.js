@@ -1,8 +1,7 @@
-// public/event-listeners.js - v2.4.3 (Exchange Management Implemented)
 import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, showConfirmationModal, renderExchangeManagementList } from './app-main.js';
 import { updateAllPrices } from './api.js';
 import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity } from './ui/helpers.js';
-import { renderLedger } from './ui/renderers.js';
+import { renderLedger, renderSnapshotsPage } from './ui/renderers.js';
 
 function populateAllExchangeDropdowns() {
     const exchangeSelects = document.querySelectorAll('select[id*="exchange"]');
@@ -38,10 +37,6 @@ export function initializeEventListeners() {
     const tabsContainer = document.getElementById('tabs-container');
     const sellFromPositionModal = document.getElementById('sell-from-position-modal');
     const sellFromPositionForm = document.getElementById('sell-from-position-form');
-    const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
-    const ledgerFilterStart = document.getElementById('ledger-filter-start');
-    const ledgerFilterEnd = document.getElementById('ledger-filter-end');
-    const ledgerClearFiltersBtn = document.getElementById('ledger-clear-filters-btn');
     const exchangeList = document.getElementById('exchange-list');
     const addExchangeBtn = document.getElementById('add-exchange-btn');
     const newExchangeNameInput = document.getElementById('new-exchange-name');
@@ -105,6 +100,17 @@ export function initializeEventListeners() {
         saveSettings();
         settingsModal.classList.remove('visible');
     });
+
+const themeSelector = document.getElementById('theme-selector');
+    if(themeSelector) {
+        themeSelector.addEventListener('change', () => {
+            saveSettings();
+            // Re-render the current view to update charts
+            if(state.currentView.type === 'charts') {
+                switchView('charts');
+            }
+        });
+    }
 
     importCsvBtn.addEventListener('click', () => {
         const file = csvFileInput.files[0];
@@ -214,53 +220,48 @@ export function initializeEventListeners() {
         }
     });
     
-document.querySelector('#ledger-table tbody').addEventListener('click', async (e) => {
-    const deleteBtn = e.target.closest('.delete-btn');
-    if (deleteBtn) {
-        const id = deleteBtn.dataset.id;
-        showConfirmationModal('Delete Transaction?', 'This is permanent.', async () => {
-            try {
-                const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-                if (!res.ok) throw new Error('Server error');
-                showToast('Transaction deleted.', 'success');
-                await refreshLedger();
-            } catch (err) {
-                showToast('Failed to delete.', 'error');
-            }
-        });
-    }
-    const editBtn = e.target.closest('.modify-btn');
-    if (editBtn) {
-        const id = editBtn.dataset.id;
-        const tx = state.allTransactions.find(t => t.id == id);
-        if (tx) {
-            // Populate the form with the transaction data
-            document.getElementById('edit-id').value = tx.id;
-            document.getElementById('edit-date').value = tx.transaction_date;
-            document.getElementById('edit-ticker').value = tx.ticker;
-            document.getElementById('edit-exchange').value = tx.exchange;
-            document.getElementById('edit-type').value = tx.transaction_type;
-            document.getElementById('edit-quantity').value = tx.quantity;
-            document.getElementById('edit-price').value = tx.price;
-            document.getElementById('edit-limit-price-up').value = tx.limit_price_up || '';
-            document.getElementById('edit-limit-up-expiration').value = tx.limit_up_expiration || '';
-            document.getElementById('edit-limit-price-down').value = tx.limit_price_down || '';
-            document.getElementById('edit-limit-down-expiration').value = tx.limit_down_expiration || '';
-
-            // Get references to the fieldsets and title
-            const coreFields = document.getElementById('edit-core-fields');
-            const limitFields = document.getElementById('edit-limit-fields');
-            const modalTitle = document.getElementById('edit-modal-title');
-
-            // Configure the modal for a general ledger edit
-            modalTitle.textContent = 'Edit Transaction';
-            coreFields.style.display = 'block'; // Show core fields
-            limitFields.style.display = 'none'; // Hide limit fields
-
-            editModal.classList.add('visible');
+    document.querySelector('#ledger-table tbody').addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
+            showConfirmationModal('Delete Transaction?', 'This is permanent.', async () => {
+                try {
+                    const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Server error');
+                    showToast('Transaction deleted.', 'success');
+                    await refreshLedger();
+                } catch (err) { showToast('Failed to delete.', 'error'); }
+            });
         }
-    }
-});
+        const editBtn = e.target.closest('.modify-btn');
+        if (editBtn) {
+            const id = editBtn.dataset.id;
+            const tx = state.allTransactions.find(t => t.id == id);
+            if (tx) {
+                document.getElementById('edit-id').value = tx.id;
+                document.getElementById('edit-date').value = tx.transaction_date;
+                document.getElementById('edit-ticker').value = tx.ticker;
+                document.getElementById('edit-exchange').value = tx.exchange;
+                document.getElementById('edit-type').value = tx.transaction_type;
+                document.getElementById('edit-quantity').value = tx.quantity;
+                document.getElementById('edit-price').value = tx.price;
+                document.getElementById('edit-limit-price-up').value = tx.limit_price_up || '';
+                document.getElementById('edit-limit-up-expiration').value = tx.limit_up_expiration || '';
+                document.getElementById('edit-limit-price-down').value = tx.limit_price_down || '';
+                document.getElementById('edit-limit-down-expiration').value = tx.limit_down_expiration || '';
+
+                const coreFields = document.getElementById('edit-core-fields');
+                const limitFields = document.getElementById('edit-limit-fields');
+                const modalTitle = document.getElementById('edit-modal-title');
+
+                modalTitle.textContent = 'Edit Transaction';
+                coreFields.style.display = 'block';
+                limitFields.style.display = 'none';
+
+                editModal.classList.add('visible');
+            }
+        }
+    });
 
     sellFromPositionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -291,93 +292,80 @@ document.querySelector('#ledger-table tbody').addEventListener('click', async (e
         }
     });
 
-editForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('edit-id').value;
-    const updatedTransaction = {
-        ticker: document.getElementById('edit-ticker').value.toUpperCase().trim(),
-        exchange: document.getElementById('edit-exchange').value,
-        transaction_type: document.getElementById('edit-type').value,
-        quantity: parseFloat(document.getElementById('edit-quantity').value),
-        price: parseFloat(document.getElementById('edit-price').value),
-        transaction_date: document.getElementById('edit-date').value,
-        limit_price_up: parseFloat(document.getElementById('edit-limit-price-up').value) || null,
-        limit_up_expiration: document.getElementById('edit-limit-up-expiration').value || null,
-        limit_price_down: parseFloat(document.getElementById('edit-limit-price-down').value) || null,
-        limit_down_expiration: document.getElementById('edit-limit-down-expiration').value || null,
-    };
+    editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-id').value;
+        const updatedTransaction = {
+            ticker: document.getElementById('edit-ticker').value.toUpperCase().trim(),
+            exchange: document.getElementById('edit-exchange').value,
+            transaction_type: document.getElementById('edit-type').value,
+            quantity: parseFloat(document.getElementById('edit-quantity').value),
+            price: parseFloat(document.getElementById('edit-price').value),
+            transaction_date: document.getElementById('edit-date').value,
+            limit_price_up: parseFloat(document.getElementById('limit-price-up').value) || null,
+            limit_up_expiration: document.getElementById('limit-up-expiration').value || null,
+            limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
+            limit_down_expiration: document.getElementById('limit-down-expiration').value || null,
+        };
 
-    // --- 1. VALIDATION LOGIC ---
-    const lotData = state.activityMap.get(`lot-${id}`);
-    if (lotData) { // Only validate if we are editing a lot from the date page
-        const costBasis = lotData.cost_basis;
-        if (updatedTransaction.limit_price_up && updatedTransaction.limit_price_up <= costBasis) {
-            showToast('Take Profit price must be higher than the cost basis.', 'error');
-            return;
-        }
-        if (updatedTransaction.limit_price_down && updatedTransaction.limit_price_down >= costBasis) {
-            showToast('Stop Loss price must be lower than the cost basis.', 'error');
-            return;
-        }
-    }
-
-    const submitButton = editForm.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
-
-    try {
-        // First, save the changes
-        const response = await fetch(`/api/transactions/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedTransaction)
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message);
-        }
-
-        editModal.classList.remove('visible');
-        showToast('Transaction updated!', 'success');
-
-        // --- 2. IMPROVED DATA REFRESH ---
-        if (state.currentView.type === 'ledger') {
-            await refreshLedger(); // Refresh the whole ledger if that's the current view
-        } else if (state.currentView.type === 'date' && lotData) {
-            // If on the date page, fetch just the updated row data
-            const freshDataRes = await fetch(`/api/transaction/${id}`);
-            if (freshDataRes.ok) {
-                const freshTx = await freshDataRes.json();
-                // Update the client state with definitive data from the server
-                lotData.cost_basis = freshTx.price;
-                lotData.original_quantity = freshTx.original_quantity;
-                lotData.quantity_remaining = freshTx.quantity_remaining;
-                lotData.limit_price_up = freshTx.limit_price_up;
-                lotData.limit_up_expiration = freshTx.limit_up_expiration;
-                lotData.limit_price_down = freshTx.limit_price_down;
-                lotData.limit_down_expiration = freshTx.limit_down_expiration;
-                
-                // Re-render just this one row
-                const rowToUpdate = document.querySelector(`tr[data-key="lot-${id}"]`);
-                if(rowToUpdate) {
-                    let limitUpText = lotData.limit_price_up ? formatAccounting(lotData.limit_price_up) : '--';
-                    if (lotData.limit_price_up && lotData.limit_up_expiration) { limitUpText += ` on ${lotData.limit_up_expiration}`; }
-                    let limitDownText = lotData.limit_price_down ? formatAccounting(lotData.limit_price_down) : '--';
-                    if (lotData.limit_price_down && lotData.limit_down_expiration) { limitDownText += ` on ${lotData.limit_down_expiration}`; }
-
-                    rowToUpdate.querySelector('td:nth-child(4)').innerHTML = formatAccounting(lotData.cost_basis);
-                    rowToUpdate.querySelector('td:nth-child(5)').innerHTML = formatQuantity(lotData.quantity_remaining);
-                    rowToUpdate.querySelector('td:nth-child(9)').innerHTML = limitUpText;
-                    rowToUpdate.querySelector('td:nth-child(10)').innerHTML = limitDownText;
-                }
+        const lotData = state.activityMap.get(`lot-${id}`);
+        if (lotData) {
+            const costBasis = lotData.cost_basis;
+            if (updatedTransaction.limit_price_up && updatedTransaction.limit_price_up <= costBasis) {
+                showToast('Take Profit price must be higher than the cost basis.', 'error');
+                return;
+            }
+            if (updatedTransaction.limit_price_down && updatedTransaction.limit_price_down >= costBasis) {
+                showToast('Stop Loss price must be lower than the cost basis.', 'error');
+                return;
             }
         }
 
-    } catch (error) {
-        showToast(`Error updating transaction: ${error.message}`, 'error');
-    } finally {
-        submitButton.disabled = false;
-    }
-});
+        const submitButton = editForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch(`/api/transactions/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTransaction) });
+            if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message); }
+
+            editModal.classList.remove('visible');
+            showToast('Transaction updated!', 'success');
+
+            if (state.currentView.type === 'ledger') {
+                await refreshLedger();
+            } else if (state.currentView.type === 'date' && lotData) {
+                const freshDataRes = await fetch(`/api/transaction/${id}`);
+                if (freshDataRes.ok) {
+                    const freshTx = await freshDataRes.json();
+                    lotData.cost_basis = freshTx.price;
+                    lotData.original_quantity = freshTx.original_quantity;
+                    lotData.quantity_remaining = freshTx.quantity_remaining;
+                    lotData.limit_price_up = freshTx.limit_price_up;
+                    lotData.limit_up_expiration = freshTx.limit_up_expiration;
+                    lotData.limit_price_down = freshTx.limit_price_down;
+                    lotData.limit_down_expiration = freshTx.limit_down_expiration;
+                    
+                    const rowToUpdate = document.querySelector(`tr[data-key="lot-${id}"]`);
+                    if(rowToUpdate) {
+                        let limitUpText = lotData.limit_price_up ? formatAccounting(lotData.limit_price_up) : '--';
+                        if (lotData.limit_price_up && lotData.limit_up_expiration) { limitUpText += ` on ${lotData.limit_up_expiration}`; }
+                        let limitDownText = lotData.limit_price_down ? formatAccounting(lotData.limit_price_down) : '--';
+                        if (lotData.limit_price_down && lotData.limit_down_expiration) { limitDownText += ` on ${lotData.limit_down_expiration}`; }
+
+                        rowToUpdate.querySelector('td:nth-child(4)').innerHTML = formatAccounting(lotData.cost_basis);
+                        rowToUpdate.querySelector('td:nth-child(5)').innerHTML = formatQuantity(lotData.quantity_remaining);
+                        rowToUpdate.querySelector('td:nth-child(9)').innerHTML = limitUpText;
+                        rowToUpdate.querySelector('td:nth-child(10)').innerHTML = limitDownText;
+                    }
+                }
+            }
+        } catch (error) {
+            showToast(`Error updating transaction: ${error.message}`, 'error');
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
     editModal.addEventListener('click', (e) => {
         const clearBtn = e.target.closest('.clear-limit-btn');
         if (!clearBtn) return;
@@ -428,7 +416,6 @@ editForm.addEventListener('submit', async (e) => {
             try {
                 const res = await fetch(`/api/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                const oldName = state.allExchanges.find(ex => ex.id == id).name;
                 state.allExchanges.find(ex => ex.id == id).name = newName;
                 state.allExchanges.sort((a, b) => a.name.localeCompare(b.name));
                 await refreshLedger();
@@ -450,6 +437,54 @@ editForm.addEventListener('submit', async (e) => {
         }
     });
 
+    const addSnapshotForm = document.getElementById('add-snapshot-form');
+    if (addSnapshotForm) {
+        addSnapshotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const snapshot = {
+                snapshot_date: document.getElementById('snapshot-date').value,
+                exchange: document.getElementById('snapshot-exchange').value,
+                value: parseFloat(document.getElementById('snapshot-value').value)
+            };
+            try {
+                const res = await fetch('/api/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snapshot) });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                
+                const freshSnapshots = await fetch('/api/snapshots');
+                state.allSnapshots = await freshSnapshots.json();
+                renderSnapshotsPage(state);
+                
+                addSnapshotForm.reset();
+                showToast('Snapshot saved!', 'success');
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        });
+    }
+
+    const snapshotsTable = document.getElementById('snapshots-table');
+    if (snapshotsTable) {
+        snapshotsTable.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.delete-snapshot-btn');
+            if (deleteBtn) {
+                const id = deleteBtn.dataset.id;
+                showConfirmationModal('Delete Snapshot?', 'This cannot be undone.', async () => {
+                     try {
+                        const res = await fetch(`/api/snapshots/${id}`, { method: 'DELETE' });
+                        if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+
+                        state.allSnapshots = state.allSnapshots.filter(s => s.id != id);
+                        renderSnapshotsPage(state);
+
+                        showToast('Snapshot deleted.', 'success');
+                    } catch (error) {
+                        showToast(`Error: ${error.message}`, 'error');
+                    }
+                });
+            }
+        });
+    }
+
     document.querySelectorAll('.modal .close-button').forEach(btn => 
         btn.addEventListener('click', e => 
             e.target.closest('.modal').classList.remove('visible')
@@ -466,3 +501,4 @@ editForm.addEventListener('submit', async (e) => {
         updateAllPrices(state.activityMap, state.priceCache)
     );
 }
+
