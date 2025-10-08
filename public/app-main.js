@@ -155,7 +155,7 @@ async function runEodFailoverCheck() {
     localStorage.setItem('lastEodRunDate', todayStr);
 }
 
-async function fetchAndRenderExchanges() {
+export async function fetchAndRenderExchanges() {
     try {
         const response = await fetch('/api/exchanges');
         state.allExchanges = await response.json();

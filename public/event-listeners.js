@@ -1,4 +1,4 @@
-import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, showConfirmationModal, renderExchangeManagementList } from './app-main.js';
+import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, showConfirmationModal, renderExchangeManagementList, fetchAndRenderExchanges } from './app-main.js';
 import { updateAllPrices } from './api.js';
 import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity } from './ui/helpers.js';
 import { renderLedger, renderSnapshotsPage } from './ui/renderers.js';
@@ -356,25 +356,19 @@ export function initializeEventListeners() {
             document.getElementById('edit-limit-down-expiration').value = '';
         }
     });
-
-    addExchangeBtn.addEventListener('click', async () => {
+    
+addExchangeBtn.addEventListener('click', async () => {
         const name = newExchangeNameInput.value.trim();
         if (!name) return showToast('Exchange name cannot be empty.', 'error');
         try {
             const res = await fetch('/api/exchanges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
             if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-            const newExchange = await res.json();
-            state.allExchanges.push(newExchange);
-            state.allExchanges.sort((a, b) => a.name.localeCompare(b.name));
-            newExchangeNameInput.value = '';
-            renderExchangeManagementList();
             
-            // We need to re-populate all dropdowns after an add
-            const freshExchanges = await fetch('/api/exchanges');
-            state.allExchanges = await freshExchanges.json();
-            const event = new CustomEvent('exchangesUpdated');
-            document.dispatchEvent(event);
-
+            // This now correctly calls the master function to update all dropdowns
+            await fetchAndRenderExchanges(); 
+            
+            newExchangeNameInput.value = '';
+            renderExchangeManagementList(); // Re-renders the list in the settings modal
             showToast('Exchange added!', 'success');
         } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
     });
@@ -401,13 +395,9 @@ export function initializeEventListeners() {
                 const res = await fetch(`/api/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                 
-                // We need to re-populate all dropdowns after an edit
-                const freshExchanges = await fetch('/api/exchanges');
-                state.allExchanges = await freshExchanges.json();
-                const event = new CustomEvent('exchangesUpdated');
-                document.dispatchEvent(event);
-
-                await refreshLedger();
+                // This now correctly calls the master function to update all dropdowns
+                await fetchAndRenderExchanges();
+                await refreshLedger(); // Refresh ledger in case transaction exchanges were renamed
                 renderExchangeManagementList();
                 showToast('Exchange updated!', 'success');
             } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
@@ -417,12 +407,8 @@ export function initializeEventListeners() {
                     const res = await fetch(`/api/exchanges/${id}`, { method: 'DELETE' });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                     
-                    // We need to re-populate all dropdowns after a delete
-                    const freshExchanges = await fetch('/api/exchanges');
-                    state.allExchanges = await freshExchanges.json();
-                    const event = new CustomEvent('exchangesUpdated');
-                    document.dispatchEvent(event);
-                    
+                    // This now correctly calls the master function to update all dropdowns
+                    await fetchAndRenderExchanges();
                     renderExchangeManagementList();
                     showToast('Exchange deleted.', 'success');
                 } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
