@@ -3,8 +3,6 @@ import { updateAllPrices } from './api.js';
 import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity } from './ui/helpers.js';
 import { renderLedger, renderSnapshotsPage } from './ui/renderers.js';
 
-
-
 export function initializeEventListeners() {
     const dailyReportContainer = document.getElementById('daily-report-container');
     const transactionForm = document.getElementById('add-transaction-form');
@@ -82,7 +80,15 @@ export function initializeEventListeners() {
         settingsModal.classList.remove('visible');
     });
 
-
+    const themeSelector = document.getElementById('theme-selector');
+    if(themeSelector) {
+        themeSelector.addEventListener('change', () => {
+            saveSettings();
+            if(state.currentView.type === 'charts') {
+                switchView('charts');
+            }
+        });
+    }
 
     importCsvBtn.addEventListener('click', () => {
         const file = csvFileInput.files[0];
@@ -274,7 +280,7 @@ export function initializeEventListeners() {
             quantity: parseFloat(document.getElementById('edit-quantity').value),
             price: parseFloat(document.getElementById('edit-price').value),
             transaction_date: document.getElementById('edit-date').value,
-            limit_price_up: parseFloat(document.getElementById('limit-price-up').value) || null,
+            limit_price_up: parseFloat(document.getElementById('edit-limit-price-up').value) || null,
             limit_up_expiration: document.getElementById('limit-up-expiration').value || null,
             limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
             limit_down_expiration: document.getElementById('limit-down-expiration').value || null,
@@ -362,7 +368,13 @@ export function initializeEventListeners() {
             state.allExchanges.sort((a, b) => a.name.localeCompare(b.name));
             newExchangeNameInput.value = '';
             renderExchangeManagementList();
-            populateAllExchangeDropdowns();
+            
+            // We need to re-populate all dropdowns after an add
+            const freshExchanges = await fetch('/api/exchanges');
+            state.allExchanges = await freshExchanges.json();
+            const event = new CustomEvent('exchangesUpdated');
+            document.dispatchEvent(event);
+
             showToast('Exchange added!', 'success');
         } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
     });
@@ -388,10 +400,14 @@ export function initializeEventListeners() {
             try {
                 const res = await fetch(`/api/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                state.allExchanges.find(ex => ex.id == id).name = newName;
-                state.allExchanges.sort((a, b) => a.name.localeCompare(b.name));
+                
+                // We need to re-populate all dropdowns after an edit
+                const freshExchanges = await fetch('/api/exchanges');
+                state.allExchanges = await freshExchanges.json();
+                const event = new CustomEvent('exchangesUpdated');
+                document.dispatchEvent(event);
+
                 await refreshLedger();
-                populateAllExchangeDropdowns();
                 renderExchangeManagementList();
                 showToast('Exchange updated!', 'success');
             } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
@@ -400,9 +416,14 @@ export function initializeEventListeners() {
                 try {
                     const res = await fetch(`/api/exchanges/${id}`, { method: 'DELETE' });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                    state.allExchanges = state.allExchanges.filter(ex => ex.id != id);
+                    
+                    // We need to re-populate all dropdowns after a delete
+                    const freshExchanges = await fetch('/api/exchanges');
+                    state.allExchanges = await freshExchanges.json();
+                    const event = new CustomEvent('exchangesUpdated');
+                    document.dispatchEvent(event);
+                    
                     renderExchangeManagementList();
-                    populateAllExchangeDropdowns();
                     showToast('Exchange deleted.', 'success');
                 } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
             });

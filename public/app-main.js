@@ -5,7 +5,6 @@ import { getCurrentESTDateString, showToast } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
 
 export const state = {
-    // State now uses a 'theme' string instead of a boolean
     settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15, theme: 'light' },
     currentView: { type: null, value: null },
     activityMap: new Map(),
@@ -62,24 +61,19 @@ export async function refreshLedger() {
     } catch (error) { console.error("Failed to refresh ledger:", error); showToast("Could not refresh the ledger.", "error"); }
 }
 
-// Updated saveSettings to handle the theme string
 export function saveSettings() {
-    const oldTheme = state.settings.theme; // Get the theme before changes
+    const oldTheme = state.settings.theme;
 
-    // Read all settings from the form
     state.settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || 0;
     state.settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || 0;
     state.settings.marketHoursInterval = parseInt(document.getElementById('market-hours-interval').value) || 2;
     state.settings.afterHoursInterval = parseInt(document.getElementById('after-hours-interval').value) || 15;
     state.settings.theme = document.getElementById('theme-selector').value;
     
-    // Save to localStorage
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
     
-    // Apply the theme to the body
     document.body.dataset.theme = state.settings.theme;
 
-    // If the theme changed and we are on the charts page, refresh the charts
     if (state.settings.theme !== oldTheme && state.currentView.type === 'charts') {
         switchView('charts');
     }
@@ -165,12 +159,15 @@ async function fetchAndRenderExchanges() {
     try {
         const response = await fetch('/api/exchanges');
         state.allExchanges = await response.json();
+        // This function call is now correct
+        populateAllExchangeDropdowns(); 
     } catch (error) {
         showToast('Could not load exchanges.', 'error');
     }
 }
+
+// This function now correctly lives in app-main.js
 function populateAllExchangeDropdowns() {
-    // This selector targets all exchange dropdowns in the app
     const exchangeSelects = document.querySelectorAll('select[id*="exchange"]');
     exchangeSelects.forEach(select => {
         const currentVal = select.value;
@@ -212,7 +209,6 @@ export function renderExchangeManagementList() {
 }
 
 async function initialize() {
-    // Updated loadSettings to handle the theme string
     const loadSettings = () => {
         const savedSettings = localStorage.getItem('stockTrackerSettings');
         if (savedSettings) { state.settings = { ...state.settings, ...JSON.parse(savedSettings) }; }
@@ -222,13 +218,11 @@ async function initialize() {
         document.getElementById('market-hours-interval').value = state.settings.marketHoursInterval;
         document.getElementById('after-hours-interval').value = state.settings.afterHoursInterval;
         
-        const darkModeCheckbox = document.getElementById('dark-mode-checkbox');
-        if(darkModeCheckbox) {
-            // Set checkbox based on the theme string
-            darkModeCheckbox.checked = state.settings.theme === 'dark';
+        const themeSelector = document.getElementById('theme-selector');
+        if(themeSelector) {
+            themeSelector.value = state.settings.theme;
         }
-        // Apply theme by setting a data-attribute on the body
-        document.body.setAttribute('data-theme', state.settings.theme);
+        document.body.dataset.theme = state.settings.theme;
     }
     loadSettings();
     await fetchAndRenderExchanges();
