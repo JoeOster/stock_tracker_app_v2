@@ -21,7 +21,69 @@ async function setupApp() {
             captureEodPrices(db, today);
         }, { timezone: "America/New_York" });
     }
+// --- Automated Order Watcher Service ---
+    if (process.env.NODE_ENV !== 'test') {
+        // Runs every 5 minutes, from 9 AM to 4 PM (16:00), Monday to Friday, in the NY timezone.
+        cron.schedule('*/5 9-16 * * 1-5', async () => {
+            console.log('[CRON] Running Pending Order Watcher...');
+            try {
+                // 1. Get all active pending buy limit orders
+                const activeOrders = await db.all("SELECT * FROM pending_orders WHERE status = 'ACTIVE' AND order_type = 'BUY_LIMIT'");
+                if (activeOrders.length === 0) {
+                    return; // No orders to check, exit early
+                }
 
+                // 2. Get unique tickers to fetch prices for
+                const uniqueTickers = [...new Set(activeOrders.map(order => order.ticker))];
+                const apiKey = process.env.FINNHUB_API_KEY;
+
+                // 3. Fetch current prices for all relevant tickers
+                const currentPrices = {};
+                for (const ticker of uniqueTickers) {
+                    const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
+                    if (apiRes.ok) {
+                        const data = await apiRes.json();
+                        if (data && data.c > 0) currentPrices[ticker] = data.c;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 150)); // Brief pause for rate limiting
+                }
+                
+                // 4. Check each order against the current market price
+                for (const order of activeOrders) {
+                    const currentPrice = currentPrices[order.ticker];
+                    if (currentPrice && currentPrice <= order.limit_price) {
+                        console.log(`[CRON] Triggered fill for ${order.ticker} at limit price ${order.limit_price}`);
+                        
+                        // 5. Atomically update status and create the new transaction
+                        await db.exec('BEGIN TRANSACTION');
+                        
+                        // Set the pending order status to 'FILLED'
+                        await db.run("UPDATE pending_orders SET status = 'FILLED' WHERE id = ?", order.id);
+
+                        // Create the new transaction in the main ledger
+                        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+                        const newTxQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id, advice_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                        
+                        await db.run(newTxQuery, [
+                            order.ticker, order.exchange, 'BUY', order.quantity, 
+                            order.limit_price, // Use the limit price as the execution price
+                            today, order.quantity, order.quantity, 
+                            order.account_holder_id, order.advice_source_id
+                        ]);
+
+                        await db.exec('COMMIT');
+                        console.log(`[CRON] Successfully filled order and created transaction for ${order.ticker}.`);
+                    }
+                }
+            } catch (error) {
+                console.error('[CRON] Error in Pending Order Watcher:', error);
+                await db.exec('ROLLBACK'); // Roll back changes if any step failed
+            }
+        }, {
+            scheduled: true,
+            timezone: "America/New_York"
+        });
+    }
     async function captureEodPrices(db, dateToProcess) {
         console.log(`[EOD Process] Running for date: ${dateToProcess}`);
         try {
@@ -201,6 +263,66 @@ async function setupApp() {
             res.json({ message: 'Account holder deleted successfully.' });
         } catch (error) {
             res.status(500).json({ message: 'Error deleting account holder.' });
+        }
+    });
+    // --- PENDING ORDERS API ENDPOINTS ---
+
+    app.get('/api/pending_orders', async (req, res) => {
+        try {
+            const holderId = req.query.holder;
+            let query = `SELECT * FROM pending_orders WHERE status = 'ACTIVE'`;
+            const params = [];
+            if (holderId && holderId !== 'all') {
+                query += ' AND account_holder_id = ?';
+                params.push(holderId);
+            }
+            query += ' ORDER BY created_date DESC';
+            const orders = await db.all(query, params);
+            res.json(orders);
+        } catch (error) {
+            console.error("Failed to fetch pending orders:", error);
+            res.status(500).json({ message: 'Error fetching pending orders.' });
+        }
+    });
+
+    app.post('/api/pending_orders', async (req, res) => {
+        try {
+            const { account_holder_id, ticker, exchange, order_type, limit_price, quantity, created_date, expiration_date, notes, advice_source_id } = req.body;
+            
+            if (!account_holder_id || !ticker || !exchange || !order_type || !limit_price || !quantity || !created_date) {
+                return res.status(400).json({ message: 'Invalid input. Ensure all required fields are provided.' });
+            }
+
+            const query = `
+                INSERT INTO pending_orders 
+                (account_holder_id, ticker, exchange, order_type, limit_price, quantity, created_date, expiration_date, notes, advice_source_id) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            await db.run(query, [
+                account_holder_id, ticker.toUpperCase(), exchange, order_type, limit_price, quantity, created_date, 
+                expiration_date || null, notes || null, advice_source_id || null
+            ]);
+            res.status(201).json({ message: 'Pending order created successfully.' });
+        } catch (error) {
+            console.error('Failed to create pending order:', error);
+            res.status(500).json({ message: 'Server Error' });
+        }
+    });
+
+    app.put('/api/pending_orders/:id', async (req, res) => {
+        try {
+            const { status } = req.body;
+            const { id } = req.params;
+
+            if (!status || !['ACTIVE', 'FILLED', 'CANCELLED'].includes(status)) {
+                return res.status(400).json({ message: 'Invalid status provided.' });
+            }
+
+            await db.run('UPDATE pending_orders SET status = ? WHERE id = ?', [status, id]);
+            res.json({ message: 'Pending order status updated.' });
+        } catch (error) {
+            console.error('Failed to update pending order:', error);
+            res.status(500).json({ message: 'Error updating pending order.' });
         }
     });
     

@@ -1,6 +1,6 @@
 // public/app-main.js - v2.13 (Corrected Data Flow & UI Improvements)
 import { initializeEventListeners } from './event-listeners.js';
-import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, populatePricesFromCache } from './ui/renderers.js';
+import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, populatePricesFromCache } from './ui/renderers.js'; // Add renderOrdersPage
 import { updatePricesForView } from './api.js';
 import { getCurrentESTDateString, showToast } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
@@ -12,8 +12,7 @@ export const state = {
     priceCache: new Map(),
     allTransactions: [],
     allSnapshots: [],
-    allExchanges: [],
-    allAccountHolders: [],
+    pendingOrders: [],
     selectedAccountHolderId: 'all',
     ledgerSort: { column: 'transaction_date', direction: 'desc' },
     allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
@@ -40,6 +39,9 @@ export async function switchView(viewType, viewValue) {
     } else if (viewType === 'ledger') {
         document.getElementById('ledger-page-container').style.display = 'block';
         await refreshLedger();
+    } else if (viewType === 'orders') {
+        document.getElementById('orders-page-container').style.display = 'block';
+        await renderOrdersPage();
     } else if (viewType === 'snapshots') {
         document.getElementById('snapshots-page-container').style.display = 'block';
         await refreshSnapshots();

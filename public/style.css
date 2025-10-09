@@ -367,3 +367,75 @@ body[data-theme="dark"] #daily-performance-summary h3, body[data-theme="contrast
     gap: 15px;
 }
 
+/* ADDED FOR v2.17: Style for clickable advice rows */
+#positions-summary-body tr {
+    cursor: pointer;
+}
+
+#positions-summary-body tr:hover {
+    background-color: var(--primary-color) !important;
+    color: #fff;
+}
+/* Add this to the "FORMS & BUTTONS" or "MISC" section of your style.css */
+.form-group-with-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group-with-checkbox input[type="checkbox"] {
+    width: auto;
+    flex-shrink: 0;
+}
+/* Styling for the new Limit Order row layout */
+.form-row-divider {
+    width: 100%;
+    height: 1px;
+    background-color: var(--container-border);
+    margin: 10px 0;
+}
+
+.limit-order-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 400px; /* Allow groups to grow and wrap on smaller screens */
+}
+
+.limit-order-group label {
+    flex-shrink: 0; /* Prevent labels from shrinking */
+}
+
+.limit-order-group input[type="checkbox"] {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.limit-order-group input[type="number"],
+.limit-order-group input[type="date"] {
+    width: 100%; /* Allow inputs to fill remaining space */
+}
+/* In the "Ledger Page Layout" section, update the selector to include the new form */
+#add-transaction-form, #add-pending-order-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+#add-transaction-form input, #add-transaction-form select,
+#add-pending-order-form input, #add-pending-order-form select {
+    flex: 1 1 150px;
+}
+
+#add-transaction-form button, #add-pending-order-form button {
+    flex-grow: 0;
+}
+/* Fix for Chart.js infinite resize loop */
+.chart-wrapper {
+    position: relative;
+    height: 40vh; /* 40% of the viewport height */
+    width: 100%;
+}

@@ -27,6 +27,7 @@ beforeEach(async () => {
     fetch.mockClear();
     await db.run('DELETE FROM transactions');
     await db.run('DELETE FROM account_holders WHERE id > 2'); // Keep Joe and the default
+    await db.run('DELETE FROM pending_orders');
 });
 
 describe('Transaction API Endpoints', () => {
@@ -198,5 +199,61 @@ describe('Data Integrity Endpoints', () => {
         // Assertion: The request should be rejected with a 400 status
         expect(res.statusCode).toEqual(400);
         expect(res.body.message).toBe('Cannot delete an account holder that is in use by transactions.');
+    });
+});
+// Add this new block to the end of tests/api.test.js
+
+describe('Pending Orders API', () => {
+    it('should create a new pending order successfully', async () => {
+        const res = await request(app)
+            .post('/api/pending_orders')
+            .send({
+                account_holder_id: 2,
+                ticker: 'NEW-PO',
+                exchange: 'TestEx',
+                order_type: 'BUY_LIMIT',
+                limit_price: 150,
+                quantity: 10,
+                created_date: '2025-10-09'
+            });
+        
+        expect(res.statusCode).toEqual(201);
+
+        const order = await db.get("SELECT * FROM pending_orders WHERE ticker = 'NEW-PO'");
+        expect(order).toBeDefined();
+        expect(order.limit_price).toEqual(150);
+    });
+
+    it('should retrieve only ACTIVE pending orders for the selected account holder', async () => {
+        // Setup: Create various orders to test the filtering
+        await db.run("INSERT INTO pending_orders (account_holder_id, ticker, status, order_type, limit_price, quantity, created_date, exchange) VALUES (2, 'ACTIVE-A', 'ACTIVE', 'BUY_LIMIT', 10, 1, '2025-10-09', 'TestEx')");
+        await db.run("INSERT INTO pending_orders (account_holder_id, ticker, status, order_type, limit_price, quantity, created_date, exchange) VALUES (5, 'ACTIVE-B', 'ACTIVE', 'BUY_LIMIT', 20, 2, '2025-10-09', 'TestEx')"); // Belongs to a different holder
+        await db.run("INSERT INTO pending_orders (account_holder_id, ticker, status, order_type, limit_price, quantity, created_date, exchange) VALUES (2, 'CANCELLED-C', 'CANCELLED', 'BUY_LIMIT', 30, 3, '2025-10-09', 'TestEx')"); // Is not 'ACTIVE'
+
+        // Action: Fetch orders for account holder #2
+        const res = await request(app)
+            .get('/api/pending_orders?holder=2');
+
+        // Assertion: Only the one correct order should be returned
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toBeInstanceOf(Array);
+        expect(res.body.length).toBe(1);
+        expect(res.body[0].ticker).toBe('ACTIVE-A');
+    });
+
+    it('should update the status of a pending order', async () => {
+        const insertRes = await db.run("INSERT INTO pending_orders (account_holder_id, ticker, status, order_type, limit_price, quantity, created_date, exchange) VALUES (2, 'TO-CANCEL', 'ACTIVE', 'BUY_LIMIT', 50, 5, '2025-10-09', 'TestEx')");
+        const orderId = insertRes.lastID;
+
+        // Action: Update the status to 'CANCELLED'
+        const res = await request(app)
+            .put(`/api/pending_orders/${orderId}`)
+            .send({ status: 'CANCELLED' });
+
+        expect(res.statusCode).toEqual(200);
+
+        // Assert that the change was saved to the database
+        const updatedOrder = await db.get("SELECT * FROM pending_orders WHERE id = ?", orderId);
+        expect(updatedOrder.status).toBe('CANCELLED');
     });
 });

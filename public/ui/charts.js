@@ -27,14 +27,32 @@ export function renderFiveDayChart(ctx, chartInstance, snapshots, state) {
     return createChart(ctx, filteredSnapshots, state);
 }
 
+// In public/ui/charts.js
 export function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance, snapshots, state) {
     if(chartInstance) chartInstance.destroy();
     if (!ctx) return null;
-    const start = startDateEl.value, end = endDateEl.value;
-    let filteredSnapshots = snapshots;
-    if (start && end) { filteredSnapshots = snapshots.filter(s => s.snapshot_date >= start && s.snapshot_date <= end); }
+    
+    const start = startDateEl ? startDateEl.value : null;
+    const end = endDateEl ? endDateEl.value : null;
+    
+    // --- TEMPORARY DIAGNOSTIC LOGS ---
+    console.log("--- Debugging Date Range Chart ---");
+    console.log("Start Date Input:", start);
+    console.log("End Date Input:", end);
+    console.log("Available Snapshots:", snapshots);
+    // --- END OF LOGS ---
+
+    let filteredSnapshots = [];
+    if (start && end) {
+        filteredSnapshots = snapshots.filter(s => s.snapshot_date >= start && s.snapshot_date <= end);
+    }
+    
+    console.log("Filtered Snapshots (this should not be empty):", filteredSnapshots);
+    console.log("------------------------------------");
+
     return createChart(ctx, filteredSnapshots, state);
 }
+
 
 // This is the new helper function for word wrapping
 function wrapText(context, text, x, y, maxWidth, lineHeight) {

@@ -1,4 +1,4 @@
-// public/ui/renderers.js - v2.13 (UX Enhancements & Corrected Data Flow)
+// public/ui/renderers.js - Complete and up-to-date version
 import { formatQuantity, formatAccounting, getActivePersistentDates, getTradingDays, getCurrentESTDateString } from './helpers.js';
 import { renderAllTimeChart, renderFiveDayChart, renderDateRangeChart } from './charts.js';
 import { state } from '../app-main.js';
@@ -34,6 +34,17 @@ export function renderTabs(currentView) {
     ledgerTab.textContent = 'Ledger';
     if (currentView.type === 'ledger') ledgerTab.classList.add('active');
     tabsContainer.appendChild(ledgerTab);
+
+      // --- TEMPORARY DIAGNOSTIC LOG ---
+    console.log("!!! EXECUTING CODE TO ADD ORDERS TAB !!!");
+
+    // This is the block that adds the "Orders" tab
+    const ordersTab = document.createElement('div');
+    ordersTab.className = 'tab master-tab';
+    ordersTab.dataset.viewType = 'orders';
+    ordersTab.textContent = 'Orders';
+    if (currentView.type === 'orders') ordersTab.classList.add('active');
+    tabsContainer.appendChild(ordersTab);
 
     const snapshotsTab = document.createElement('div');
     snapshotsTab.className = 'tab master-tab';
@@ -124,9 +135,38 @@ export function renderLedger(allTransactions, ledgerSort) {
         if (tx.transaction_date !== lastDate && lastDate !== null) {
             row.classList.add('new-date-group');
         }
-        row.innerHTML = `<td>${tx.transaction_date}</td><td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td class="numeric">${formatQuantity(tx.quantity)}</td><td class="numeric">${formatAccounting(tx.price)}</td><td class="actions-cell"><button class="modify-btn" data-id="${tx.id}">Edit</button><button class="delete-btn" data-id="${tx.id}">Delete</button></td>`;
+
+        let limitUpText = tx.limit_price_up ? formatAccounting(tx.limit_price_up) : '';
+        if (tx.limit_up_expiration) limitUpText += ` (${tx.limit_up_expiration})`;
+
+        let limitDownText = tx.limit_price_down ? formatAccounting(tx.limit_price_down) : '';
+        if (tx.limit_down_expiration) limitDownText += ` (${tx.limit_down_expiration})`;
+        
+        row.innerHTML = `
+            <td>${tx.transaction_date}</td>
+            <td>${tx.ticker}</td>
+            <td>${tx.exchange}</td>
+            <td>${tx.transaction_type}</td>
+            <td class="numeric">${formatQuantity(tx.quantity)}</td>
+            <td class="numeric">${formatAccounting(tx.price)}</td>
+            <td class="numeric">${limitUpText}</td>
+            <td class="numeric">${limitDownText}</td>
+            <td class="actions-cell">
+                <button class="modify-btn" data-id="${tx.id}">Edit</button>
+                <button class="delete-btn" data-id="${tx.id}">Delete</button>
+            </td>`;
+        
         lastDate = tx.transaction_date;
     });
+
+    const addTxAccountHolderSelect = document.getElementById('add-tx-account-holder');
+    if (addTxAccountHolderSelect) {
+        if (state.selectedAccountHolderId !== 'all') {
+            addTxAccountHolderSelect.value = state.selectedAccountHolderId;
+        } else {
+            addTxAccountHolderSelect.value = ""; 
+        }
+    }
 }
 
 export async function renderChartsPage(state) {
@@ -179,11 +219,38 @@ export async function renderChartsPage(state) {
     const dateRangeChartCtx = document.getElementById('date-range-chart')?.getContext('2d');
     const chartStartDate = document.getElementById('chart-start-date');
     const chartEndDate = document.getElementById('chart-end-date');
+
+    // Set default date range if the inputs are empty
+// --- NEW DYNAMIC DATE LOGIC ---
+    if (chartStartDate && !chartStartDate.value) {
+        if (state.allSnapshots.length > 0) {
+            // Find the oldest date from the snapshots already loaded for this user
+            const oldestDate = state.allSnapshots.reduce((oldest, current) => {
+                return current.snapshot_date < oldest ? current.snapshot_date : oldest;
+            }, state.allSnapshots[0].snapshot_date);
+            chartStartDate.value = oldestDate;
+        } else {
+            // If there are no snapshots at all, default to today
+            chartStartDate.value = getCurrentESTDateString();
+        }
+    }
+if (chartEndDate && !chartEndDate.value) {
+    chartEndDate.value = getCurrentESTDateString();
+}
+
     state.allTimeChart = renderAllTimeChart(allTimeChartCtx, state.allTimeChart, state.allSnapshots, state);
     state.fiveDayChart = renderFiveDayChart(fiveDayChartCtx, state.fiveDayChart, state.allSnapshots, state);
     state.dateRangeChart = renderDateRangeChart(dateRangeChartCtx, chartStartDate, chartEndDate, state.dateRangeChart, state.allSnapshots, state);
     
     await renderPortfolioOverview(state.priceCache);
+
+    // Add event listeners to re-render the charts page on date change
+    if(chartStartDate) {
+        chartStartDate.addEventListener('change', () => renderChartsPage(state));
+    }
+    if(chartEndDate) {
+        chartEndDate.addEventListener('change', () => renderChartsPage(state));
+    }
 
     const plStartDate = document.getElementById('pl-start-date');
     const plEndDate = document.getElementById('pl-end-date');
@@ -193,7 +260,6 @@ export async function renderChartsPage(state) {
     if(plEndDate) plEndDate.addEventListener('change', renderRangedPLSummary);
     renderRangedPLSummary();
 }
-
 export async function renderPortfolioOverview(priceCache) {
     const overviewBody = document.getElementById('portfolio-overview-body');
     if (!overviewBody) return;
@@ -334,7 +400,7 @@ export async function renderDailyReport(date, activityMap) {
                         <td class="actions-cell">
                             <button class="edit-buy-btn modify-btn" data-id="${p.id}" title="Edit Original Buy Transaction">Edit</button>
                             <button class="set-limit-btn modify-btn" data-id="${p.id}" title="Set/Edit Limit Order">Limits</button>
-                            <button class="sell-from-lot-btn" data-buy-id="${p.id}" data-ticker="${p.ticker}" data-exchange="${p.exchange}" data-quantity="${p.quantity_remaining}">Sell</button>
+                            <button class="sell-from-lot-btn" data-id="${p.id}" data-buy-id="${p.id}" data-ticker="${p.ticker}" data-exchange="${p.exchange}" data-quantity="${p.quantity_remaining}">Sell</button>
                         </td>`;
                 });
             }
@@ -350,7 +416,6 @@ export async function renderDailyReport(date, activityMap) {
 }
 
 export function renderSnapshotsPage() {
-    // Populate exchange dropdown for the form
     const exchangeSelect = document.getElementById('snapshot-exchange');
     if (exchangeSelect) {
         const currentVal = exchangeSelect.value;
@@ -364,7 +429,6 @@ export function renderSnapshotsPage() {
         exchangeSelect.value = currentVal;
     }
 
-    // Populate the snapshots table
     const tableBody = document.querySelector('#snapshots-table tbody');
     if (tableBody) {
         tableBody.innerHTML = '';
@@ -372,7 +436,7 @@ export function renderSnapshotsPage() {
             tableBody.innerHTML = '<tr><td colspan="4">No snapshots have been logged yet for this account holder.</td></tr>';
             return;
         }
-        // Sort by date descending, then by exchange
+        
         const sortedSnapshots = [...state.allSnapshots].sort((a, b) => {
             if (a.snapshot_date > b.snapshot_date) return -1;
             if (a.snapshot_date < b.snapshot_date) return 1;
@@ -393,7 +457,6 @@ export function renderSnapshotsPage() {
     }
 }
 
-// This function must be exported to be used by app-main.js
 export function populatePricesFromCache(activityMap, priceCache) {
     const totalValueSummarySpan = document.querySelector('#total-value-summary span');
     let totalPortfolioValue = 0;
@@ -447,3 +510,46 @@ export function populatePricesFromCache(activityMap, priceCache) {
     }
 }
 
+export async function renderOrdersPage() {
+    const tableBody = document.querySelector('#pending-orders-table tbody');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
+    state.pendingOrders = []; // Clear old data
+
+    try {
+        const response = await fetch(`/api/pending_orders?holder=${state.selectedAccountHolderId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch pending orders from the server.');
+        }
+        const orders = await response.json();
+        state.pendingOrders = orders; // Save data to state for event listeners
+
+        tableBody.innerHTML = ''; // Clear loading message
+
+        if (orders.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7">You have no active pending orders.</td></tr>';
+            return;
+        }
+
+        orders.forEach(order => {
+            const row = tableBody.insertRow();
+            row.innerHTML = `
+                <td>${order.ticker}</td>
+                <td>${order.exchange}</td>
+                <td class="numeric">${formatQuantity(order.quantity)}</td>
+                <td class="numeric">${formatAccounting(order.limit_price)}</td>
+                <td>${order.expiration_date || 'GTC'}</td>
+                <td>${order.created_date}</td>
+                <td class="actions-cell">
+                    <button class="fill-order-btn" data-id="${order.id}">Mark as Filled</button>
+                    <button class="cancel-order-btn delete-btn" data-id="${order.id}">Cancel</button>
+                </td>
+            `;
+        });
+    } catch (error) {
+        console.error(error);
+        tableBody.innerHTML = `<tr><td colspan="7">Error loading pending orders.</td></tr>`;
+        showToast(error.message, 'error');
+    }
+}

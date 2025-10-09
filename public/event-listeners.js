@@ -1,8 +1,8 @@
 // public/event-listeners.js - v2.16 (Complete with Cancel Button Fixes)
 import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList } from './app-main.js';
 import { updateAllPrices } from './api.js';
-import { showToast, getCurrentESTDateString, showConfirmationModal } from './ui/helpers.js';
-import { renderLedger, renderSnapshotsPage } from './ui/renderers.js';
+import { showToast, getCurrentESTDateString, showConfirmationModal, formatAccounting } from './ui/helpers.js';
+import { renderLedger, renderSnapshotsPage, renderOrdersPage  } from './ui/renderers.js';
 
 export function initializeEventListeners() {
     // --- Define all major elements once ---
@@ -84,37 +84,79 @@ export function initializeEventListeners() {
     }
 
     // --- Add Transaction Form ---
-    if (transactionForm) {
-        transactionForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const transaction = {
-                account_holder_id: document.getElementById('add-tx-account-holder').value,
-                transaction_date: document.getElementById('transaction-date').value,
-                ticker: document.getElementById('ticker').value.toUpperCase().trim(),
-                exchange: document.getElementById('exchange').value,
-                transaction_type: document.getElementById('transaction-type').value,
-                quantity: parseFloat(document.getElementById('quantity').value),
-                price: parseFloat(document.getElementById('price').value),
-            };
-            const submitButton = transactionForm.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            try {
-                const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transaction) });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Server responded with an error.');
-                }
-                showToast('Transaction logged successfully!', 'success');
-                transactionForm.reset();
-                document.getElementById('transaction-date').value = getCurrentESTDateString();
-                await refreshLedger();
-            } catch (error) {
-                showToast(`Failed to log transaction: ${error.message}`, 'error');
-            } finally {
-                submitButton.disabled = false;
+// In public/event-listeners.js
+if (transactionForm) {
+    // Auto-calculate suggested limits when the price is entered
+    const priceInput = document.getElementById('price');
+    priceInput.addEventListener('change', () => {
+        const price = parseFloat(priceInput.value);
+        if (!price || isNaN(price)) return;
+
+        const takeProfitPercent = state.settings.takeProfitPercent;
+        const stopLossPercent = state.settings.stopLossPercent;
+
+        const suggestedProfit = price * (1 + takeProfitPercent / 100);
+        const suggestedLoss = price * (1 - stopLossPercent / 100);
+
+        document.getElementById('add-limit-price-up').value = suggestedProfit.toFixed(2);
+        document.getElementById('add-limit-price-down').value = suggestedLoss.toFixed(2);
+    });
+
+    // Handle the form submission
+    transactionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // --- NEW VALIDATION LOGIC ---
+        const isProfitLimitSet = document.getElementById('set-profit-limit-checkbox').checked;
+        const profitExpirationDate = document.getElementById('add-limit-up-expiration').value;
+        if (isProfitLimitSet && !profitExpirationDate) {
+            showToast('A Take Profit limit requires an expiration date.', 'error');
+            return; // Stop submission
+        }
+
+        const isLossLimitSet = document.getElementById('set-loss-limit-checkbox').checked;
+        const lossExpirationDate = document.getElementById('add-limit-down-expiration').value;
+        if (isLossLimitSet && !lossExpirationDate) {
+            showToast('A Stop Loss limit requires an expiration date.', 'error');
+            return; // Stop submission
+        }
+        // --- END OF VALIDATION ---
+
+        const transaction = {
+            account_holder_id: document.getElementById('add-tx-account-holder').value,
+            transaction_date: document.getElementById('transaction-date').value,
+            ticker: document.getElementById('ticker').value.toUpperCase().trim(),
+            exchange: document.getElementById('exchange').value,
+            transaction_type: document.getElementById('transaction-type').value,
+            quantity: parseFloat(document.getElementById('quantity').value),
+            price: parseFloat(document.getElementById('price').value),
+            
+            // --- NEW CONDITIONAL SAVING LOGIC ---
+            limit_price_up: isProfitLimitSet ? parseFloat(document.getElementById('add-limit-price-up').value) : null,
+            limit_up_expiration: isProfitLimitSet ? profitExpirationDate : null,
+            limit_price_down: isLossLimitSet ? parseFloat(document.getElementById('add-limit-price-down').value) : null,
+            limit_down_expiration: isLossLimitSet ? lossExpirationDate : null
+        };
+
+        const submitButton = transactionForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        try {
+            const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transaction) });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Server responded with an error.');
             }
-        });
-    }
+            showToast('Transaction logged successfully!', 'success');
+            transactionForm.reset(); // This will also clear the limit fields
+            document.getElementById('transaction-date').value = getCurrentESTDateString();
+            await refreshLedger();
+        } catch (error) {
+            showToast(`Failed to log transaction: ${error.message}`, 'error');
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+}
     
     // --- Settings Modal and Associated Actions ---
     if(settingsBtn) {
@@ -200,68 +242,109 @@ export function initializeEventListeners() {
     
     // --- Delegated Listeners for Dynamic Content (Daily Report / Ledger) ---
     const dailyReportContainer = document.getElementById('daily-report-container');
-    if(dailyReportContainer) {
-        dailyReportContainer.addEventListener('click', (e) => {
-            const th = e.target.closest('th[data-sort]');
-            if (th) {
-                const thead = th.closest('thead');
-                let tbody = thead.nextElementSibling;
-                while (tbody && tbody.tagName !== 'TBODY') { tbody = tbody.nextElementSibling; }
-                if (tbody) { sortTableByColumn(th, tbody); }
-                return;
-            }
+// In public/event-listeners.js, replace the existing block with this one
+if(dailyReportContainer) {
+    dailyReportContainer.addEventListener('click', (e) => {
+        const th = e.target.closest('th[data-sort]');
+        if (th) {
+            const thead = th.closest('thead');
+            let tbody = thead.nextElementSibling;
+            while (tbody && tbody.tagName !== 'TBODY') { tbody = tbody.nextElementSibling; }
+            if (tbody) { sortTableByColumn(th, tbody); }
+            return;
+        }
 
-            const sellBtn = e.target.closest('.sell-from-lot-btn');
-            if (sellBtn) {
-                const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
-                document.getElementById('sell-parent-buy-id').value = buyId;
-                document.getElementById('sell-ticker-display').textContent = ticker;
-                document.getElementById('sell-exchange-display').textContent = exchange;
-                const quantityInput = document.getElementById('sell-quantity');
-                quantityInput.value = quantity;
-                quantityInput.max = quantity;
-                document.getElementById('sell-date').value = getCurrentESTDateString();
-                sellFromPositionModal.classList.add('visible');
-                return;
-            }
-            
-            const setLimitBtn = e.target.closest('.set-limit-btn');
-            const editBuyBtn = e.target.closest('.edit-buy-btn');
-            if (setLimitBtn || editBuyBtn) {
-                const id = (setLimitBtn || editBuyBtn).dataset.id;
-                const lotData = state.activityMap.get(`lot-${id}`);
-                if (lotData) {
-                    document.getElementById('edit-id').value = lotData.id;
-                    document.getElementById('edit-account-holder').value = lotData.account_holder_id;
-                    document.getElementById('edit-date').value = lotData.purchase_date;
-                    document.getElementById('edit-ticker').value = lotData.ticker;
-                    document.getElementById('edit-exchange').value = lotData.exchange;
-                    document.getElementById('edit-type').value = 'BUY';
-                    document.getElementById('edit-quantity').value = lotData.original_quantity;
-                    document.getElementById('edit-price').value = lotData.cost_basis;
-                    document.getElementById('edit-limit-price-up').value = lotData.limit_price_up || '';
-                    document.getElementById('edit-limit-up-expiration').value = lotData.limit_up_expiration || '';
-                    document.getElementById('edit-limit-price-down').value = lotData.limit_price_down || '';
-                    document.getElementById('edit-limit-down-expiration').value = lotData.limit_down_expiration || '';
+        // --- ADDED FOR v2.17: Handle clicks on the table row itself ---
+        const row = e.target.closest('#positions-summary-body tr');
+        if (row && !e.target.closest('button')) {
+            const lotKey = row.dataset.key;
+            if (!lotKey) return;
 
-                    const coreFields = document.getElementById('edit-core-fields');
-                    const limitFields = document.getElementById('edit-limit-fields');
-                    const modalTitle = document.getElementById('edit-modal-title');
+            const lotData = state.activityMap.get(lotKey); // Get lot data
+            const priceData = state.priceCache.get(lotData.ticker); // Get price data
 
-                    if (setLimitBtn) {
-                        modalTitle.textContent = `Set Limits for ${lotData.ticker}`;
-                        coreFields.style.display = 'none';
-                        limitFields.style.display = 'block';
-                    } else { 
-                        modalTitle.textContent = 'Edit Buy Transaction';
-                        coreFields.style.display = 'block';
-                        limitFields.style.display = 'none';
-                    }
-                    editModal.classList.add('visible');
+            if (!lotData) return;
+
+            // Perform calculations based on settings
+            const costBasis = lotData.cost_basis;
+            const takeProfitPercent = state.settings.takeProfitPercent;
+            const stopLossPercent = state.settings.stopLossPercent;
+
+            const suggestedProfit = costBasis * (1 + takeProfitPercent / 100);
+            const suggestedLoss = costBasis * (1 - stopLossPercent / 100);
+
+            // Populate Modal
+            document.getElementById('advice-modal-title').textContent = `${lotData.ticker} Advice`;
+            document.getElementById('advice-cost-basis').textContent = formatAccounting(costBasis);
+            document.getElementById('advice-current-price').textContent = (priceData && priceData !== 'invalid') ? formatAccounting(priceData) : 'N/A';
+            document.getElementById('advice-suggested-profit').textContent = formatAccounting(suggestedProfit);
+            document.getElementById('advice-suggested-loss').textContent = formatAccounting(suggestedLoss);
+            document.getElementById('advice-profit-percent').textContent = takeProfitPercent;
+            document.getElementById('advice-loss-percent').textContent = stopLossPercent;
+
+            const currentLimitUp = lotData.limit_price_up ? `${formatAccounting(lotData.limit_price_up)} by ${lotData.limit_up_expiration || 'N/A'}` : 'Not set';
+            document.getElementById('advice-current-limit-up').textContent = currentLimitUp;
+
+            const currentLimitDown = lotData.limit_price_down ? `${formatAccounting(lotData.limit_price_down)} by ${lotData.limit_down_expiration || 'N/A'}` : 'Not set';
+            document.getElementById('advice-current-limit-down').textContent = currentLimitDown;
+
+            // Show Modal
+            document.getElementById('advice-modal').classList.add('visible');
+            return; // Stop further execution
+        }
+        // --- END OF v2.17 ADDITION ---
+
+        const sellBtn = e.target.closest('.sell-from-lot-btn');
+        if (sellBtn) {
+            const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
+            document.getElementById('sell-parent-buy-id').value = buyId;
+            document.getElementById('sell-ticker-display').textContent = ticker;
+            document.getElementById('sell-exchange-display').textContent = exchange;
+            const quantityInput = document.getElementById('sell-quantity');
+            quantityInput.value = quantity;
+            quantityInput.max = quantity;
+            document.getElementById('sell-date').value = getCurrentESTDateString();
+            sellFromPositionModal.classList.add('visible');
+            return;
+        }
+        
+        const setLimitBtn = e.target.closest('.set-limit-btn');
+        const editBuyBtn = e.target.closest('.edit-buy-btn');
+        if (setLimitBtn || editBuyBtn) {
+            const id = (setLimitBtn || editBuyBtn).dataset.id;
+            const lotData = state.activityMap.get(`lot-${id}`);
+            if (lotData) {
+                document.getElementById('edit-id').value = lotData.id;
+                document.getElementById('edit-account-holder').value = lotData.account_holder_id;
+                document.getElementById('edit-date').value = lotData.purchase_date;
+                document.getElementById('edit-ticker').value = lotData.ticker;
+                document.getElementById('edit-exchange').value = lotData.exchange;
+                document.getElementById('edit-type').value = 'BUY';
+                document.getElementById('edit-quantity').value = lotData.original_quantity;
+                document.getElementById('edit-price').value = lotData.cost_basis;
+                document.getElementById('edit-limit-price-up').value = lotData.limit_price_up || '';
+                document.getElementById('edit-limit-up-expiration').value = lotData.limit_up_expiration || '';
+                document.getElementById('edit-limit-price-down').value = lotData.limit_price_down || '';
+                document.getElementById('edit-limit-down-expiration').value = lotData.limit_down_expiration || '';
+
+                const coreFields = document.getElementById('edit-core-fields');
+                const limitFields = document.getElementById('edit-limit-fields');
+                const modalTitle = document.getElementById('edit-modal-title');
+
+                if (setLimitBtn) {
+                    modalTitle.textContent = `Set Limits for ${lotData.ticker}`;
+                    coreFields.style.display = 'none';
+                    limitFields.style.display = 'block';
+                } else { 
+                    modalTitle.textContent = 'Edit Buy Transaction';
+                    coreFields.style.display = 'block';
+                    limitFields.style.display = 'none';
                 }
+                editModal.classList.add('visible');
             }
-        });
-    }
+        }
+    });
+}
     
     if(ledgerTable) {
         ledgerTable.querySelector('tbody').addEventListener('click', async (e) => {
@@ -561,7 +644,106 @@ if(sellFromPositionForm) {
             }
         });
     }
+   // --- NEW: Pending Order Form Submission ---
+    const addPendingOrderForm = document.getElementById('add-pending-order-form');
+    if (addPendingOrderForm) {
+        addPendingOrderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newOrder = {
+                account_holder_id: document.getElementById('pending-order-account-holder').value,
+                ticker: document.getElementById('pending-order-ticker').value,
+                exchange: document.getElementById('pending-order-exchange').value,
+                quantity: parseFloat(document.getElementById('pending-order-quantity').value),
+                limit_price: parseFloat(document.getElementById('pending-order-limit-price').value),
+                expiration_date: document.getElementById('pending-order-expiration').value || null,
+                created_date: getCurrentESTDateString(),
+                order_type: 'BUY_LIMIT',
+            };
 
+            try {
+                const response = await fetch('/api/pending_orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newOrder)
+                });
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || 'Server error');
+                }
+                showToast('New buy limit order placed!', 'success');
+                addPendingOrderForm.reset();
+                
+                // Refresh the table to show the new order
+                if (state.currentView.type === 'orders') {
+                    const { renderOrdersPage } = await import('./ui/renderers.js');
+                    await renderOrdersPage();
+                }
+            } catch (error) {
+                showToast(`Error placing order: ${error.message}`, 'error');
+            }
+        });
+    }
+
+    // --- NEW: Pending Orders Table Actions (Cancel) ---
+// In public/event-listeners.js, replace the entire block
+
+const pendingOrdersTable = document.getElementById('pending-orders-table');
+if (pendingOrdersTable) {
+    pendingOrdersTable.addEventListener('click', async (e) => {
+        // --- FIX: Ensure both button variables are defined here ---
+        const cancelButton = e.target.closest('.cancel-order-btn');
+        const fillButton = e.target.closest('.fill-order-btn');
+
+        if (cancelButton) {
+            const orderId = cancelButton.dataset.id;
+            showConfirmationModal('Cancel Order?', 'This will change the order status to CANCELLED.', async () => {
+                try {
+                    const response = await fetch(`/api/pending_orders/${orderId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'CANCELLED' })
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.message || 'Server error');
+                    }
+                    showToast('Order cancelled.', 'success');
+                    
+                    const { renderOrdersPage } = await import('./ui/renderers.js');
+                    await renderOrdersPage();
+                } catch (error) {
+                    showToast(`Error cancelling order: ${error.message}`, 'error');
+                }
+            });
+        } 
+        else if (fillButton) { // This line will now work correctly
+            const orderId = fillButton.dataset.id;
+            const order = state.pendingOrders.find(o => o.id == orderId);
+
+            if (!order) {
+                showToast('Could not find order details.', 'error');
+                return;
+            }
+
+            // Populate the modal fields
+            document.getElementById('fill-pending-order-id').value = order.id;
+            document.getElementById('fill-account-holder-id').value = order.account_holder_id;
+            document.getElementById('fill-ticker').value = order.ticker;
+            document.getElementById('fill-exchange').value = order.exchange;
+            document.getElementById('fill-quantity').value = order.quantity;
+            document.getElementById('fill-ticker-display').textContent = order.ticker;
+            document.getElementById('fill-limit-price-display').textContent = formatAccounting(order.limit_price);
+            
+            // Pre-fill editable fields with defaults
+            document.getElementById('fill-execution-price').value = order.limit_price;
+            document.getElementById('fill-execution-date').value = getCurrentESTDateString();
+
+            // Show the modal
+            document.getElementById('confirm-fill-modal').classList.add('visible');
+        }
+    });
+}
+    
     const addSnapshotForm = document.getElementById('add-snapshot-form');
     if (addSnapshotForm) {
         addSnapshotForm.addEventListener('submit', async (e) => {
@@ -640,5 +822,72 @@ if(sellFromPositionForm) {
         refreshBtn.addEventListener('click', () => 
             updateAllPrices(state.activityMap, state.priceCache)
         );
+    }
+    // Add this new block to public/event-listeners.js
+
+    // --- NEW: "Confirm Fill" Modal Form Submission ---
+    const confirmFillForm = document.getElementById('confirm-fill-form');
+    if (confirmFillForm) {
+        confirmFillForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitButton = confirmFillForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            const pendingOrderId = document.getElementById('fill-pending-order-id').value;
+
+            // Prepare the new transaction object from the form data
+            const newTransaction = {
+                account_holder_id: document.getElementById('fill-account-holder-id').value,
+                ticker: document.getElementById('fill-ticker').value,
+                exchange: document.getElementById('fill-exchange').value,
+                quantity: parseFloat(document.getElementById('fill-quantity').value),
+                price: parseFloat(document.getElementById('fill-execution-price').value),
+                transaction_date: document.getElementById('fill-execution-date').value,
+                transaction_type: 'BUY'
+            };
+            
+            try {
+                // Step 1: Update the pending order's status to 'FILLED'
+                const updateRes = await fetch(`/api/pending_orders/${pendingOrderId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'FILLED' })
+                });
+                if (!updateRes.ok) {
+                    const err = await updateRes.json();
+                    throw new Error(err.message || 'Failed to update pending order status.');
+                }
+
+                // Step 2: Create the new transaction in the ledger
+                const createRes = await fetch('/api/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newTransaction)
+                });
+                if (!createRes.ok) {
+                    const err = await createRes.json();
+                    // Attempt to roll back the status update if transaction creation fails
+                    await fetch(`/api/pending_orders/${pendingOrderId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'ACTIVE' })
+                    });
+                    throw new Error(err.message || 'Failed to create new transaction.');
+                }
+
+                // Step 3: If both API calls succeed, update the UI
+                document.getElementById('confirm-fill-modal').classList.remove('visible');
+                showToast('Order filled and transaction logged!', 'success');
+                
+                // Refresh the orders page to remove the filled order from the list
+                const { renderOrdersPage } = await import('./ui/renderers.js');
+                await renderOrdersPage();
+
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
     }
 }
