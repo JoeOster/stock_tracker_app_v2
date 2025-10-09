@@ -4,22 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Stock Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lato&family=Open+Sans&family=Roboto&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body data-theme="light">
-
-    <div class="header">
+<body>
+    <header class="header">
         <div class="header-left">
-            <label for="global-account-holder-filter">Viewing:</label>
-            <select id="global-account-holder-filter" class="account-holder-select"></select>
+             <label for="global-account-holder-filter">Viewing:</label>
+             <select id="global-account-holder-filter" class="account-holder-select"></select>
+        </div>
+        <div class="header-center">
+            <h1>Live Stock Tracker</h1>
+        </div>
+        <div class="header-right">
+            <div id="api-timer-container">Next: <span id="api-timer">--:--</span></div>
             <button id="settings-btn" title="Settings">⚙️</button>
         </div>
-        <h1>Live Stock Tracker</h1>
-        <div class="header-right">
-            <div id="api-timer-container">Next Update: <span id="api-timer">--:--</span></div>
-        </div>
-    </div>
+    </header>
 
     <div id="tabs-container" class="tabs"></div>
 
@@ -32,7 +36,7 @@
         <h2 id="table-title"></h2>
         <div id="daily-performance-summary"></div>
         <table id="stock-table">
-             <thead>
+            <thead>
                 <tr><th colspan="11" class="table-section-header">Daily Transaction Log</th></tr>
                 <tr>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Action</th><th class="numeric" data-sort="quantity" data-type="numeric">Qty</th><th class="numeric" data-sort="price" data-type="numeric">Price</th><th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
@@ -48,9 +52,7 @@
                     <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Rem. Qty</th><th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
                     <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($)</th>
                     <th class="numeric" data-sort="unrealized-pl-percent" data-type="numeric">Unrealized P/L (%)</th>
-                    <th class="numeric">Limit Up</th>
-                    <th class="numeric">Limit Down</th>
-                    <th>Actions</th>
+                    <th class="numeric">Limit Up</th><th class="numeric">Limit Down</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody id="positions-summary-body"></tbody>
@@ -73,8 +75,6 @@
             <div class="chart-container"> <h2>Past Five Day Report</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div>
             <div class="chart-container"> <div class="date-range-header"> <h2>Date Range</h2> <div class="date-range-inputs"> <input type="date" id="chart-start-date"> <span>to</span> <input type="date" id="chart-end-date"> </div> </div> <canvas id="date-range-chart" class="zoomable-chart"></canvas> </div>
         </div>
-
-        <!-- CORRECTED PLACEMENT OF P&L SUMMARY GRID -->
         <div class="pl-summary-grid">
             <div class="pl-summary-container">
                 <h3>Lifetime Realized P&L Summary</h3>
@@ -90,20 +90,13 @@
                 <table id="pl-summary-ranged-table"></table>
             </div>
         </div>
-
         <div class="portfolio-overview-container container">
             <h2>Portfolio Overview <span id="overview-date"></span></h2>
             <table id="portfolio-overview-table">
                 <thead>
                     <tr>
-                        <th>Ticker</th>
-                        <th class="numeric">Total Quantity</th>
-                        <th class="numeric">Avg. Cost Basis</th>
-                        <th class="numeric">Current Price</th>
-                        <th class="numeric">Day's Change ($)</th>
-                        <th class="numeric">Day's Change (%)</th>
-                        <th class="numeric">Total Value</th>
-                        <th class="numeric">Total Unrealized P/L</th>
+                        <th>Ticker</th><th class="numeric">Total Quantity</th><th class="numeric">Avg. Cost Basis</th><th class="numeric">Current Price</th>
+                        <th class="numeric">Day's Change ($)</th><th class="numeric">Day's Change (%)</th><th class="numeric">Total Value</th><th class="numeric">Total Unrealized P/L</th>
                     </tr>
                 </thead>
                 <tbody id="portfolio-overview-body"></tbody>
@@ -112,19 +105,16 @@
     </div>
 
     <div id="ledger-page-container" class="page-container" style="display: none;">
+        <div id="ledger-summary-container"></div>
         <h2>Transaction Ledger</h2>
-        <div id="add-transaction-container" class="container">
-            <h2>Log a New Transaction</h2>
+        <p class="subtitle">Log a new transaction or filter your complete history below.</p>
+        <div id="add-transaction-container">
+            <h3>Log a New Transaction</h3>
             <form id="add-transaction-form">
-                <div class="form-group">
-                    <label for="add-tx-account-holder">Account Holder</label>
-                    <select id="add-tx-account-holder" class="account-holder-select" required></select>
-                </div>
+                <select id="add-tx-account-holder" class="account-holder-select" required></select>
                 <input type="date" id="transaction-date" required>
                 <input type="text" id="ticker" placeholder="Ticker" required>
-                <select id="exchange" required>
-                    <option value="" disabled selected>Select Exchange</option>
-                </select>
+                <select id="exchange" required></select>
                 <select id="transaction-type">
                     <option value="BUY">BUY</option>
                     <option value="SELL">SELL</option>
@@ -134,38 +124,39 @@
                 <button type="submit">Log Transaction</button>
             </form>
         </div>
-        <div class="ledger-controls">
-            <div class="ledger-filters">
-                <h3>Filter Transactions</h3>
-                <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
-                <div class="date-range-inputs">
-                    <label for="ledger-filter-start">From:</label><input type="date" id="ledger-filter-start">
-                    <label for="ledger-filter-end">To:</label><input type="date" id="ledger-filter-end">
-                </div>
-                <button id="ledger-clear-filters-btn">Clear Filters</button>
-            </div>
-            <div class="import-section">
-                <h3>Import from CSV</h3>
-                <div class="form-group">
-                    <label for="import-account-holder">Import into Account:</label>
-                    <select id="import-account-holder" class="account-holder-select" required></select>
-                </div>
-                <label for="csv-file-input">Select a .csv file:</label>
-                <input type="file" id="csv-file-input" accept=".csv">
-                <button id="import-csv-btn">Import CSV</button>
-                <small>Format: date,ticker,exchange,type,quantity,price</small>
-            </div>
+        <div class="ledger-filters">
+            <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
+            <label for="ledger-filter-start">From:</label><input type="date" id="ledger-filter-start">
+            <label for="ledger-filter-end">To:</label><input type="date" id="ledger-filter-end">
+            <button id="ledger-clear-filters-btn">Clear Filters</button>
         </div>
-        <div id="ledger-summary-container"></div>
         <table id="ledger-table">
             <thead><tr><th data-sort="transaction_date">Date</th><th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Type</th><th class="numeric" data-sort="quantity">Quantity</th><th class="numeric" data-sort="price">Price</th><th>Actions</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
 
+    <div id="imports-page-container" class="page-container" style="display: none;">
+        <h2>Import Transactions</h2>
+        <p class="subtitle">Bulk import historical BUY transactions from a CSV file.</p>
+        <div class="import-section">
+            <h3>Import from CSV</h3>
+            <div class="form-group">
+                <label for="import-account-holder">Import Into Account:</label>
+                <select id="import-account-holder" class="account-holder-select" required></select>
+            </div>
+             <div class="form-group">
+                <label for="csv-file-input">Select a .csv file:</label>
+                <input type="file" id="csv-file-input" accept=".csv">
+            </div>
+            <button id="import-csv-btn">Import CSV</button>
+            <small>Format: date,ticker,exchange,type,quantity,price</small>
+        </div>
+    </div>
+    
     <div id="snapshots-page-container" class="page-container" style="display: none;">
         <h2>Account Value Snapshots</h2>
-        <p class="subtitle">Log the total value of your brokerage accounts (including cash and positions) on a specific date to track overall portfolio growth. This data populates the historical charts.</p>
+        <p class="subtitle">Log the total value of your brokerage accounts to track overall portfolio growth.</p>
         <div class="snapshot-content-grid">
             <div id="add-snapshot-container">
                 <h3>Log a New Snapshot</h3>
@@ -174,32 +165,16 @@
                         <label for="snapshot-account-holder">Account Holder</label>
                         <select id="snapshot-account-holder" class="account-holder-select" required></select>
                     </div>
-                    <div class="form-group">
-                        <label for="snapshot-date">Snapshot Date</label>
-                        <input type="date" id="snapshot-date" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="snapshot-exchange">Exchange</label>
-                        <select id="snapshot-exchange" required></select>
-                    </div>
-                    <div class="form-group">
-                        <label for="snapshot-value">Total Account Value ($)</label>
-                        <input type="number" id="snapshot-value" step="any" min="0" placeholder="e.g., 25000.50" required>
-                    </div>
+                    <div class="form-group"><label for="snapshot-date">Snapshot Date</label><input type="date" id="snapshot-date" required></div>
+                    <div class="form-group"><label for="snapshot-exchange">Exchange</label><select id="snapshot-exchange" required></select></div>
+                    <div class="form-group"><label for="snapshot-value">Total Account Value ($)</label><input type="number" id="snapshot-value" step="any" min="0" required></div>
                     <button type="submit">Save Snapshot</button>
                 </form>
             </div>
             <div id="list-snapshots-container">
                  <h3>Existing Snapshots</h3>
                 <table id="snapshots-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Exchange</th>
-                            <th class="numeric">Value</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Date</th><th>Exchange</th><th class="numeric">Value</th><th>Actions</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -209,139 +184,128 @@
     <div id="toast-container"></div>
     
     <div id="settings-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-large">
             <span class="close-button">&times;</span>
-            <h2>Settings</h2>
-
-            <div class="settings-input-group">
-                <label for="theme-selector">Theme</label>
-                <select id="theme-selector">
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="sepia">Sepia</option>
-                    <option value="contrast">High Contrast</option>
-                </select>
-            </div>
-
-            <div class="settings-input-group">
-                <label for="take-profit-percent">Suggest Profit %</label>
-                <input type="number" id="take-profit-percent" step="any" placeholder="e.g., 8">
-            </div>
-            <div class="settings-input-group">
-                <label for="stop-loss-percent">Suggest Loss %</label>
-                <input type="number" id="stop-loss-percent" step="any" placeholder="e.g., 8">
-            </div>
-            <hr>
-            <div class="settings-input-group">
-                <label for="market-hours-interval">Market Hours Refresh (min)</label>
-                <input type="number" id="market-hours-interval" step="1" min="1" placeholder="e.g., 2">
-            </div>
-            <div class="settings-input-group">
-                <label for="after-hours-interval">After Hours Refresh (min)</label>
-                <input type="number" id="after-hours-interval" step="1" min="5" placeholder="e.g., 15">
-            </div>
-            <hr>
-            <div class="management-grid">
-                <div class="exchange-management-container">
-                    <h3>Manage Exchanges</h3>
-                    <ul id="exchange-list"></ul>
-                    <div class="add-exchange-form">
-                        <input type="text" id="new-exchange-name" placeholder="New Exchange Name">
-                        <button id="add-exchange-btn">Add</button>
+            <div class="settings-layout">
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-tab="general">General</button>
+                    <button class="settings-tab" data-tab="appearance">Appearance</button>
+                    <button class="settings-tab" data-tab="data">Data Management</button>
+                </div>
+                <div class="settings-content">
+                    <div id="general-settings-panel" class="settings-panel active">
+                        <h2>General Settings</h2>
+                        <div class="form-group">
+                            <label for="take-profit-percent">Suggested Take Profit %</label>
+                            <input type="number" id="take-profit-percent" step="any">
+                        </div>
+                        <div class="form-group">
+                            <label for="stop-loss-percent">Suggested Stop Loss %</label>
+                            <input type="number" id="stop-loss-percent" step="any">
+                        </div>
+                    </div>
+                    <div id="appearance-settings-panel" class="settings-panel">
+                        <h2>Appearance</h2>
+                         <div class="form-group">
+                            <label for="theme-selector">Theme</label>
+                            <select id="theme-selector">
+                                <option value="light">Light</option><option value="dark">Dark</option><option value="sepia">Sepia</option><option value="contrast">High Contrast</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="font-selector">Font</label>
+                            <select id="font-selector">
+                                <option value="Inter">Inter</option><option value="Roboto">Roboto</option><option value="Lato">Lato</option><option value="Open Sans">Open Sans</option><option value="System">System Default</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="data-settings-panel" class="settings-panel">
+                        <h2>Data Management</h2>
+                        <div class="management-section">
+                            <h3>Manage Exchanges</h3>
+                            <ul id="exchange-list" class="management-list"></ul>
+                            <div class="add-item-form">
+                                <input type="text" id="new-exchange-name" placeholder="New Exchange Name">
+                                <button id="add-exchange-btn">Add</button>
+                            </div>
+                        </div>
+                        <hr style="margin: 2rem 0;">
+                        <div class="management-section">
+                            <h3>Manage Account Holders</h3>
+                            <ul id="account-holder-list" class="management-list"></ul>
+                             <div class="add-item-form">
+                                <input type="text" id="new-account-holder-name" placeholder="New Account Holder">
+                                <button id="add-account-holder-btn">Add</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="account-holder-management-container">
-                    <h3>Manage Account Holders</h3>
-                    <ul id="account-holder-list"></ul>
-                    <div class="add-holder-form">
-                        <input type="text" id="new-account-holder-name" placeholder="New Holder Name">
-                        <button id="add-account-holder-btn">Add</button>
-                    </div>
-                </div>
             </div>
-            <button id="save-settings-button">Save Settings</button>
-        </div>
-    </div>
-
-    <div id="edit-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2 id="edit-modal-title">Edit Transaction</h2>
-            <form id="edit-transaction-form">
-                <input type="hidden" id="edit-id">
-                
-                <div class="form-group">
-                    <label for="edit-account-holder">Account Holder</label>
-                    <select id="edit-account-holder" class="account-holder-select" required></select>
-                </div>
-
-                <fieldset id="edit-core-fields">
-                    <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div>
-                    <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div>
-                    <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div>
-                    <div class="form-group"><label for="edit-type">Type</label><select id="edit-type"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
-                    <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div>
-                    <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div>
-                </fieldset>
-            
-                <fieldset id="edit-limit-fields">
-                    <legend>Limit Orders</legend>
-                    <div class="form-group">
-                        <label for="edit-limit-price-up">Take Profit Limit ($)</label>
-                        <input type="number" id="edit-limit-price-up" step="any">
-                    </div>
-                    <div class="form-group form-group-with-button">
-                        <label for="edit-limit-up-expiration">Take Profit Expiration</label>
-                        <input type="date" id="edit-limit-up-expiration">
-                        <button type="button" class="clear-limit-btn" data-target="up" title="Clear Take Profit Limit">&times;</button>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-limit-price-down">Stop Loss Limit ($)</label>
-                        <input type="number" id="edit-limit-price-down" step="any">
-                    </div>
-                    <div class="form-group form-group-with-button">
-                        <label for="edit-limit-down-expiration">Stop Loss Expiration</label>
-                        <input type="date" id="edit-limit-down-expiration">
-                        <button type="button" class="clear-limit-btn" data-target="down" title="Clear Stop Loss Limit">&times;</button>
-                    </div>
-                </fieldset> 
-                <button type="submit">Save Changes</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="chart-zoom-modal" class="modal">
-        <div class="modal-content modal-large"> <span class="close-button">&times;</span> <canvas id="zoomed-chart"></canvas> </div>
-    </div>
-
-    <div id="confirm-modal" class="modal">
-        <div class="modal-content">
-            <h2 id="confirm-modal-title">Confirm Action</h2>
-            <p id="confirm-modal-body">Are you sure you want to proceed?</p>
-            <div class="confirmation-actions" style="margin-top: 20px;">
-                <button id="confirm-modal-confirm-btn" class="delete-btn">Confirm</button>
-                <button id="confirm-modal-cancel-btn">Cancel</button>
+            <div class="settings-footer">
+                <button id="save-settings-button">Save & Close</button>
             </div>
         </div>
     </div>
 
-    <div id="sell-from-position-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2>Sell from Position</h2>
-            <form id="sell-from-position-form">
-                <input type="hidden" id="sell-parent-buy-id">
-                <div class="form-group"><label>Ticker</label><p id="sell-ticker-display" class="form-static-text"></p></div>
-                <div class="form-group"><label>Exchange</label><p id="sell-exchange-display" class="form-static-text"></p></div>
-                <div class="form-group"><label for="sell-quantity">Quantity to Sell</label><input type="number" id="sell-quantity" step="any" required min="0.00001"></div>
-                 <div class="form-group"><label for="sell-price">Price Per Share</label><input type="number" id="sell-price" step="any" required min="0.01"></div>
-                <div class="form-group"><label for="sell-date">Transaction Date</label><input type="date" id="sell-date" required></div>
-                <button type="submit">Confirm Sale</button>
-            </form>
+<div id="edit-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2 id="edit-modal-title">Edit Transaction</h2>
+        <form id="edit-transaction-form">
+            <input type="hidden" id="edit-id">
+            <fieldset id="edit-core-fields">
+                <div class="form-group"><label for="edit-account-holder">Account Holder</label><select id="edit-account-holder" class="account-holder-select"></select></div>
+                <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div>
+                <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div>
+                <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div>
+                <div class="form-group"><label for="edit-type">Type</label><select id="edit-type" disabled><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
+                <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div>
+                <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div>
+            </fieldset>
+            <fieldset id="edit-limit-fields">
+                <legend>Limit Orders</legend>
+                <div class="form-group"><label for="edit-limit-price-up">Take Profit Limit ($)</label><input type="number" id="edit-limit-price-up" step="any"></div>
+                <div class="form-group form-group-with-button"><label for="edit-limit-up-expiration">Take Profit Expiration</label><input type="date" id="edit-limit-up-expiration"><button type="button" class="clear-limit-btn" data-target="up" title="Clear Take Profit Limit">&times;</button></div>
+                <div class="form-group"><label for="edit-limit-price-down">Stop Loss Limit ($)</label><input type="number" id="edit-limit-price-down" step="any"></div>
+                <div class="form-group form-group-with-button"><label for="edit-limit-down-expiration">Stop Loss Expiration</label><input type="date" id="edit-limit-down-expiration"><button type="button" class="clear-limit-btn" data-target="down" title="Clear Stop Loss Limit">&times;</button></div>
+            </fieldset> 
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<div id="chart-zoom-modal" class="modal">
+    <div class="modal-content modal-large"> <span class="close-button">&times;</span> <canvas id="zoomed-chart"></canvas> </div>
+</div>
+
+<div id="confirm-modal" class="modal">
+    <div class="modal-content">
+        <h2 id="confirm-modal-title">Confirm Action</h2>
+        <p id="confirm-modal-body">Are you sure?</p>
+        <div class="confirmation-actions" style="margin-top: 20px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="confirm-modal-cancel-btn">Cancel</button>
+            <button id="confirm-modal-confirm-btn" class="delete-btn">Confirm</button>
         </div>
     </div>
+</div>
 
-    <script type="module" src="app-main.js" defer></script>
+<div id="sell-from-position-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Sell from Position</h2>
+        <form id="sell-from-position-form">
+            <input type="hidden" id="sell-parent-buy-id">
+            <div class="form-group"><label>Ticker</label><p id="sell-ticker-display" class="form-static-text"></p></div>
+            <div class="form-group"><label>Exchange</label><p id="sell-exchange-display" class="form-static-text"></p></div>
+            <div class="form-group"><label for="sell-quantity">Quantity to Sell</label><input type="number" id="sell-quantity" step="any" required min="0.00001"></div>
+            <div class="form-group"><label for="sell-price">Price Per Share</label><input type="number" id="sell-price" step="any" required min="0.01"></div>
+            <div class="form-group"><label for="sell-date">Transaction Date</label><input type="date" id="sell-date" required></div>
+            <button type="submit">Confirm Sale</button>
+        </form>
+    </div>
+</div>
+
+<script type="module" src="app-main.js" defer></script>
 </body>
 </html>
 

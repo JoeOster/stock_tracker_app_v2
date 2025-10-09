@@ -40,6 +40,13 @@ export function renderTabs(currentView) {
     snapshotsTab.textContent = 'Snapshots';
     if (currentView.type === 'snapshots') snapshotsTab.classList.add('active');
     tabsContainer.appendChild(snapshotsTab);
+
+    const importsTab = document.createElement('div');
+    importsTab.className = 'tab master-tab';
+    importsTab.dataset.viewType = 'imports';
+    importsTab.textContent = 'Imports';
+    if (currentView.type === 'imports') importsTab.classList.add('active');
+    tabsContainer.appendChild(importsTab);
 }
 
 export function renderLedger(allTransactions, ledgerSort) {
@@ -47,14 +54,11 @@ export function renderLedger(allTransactions, ledgerSort) {
     const summaryContainer = document.getElementById('ledger-summary-container');
     if(!ledgerTableBody) return;
 
-    // --- THIS IS THE NEW LOGIC ---
-    // If there are no transactions at all for this account holder, show a specific message and exit.
     if (allTransactions.length === 0) {
         ledgerTableBody.innerHTML = '<tr><td colspan="7">No transactions have been logged for this account holder.</td></tr>';
-        if (summaryContainer) summaryContainer.innerHTML = ''; // Also clear the summary box
+        if (summaryContainer) summaryContainer.innerHTML = '';
         return;
     }
-    // --- END OF NEW LOGIC ---
     
     const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
     const ledgerFilterStart = document.getElementById('ledger-filter-start');
@@ -109,7 +113,6 @@ export function renderLedger(allTransactions, ledgerSort) {
 
     ledgerTableBody.innerHTML = '';
     if (filteredTransactions.length === 0) {
-        // This message will now only show if the user's filters result in an empty list.
         ledgerTableBody.innerHTML = '<tr><td colspan="7">No transactions match the current filters.</td></tr>';
         if (summaryContainer) summaryContainer.innerHTML = '';
         return;
@@ -124,6 +127,7 @@ export function renderLedger(allTransactions, ledgerSort) {
         lastDate = tx.transaction_date;
     });
 }
+
 export async function renderChartsPage(state) {
     const plSummaryTable = document.getElementById('pl-summary-table');
     const allTimeChartCtx = document.getElementById('all-time-chart')?.getContext('2d');
@@ -153,7 +157,7 @@ export async function renderChartsPage(state) {
                      return;
                 }
                 const plBody = plData.byExchange.map(row => `<tr><td>${row.exchange}</td><td class="numeric">${formatAccounting(row.total_pl)}</td></tr>`).join('');
-                rangedTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P&L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
+                rangedTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P/L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
             }
         } catch (error) {
             console.error("Failed to render Ranged P&L Summary:", error);
@@ -166,7 +170,7 @@ export async function renderChartsPage(state) {
         if (plResponse.ok) {
             const plData = await plResponse.json();
             const plBody = plData.byExchange.map(row => `<tr><td>${row.exchange}</td><td class="numeric">${formatAccounting(row.total_pl)}</td></tr>`).join('');
-            plSummaryTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P&L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
+            plSummaryTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P/L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
         }
     } catch (error) { console.error("Failed to render P&L Summary:", error); }
     
@@ -290,12 +294,10 @@ export async function renderDailyReport(date, activityMap) {
         if (logBody) {
             logBody.innerHTML = '';
             if (data.dailyTransactions.length === 0) {
-                // Update colspan to 11
                 logBody.innerHTML = '<tr><td colspan="11">No transactions logged for this day.</td></tr>';
             } else {
                 data.dailyTransactions.forEach(tx => {
                     dailyRealizedPL += tx.realizedPL || 0;
-                    // Add an empty <td> at the end of the row
                     logBody.insertRow().innerHTML = `<td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td class="numeric">${formatQuantity(tx.quantity)}</td><td class="numeric">${formatAccounting(tx.price)}</td><td class="numeric">${formatAccounting(tx.realizedPL)}</td><td></td><td></td><td class="numeric">${formatAccounting(tx.limit_price_up)}</td><td class="numeric">${formatAccounting(tx.limit_price_down)}</td><td></td>`;
                 });
             }

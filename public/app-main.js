@@ -1,12 +1,12 @@
-// public/app-main.js - v2.9.3 (Corrected Price Population)
+// public/app-main.js - v2.13 (Corrected Data Flow)
 import { initializeEventListeners } from './event-listeners.js';
-import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage } from './ui/renderers.js';
+import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, populatePricesFromCache } from './ui/renderers.js';
 import { updatePricesForView } from './api.js';
 import { getCurrentESTDateString, showToast } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
 
 export const state = {
-    settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15, theme: 'light' },
+    settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15, theme: 'light', font: 'Inter' },
     currentView: { type: null, value: null },
     activityMap: new Map(),
     priceCache: new Map(),
@@ -29,8 +29,9 @@ export async function switchView(viewType, viewValue) {
     if (viewType === 'date') {
         document.getElementById('daily-report-container').style.display = 'block';
         await renderDailyReport(viewValue, state.activityMap);
-        // GUARANTEED ORDER: Fetch prices, then populate the table.
+        // This enforces the correct order: fetch prices, THEN populate the UI with them.
         await updatePricesForView(viewValue, state.activityMap, state.priceCache);
+        populatePricesFromCache(state.activityMap, state.priceCache);
     } else if (viewType === 'charts') {
         document.getElementById('charts-container').style.display = 'block';
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -43,6 +44,8 @@ export async function switchView(viewType, viewValue) {
         document.getElementById('snapshots-page-container').style.display = 'block';
         await refreshSnapshots();
         renderSnapshotsPage();
+    } else if (viewType === 'imports') {
+        document.getElementById('imports-page-container').style.display = 'block';
     }
 }
 
@@ -69,11 +72,21 @@ export function saveSettings() {
     state.settings.marketHoursInterval = parseInt(document.getElementById('market-hours-interval').value) || 2;
     state.settings.afterHoursInterval = parseInt(document.getElementById('after-hours-interval').value) || 15;
     state.settings.theme = document.getElementById('theme-selector').value;
+    state.settings.font = document.getElementById('font-selector').value;
+    
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
-    document.body.dataset.theme = state.settings.theme;
+    
+    applyAppearanceSettings();
+
     if (state.settings.theme !== oldTheme && state.currentView.type === 'charts') {
         switchView('charts');
     }
+}
+
+function applyAppearanceSettings() {
+    document.body.dataset.theme = state.settings.theme;
+    const fontVar = state.settings.font === 'System' ? 'var(--font-system)' : `var(--font-${state.settings.font.toLowerCase().replace(' ', '-')})`;
+    document.body.style.setProperty('--font-family-base', fontVar);
 }
 
 export function sortTableByColumn(th, tbody) {
@@ -245,11 +258,14 @@ async function initialize() {
         document.getElementById('stop-loss-percent').value = state.settings.stopLossPercent;
         document.getElementById('market-hours-interval').value = state.settings.marketHoursInterval;
         document.getElementById('after-hours-interval').value = state.settings.afterHoursInterval;
+        
         const themeSelector = document.getElementById('theme-selector');
-        if(themeSelector) {
-            themeSelector.value = state.settings.theme;
-        }
-        document.body.dataset.theme = state.settings.theme;
+        if(themeSelector) themeSelector.value = state.settings.theme;
+        
+        const fontSelector = document.getElementById('font-selector');
+        if(fontSelector) fontSelector.value = state.settings.font;
+        
+        applyAppearanceSettings();
     }
     loadSettings();
     await fetchAndRenderExchanges();

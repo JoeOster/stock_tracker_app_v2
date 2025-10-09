@@ -1,3 +1,4 @@
+// public/event-listeners.js - v2.12 (UI Modernization)
 import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList } from './app-main.js';
 import { updateAllPrices } from './api.js';
 import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity, showConfirmationModal } from './ui/helpers.js';
@@ -25,34 +26,41 @@ export function initializeEventListeners() {
 
 
     // --- Global Filter Listener ---
-    globalHolderFilter.addEventListener('change', (e) => {
-        state.selectedAccountHolderId = e.target.value;
-        switchView(state.currentView.type, state.currentView.value);
-    });
+    if (globalHolderFilter) {
+        globalHolderFilter.addEventListener('change', (e) => {
+            state.selectedAccountHolderId = e.target.value;
+            switchView(state.currentView.type, state.currentView.value);
+        });
+    }
     
-    tabsContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('master-tab')) {
-            const viewType = e.target.dataset.viewType;
-            const viewValue = e.target.dataset.viewValue;
-            if (viewType) {
-                switchView(viewType, viewValue || null);
+    if (tabsContainer) {
+        tabsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('master-tab')) {
+                const viewType = e.target.dataset.viewType;
+                const viewValue = e.target.dataset.viewValue;
+                if (viewType) {
+                    switchView(viewType, viewValue || null);
+                }
             }
-        }
-    });
+        });
+    }
 
-    document.getElementById('custom-date-picker').addEventListener('change', (e) => {
-        const selectedDate = e.target.value;
-        if (selectedDate) {
-            let persistentDates = JSON.parse(localStorage.getItem('persistentDates')) || [];
-            const newDate = { date: selectedDate, added: Date.now() };
-            persistentDates = persistentDates.filter(d => d.date !== selectedDate);
-            persistentDates.push(newDate);
-            localStorage.setItem('persistentDates', JSON.stringify(persistentDates));
-            switchView('date', selectedDate);
-        }
-    });
+    const customDatePicker = document.getElementById('custom-date-picker');
+    if(customDatePicker) {
+        customDatePicker.addEventListener('change', (e) => {
+            const selectedDate = e.target.value;
+            if (selectedDate) {
+                let persistentDates = JSON.parse(localStorage.getItem('persistentDates')) || [];
+                const newDate = { date: selectedDate, added: Date.now() };
+                persistentDates = persistentDates.filter(d => d.date !== selectedDate);
+                persistentDates.push(newDate);
+                localStorage.setItem('persistentDates', JSON.stringify(persistentDates));
+                switchView('date', selectedDate);
+            }
+        });
+    }
 
-    // --- NEW: Ledger Filter Listeners ---
+    // --- Ledger Filter Listeners ---
     const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
     const ledgerFilterStart = document.getElementById('ledger-filter-start');
     const ledgerFilterEnd = document.getElementById('ledger-filter-end');
@@ -60,376 +68,398 @@ export function initializeEventListeners() {
 
     const applyLedgerFilters = () => renderLedger(state.allTransactions, state.ledgerSort);
 
-    ledgerFilterTicker.addEventListener('input', applyLedgerFilters);
-    ledgerFilterStart.addEventListener('input', applyLedgerFilters);
-    ledgerFilterEnd.addEventListener('input', applyLedgerFilters);
+    if(ledgerFilterTicker) ledgerFilterTicker.addEventListener('input', applyLedgerFilters);
+    if(ledgerFilterStart) ledgerFilterStart.addEventListener('input', applyLedgerFilters);
+    if(ledgerFilterEnd) ledgerFilterEnd.addEventListener('input', applyLedgerFilters);
 
-    ledgerClearFiltersBtn.addEventListener('click', () => {
-        ledgerFilterTicker.value = '';
-        ledgerFilterStart.value = '';
-        ledgerFilterEnd.value = '';
-        applyLedgerFilters();
-    });
-    // --- END NEW BLOCK ---
+    if(ledgerClearFiltersBtn) {
+        ledgerClearFiltersBtn.addEventListener('click', () => {
+            ledgerFilterTicker.value = '';
+            ledgerFilterStart.value = '';
+            ledgerFilterEnd.value = '';
+            applyLedgerFilters();
+        });
+    }
 
-    transactionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const transaction = {
-            account_holder_id: document.getElementById('add-tx-account-holder').value,
-            transaction_date: document.getElementById('transaction-date').value,
-            ticker: document.getElementById('ticker').value.toUpperCase().trim(),
-            exchange: document.getElementById('exchange').value,
-            transaction_type: document.getElementById('transaction-type').value,
-            quantity: parseFloat(document.getElementById('quantity').value),
-            price: parseFloat(document.getElementById('price').value),
-            limit_price_up: parseFloat(document.getElementById('limit-price-up').value) || null,
-            limit_up_expiration: document.getElementById('limit-up-expiration').value || null,
-            limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
-            limit_down_expiration: document.getElementById('limit-down-expiration').value || null,
-        };
-        const submitButton = transactionForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        try {
-            const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transaction) });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Server responded with an error.');
-            }
-            showToast('Transaction logged successfully!', 'success');
-            transactionForm.reset();
-            document.getElementById('transaction-date').value = getCurrentESTDateString();
-            await refreshLedger();
-        } catch (error) {
-            showToast(`Failed to log transaction: ${error.message}`, 'error');
-        } finally {
-            submitButton.disabled = false;
-        }
-    });
-
-    saveSettingsBtn.addEventListener('click', () => {
-        saveSettings();
-        settingsModal.classList.remove('visible');
-    });
-
-    const themeSelector = document.getElementById('theme-selector');
-    if(themeSelector) {
-        themeSelector.addEventListener('change', () => {
-            saveSettings();
-            if(state.currentView.type === 'charts') {
-                switchView('charts');
+    if (transactionForm) {
+        transactionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const transaction = {
+                account_holder_id: document.getElementById('add-tx-account-holder').value,
+                transaction_date: document.getElementById('transaction-date').value,
+                ticker: document.getElementById('ticker').value.toUpperCase().trim(),
+                exchange: document.getElementById('exchange').value,
+                transaction_type: document.getElementById('transaction-type').value,
+                quantity: parseFloat(document.getElementById('quantity').value),
+                price: parseFloat(document.getElementById('price').value),
+            };
+            const submitButton = transactionForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            try {
+                const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transaction) });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Server responded with an error.');
+                }
+                showToast('Transaction logged successfully!', 'success');
+                transactionForm.reset();
+                document.getElementById('transaction-date').value = getCurrentESTDateString();
+                await refreshLedger();
+            } catch (error) {
+                showToast(`Failed to log transaction: ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
             }
         });
     }
 
-    importCsvBtn.addEventListener('click', () => {
-        const file = csvFileInput.files[0];
-        const accountHolderId = document.getElementById('import-account-holder').value;
-        if (!file) { return showToast('Please select a CSV file.', 'error'); }
-        if (!accountHolderId) { return showToast('Please select an account holder to import into.', 'error'); }
+    if(saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', () => {
+            saveSettings();
+            settingsModal.classList.remove('visible');
+        });
+    }
+    
+    const themeSelector = document.getElementById('theme-selector');
+    const fontSelector = document.getElementById('font-selector');
+    if(themeSelector) {
+        themeSelector.addEventListener('change', saveSettings);
+    }
+    if(fontSelector) {
+        fontSelector.addEventListener('change', saveSettings);
+    }
 
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            const transactions = [];
-            const lines = event.target.result.split(/\r\n|\n/);
-            for (let i = 1; i < lines.length; i++) {
-                if (lines[i].trim() === '') continue;
-                const values = lines[i].split(',');
-                if (values.length !== 6) { return showToast(`Error on line ${i + 1}: Invalid column count.`, 'error'); }
-                transactions.push({
-                    transaction_date: values[0].trim(),
-                    ticker: values[1].trim().toUpperCase(),
-                    exchange: values[2].trim(),
-                    transaction_type: values[3].trim().toUpperCase(),
-                    quantity: parseFloat(values[4]),
-                    price: parseFloat(values[5])
+    if(importCsvBtn) {
+        importCsvBtn.addEventListener('click', () => {
+            const file = csvFileInput.files[0];
+            const accountHolderId = document.getElementById('import-account-holder').value;
+            if (!file) { return showToast('Please select a CSV file.', 'error'); }
+            if (!accountHolderId) { return showToast('Please select an account holder to import into.', 'error'); }
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const transactions = [];
+                const lines = event.target.result.split(/\r\n|\n/);
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    const values = lines[i].split(',');
+                    if (values.length !== 6) { return showToast(`Error on line ${i + 1}: Invalid column count.`, 'error'); }
+                    transactions.push({
+                        transaction_date: values[0].trim(),
+                        ticker: values[1].trim().toUpperCase(),
+                        exchange: values[2].trim(),
+                        transaction_type: values[3].trim().toUpperCase(),
+                        quantity: parseFloat(values[4]),
+                        price: parseFloat(values[5])
+                    });
+                }
+                if (transactions.length > 0) {
+                    try {
+                        const response = await fetch('/api/transactions/batch', { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify({ transactions, account_holder_id: accountHolderId }) 
+                        });
+                        if (!response.ok) { const err = await response.json(); throw new Error(err.message); }
+                        showToast(`${transactions.length} transactions imported!`, 'success');
+                        csvFileInput.value = '';
+                        await refreshLedger();
+                    } catch (error) { showToast(`Import failed: ${error.message}`, 'error'); }
+                } else { showToast('No valid transactions found.', 'info'); }
+            };
+            reader.readAsText(file);
+        });
+    }
+    
+    if(settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            renderExchangeManagementList();
+            renderAccountHolderManagementList();
+            settingsModal.classList.add('visible');
+        });
+    }
+    
+    const ledgerTable = document.querySelector('#ledger-table');
+    if(ledgerTable) {
+        ledgerTable.querySelector('thead').addEventListener('click', (e) => {
+            const th = e.target.closest('th[data-sort]');
+            if (!th) return;
+            const newColumn = th.dataset.sort;
+            let newDirection = 'asc';
+            if (state.ledgerSort.column === newColumn && state.ledgerSort.direction === 'asc') { newDirection = 'desc'; }
+            state.ledgerSort = { column: newColumn, direction: newDirection };
+            renderLedger(state.allTransactions, state.ledgerSort);
+        });
+    }
+    
+    const dailyReportContainer = document.getElementById('daily-report-container');
+    if(dailyReportContainer) {
+        dailyReportContainer.addEventListener('click', (e) => {
+            const th = e.target.closest('th[data-sort]');
+            if (th) {
+                const thead = th.closest('thead');
+                let tbody = thead.nextElementSibling;
+                while (tbody && tbody.tagName !== 'TBODY') { tbody = tbody.nextElementSibling; }
+                if (tbody) { sortTableByColumn(th, tbody); }
+                return;
+            }
+
+            const sellBtn = e.target.closest('.sell-from-lot-btn');
+            if (sellBtn) {
+                const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
+                document.getElementById('sell-parent-buy-id').value = buyId;
+                document.getElementById('sell-ticker-display').textContent = ticker;
+                document.getElementById('sell-exchange-display').textContent = exchange;
+                const quantityInput = document.getElementById('sell-quantity');
+                quantityInput.value = quantity;
+                quantityInput.max = quantity;
+                document.getElementById('sell-date').value = getCurrentESTDateString();
+                sellFromPositionModal.classList.add('visible');
+                return;
+            }
+            
+            const setLimitBtn = e.target.closest('.set-limit-btn');
+            const editBuyBtn = e.target.closest('.edit-buy-btn');
+            if (setLimitBtn || editBuyBtn) {
+                const id = (setLimitBtn || editBuyBtn).dataset.id;
+                const lotData = state.activityMap.get(`lot-${id}`);
+                if (lotData) {
+                    document.getElementById('edit-id').value = lotData.id;
+                    document.getElementById('edit-account-holder').value = lotData.account_holder_id;
+                    document.getElementById('edit-date').value = lotData.purchase_date;
+                    document.getElementById('edit-ticker').value = lotData.ticker;
+                    document.getElementById('edit-exchange').value = lotData.exchange;
+                    document.getElementById('edit-type').value = 'BUY';
+                    document.getElementById('edit-quantity').value = lotData.original_quantity;
+                    document.getElementById('edit-price').value = lotData.cost_basis;
+                    document.getElementById('edit-limit-price-up').value = lotData.limit_price_up || '';
+                    document.getElementById('edit-limit-up-expiration').value = lotData.limit_up_expiration || '';
+                    document.getElementById('edit-limit-price-down').value = lotData.limit_price_down || '';
+                    document.getElementById('edit-limit-down-expiration').value = lotData.limit_down_expiration || '';
+
+                    const coreFields = document.getElementById('edit-core-fields');
+                    const limitFields = document.getElementById('edit-limit-fields');
+                    const modalTitle = document.getElementById('edit-modal-title');
+
+                    if (setLimitBtn) {
+                        modalTitle.textContent = `Set Limits for ${lotData.ticker}`;
+                        coreFields.style.display = 'none';
+                        limitFields.style.display = 'block';
+                    } else { 
+                        modalTitle.textContent = 'Edit Buy Transaction';
+                        coreFields.style.display = 'block';
+                        limitFields.style.display = 'none';
+                    }
+                    editModal.classList.add('visible');
+                }
+            }
+        });
+    }
+    
+    if(ledgerTable) {
+        ledgerTable.querySelector('tbody').addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (deleteBtn) {
+                const id = deleteBtn.dataset.id;
+                showConfirmationModal('Delete Transaction?', 'This is permanent.', async () => {
+                    try {
+                        const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+                        if (!res.ok) throw new Error('Server error');
+                        showToast('Transaction deleted.', 'success');
+                        await refreshLedger();
+                    } catch (err) { showToast('Failed to delete.', 'error'); }
                 });
             }
-            if (transactions.length > 0) {
-                try {
-                    const response = await fetch('/api/transactions/batch', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ transactions, account_holder_id: accountHolderId }) 
-                    });
-                    if (!response.ok) { const err = await response.json(); throw new Error(err.message); }
-                    showToast(`${transactions.length} transactions imported!`, 'success');
-                    csvFileInput.value = '';
-                    await refreshLedger();
-                } catch (error) { showToast(`Import failed: ${error.message}`, 'error'); }
-            } else { showToast('No valid transactions found.', 'info'); }
-        };
-        reader.readAsText(file);
-    });
+            const editBtn = e.target.closest('.modify-btn');
+            if (editBtn) {
+                const id = editBtn.dataset.id;
+                const tx = state.allTransactions.find(t => t.id == id);
+                if (tx) {
+                    document.getElementById('edit-id').value = tx.id;
+                    document.getElementById('edit-account-holder').value = tx.account_holder_id;
+                    document.getElementById('edit-date').value = tx.transaction_date;
+                    document.getElementById('edit-ticker').value = tx.ticker;
+                    document.getElementById('edit-exchange').value = tx.exchange;
+                    document.getElementById('edit-type').value = tx.transaction_type;
+                    document.getElementById('edit-quantity').value = tx.quantity;
+                    document.getElementById('edit-price').value = tx.price;
+                    document.getElementById('edit-limit-price-up').value = tx.limit_price_up || '';
+                    document.getElementById('edit-limit-up-expiration').value = tx.limit_up_expiration || '';
+                    document.getElementById('edit-limit-price-down').value = tx.limit_price_down || '';
+                    document.getElementById('edit-limit-down-expiration').value = tx.limit_down_expiration || '';
 
-    settingsBtn.addEventListener('click', () => {
-        renderExchangeManagementList();
-        renderAccountHolderManagementList();
-        settingsModal.classList.add('visible');
-    });
-    
-    document.querySelector('#ledger-table thead').addEventListener('click', (e) => {
-        const th = e.target.closest('th[data-sort]');
-        if (!th) return;
-        const newColumn = th.dataset.sort;
-        let newDirection = 'asc';
-        if (state.ledgerSort.column === newColumn && state.ledgerSort.direction === 'asc') { newDirection = 'desc'; }
-        state.ledgerSort = { column: newColumn, direction: newDirection };
-        renderLedger(state.allTransactions, state.ledgerSort);
-    });
-    
-    document.getElementById('daily-report-container').addEventListener('click', (e) => {
-        const th = e.target.closest('th[data-sort]');
-        if (th) {
-            const thead = th.closest('thead');
-            let tbody = thead.nextElementSibling;
-            while (tbody && tbody.tagName !== 'TBODY') { tbody = tbody.nextElementSibling; }
-            if (tbody) { sortTableByColumn(th, tbody); }
-            return;
-        }
+                    const coreFields = document.getElementById('edit-core-fields');
+                    const limitFields = document.getElementById('edit-limit-fields');
+                    const modalTitle = document.getElementById('edit-modal-title');
 
-        const sellBtn = e.target.closest('.sell-from-lot-btn');
-        if (sellBtn) {
-            const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
-            document.getElementById('sell-parent-buy-id').value = buyId;
-            document.getElementById('sell-ticker-display').textContent = ticker;
-            document.getElementById('sell-exchange-display').textContent = exchange;
-            const quantityInput = document.getElementById('sell-quantity');
-            quantityInput.value = quantity;
-            quantityInput.max = quantity;
-            document.getElementById('sell-date').value = getCurrentESTDateString();
-            sellFromPositionModal.classList.add('visible');
-            return;
-        }
-        
-        const setLimitBtn = e.target.closest('.set-limit-btn');
-        const editBuyBtn = e.target.closest('.edit-buy-btn');
-        if (setLimitBtn || editBuyBtn) {
-            const id = (setLimitBtn || editBuyBtn).dataset.id;
-            const lotData = state.activityMap.get(`lot-${id}`);
-            if (lotData) {
-                document.getElementById('edit-id').value = lotData.id;
-                document.getElementById('edit-account-holder').value = lotData.account_holder_id;
-                document.getElementById('edit-date').value = lotData.purchase_date;
-                document.getElementById('edit-ticker').value = lotData.ticker;
-                document.getElementById('edit-exchange').value = lotData.exchange;
-                document.getElementById('edit-type').value = 'BUY';
-                document.getElementById('edit-quantity').value = lotData.original_quantity;
-                document.getElementById('edit-price').value = lotData.cost_basis;
-                document.getElementById('edit-limit-price-up').value = lotData.limit_price_up || '';
-                document.getElementById('edit-limit-up-expiration').value = lotData.limit_up_expiration || '';
-                document.getElementById('edit-limit-price-down').value = lotData.limit_price_down || '';
-                document.getElementById('edit-limit-down-expiration').value = lotData.limit_down_expiration || '';
-
-                const coreFields = document.getElementById('edit-core-fields');
-                const limitFields = document.getElementById('edit-limit-fields');
-                const modalTitle = document.getElementById('edit-modal-title');
-
-                if (setLimitBtn) {
-                    modalTitle.textContent = `Set Limits for ${lotData.ticker}`;
-                    coreFields.style.display = 'none';
-                    limitFields.style.display = 'block';
-                } else { 
-                    modalTitle.textContent = 'Edit Buy Transaction';
+                    modalTitle.textContent = 'Edit Transaction';
                     coreFields.style.display = 'block';
                     limitFields.style.display = 'none';
+
+                    editModal.classList.add('visible');
                 }
-                editModal.classList.add('visible');
             }
-        }
-    });
-    
-    document.querySelector('#ledger-table tbody').addEventListener('click', async (e) => {
-        const deleteBtn = e.target.closest('.delete-btn');
-        if (deleteBtn) {
-            const id = deleteBtn.dataset.id;
-            showConfirmationModal('Delete Transaction?', 'This is permanent.', async () => {
-                try {
-                    const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-                    if (!res.ok) throw new Error('Server error');
-                    showToast('Transaction deleted.', 'success');
-                    await refreshLedger();
-                } catch (err) { showToast('Failed to delete.', 'error'); }
-            });
-        }
-        const editBtn = e.target.closest('.modify-btn');
-        if (editBtn) {
-            const id = editBtn.dataset.id;
-            const tx = state.allTransactions.find(t => t.id == id);
-            if (tx) {
-                document.getElementById('edit-id').value = tx.id;
-                document.getElementById('edit-account-holder').value = tx.account_holder_id;
-                document.getElementById('edit-date').value = tx.transaction_date;
-                document.getElementById('edit-ticker').value = tx.ticker;
-                document.getElementById('edit-exchange').value = tx.exchange;
-                document.getElementById('edit-type').value = tx.transaction_type;
-                document.getElementById('edit-quantity').value = tx.quantity;
-                document.getElementById('edit-price').value = tx.price;
-                document.getElementById('edit-limit-price-up').value = tx.limit_price_up || '';
-                document.getElementById('edit-limit-up-expiration').value = tx.limit_up_expiration || '';
-                document.getElementById('edit-limit-price-down').value = tx.limit_price_down || '';
-                document.getElementById('edit-limit-down-expiration').value = tx.limit_down_expiration || '';
+        });
+    }
 
-                const coreFields = document.getElementById('edit-core-fields');
-                const limitFields = document.getElementById('edit-limit-fields');
-                const modalTitle = document.getElementById('edit-modal-title');
+    if(sellFromPositionForm) {
+        sellFromPositionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const sellDetails = {
+                parent_buy_id: document.getElementById('sell-parent-buy-id').value,
+                quantity: parseFloat(document.getElementById('sell-quantity').value),
+                price: parseFloat(document.getElementById('sell-price').value),
+                transaction_date: document.getElementById('sell-date').value,
+                ticker: document.getElementById('sell-ticker-display').textContent,
+                exchange: document.getElementById('sell-exchange-display').textContent,
+                transaction_type: 'SELL',
+                account_holder_id: state.selectedAccountHolderId === 'all' ? null : state.selectedAccountHolderId
+            };
 
-                modalTitle.textContent = 'Edit Transaction';
-                coreFields.style.display = 'block';
-                limitFields.style.display = 'none';
-
-                editModal.classList.add('visible');
+            if(!sellDetails.account_holder_id) {
+                return showToast('Please select a specific account holder before logging a sale.', 'error');
             }
-        }
-    });
 
-    sellFromPositionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const sellDetails = {
-            parent_buy_id: document.getElementById('sell-parent-buy-id').value,
-            quantity: parseFloat(document.getElementById('sell-quantity').value),
-            price: parseFloat(document.getElementById('sell-price').value),
-            transaction_date: document.getElementById('sell-date').value,
-            ticker: document.getElementById('sell-ticker-display').textContent,
-            exchange: document.getElementById('sell-exchange-display').textContent,
-            transaction_type: 'SELL',
-            account_holder_id: state.selectedAccountHolderId === 'all' ? null : state.selectedAccountHolderId
-        };
-
-        if(!sellDetails.account_holder_id) {
-            return showToast('Please select a specific account holder before logging a sale.', 'error');
-        }
-
-        const submitButton = sellFromPositionForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        try {
-            const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sellDetails) });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Server returned an error.');
-            }
-            showToast('Sale logged successfully!', 'success');
-            sellFromPositionModal.classList.remove('visible');
-            await switchView(state.currentView.type, state.currentView.value);
-        } catch (error) {
-            showToast(`Failed to log sale: ${error.message}`, 'error');
-        } finally {
-            submitButton.disabled = false;
-        }
-    });
-
-    editForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('edit-id').value;
-        const updatedTransaction = {
-            account_holder_id: document.getElementById('edit-account-holder').value,
-            ticker: document.getElementById('edit-ticker').value.toUpperCase().trim(),
-            exchange: document.getElementById('edit-exchange').value,
-            transaction_type: document.getElementById('edit-type').value,
-            quantity: parseFloat(document.getElementById('edit-quantity').value),
-            price: parseFloat(document.getElementById('edit-price').value),
-            transaction_date: document.getElementById('edit-date').value,
-            limit_price_up: parseFloat(document.getElementById('limit-price-up').value) || null,
-            limit_up_expiration: document.getElementById('limit-up-expiration').value || null,
-            limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
-            limit_down_expiration: document.getElementById('limit-down-expiration').value || null,
-        };
-
-        const lotData = state.activityMap.get(`lot-${id}`);
-        if (lotData) {
-            const costBasis = lotData.cost_basis;
-            if (updatedTransaction.limit_price_up && updatedTransaction.limit_price_up <= costBasis) {
-                showToast('Take Profit price must be higher than the cost basis.', 'error');
-                return;
-            }
-            if (updatedTransaction.limit_price_down && updatedTransaction.limit_price_down >= costBasis) {
-                showToast('Stop Loss price must be lower than the cost basis.', 'error');
-                return;
-            }
-        }
-
-        const submitButton = editForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-
-        try {
-            const response = await fetch(`/api/transactions/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTransaction) });
-            if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message); }
-
-            editModal.classList.remove('visible');
-            showToast('Transaction updated!', 'success');
-
-            if (state.currentView.type === 'ledger') {
-                await refreshLedger();
-            } else if (state.currentView.type === 'date') {
-                 await switchView(state.currentView.type, state.currentView.value);
-            }
-        } catch (error) {
-            showToast(`Error updating transaction: ${error.message}`, 'error');
-        } finally {
-            submitButton.disabled = false;
-        }
-    });
-
-    editModal.addEventListener('click', (e) => {
-        const clearBtn = e.target.closest('.clear-limit-btn');
-        if (!clearBtn) return;
-        const target = clearBtn.dataset.target;
-        if (target === 'up') {
-            document.getElementById('edit-limit-price-up').value = '';
-            document.getElementById('edit-limit-up-expiration').value = '';
-        } else if (target === 'down') {
-            document.getElementById('edit-limit-price-down').value = '';
-            document.getElementById('edit-limit-down-expiration').value = '';
-        }
-    });
-
-    addExchangeBtn.addEventListener('click', async () => {
-        const name = newExchangeNameInput.value.trim();
-        if (!name) return showToast('Exchange name cannot be empty.', 'error');
-        try {
-            const res = await fetch('/api/exchanges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-            if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-            await fetchAndRenderExchanges(); 
-            newExchangeNameInput.value = '';
-            renderExchangeManagementList();
-            showToast('Exchange added!', 'success');
-        } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
-    });
-
-    exchangeList.addEventListener('click', async (e) => {
-        const li = e.target.closest('li');
-        if (!li) return;
-        const id = li.dataset.id;
-        const nameInput = li.querySelector('.edit-exchange-input');
-
-        if (e.target.matches('.edit-exchange-btn')) {
-            li.querySelector('.exchange-name').style.display = 'none';
-            e.target.style.display = 'none';
-            nameInput.style.display = 'inline-block';
-            li.querySelector('.save-exchange-btn').style.display = 'inline-block';
-            nameInput.focus();
-        } else if (e.target.matches('.save-exchange-btn')) {
-            const newName = nameInput.value.trim();
-            if (!newName) return showToast('Exchange name cannot be empty.', 'error');
+            const submitButton = sellFromPositionForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
             try {
-                const res = await fetch(`/api/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+                const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sellDetails) });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Server returned an error.');
+                }
+                showToast('Sale logged successfully!', 'success');
+                sellFromPositionModal.classList.remove('visible');
+                await switchView(state.currentView.type, state.currentView.value);
+            } catch (error) {
+                showToast(`Failed to log sale: ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    }
+
+    if(editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const updatedTransaction = {
+                account_holder_id: document.getElementById('edit-account-holder').value,
+                ticker: document.getElementById('edit-ticker').value.toUpperCase().trim(),
+                exchange: document.getElementById('edit-exchange').value,
+                transaction_type: document.getElementById('edit-type').value,
+                quantity: parseFloat(document.getElementById('edit-quantity').value),
+                price: parseFloat(document.getElementById('edit-price').value),
+                transaction_date: document.getElementById('edit-date').value,
+                limit_price_up: parseFloat(document.getElementById('edit-limit-price-up').value) || null,
+                limit_up_expiration: document.getElementById('edit-limit-up-expiration').value || null,
+                limit_price_down: parseFloat(document.getElementById('edit-limit-price-down').value) || null,
+                limit_down_expiration: document.getElementById('edit-limit-down-expiration').value || null,
+            };
+
+            const lotData = state.activityMap.get(`lot-${id}`);
+            if (lotData) {
+                const costBasis = lotData.cost_basis;
+                if (updatedTransaction.limit_price_up && updatedTransaction.limit_price_up <= costBasis) {
+                    showToast('Take Profit price must be higher than the cost basis.', 'error');
+                    return;
+                }
+                if (updatedTransaction.limit_price_down && updatedTransaction.limit_price_down >= costBasis) {
+                    showToast('Stop Loss price must be lower than the cost basis.', 'error');
+                    return;
+                }
+            }
+
+            const submitButton = editForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch(`/api/transactions/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTransaction) });
+                if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message); }
+
+                editModal.classList.remove('visible');
+                showToast('Transaction updated!', 'success');
+
+                if (state.currentView.type === 'ledger') {
+                    await refreshLedger();
+                } else if (state.currentView.type === 'date') {
+                     await switchView(state.currentView.type, state.currentView.value);
+                }
+            } catch (error) {
+                showToast(`Error updating transaction: ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    }
+
+    if(editModal) {
+        editModal.addEventListener('click', (e) => {
+            const clearBtn = e.target.closest('.clear-limit-btn');
+            if (!clearBtn) return;
+            const target = clearBtn.dataset.target;
+            if (target === 'up') {
+                document.getElementById('edit-limit-price-up').value = '';
+                document.getElementById('edit-limit-up-expiration').value = '';
+            } else if (target === 'down') {
+                document.getElementById('edit-limit-price-down').value = '';
+                document.getElementById('edit-limit-down-expiration').value = '';
+            }
+        });
+    }
+
+    if(addExchangeBtn) {
+        addExchangeBtn.addEventListener('click', async () => {
+            const name = newExchangeNameInput.value.trim();
+            if (!name) return showToast('Exchange name cannot be empty.', 'error');
+            try {
+                const res = await fetch('/api/exchanges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                await fetchAndRenderExchanges();
-                await refreshLedger();
+                await fetchAndRenderExchanges(); 
+                newExchangeNameInput.value = '';
                 renderExchangeManagementList();
-                showToast('Exchange updated!', 'success');
+                showToast('Exchange added!', 'success');
             } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
-        } else if (e.target.matches('.delete-exchange-btn')) {
-            showConfirmationModal('Delete Exchange?', 'This cannot be undone.', async () => {
+        });
+    }
+
+    if(exchangeList) {
+        exchangeList.addEventListener('click', async (e) => {
+            const li = e.target.closest('li');
+            if (!li) return;
+            const id = li.dataset.id;
+            const nameInput = li.querySelector('.edit-exchange-input');
+
+            if (e.target.matches('.edit-exchange-btn')) {
+                li.querySelector('.exchange-name').style.display = 'none';
+                e.target.style.display = 'none';
+                nameInput.style.display = 'inline-block';
+                li.querySelector('.save-exchange-btn').style.display = 'inline-block';
+                nameInput.focus();
+            } else if (e.target.matches('.save-exchange-btn')) {
+                const newName = nameInput.value.trim();
+                if (!newName) return showToast('Exchange name cannot be empty.', 'error');
                 try {
-                    const res = await fetch(`/api/exchanges/${id}`, { method: 'DELETE' });
+                    const res = await fetch(`/api/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                     await fetchAndRenderExchanges();
+                    await refreshLedger();
                     renderExchangeManagementList();
-                    showToast('Exchange deleted.', 'success');
+                    showToast('Exchange updated!', 'success');
                 } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
-            });
-        }
-    });
+            } else if (e.target.matches('.delete-exchange-btn')) {
+                showConfirmationModal('Delete Exchange?', 'This cannot be undone.', async () => {
+                    try {
+                        const res = await fetch(`/api/exchanges/${id}`, { method: 'DELETE' });
+                        if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                        await fetchAndRenderExchanges();
+                        renderExchangeManagementList();
+                        showToast('Exchange deleted.', 'success');
+                    } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+                });
+            }
+        });
+    }
 
     if (addAccountHolderBtn) {
         addAccountHolderBtn.addEventListener('click', async () => {
@@ -531,6 +561,22 @@ export function initializeEventListeners() {
         });
     }
 
+    // Settings Modal Tab logic
+    const settingsTabsContainer = document.querySelector('.settings-tabs');
+    if (settingsTabsContainer) {
+        settingsTabsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('settings-tab')) {
+                const tabName = e.target.dataset.tab;
+
+                document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
+                e.target.classList.add('active');
+
+                document.querySelectorAll('.settings-panel').forEach(panel => panel.classList.remove('active'));
+                document.getElementById(`${tabName}-settings-panel`).classList.add('active');
+            }
+        });
+    }
+
     document.querySelectorAll('.modal .close-button').forEach(btn => 
         btn.addEventListener('click', e => 
             e.target.closest('.modal').classList.remove('visible')
@@ -543,8 +589,11 @@ export function initializeEventListeners() {
         }
     });
 
-    document.getElementById('refresh-prices-btn').addEventListener('click', () => 
-        updateAllPrices(state.activityMap, state.priceCache)
-    );
+    const refreshBtn = document.getElementById('refresh-prices-btn');
+    if(refreshBtn) {
+        refreshBtn.addEventListener('click', () => 
+            updateAllPrices(state.activityMap, state.priceCache)
+        );
+    }
 }
 
