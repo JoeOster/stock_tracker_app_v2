@@ -28,7 +28,6 @@ export async function switchView(viewType, viewValue) {
     if (viewType === 'date') {
         document.getElementById('daily-report-container').style.display = 'block';
         await renderDailyReport(viewValue, state.activityMap);
-        // This enforces the correct order: fetch prices, THEN populate the UI with them.
         await updatePricesForView(viewValue, state.activityMap, state.priceCache);
         populatePricesFromCache(state.activityMap, state.priceCache);
     } else if (viewType === 'charts') {

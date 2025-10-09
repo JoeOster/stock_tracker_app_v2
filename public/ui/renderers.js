@@ -36,7 +36,7 @@ export function renderTabs(currentView) {
     tabsContainer.appendChild(ledgerTab);
 
       // --- TEMPORARY DIAGNOSTIC LOG ---
-    console.log("!!! EXECUTING CODE TO ADD ORDERS TAB !!!");
+   // console.log("!!! EXECUTING CODE TO ADD ORDERS TAB !!!");
 
     // This is the block that adds the "Orders" tab
     const ordersTab = document.createElement('div');
