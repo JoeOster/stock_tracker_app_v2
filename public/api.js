@@ -1,14 +1,15 @@
 // public/api.js - v2.13 (Corrected Data Flow)
-import { populatePricesFromCache } from './ui/renderers.js';
 import { state } from './app-main.js';
+import { populatePricesFromCache } from './ui/renderers.js';
 
+// This function now ONLY fetches prices and updates the cache.
 export async function updatePricesForView(viewDate, activityMap, priceCache) {
     const allTickersInView = [...new Set(Array.from(activityMap.values()).map(lot => lot.ticker))];
     if (allTickersInView.length === 0) {
-        populatePricesFromCache(activityMap, priceCache);
-        return;
+        return; // Nothing to fetch
     }
 
+    // Show spinners for all relevant rows before fetching
     activityMap.forEach((lot, key) => {
         const row = document.querySelector(`tr[data-key="${key}"]`);
         if (row) {
@@ -30,7 +31,7 @@ export async function updatePricesForView(viewDate, activityMap, priceCache) {
 
         const prices = await response.json();
 
-        // THIS IS THE MISSING LOGIC
+        // Update the cache with the batch-fetched prices
         for (const ticker in prices) {
             priceCache.set(ticker, prices[ticker]);
         }
@@ -43,6 +44,7 @@ export async function updatePricesForView(viewDate, activityMap, priceCache) {
 // This function is used by the manual "Refresh Prices" button
 export async function updateAllPrices(activityMap, priceCache) {
     await updatePricesForView(state.currentView.value, activityMap, priceCache);
-    populatePricesFromCache(activityMap, priceCache); // Ensure UI is populated after manual refresh
+    // After fetching, we must explicitly call the populator
+    populatePricesFromCache(activityMap, priceCache);
 }
 

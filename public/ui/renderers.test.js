@@ -35,13 +35,14 @@ describe('renderTabs', () => {
         const tabsContainer = document.getElementById('tabs-container');
         const tabs = tabsContainer.querySelectorAll('.tab');
 
-        // CORRECTED: We expect 2 date tabs + 3 static tabs (Charts, Ledger, Snapshots) = 5 total
-        expect(tabs.length).toBe(5);
+        // CORRECTED: We now expect 2 date tabs + 4 static tabs (Charts, Ledger, Snapshots, Imports) = 6 total
+        expect(tabs.length).toBe(6);
 
         // Check for the static tabs by their text content
         expect(tabsContainer.textContent).toContain('Charts');
         expect(tabsContainer.textContent).toContain('Ledger');
         expect(tabsContainer.textContent).toContain('Snapshots');
+        expect(tabsContainer.textContent).toContain('Imports'); // Added check for the new tab
     });
 
     it('should correctly apply the "active" class to the current view tab', () => {

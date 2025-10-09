@@ -1,4 +1,4 @@
-/* style.css - v2.12 (UI Modernization) */
+/* style.css - v2.13 (Ledger Layout Improvements) */
 
 /* --- FONT & COLOR THEME DEFINITIONS --- */
 :root {
@@ -66,7 +66,6 @@ body[data-theme="contrast"] {
     --primary-color: #00aaff;
     --primary-hover: #0088cc;
 }
-
 
 /* --- GLOBAL & BODY STYLES --- */
 body {
@@ -212,16 +211,6 @@ button:hover {
     background-color: var(--negative-color);
     border-color: var(--negative-color);
 }
-#add-transaction-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-}
-#add-transaction-form input, #add-transaction-form select { flex-grow: 1; }
-#add-transaction-form button { flex-grow: 0; }
-
 .form-group { text-align: left; margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9em; }
 .form-group-with-button { display: flex; align-items: flex-end; gap: 5px; }
@@ -247,10 +236,7 @@ th {
 .table-section-header { text-align: center; background-color: #f8f9f9; }
 #positions-summary-title { background-color: #e8f6f3; }
 
-body[data-theme="dark"] .table-section-header, body[data-theme="contrast"] .table-section-header {
-    background-color: var(--table-header-bg);
-    color: var(--heading-color);
-}
+body[data-theme="dark"] .table-section-header, body[data-theme="contrast"] .table-section-header,
 body[data-theme="dark"] #positions-summary-title, body[data-theme="contrast"] #positions-summary-title {
     background-color: var(--table-header-bg);
     color: var(--heading-color);
@@ -276,14 +262,33 @@ body[data-theme="dark"] #daily-performance-summary, body[data-theme="contrast"] 
 body[data-theme="dark"] #daily-performance-summary h3, body[data-theme="contrast"] #daily-performance-summary h3, body[data-theme="sepia"] #daily-performance-summary h3 {
     color: var(--heading-color);
 }
-.chart-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(400px,1fr)); gap: 30px; margin-bottom: 2rem; }
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(400px,1fr)); gap: 30px; }
 .chart-container { position: relative; padding: 15px; border: 1px solid var(--container-border); border-radius: 8px; min-height: 300px; }
-.pl-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-bottom: 2rem; }
+.pl-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-top: 2rem; }
 .pl-summary-container { display: flex; flex-direction: column; align-items: center; padding: 20px; background-color: var(--info-panel-bg); border: 1px solid var(--container-border); border-radius: 8px; }
 .pl-summary-container h3 { margin-top: 0; }
 #pl-summary-table { min-width: auto; margin: 0 auto; width: auto; }
-.ledger-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 20px; align-items: start; }
-.ledger-filters, .import-section, #add-snapshot-container, #ledger-summary-container { background-color: var(--info-panel-bg); padding: 20px; border: 1px solid var(--container-border); border-radius: 8px; }
+.import-section { padding: 20px; background-color: var(--info-panel-bg); border-radius: 8px; border: 1px solid var(--container-border); }
+#add-snapshot-container { background-color: var(--info-panel-bg); padding: 20px; border: 1px solid var(--container-border); border-radius: 8px; }
+
+/* Ledger Page Layout - UPDATED */
+#add-transaction-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; margin-bottom: 2rem; }
+#add-transaction-form input, #add-transaction-form select { flex: 1 1 150px; }
+#add-transaction-form button { flex-grow: 0; }
+
+#ledger-summary-container { 
+    display: flex; 
+    justify-content: space-around; 
+    padding: 15px; 
+    margin-bottom: 2rem; 
+    background-color: var(--info-panel-bg); 
+    border: 1px solid var(--container-border); 
+    border-radius: 8px; 
+    text-align: center; 
+}
+.ledger-filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 1.5rem; padding: 1rem; background-color: var(--info-panel-bg); border-radius: 8px; border: 1px solid var(--container-border); }
+.ledger-filters input { width: auto; flex-grow: 1; }
+.new-date-group td { border-top: 2px solid var(--primary-color) !important; }
 
 /* --- SETTINGS MODAL (TABBED) --- */
 .settings-layout { display: flex; gap: 2rem; }

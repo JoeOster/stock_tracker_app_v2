@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <!-- Version 2.13 -->
     <header class="header">
         <div class="header-left">
              <label for="global-account-holder-filter">Viewing:</label>
@@ -27,6 +28,8 @@
 
     <div id="tabs-container" class="tabs"></div>
 
+    <div id="ledger-summary-container"></div>
+    
     <div class="custom-date-container">
         <label for="custom-date-picker">View a specific date:</label>
         <input type="date" id="custom-date-picker">
@@ -105,25 +108,21 @@
     </div>
 
     <div id="ledger-page-container" class="page-container" style="display: none;">
-        <div id="ledger-summary-container"></div>
         <h2>Transaction Ledger</h2>
         <p class="subtitle">Log a new transaction or filter your complete history below.</p>
-        <div id="add-transaction-container">
-            <h3>Log a New Transaction</h3>
-            <form id="add-transaction-form">
-                <select id="add-tx-account-holder" class="account-holder-select" required></select>
-                <input type="date" id="transaction-date" required>
-                <input type="text" id="ticker" placeholder="Ticker" required>
-                <select id="exchange" required></select>
-                <select id="transaction-type">
-                    <option value="BUY">BUY</option>
-                    <option value="SELL">SELL</option>
-                </select>
-                <input type="number" id="quantity" placeholder="Quantity" step="any" min="0.00001" required>
-                <input type="number" id="price" placeholder="Price Per Share" step="any" min="0.01" required>
-                <button type="submit">Log Transaction</button>
-            </form>
-        </div>
+        <form id="add-transaction-form">
+            <select id="add-tx-account-holder" class="account-holder-select" required></select>
+            <input type="date" id="transaction-date" required>
+            <input type="text" id="ticker" placeholder="Ticker" required>
+            <select id="exchange" required></select>
+            <select id="transaction-type">
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+            </select>
+            <input type="number" id="quantity" placeholder="Quantity" step="any" min="0.00001" required>
+            <input type="number" id="price" placeholder="Price Per Share" step="any" min="0.01" required>
+            <button type="submit">Log Transaction</button>
+        </form>
         <div class="ledger-filters">
             <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
             <label for="ledger-filter-start">From:</label><input type="date" id="ledger-filter-start">
@@ -219,6 +218,7 @@
                             </select>
                         </div>
                     </div>
+                    <!-- Data Management Panel -->
                     <div id="data-settings-panel" class="settings-panel">
                         <h2>Data Management</h2>
                         <div class="management-section">
@@ -232,6 +232,7 @@
                         <hr style="margin: 2rem 0;">
                         <div class="management-section">
                             <h3>Manage Account Holders</h3>
+                            <p class="subtitle" style="text-align: left; margin: 0 0 10px 0;">Select a default account to load on startup.</p>
                             <ul id="account-holder-list" class="management-list"></ul>
                              <div class="add-item-form">
                                 <input type="text" id="new-account-holder-name" placeholder="New Account Holder">

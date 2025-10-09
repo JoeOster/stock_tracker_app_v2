@@ -1,4 +1,4 @@
-// public/event-listeners.js - v2.12 (UI Modernization)
+// public/event-listeners.js - v2.13 (UX Enhancements)
 import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList } from './app-main.js';
 import { updateAllPrices } from './api.js';
 import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity, showConfirmationModal } from './ui/helpers.js';
@@ -23,7 +23,6 @@ export function initializeEventListeners() {
     const accountHolderList = document.getElementById('account-holder-list');
     const addAccountHolderBtn = document.getElementById('add-account-holder-btn');
     const newAccountHolderNameInput = document.getElementById('new-account-holder-name');
-
 
     // --- Global Filter Listener ---
     if (globalHolderFilter) {
@@ -351,9 +350,9 @@ export function initializeEventListeners() {
                 quantity: parseFloat(document.getElementById('edit-quantity').value),
                 price: parseFloat(document.getElementById('edit-price').value),
                 transaction_date: document.getElementById('edit-date').value,
-                limit_price_up: parseFloat(document.getElementById('edit-limit-price-up').value) || null,
+                limit_price_up: parseFloat(document.getElementById('limit-price-up').value) || null,
                 limit_up_expiration: document.getElementById('edit-limit-up-expiration').value || null,
-                limit_price_down: parseFloat(document.getElementById('edit-limit-price-down').value) || null,
+                limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
                 limit_down_expiration: document.getElementById('edit-limit-down-expiration').value || null,
             };
 

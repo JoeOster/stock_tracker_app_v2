@@ -1,3 +1,4 @@
+// public/ui/renderers.js - v2.13 (UX Enhancements & Corrected Data Flow)
 import { formatQuantity, formatAccounting, getActivePersistentDates, getTradingDays, getCurrentESTDateString } from './helpers.js';
 import { renderAllTimeChart, renderFiveDayChart, renderDateRangeChart } from './charts.js';
 import { state } from '../app-main.js';
@@ -186,10 +187,10 @@ export async function renderChartsPage(state) {
 
     const plStartDate = document.getElementById('pl-start-date');
     const plEndDate = document.getElementById('pl-end-date');
-    plStartDate.value = '2025-09-30';
-    plEndDate.value = getCurrentESTDateString();
-    plStartDate.addEventListener('change', renderRangedPLSummary);
-    plEndDate.addEventListener('change', renderRangedPLSummary);
+    if(plStartDate) plStartDate.value = '2025-09-30';
+    if(plEndDate) plEndDate.value = getCurrentESTDateString();
+    if(plStartDate) plStartDate.addEventListener('change', renderRangedPLSummary);
+    if(plEndDate) plEndDate.addEventListener('change', renderRangedPLSummary);
     renderRangedPLSummary();
 }
 
@@ -220,14 +221,14 @@ export async function renderPortfolioOverview(priceCache) {
         let totalUnrealizedPL = 0;
         for (const pos of data) {
             const priceToUse = priceCache.get(pos.ticker);
-            const priceHTML = priceToUse ? formatAccounting(priceToUse) : '--';
-            const totalValue = pos.total_quantity * priceToUse;
+            const priceHTML = priceToUse && priceToUse !== 'invalid' ? formatAccounting(priceToUse) : `<span class="negative">${priceToUse || '--'}</span>`;
+            const totalValue = (priceToUse && priceToUse !== 'invalid') ? pos.total_quantity * priceToUse : null;
             const totalCost = pos.total_quantity * pos.weighted_avg_cost;
-            const unrealizedPL = (priceToUse) ? totalValue - totalCost : null;
+            const unrealizedPL = (totalValue !== null) ? totalValue - totalCost : null;
             if(unrealizedPL) totalUnrealizedPL += unrealizedPL;
 
-            const dayChangeAmount = priceToUse && pos.previous_close ? (priceToUse - pos.previous_close) * pos.total_quantity : null;
-            const dayChangePercent = priceToUse && pos.previous_close && pos.previous_close !== 0 ? ((priceToUse - pos.previous_close) / pos.previous_close) * 100 : null;
+            const dayChangeAmount = (priceToUse && priceToUse !== 'invalid' && pos.previous_close) ? (priceToUse - pos.previous_close) * pos.total_quantity : null;
+            const dayChangePercent = (priceToUse && priceToUse !== 'invalid' && pos.previous_close && pos.previous_close !== 0) ? ((priceToUse - pos.previous_close) / pos.previous_close) * 100 : null;
 
             overviewBody.insertRow().innerHTML = `
                 <td>${pos.ticker}</td>
@@ -392,6 +393,7 @@ export function renderSnapshotsPage() {
     }
 }
 
+// This function must be exported to be used by app-main.js
 export function populatePricesFromCache(activityMap, priceCache) {
     const totalValueSummarySpan = document.querySelector('#total-value-summary span');
     let totalPortfolioValue = 0;

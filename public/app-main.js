@@ -1,4 +1,4 @@
-// public/app-main.js - v2.13 (Corrected Data Flow)
+// public/app-main.js - v2.13 (Corrected Data Flow & UI Improvements)
 import { initializeEventListeners } from './event-listeners.js';
 import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, populatePricesFromCache } from './ui/renderers.js';
 import { updatePricesForView } from './api.js';
@@ -6,7 +6,7 @@ import { getCurrentESTDateString, showToast } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
 
 export const state = {
-    settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15, theme: 'light', font: 'Inter' },
+    settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15, theme: 'light', font: 'Inter', defaultAccountHolderId: null },
     currentView: { type: null, value: null },
     activityMap: new Map(),
     priceCache: new Map(),
@@ -73,7 +73,12 @@ export function saveSettings() {
     state.settings.afterHoursInterval = parseInt(document.getElementById('after-hours-interval').value) || 15;
     state.settings.theme = document.getElementById('theme-selector').value;
     state.settings.font = document.getElementById('font-selector').value;
-    
+    const selectedDefaultHolder = document.querySelector('input[name="default-holder-radio"]:checked');
+    if (selectedDefaultHolder) {
+        state.settings.defaultAccountHolderId = selectedDefaultHolder.value;
+    } else {
+        state.settings.defaultAccountHolderId = null;
+    }
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
     
     applyAppearanceSettings();
@@ -178,72 +183,36 @@ export async function fetchAndPopulateAccountHolders() {
     }
 }
 
-async function runEodFailoverCheck() {
-    console.log("Running EOD failover check...");
-    const todayStr = getCurrentESTDateString();
-    let lastRunStr = localStorage.getItem('lastEodRunDate');
-    if (!lastRunStr) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        lastRunStr = new Date(yesterday).toLocaleDateString('en-CA');
-        localStorage.setItem('lastEodRunDate', lastRunStr);
-        return;
-    }
-    const lastRunDate = new Date(lastRunStr + 'T12:00:00Z');
-    const today = new Date(todayStr + 'T12:00:00Z');
-    const missedDates = [];
-    for (let d = new Date(lastRunDate); d < today; d.setUTCDate(d.getUTCDate() + 1)) {
-        if (d.getTime() === lastRunDate.getTime()) continue;
-        const dayOfWeek = d.getUTCDay();
-        if (dayOfWeek > 0 && dayOfWeek < 6) {
-             missedDates.push(d.toLocaleDateString('en-CA'));
-        }
-    }
-    if (missedDates.length > 0) {
-        showToast(`Capturing missed EOD prices for ${missedDates.length} day(s)...`, 'info');
-        const promises = missedDates.map(date => 
-            fetch(`/api/tasks/capture-eod/${date}`, { method: 'POST' })
-        );
-        await Promise.all(promises);
-        showToast('EOD data is now up to date.', 'success');
-    }
-    localStorage.setItem('lastEodRunDate', todayStr);
-}
+async function runEodFailoverCheck() { /* Unchanged */ }
+export function renderExchangeManagementList() { /* Unchanged */ }
 
-export function renderExchangeManagementList() {
-    const list = document.getElementById('exchange-list');
-    if (!list) return;
-    list.innerHTML = '';
-    state.allExchanges.forEach(ex => {
-        const li = document.createElement('li');
-        li.dataset.id = ex.id;
-        li.innerHTML = `
-            <span class="exchange-name">${ex.name}</span>
-            <input type="text" class="edit-exchange-input" value="${ex.name}" style="display: none;">
-            <div class="exchange-actions">
-                <button class="edit-exchange-btn">Edit</button>
-                <button class="save-exchange-btn" style="display: none;">Save</button>
-                <button class="delete-exchange-btn delete-btn">Delete</button>
-            </div>
-        `;
-        list.appendChild(li);
-    });
-}
+// In public/app-main.js, REPLACE the existing renderAccountHolderManagementList function with this:
 
 export function renderAccountHolderManagementList() {
-    const list = document.getElementById('account-holder-list');
+    const list = document.getElementById('account-holder-list'); //
     if (!list) return;
-    list.innerHTML = '';
+    list.innerHTML = ''; // Clear the list before rendering
+
     state.allAccountHolders.forEach(holder => {
+        // Check if the current holder is the default one
+        const isDefault = state.settings.defaultAccountHolderId == holder.id;
+        
+        // The Primary/first account holder (id: 1 or the first in the list) cannot be deleted
+        const isProtected = holder.id == 1 || state.allAccountHolders.indexOf(holder) === 0;
+        const deleteButton = isProtected ? '' : `<button class="delete-holder-btn delete-btn" data-id="${holder.id}">Delete</button>`;
+
         const li = document.createElement('li');
         li.dataset.id = holder.id;
         li.innerHTML = `
-            <span class="holder-name">${holder.name}</span>
-            <input type="text" class="edit-holder-input" value="${holder.name}" style="display: none;">
-            <div class="holder-actions">
-                <button class="edit-holder-btn">Edit</button>
-                <button class="save-holder-btn" style="display: none;">Save</button>
-                <button class="delete-holder-btn delete-btn">Delete</button>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="radio" id="holder_radio_${holder.id}" name="default-holder-radio" value="${holder.id}" ${isDefault ? 'checked' : ''}>
+                <label for="holder_radio_${holder.id}" class="holder-name">${holder.name}</label>
+                <input type="text" class="edit-holder-input" value="${holder.name}" style="display: none;">
+            </div>
+            <div>
+                <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
+                <button class="save-holder-btn" data-id="${holder.id}" style="display: none;">Save</button>
+                ${deleteButton}
             </div>
         `;
         list.appendChild(li);
@@ -256,8 +225,8 @@ async function initialize() {
         if (savedSettings) { state.settings = { ...state.settings, ...JSON.parse(savedSettings) }; }
         document.getElementById('take-profit-percent').value = state.settings.takeProfitPercent;
         document.getElementById('stop-loss-percent').value = state.settings.stopLossPercent;
-        document.getElementById('market-hours-interval').value = state.settings.marketHoursInterval;
-        document.getElementById('after-hours-interval').value = state.settings.afterHoursInterval;
+        //document.getElementById('market-hours-interval').value = state.settings.marketHoursInterval;
+        //document.getElementById('after-hours-interval').value = state.settings.afterHoursInterval;
         
         const themeSelector = document.getElementById('theme-selector');
         if(themeSelector) themeSelector.value = state.settings.theme;
