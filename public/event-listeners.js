@@ -1,10 +1,11 @@
-// public/event-listeners.js - v2.13 (UX Enhancements)
+// public/event-listeners.js - v2.16 (Complete with Cancel Button Fixes)
 import { switchView, refreshLedger, saveSettings, state, sortTableByColumn, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList } from './app-main.js';
 import { updateAllPrices } from './api.js';
-import { showToast, getCurrentESTDateString, formatAccounting, formatQuantity, showConfirmationModal } from './ui/helpers.js';
+import { showToast, getCurrentESTDateString, showConfirmationModal } from './ui/helpers.js';
 import { renderLedger, renderSnapshotsPage } from './ui/renderers.js';
 
 export function initializeEventListeners() {
+    // --- Define all major elements once ---
     const transactionForm = document.getElementById('add-transaction-form');
     const editModal = document.getElementById('edit-modal');
     const editForm = document.getElementById('edit-transaction-form');
@@ -32,6 +33,7 @@ export function initializeEventListeners() {
         });
     }
     
+    // --- Main View/Tab Navigation ---
     if (tabsContainer) {
         tabsContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('master-tab')) {
@@ -44,6 +46,7 @@ export function initializeEventListeners() {
         });
     }
 
+    // --- Custom Date Picker ---
     const customDatePicker = document.getElementById('custom-date-picker');
     if(customDatePicker) {
         customDatePicker.addEventListener('change', (e) => {
@@ -80,6 +83,7 @@ export function initializeEventListeners() {
         });
     }
 
+    // --- Add Transaction Form ---
     if (transactionForm) {
         transactionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -111,7 +115,16 @@ export function initializeEventListeners() {
             }
         });
     }
-
+    
+    // --- Settings Modal and Associated Actions ---
+    if(settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            renderExchangeManagementList();
+            renderAccountHolderManagementList();
+            settingsModal.classList.add('visible');
+        });
+    }
+    
     if(saveSettingsBtn) {
         saveSettingsBtn.addEventListener('click', () => {
             saveSettings();
@@ -128,6 +141,7 @@ export function initializeEventListeners() {
         fontSelector.addEventListener('change', saveSettings);
     }
 
+    // --- CSV Import ---
     if(importCsvBtn) {
         importCsvBtn.addEventListener('click', () => {
             const file = csvFileInput.files[0];
@@ -170,14 +184,7 @@ export function initializeEventListeners() {
         });
     }
     
-    if(settingsBtn) {
-        settingsBtn.addEventListener('click', () => {
-            renderExchangeManagementList();
-            renderAccountHolderManagementList();
-            settingsModal.classList.add('visible');
-        });
-    }
-    
+    // --- Table Sorting ---
     const ledgerTable = document.querySelector('#ledger-table');
     if(ledgerTable) {
         ledgerTable.querySelector('thead').addEventListener('click', (e) => {
@@ -191,6 +198,7 @@ export function initializeEventListeners() {
         });
     }
     
+    // --- Delegated Listeners for Dynamic Content (Daily Report / Ledger) ---
     const dailyReportContainer = document.getElementById('daily-report-container');
     if(dailyReportContainer) {
         dailyReportContainer.addEventListener('click', (e) => {
@@ -300,8 +308,7 @@ export function initializeEventListeners() {
             }
         });
     }
-
-    if(sellFromPositionForm) {
+if(sellFromPositionForm) {
         sellFromPositionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const sellDetails = {
@@ -339,6 +346,7 @@ export function initializeEventListeners() {
     }
 
     if(editForm) {
+        // Listener for the form submission (Save Changes)
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
@@ -350,9 +358,9 @@ export function initializeEventListeners() {
                 quantity: parseFloat(document.getElementById('edit-quantity').value),
                 price: parseFloat(document.getElementById('edit-price').value),
                 transaction_date: document.getElementById('edit-date').value,
-                limit_price_up: parseFloat(document.getElementById('limit-price-up').value) || null,
+                limit_price_up: parseFloat(document.getElementById('edit-limit-price-up').value) || null,
                 limit_up_expiration: document.getElementById('edit-limit-up-expiration').value || null,
-                limit_price_down: parseFloat(document.getElementById('limit-price-down').value) || null,
+                limit_price_down: parseFloat(document.getElementById('edit-limit-price-down').value) || null,
                 limit_down_expiration: document.getElementById('edit-limit-down-expiration').value || null,
             };
 
@@ -390,6 +398,14 @@ export function initializeEventListeners() {
                 submitButton.disabled = false;
             }
         });
+        
+        // Listener for the v2.16 cancel button
+        const cancelEditBtn = document.getElementById('edit-modal-cancel-btn');
+        if (cancelEditBtn) {
+            cancelEditBtn.addEventListener('click', () => {
+                editModal.classList.remove('visible');
+            });
+        }
     }
 
     if(editModal) {
@@ -426,16 +442,34 @@ export function initializeEventListeners() {
         exchangeList.addEventListener('click', async (e) => {
             const li = e.target.closest('li');
             if (!li) return;
-            const id = li.dataset.id;
+            
+            const nameSpan = li.querySelector('.exchange-name');
             const nameInput = li.querySelector('.edit-exchange-input');
+            const editBtn = li.querySelector('.edit-exchange-btn');
+            const saveBtn = li.querySelector('.save-exchange-btn');
+            const cancelBtn = li.querySelector('.cancel-exchange-btn');
+            const deleteBtn = li.querySelector('.delete-exchange-btn');
 
-            if (e.target.matches('.edit-exchange-btn')) {
-                li.querySelector('.exchange-name').style.display = 'none';
-                e.target.style.display = 'none';
+            if (e.target === editBtn) {
+                nameSpan.style.display = 'none';
+                editBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
                 nameInput.style.display = 'inline-block';
-                li.querySelector('.save-exchange-btn').style.display = 'inline-block';
+                saveBtn.style.display = 'inline-block';
+                cancelBtn.style.display = 'inline-block';
                 nameInput.focus();
-            } else if (e.target.matches('.save-exchange-btn')) {
+            } 
+            else if (e.target === cancelBtn) {
+                nameInput.style.display = 'none';
+                saveBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+                nameSpan.style.display = 'inline-block';
+                editBtn.style.display = 'inline-block';
+                deleteBtn.style.display = 'inline-block';
+                nameInput.value = nameSpan.textContent;
+            }
+            else if (e.target === saveBtn) {
+                const id = li.dataset.id;
                 const newName = nameInput.value.trim();
                 if (!newName) return showToast('Exchange name cannot be empty.', 'error');
                 try {
@@ -446,7 +480,9 @@ export function initializeEventListeners() {
                     renderExchangeManagementList();
                     showToast('Exchange updated!', 'success');
                 } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
-            } else if (e.target.matches('.delete-exchange-btn')) {
+            } 
+            else if (e.target === deleteBtn) {
+                const id = li.dataset.id;
                 showConfirmationModal('Delete Exchange?', 'This cannot be undone.', async () => {
                     try {
                         const res = await fetch(`/api/exchanges/${id}`, { method: 'DELETE' });
@@ -467,9 +503,7 @@ export function initializeEventListeners() {
             try {
                 const res = await fetch('/api/account_holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                
                 await fetchAndPopulateAccountHolders();
-                
                 newAccountHolderNameInput.value = '';
                 renderAccountHolderManagementList();
                 showToast('Account holder added!', 'success');
@@ -481,32 +515,44 @@ export function initializeEventListeners() {
         accountHolderList.addEventListener('click', async (e) => {
             const li = e.target.closest('li');
             if (!li) return;
-            const id = li.dataset.id;
+            
+            const nameSpan = li.querySelector('.holder-name');
             const nameInput = li.querySelector('.edit-holder-input');
+            const editBtn = li.querySelector('.edit-holder-btn');
+            const saveBtn = li.querySelector('.save-holder-btn');
+            const cancelBtn = li.querySelector('.cancel-holder-btn');
 
             if (e.target.matches('.edit-holder-btn')) {
-                li.querySelector('.holder-name').style.display = 'none';
-                e.target.style.display = 'none';
+                nameSpan.style.display = 'none';
+                editBtn.style.display = 'none';
                 nameInput.style.display = 'inline-block';
-                li.querySelector('.save-holder-btn').style.display = 'inline-block';
+                saveBtn.style.display = 'inline-block';
+                cancelBtn.style.display = 'inline-block';
                 nameInput.focus();
+            } else if (e.target.matches('.cancel-holder-btn')) {
+                nameInput.style.display = 'none';
+                saveBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+                nameSpan.style.display = 'inline-block';
+                editBtn.style.display = 'inline-block';
+                nameInput.value = nameSpan.textContent;
             } else if (e.target.matches('.save-holder-btn')) {
+                const id = li.dataset.id;
                 const newName = nameInput.value.trim();
                 if (!newName) return showToast('Name cannot be empty.', 'error');
                 try {
                     const res = await fetch(`/api/account_holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                    
                     await fetchAndPopulateAccountHolders();
                     renderAccountHolderManagementList();
                     showToast('Account holder updated!', 'success');
                 } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
             } else if (e.target.matches('.delete-holder-btn')) {
+                const id = li.dataset.id;
                 showConfirmationModal('Delete Account Holder?', 'This cannot be undone.', async () => {
                     try {
                         const res = await fetch(`/api/account_holders/${id}`, { method: 'DELETE' });
                         if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                        
                         await fetchAndPopulateAccountHolders();
                         renderAccountHolderManagementList();
                         showToast('Account holder deleted.', 'success');
@@ -576,6 +622,7 @@ export function initializeEventListeners() {
         });
     }
 
+    // Generic Modal Closing Listeners
     document.querySelectorAll('.modal .close-button').forEach(btn => 
         btn.addEventListener('click', e => 
             e.target.closest('.modal').classList.remove('visible')
@@ -595,4 +642,3 @@ export function initializeEventListeners() {
         );
     }
 }
-

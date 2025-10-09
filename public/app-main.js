@@ -65,12 +65,11 @@ export async function refreshSnapshots() {
     } catch (e) { console.error("Could not fetch snapshots", e); }
 }
 
+// In public/app-main.js
 export function saveSettings() {
     const oldTheme = state.settings.theme;
     state.settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || 0;
     state.settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || 0;
-    state.settings.marketHoursInterval = parseInt(document.getElementById('market-hours-interval').value) || 2;
-    state.settings.afterHoursInterval = parseInt(document.getElementById('after-hours-interval').value) || 15;
     state.settings.theme = document.getElementById('theme-selector').value;
     state.settings.font = document.getElementById('font-selector').value;
     const selectedDefaultHolder = document.querySelector('input[name="default-holder-radio"]:checked');
@@ -184,21 +183,38 @@ export async function fetchAndPopulateAccountHolders() {
 }
 
 async function runEodFailoverCheck() { /* Unchanged */ }
-export function renderExchangeManagementList() { /* Unchanged */ }
+// In public/app-main.js
+// In public/app-main.js
+export function renderExchangeManagementList() {
+    const list = document.getElementById('exchange-list');
+    if (!list) return;
+    list.innerHTML = '';
 
-// In public/app-main.js, REPLACE the existing renderAccountHolderManagementList function with this:
+    state.allExchanges.forEach(exchange => {
+        const li = document.createElement('li');
+        li.dataset.id = exchange.id;
+        li.innerHTML = `
+            <span class="exchange-name">${exchange.name}</span>
+            <input type="text" class="edit-exchange-input" value="${exchange.name}" style="display: none;">
+            <div>
+                <button class="edit-exchange-btn" data-id="${exchange.id}">Edit</button>
+                <button class="save-exchange-btn" data-id="${exchange.id}" style="display: none;">Save</button>
+                <button class="cancel-exchange-btn" data-id="${exchange.id}" style="display: none;">Cancel</button>
+                <button class="delete-exchange-btn delete-btn" data-id="${exchange.id}">Delete</button>
+            </div>
+        `;
+        list.appendChild(li);
+    });
+}
 
 export function renderAccountHolderManagementList() {
-    const list = document.getElementById('account-holder-list'); //
+    const list = document.getElementById('account-holder-list');
     if (!list) return;
-    list.innerHTML = ''; // Clear the list before rendering
+    list.innerHTML = ''; 
 
     state.allAccountHolders.forEach(holder => {
-        // Check if the current holder is the default one
         const isDefault = state.settings.defaultAccountHolderId == holder.id;
-        
-        // The Primary/first account holder (id: 1 or the first in the list) cannot be deleted
-        const isProtected = holder.id == 1 || state.allAccountHolders.indexOf(holder) === 0;
+        const isProtected = holder.id == 1;
         const deleteButton = isProtected ? '' : `<button class="delete-holder-btn delete-btn" data-id="${holder.id}">Delete</button>`;
 
         const li = document.createElement('li');
@@ -212,6 +228,7 @@ export function renderAccountHolderManagementList() {
             <div>
                 <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
                 <button class="save-holder-btn" data-id="${holder.id}" style="display: none;">Save</button>
+                <button class="cancel-holder-btn" data-id="${holder.id}" style="display: none;">Cancel</button>
                 ${deleteButton}
             </div>
         `;
@@ -225,9 +242,7 @@ async function initialize() {
         if (savedSettings) { state.settings = { ...state.settings, ...JSON.parse(savedSettings) }; }
         document.getElementById('take-profit-percent').value = state.settings.takeProfitPercent;
         document.getElementById('stop-loss-percent').value = state.settings.stopLossPercent;
-        //document.getElementById('market-hours-interval').value = state.settings.marketHoursInterval;
-        //document.getElementById('after-hours-interval').value = state.settings.afterHoursInterval;
-        
+          
         const themeSelector = document.getElementById('theme-selector');
         if(themeSelector) themeSelector.value = state.settings.theme;
         
@@ -255,14 +270,16 @@ async function initialize() {
     const transactionDateInput = document.getElementById('transaction-date');
     if(transactionDateInput) transactionDateInput.value = today;
     
-    const globalHolderFilter = document.getElementById('global-account-holder-filter');
-    if(globalHolderFilter.options.length > 1) {
-        const firstHolder = state.allAccountHolders[0];
-        if(firstHolder) {
-            globalHolderFilter.value = firstHolder.id;
-            state.selectedAccountHolderId = firstHolder.id;
-        }
-    }
+const globalHolderFilter = document.getElementById('global-account-holder-filter');
+// Prioritize the saved default account holder on initial load
+if (state.settings.defaultAccountHolderId && state.allAccountHolders.some(h => h.id == state.settings.defaultAccountHolderId)) {
+    globalHolderFilter.value = state.settings.defaultAccountHolderId;
+    state.selectedAccountHolderId = state.settings.defaultAccountHolderId;
+} else if (globalHolderFilter.options.length > 1) {
+    // Fallback to 'All Accounts' if no default is set or is invalid
+    globalHolderFilter.value = 'all';
+    state.selectedAccountHolderId = 'all';
+}
     
     await switchView('date', viewDate);
     initializeScheduler(state);

@@ -1,5 +1,6 @@
-// public/scheduler.js
+// public/scheduler.js  v2.15
 import { updatePricesForView } from './api.js';
+import { populatePricesFromCache } from './ui/renderers.js'; // ADDED FOR v2.15
 
 let nextApiCallTimestamp = 0; // This variable holds the timestamp for the next scheduled API call.
 
@@ -46,12 +47,15 @@ export function initializeScheduler(state) {
             apiTimerEl.textContent = "Market Closed";
         }
 
-        if (triggerUpdate) {
-            console.log("Scheduler triggered update...");
-            const viewDate = state.currentView.value;
-            await updatePricesForView(viewDate, state.activityMap, state.priceCache);
-            nextApiCallTimestamp = Date.now() + currentIntervalMs;
-        }
+if (triggerUpdate) {
+    console.log("Scheduler triggered update...");
+    const viewDate = state.currentView.value;
+    await updatePricesForView(viewDate, state.activityMap, state.priceCache);
 
+    // This new line populates the UI with the newly cached prices
+    populatePricesFromCache(state.activityMap, state.priceCache); 
+
+    nextApiCallTimestamp = Date.now() + currentIntervalMs;
+}
     }, 5000);
 }
