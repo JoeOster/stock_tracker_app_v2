@@ -8,16 +8,17 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body data-theme="light">
+
     <div class="header">
-        <div class="global-controls">
-            <div class="account-holder-filter-container">
-                <label for="global-account-holder-filter">Viewing:</label>
-                <select id="global-account-holder-filter" class="account-holder-select"></select>
-            </div>
+        <div class="header-left">
+            <label for="global-account-holder-filter">Viewing:</label>
+            <select id="global-account-holder-filter" class="account-holder-select"></select>
             <button id="settings-btn" title="Settings">⚙️</button>
         </div>
         <h1>Live Stock Tracker</h1>
-        <div id="api-timer-container">Next Update: <span id="api-timer">--:--</span></div>
+        <div class="header-right">
+            <div id="api-timer-container">Next Update: <span id="api-timer">--:--</span></div>
+        </div>
     </div>
 
     <div id="tabs-container" class="tabs"></div>
@@ -27,15 +28,16 @@
         <input type="date" id="custom-date-picker">
     </div>
 
-    <div id="daily-report-container" class="container page-container" style="display: none;">
+    <div id="daily-report-container" class="page-container" style="display: none;">
         <h2 id="table-title"></h2>
         <div id="daily-performance-summary"></div>
         <table id="stock-table">
-            <thead>
+             <thead>
                 <tr><th colspan="11" class="table-section-header">Daily Transaction Log</th></tr>
                 <tr>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Action</th><th class="numeric" data-sort="quantity" data-type="numeric">Qty</th><th class="numeric" data-sort="price" data-type="numeric">Price</th><th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
-                    <th class="numeric">Suggest Profit</th><th class="numeric">Suggest Loss</th><th class="numeric">My Limit Up</th><th class="numeric">My Limit Down</th><th></th>
+                    <th class="numeric">Suggest Profit</th><th class="numeric">Suggest Loss</th><th class="numeric">My Limit Up</th><th class="numeric">My Limit Down</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody id="log-body"></tbody>
@@ -65,12 +67,30 @@
         </div>
     </div>
     
-    <div id="charts-container" class="container page-container" style="display: none;">
+    <div id="charts-container" class="page-container" style="display: none;">
         <div class="chart-grid">
             <div class="chart-container"> <h2>All Time Value</h2> <canvas id="all-time-chart" class="zoomable-chart"></canvas> </div>
-            <div class="chart-container"> <h2>Past Five Days</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div>
+            <div class="chart-container"> <h2>Past Five Day Report</h2> <canvas id="five-day-chart" class="zoomable-chart"></canvas> </div>
             <div class="chart-container"> <div class="date-range-header"> <h2>Date Range</h2> <div class="date-range-inputs"> <input type="date" id="chart-start-date"> <span>to</span> <input type="date" id="chart-end-date"> </div> </div> <canvas id="date-range-chart" class="zoomable-chart"></canvas> </div>
         </div>
+
+        <!-- CORRECTED PLACEMENT OF P&L SUMMARY GRID -->
+        <div class="pl-summary-grid">
+            <div class="pl-summary-container">
+                <h3>Lifetime Realized P&L Summary</h3>
+                <table id="pl-summary-table"></table>
+            </div>
+            <div class="pl-summary-container">
+                <h3>Realized P&L by Date Range</h3>
+                <div class="date-range-inputs">
+                    <input type="date" id="pl-start-date">
+                    <span>to</span>
+                    <input type="date" id="pl-end-date">
+                </div>
+                <table id="pl-summary-ranged-table"></table>
+            </div>
+        </div>
+
         <div class="portfolio-overview-container container">
             <h2>Portfolio Overview <span id="overview-date"></span></h2>
             <table id="portfolio-overview-table">
@@ -89,32 +109,22 @@
                 <tbody id="portfolio-overview-body"></tbody>
             </table>
         </div>
-<div class="pl-summary-grid">
-            <div class="pl-summary-container">
-                <h3>Lifetime Realized P&L Summary</h3>
-                <table id="pl-summary-table"></table>
-            </div>
-            <div class="pl-summary-container">
-                <h3>Realized P&L by Date Range</h3>
-                <div class="date-range-inputs">
-                    <input type="date" id="pl-start-date">
-                    <span>to</span>
-                    <input type="date" id="pl-end-date">
-                </div>
-                <table id="pl-summary-ranged-table"></table>
-            </div>
-        </div>
     </div>
 
-    <div id="ledger-page-container" class="container page-container" style="display: none;">
+    <div id="ledger-page-container" class="page-container" style="display: none;">
         <h2>Transaction Ledger</h2>
         <div id="add-transaction-container" class="container">
             <h2>Log a New Transaction</h2>
             <form id="add-transaction-form">
-                <select id="add-tx-account-holder" class="account-holder-select" required></select>
+                <div class="form-group">
+                    <label for="add-tx-account-holder">Account Holder</label>
+                    <select id="add-tx-account-holder" class="account-holder-select" required></select>
+                </div>
                 <input type="date" id="transaction-date" required>
                 <input type="text" id="ticker" placeholder="Ticker" required>
-                <select id="exchange" required></select>
+                <select id="exchange" required>
+                    <option value="" disabled selected>Select Exchange</option>
+                </select>
                 <select id="transaction-type">
                     <option value="BUY">BUY</option>
                     <option value="SELL">SELL</option>
@@ -122,15 +132,6 @@
                 <input type="number" id="quantity" placeholder="Quantity" step="any" min="0.00001" required>
                 <input type="number" id="price" placeholder="Price Per Share" step="any" min="0.01" required>
                 <button type="submit">Log Transaction</button>
-                <details class="advanced-options">
-                    <summary>Advanced Options (Set Limit Orders)</summary>
-                    <div class="form-grid">
-                        <input type="number" id="limit-price-up" placeholder="Take Profit Limit ($)" step="any" min="0">
-                        <input type="date" id="limit-up-expiration">
-                        <input type="number" id="limit-price-down" placeholder="Stop Loss Limit ($)" step="any" min="0">
-                        <input type="date" id="limit-down-expiration">
-                    </div>
-                </details>
             </form>
         </div>
         <div class="ledger-controls">
@@ -162,10 +163,9 @@
         </table>
     </div>
 
-    <div id="snapshots-page-container" class="container page-container" style="display: none;">
+    <div id="snapshots-page-container" class="page-container" style="display: none;">
         <h2>Account Value Snapshots</h2>
         <p class="subtitle">Log the total value of your brokerage accounts (including cash and positions) on a specific date to track overall portfolio growth. This data populates the historical charts.</p>
-        
         <div class="snapshot-content-grid">
             <div id="add-snapshot-container">
                 <h3>Log a New Snapshot</h3>
@@ -180,8 +180,7 @@
                     </div>
                     <div class="form-group">
                         <label for="snapshot-exchange">Exchange</label>
-                        <select id="snapshot-exchange" required>
-                        </select>
+                        <select id="snapshot-exchange" required></select>
                     </div>
                     <div class="form-group">
                         <label for="snapshot-value">Total Account Value ($)</label>
@@ -213,6 +212,7 @@
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h2>Settings</h2>
+
             <div class="settings-input-group">
                 <label for="theme-selector">Theme</label>
                 <select id="theme-selector">
@@ -222,6 +222,7 @@
                     <option value="contrast">High Contrast</option>
                 </select>
             </div>
+
             <div class="settings-input-group">
                 <label for="take-profit-percent">Suggest Profit %</label>
                 <input type="number" id="take-profit-percent" step="any" placeholder="e.g., 8">
@@ -240,36 +241,41 @@
                 <input type="number" id="after-hours-interval" step="1" min="5" placeholder="e.g., 15">
             </div>
             <hr>
-            <div class="exchange-management-container">
-                <h3>Manage Exchanges</h3>
-                <ul id="exchange-list"></ul>
-                <div class="add-exchange-form">
-                    <input type="text" id="new-exchange-name" placeholder="New Exchange Name">
-                    <button id="add-exchange-btn">Add</button>
+            <div class="management-grid">
+                <div class="exchange-management-container">
+                    <h3>Manage Exchanges</h3>
+                    <ul id="exchange-list"></ul>
+                    <div class="add-exchange-form">
+                        <input type="text" id="new-exchange-name" placeholder="New Exchange Name">
+                        <button id="add-exchange-btn">Add</button>
+                    </div>
                 </div>
-            </div>
-            <hr>
-            <div class="account-holder-management-container">
-                <h3>Manage Account Holders</h3>
-                <ul id="account-holder-list"></ul>
-                <div class="add-account-holder-form">
-                    <input type="text" id="new-account-holder-name" placeholder="New Holder Name">
-                    <button id="add-account-holder-btn">Add</button>
+                <div class="account-holder-management-container">
+                    <h3>Manage Account Holders</h3>
+                    <ul id="account-holder-list"></ul>
+                    <div class="add-holder-form">
+                        <input type="text" id="new-account-holder-name" placeholder="New Holder Name">
+                        <button id="add-account-holder-btn">Add</button>
+                    </div>
                 </div>
             </div>
             <button id="save-settings-button">Save Settings</button>
         </div>
     </div>
 
-<div id="edit-modal" class="modal">
+    <div id="edit-modal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h2 id="edit-modal-title">Edit Transaction</h2>
             <form id="edit-transaction-form">
                 <input type="hidden" id="edit-id">
+                
+                <div class="form-group">
+                    <label for="edit-account-holder">Account Holder</label>
+                    <select id="edit-account-holder" class="account-holder-select" required></select>
+                </div>
 
                 <fieldset id="edit-core-fields">
-                    <div class="form-group"><label for="edit-account-holder">Account Holder</label><select id="edit-account-holder" class="account-holder-select" required></select></div>
                     <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div>
                     <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div>
                     <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div>
