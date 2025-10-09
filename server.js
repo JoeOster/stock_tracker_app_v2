@@ -1,4 +1,4 @@
-// server.js - v2.9.1 (Account Holder Aware Endpoints)
+// server.js - v2.9.3 (Corrected Invalid Ticker Handling)
 const express = require('express');
 require('dotenv').config();
 const fetch = require('node-fetch');
@@ -55,50 +55,41 @@ async function setupApp() {
     
     // --- ALL API ROUTES GO HERE ---
     
-app.post('/api/prices/batch', async (req, res) => {
-    const { tickers, date } = req.body;
-    if (!tickers || !Array.isArray(tickers)) {
-        return res.status(400).json({ message: 'Invalid request body, expected a "tickers" array.' });
-    }
-
-    const prices = {};
-    const apiKey = process.env.FINNHUB_API_KEY;
-    if (!apiKey) return res.status(500).json({ message: "API key not configured on server." });
-
-    for (const ticker of tickers) {
-        try {
-            const cachedPrice = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, date]);
-            if (cachedPrice) {
-                prices[ticker] = cachedPrice.close_price;
-                continue;
-            }
-
-            const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
-            if (apiRes.ok) {
-                const data = await apiRes.json();
-                // THIS IS THE CORRECTED LOGIC
-                if (data && data.c > 0) {
-                    prices[ticker] = data.c;
-                } else {
-                    prices[ticker] = 'invalid'; // Send 'invalid' for zero or null prices
-                    console.warn(`[Price Fetch Warning] Ticker '${ticker}' returned a null or zero price. It may be an invalid symbol.`);
-                }
-            } else {
-                prices[ticker] = null; // API call itself failed
-                console.error(`[Price Fetch Error] API call for ticker '${ticker}' failed with status: ${apiRes.status}`);
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 150));
-
-        } catch (error) {
-            console.error(`Error processing ticker ${ticker} in batch:`, error);
-            prices[ticker] = null;
+    app.post('/api/prices/batch', async (req, res) => {
+        const { tickers, date } = req.body;
+        if (!tickers || !Array.isArray(tickers)) {
+            return res.status(400).json({ message: 'Invalid request body, expected a "tickers" array.' });
         }
-    }
-    res.json(prices);
-});
-
-
+        const prices = {};
+        const apiKey = process.env.FINNHUB_API_KEY;
+        if (!apiKey) return res.status(500).json({ message: "API key not configured on server." });
+        for (const ticker of tickers) {
+            try {
+                const cachedPrice = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, date]);
+                if (cachedPrice) {
+                    prices[ticker] = cachedPrice.close_price;
+                    continue;
+                }
+                const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
+                if (apiRes.ok) {
+                    const data = await apiRes.json();
+                    if (data && data.c > 0) {
+                        prices[ticker] = data.c;
+                    } else {
+                        prices[ticker] = 'invalid'; // Correctly send 'invalid'
+                        console.warn(`[Price Fetch Warning] Ticker '${ticker}' returned a null or zero price. It may be an invalid symbol.`);
+                    }
+                } else {
+                    prices[ticker] = null;
+                }
+                await new Promise(resolve => setTimeout(resolve, 150));
+            } catch (error) {
+                console.error(`Error fetching price for ${ticker} in batch:`, error);
+                prices[ticker] = null;
+            }
+        }
+        res.json(prices);
+    });
 
     app.post('/api/tasks/capture-eod/:date', async (req, res) => {
         const { date } = req.params;
@@ -133,14 +124,11 @@ app.post('/api/prices/batch', async (req, res) => {
         try {
             const oldExchange = await db.get('SELECT name FROM exchanges WHERE id = ?', req.params.id);
             if(oldExchange) {
-                await db.run('BEGIN TRANSACTION');
                 await db.run('UPDATE transactions SET exchange = ? WHERE exchange = ?', [name, oldExchange.name]);
                 await db.run('UPDATE exchanges SET name = ? WHERE id = ?', [name, req.params.id]);
-                await db.run('COMMIT');
             }
             res.json({ message: 'Exchange updated successfully.' });
         } catch (error) {
-            await db.run('ROLLBACK');
             res.status(500).json({ message: 'Error updating exchange.' });
         }
     });
@@ -298,7 +286,7 @@ app.post('/api/prices/batch', async (req, res) => {
                 SELECT id, ticker, exchange, transaction_date as purchase_date, price as cost_basis, 
                        COALESCE(original_quantity, quantity) as original_quantity, 
                        COALESCE(quantity_remaining, 0) as quantity_remaining,
-                       limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration
+                       limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, account_holder_id
                 FROM transactions
                 WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?) AND COALESCE(quantity_remaining, 0) > 0.00001
                 ${holderFilter}
@@ -531,47 +519,41 @@ app.post('/api/prices/batch', async (req, res) => {
         }
     });
 
-app.get('/api/portfolio/overview', async (req, res) => {
-    try {
-        const holderId = req.query.holder;
-        let holderFilter = '';
-        const params = [];
-        if (holderId && holderId !== 'all') {
-            holderFilter = `AND account_holder_id = ?`;
-            params.push(holderId);
+    app.get('/api/portfolio/overview', async (req, res) => {
+        try {
+            const holderId = req.query.holder;
+            let holderFilter = '';
+            const params = [];
+            if (holderId && holderId !== 'all') {
+                holderFilter = `AND account_holder_id = ?`;
+                params.push(holderId);
+            }
+
+            const overviewQuery = `
+                SELECT 
+                    ticker,
+                    SUM(quantity_remaining) as total_quantity,
+                    SUM(price * quantity_remaining) / SUM(quantity_remaining) as weighted_avg_cost
+                FROM transactions
+                WHERE transaction_type = 'BUY' AND COALESCE(quantity_remaining, 0) > 0.00001
+                ${holderFilter}
+                GROUP BY ticker 
+                ORDER BY ticker;
+            `;
+            const overview = await db.all(overviewQuery, params);
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            for (const pos of overview) {
+                const priceRecord = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date <= ? ORDER BY date DESC LIMIT 1', [pos.ticker, yesterdayStr]);
+                pos.previous_close = priceRecord ? priceRecord.close_price : null;
+            }
+            res.json(overview);
+        } catch (error) {
+            console.error("Failed to get portfolio overview:", error);
+            res.status(500).json({ message: "Error fetching portfolio overview." });
         }
-
-        // --- THIS QUERY IS NOW CORRECT ---
-        // It correctly calculates the weighted average cost by multiplying the cost of each lot
-        // by its remaining quantity, summing them up, and then dividing by the total remaining quantity.
-        const overviewQuery = `
-            SELECT 
-                ticker,
-                SUM(quantity_remaining) as total_quantity,
-                SUM(price * quantity_remaining) / SUM(quantity_remaining) as weighted_avg_cost
-            FROM transactions
-            WHERE transaction_type = 'BUY' AND COALESCE(quantity_remaining, 0) > 0.00001
-            ${holderFilter}
-            GROUP BY ticker 
-            ORDER BY ticker;
-        `;
-        const overview = await db.all(overviewQuery, params);
-
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        
-        for (const pos of overview) {
-            const priceRecord = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date <= ? ORDER BY date DESC LIMIT 1', [pos.ticker, yesterdayStr]);
-            pos.previous_close = priceRecord ? priceRecord.close_price : null;
-        }
-
-        res.json(overview);
-    } catch (error) {
-        console.error("Failed to get portfolio overview:", error);
-        res.status(500).json({ message: "Error fetching portfolio overview." });
-    }
-});
+    });
 
     app.get('/api/snapshots', async (req, res) => {
         try {
