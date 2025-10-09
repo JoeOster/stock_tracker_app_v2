@@ -44,12 +44,22 @@ export function renderTabs(currentView) {
 
 export function renderLedger(allTransactions, ledgerSort) {
     const ledgerTableBody = document.querySelector('#ledger-table tbody');
+    const summaryContainer = document.getElementById('ledger-summary-container');
     if(!ledgerTableBody) return;
+
+    // --- THIS IS THE NEW LOGIC ---
+    // If there are no transactions at all for this account holder, show a specific message and exit.
+    if (allTransactions.length === 0) {
+        ledgerTableBody.innerHTML = '<tr><td colspan="7">No transactions have been logged for this account holder.</td></tr>';
+        if (summaryContainer) summaryContainer.innerHTML = ''; // Also clear the summary box
+        return;
+    }
+    // --- END OF NEW LOGIC ---
     
-    // --- Filter Logic (Unchanged) ---
     const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
     const ledgerFilterStart = document.getElementById('ledger-filter-start');
     const ledgerFilterEnd = document.getElementById('ledger-filter-end');
+    
     const filterTicker = ledgerFilterTicker.value.toUpperCase().trim();
     const filterStart = ledgerFilterStart.value;
     const filterEnd = ledgerFilterEnd.value;
@@ -61,8 +71,6 @@ export function renderLedger(allTransactions, ledgerSort) {
         return tickerMatch && startDateMatch && endDateMatch;
     });
 
-    // --- CORRECTED Summary Calculation Logic ---
-    const summaryContainer = document.getElementById('ledger-summary-container');
     if (summaryContainer) {
         let buyCount = 0;
         let sellCount = 0;
@@ -87,21 +95,21 @@ export function renderLedger(allTransactions, ledgerSort) {
         `;
     }
 
-    // --- Sorting Logic (Unchanged) ---
     filteredTransactions.sort((a, b) => {
         const col = ledgerSort.column;
         const dir = ledgerSort.direction === 'asc' ? 1 : -1;
         if (col === 'quantity' || col === 'price') return (a[col] - b[col]) * dir;
         return a[col].localeCompare(b[col]) * dir;
     });
+
     document.querySelectorAll('#ledger-table thead th[data-sort]').forEach(th => {
         th.classList.remove('sorted-asc', 'sorted-desc');
         if (th.dataset.sort === ledgerSort.column) { th.classList.add(ledgerSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc'); }
     });
 
-    // --- Table Rendering with Date Grouping (Unchanged) ---
     ledgerTableBody.innerHTML = '';
     if (filteredTransactions.length === 0) {
+        // This message will now only show if the user's filters result in an empty list.
         ledgerTableBody.innerHTML = '<tr><td colspan="7">No transactions match the current filters.</td></tr>';
         if (summaryContainer) summaryContainer.innerHTML = '';
         return;
@@ -116,9 +124,6 @@ export function renderLedger(allTransactions, ledgerSort) {
         lastDate = tx.transaction_date;
     });
 }
-
-
-
 export async function renderChartsPage(state) {
     const plSummaryTable = document.getElementById('pl-summary-table');
     const allTimeChartCtx = document.getElementById('all-time-chart')?.getContext('2d');
@@ -285,11 +290,13 @@ export async function renderDailyReport(date, activityMap) {
         if (logBody) {
             logBody.innerHTML = '';
             if (data.dailyTransactions.length === 0) {
-                logBody.innerHTML = '<tr><td colspan="10">No transactions logged for this day.</td></tr>';
+                // Update colspan to 11
+                logBody.innerHTML = '<tr><td colspan="11">No transactions logged for this day.</td></tr>';
             } else {
                 data.dailyTransactions.forEach(tx => {
                     dailyRealizedPL += tx.realizedPL || 0;
-                    logBody.insertRow().innerHTML = `<td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td class="numeric">${formatQuantity(tx.quantity)}</td><td class="numeric">${formatAccounting(tx.price)}</td><td class="numeric">${formatAccounting(tx.realizedPL)}</td><td></td><td></td><td class="numeric">${formatAccounting(tx.limit_price_up)}</td><td class="numeric">${formatAccounting(tx.limit_price_down)}</td>`;
+                    // Add an empty <td> at the end of the row
+                    logBody.insertRow().innerHTML = `<td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td class="numeric">${formatQuantity(tx.quantity)}</td><td class="numeric">${formatAccounting(tx.price)}</td><td class="numeric">${formatAccounting(tx.realizedPL)}</td><td></td><td></td><td class="numeric">${formatAccounting(tx.limit_price_up)}</td><td class="numeric">${formatAccounting(tx.limit_price_down)}</td><td></td>`;
                 });
             }
         }

@@ -36,20 +36,55 @@ export function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance,
     return createChart(ctx, filteredSnapshots, state);
 }
 
+// This is the new helper function for word wrapping
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = context.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+            context.fillText(line, x, y);
+            line = words[n] + ' ';
+            y += lineHeight;
+        } else {
+            line = testLine;
+        }
+    }
+    context.fillText(line, x, y);
+}
+
 export function createChart(ctx, snapshots, state) {
     const datasets = {};
     const labels = [...new Set(snapshots.map(s => s.snapshot_date))].sort();
     
-    if (labels.length < 2) {
+    // --- THIS LOGIC IS UPDATED TO USE THE WRAPPER ---
+    if (snapshots.length === 0) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.font = "16px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("At least two snapshots are needed to draw a chart.", ctx.canvas.width / 2, 50);
+        const isDarkMode = state.settings.theme === 'dark' || state.settings.theme === 'contrast';
+        ctx.fillStyle = isDarkMode ? 'rgba(255, 255, 255, 0.5)' : '#666';
+        
+        const message = "No snapshot data available for this account holder, please add data via the Snapshots tab.";
+        wrapText(ctx, message, ctx.canvas.width / 2, 50, ctx.canvas.width - 40, 20); // Using the wrapper
+        return null;
+        
+    } else if (labels.length < 2) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        const isDarkMode = state.settings.theme === 'dark' || state.settings.theme === 'contrast';
+        ctx.fillStyle = isDarkMode ? 'rgba(255, 255, 255, 0.5)' : '#666';
+
+        const message = "At least two snapshots are needed to draw a chart.";
+        wrapText(ctx, message, ctx.canvas.width / 2, 50, ctx.canvas.width - 40, 20); // Using the wrapper
         return null;
     }
+    // --- END OF UPDATED LOGIC ---
     
-    // --- THIS IS THE NEW THEME-AWARE LOGIC ---
-    const isDarkMode = state.settings.darkMode;
+    const isDarkMode = state.settings.theme === 'dark' || state.settings.theme === 'contrast';
     const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
     const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.7)' : '#666';
 

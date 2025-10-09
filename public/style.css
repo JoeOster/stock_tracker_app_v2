@@ -164,3 +164,17 @@ body[data-theme="contrast"] #positions-summary-title, body[data-theme="contrast"
     display: contents; /* Allow children to be part of the parent grid */
 }
 
+/* --- UI Polish for Chart Page Tables --- */
+.pl-summary-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* This will center the date pickers and the table */
+    padding: 20px;
+    background-color: var(--info-panel-bg);
+    border: 1px solid var(--container-border);
+    border-radius: 5px;
+}
+
+.pl-summary-container h3 {
+    margin-top: 0;
+}
