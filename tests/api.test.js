@@ -114,3 +114,89 @@ describe('Portfolio Calculation Endpoints', () => {
     });
 });
 
+// Add this entire block to the end of your tests/api.test.js file
+
+describe('Transaction API Edge Cases', () => {
+    let buyTransactionId;
+
+    // Setup a BUY transaction to sell against in each test
+    beforeEach(async () => {
+        const buyRes = await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', ['EDGE', 'TestEx', 'BUY', 100, 10, '2025-10-08', 100, 100, 2]);
+        buyTransactionId = buyRes.lastID;
+    });
+
+    it('should fail to create a SELL transaction if quantity is insufficient', async () => {
+        const res = await request(app)
+            .post('/api/transactions')
+            .send({
+                ticker: 'EDGE',
+                exchange: 'TestEx',
+                transaction_type: 'SELL',
+                quantity: 101, // Attempt to sell 101 shares when only 100 are owned
+                price: 12,
+                transaction_date: '2025-10-09',
+                account_holder_id: 2,
+                parent_buy_id: buyTransactionId
+            });
+        
+        expect(res.statusCode).toEqual(400);
+        expect(res.body.message).toBe('Sell quantity exceeds remaining quantity.');
+    });
+
+    it('should fail to create a SELL transaction if the sell date is before the buy date', async () => {
+        const res = await request(app)
+            .post('/api/transactions')
+            .send({
+                ticker: 'EDGE',
+                exchange: 'TestEx',
+                transaction_type: 'SELL',
+                quantity: 50,
+                price: 12,
+                transaction_date: '2025-10-07', // Sell date is before the buy date of Oct 8th
+                account_holder_id: 2,
+                parent_buy_id: buyTransactionId
+            });
+
+        expect(res.statusCode).toEqual(400);
+        expect(res.body.message).toBe('Sell date cannot be before the buy date.');
+    });
+});
+// Add these two 'describe' blocks to the end of the file
+
+describe('Reporting Endpoints', () => {
+    it('should correctly calculate the total realized P&L', async () => {
+        // Setup: Create a BUY transaction for 10 shares @ $100
+        const buyRes = await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', ['PL-TEST', 'TestEx', 'BUY', 10, 100, '2025-10-08', 10, 10, 2]);
+        const buyTransactionId = buyRes.lastID;
+
+        // Setup: Sell 8 of those shares @ $120 for a profit of ($120 - $100) * 8 = $160
+        await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', ['PL-TEST', 'TestEx', 'SELL', 8, 120, '2025-10-09', buyTransactionId, 2]);
+
+        // Action: Fetch the realized P&L summary
+        const res = await request(app)
+            .get('/api/realized_pl/summary?holder=2');
+
+        // Assertion: The total should be 160
+        expect(res.statusCode).toEqual(200);
+        expect(res.body.total).toBeCloseTo(160);
+    });
+});
+
+describe('Data Integrity Endpoints', () => {
+    it('should prevent deleting an account holder that has transactions', async () => {
+        // Setup: Create a new account holder
+        const holderRes = await db.run('INSERT INTO account_holders (name) VALUES (?)', ['InUseHolder']);
+        const holderId = holderRes.lastID;
+        
+        // Setup: Assign a transaction to this new holder
+        await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?)', ['TEST', 'TestEx', 'BUY', 100, 10, '2025-10-01', holderId]);
+
+        // Action: Attempt to delete the account holder
+        const res = await request(app)
+            .delete(`/api/account_holders/${holderId}`);
+
+        // Assertion: The request should be rejected with a 400 status
+        expect(res.statusCode).toEqual(400);
+        expect(res.body.message).toBe('Cannot delete an account holder that is in use by transactions.');
+    });
+});
