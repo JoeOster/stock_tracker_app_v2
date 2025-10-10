@@ -35,16 +35,19 @@ export function renderTabs(currentView) {
     if (currentView.type === 'ledger') ledgerTab.classList.add('active');
     tabsContainer.appendChild(ledgerTab);
 
-      // --- TEMPORARY DIAGNOSTIC LOG ---
-   // console.log("!!! EXECUTING CODE TO ADD ORDERS TAB !!!");
-
-    // This is the block that adds the "Orders" tab
     const ordersTab = document.createElement('div');
     ordersTab.className = 'tab master-tab';
     ordersTab.dataset.viewType = 'orders';
-    ordersTab.textContent = 'Orders';
+    ordersTab.textContent = 'New Orders'; // Updated name
     if (currentView.type === 'orders') ordersTab.classList.add('active');
     tabsContainer.appendChild(ordersTab);
+
+    const alertsTab = document.createElement('div');
+    alertsTab.className = 'tab master-tab';
+    alertsTab.dataset.viewType = 'alerts';
+    alertsTab.textContent = 'Alerts';
+    if (currentView.type === 'alerts') alertsTab.classList.add('active');
+    tabsContainer.appendChild(alertsTab);
 
     const snapshotsTab = document.createElement('div');
     snapshotsTab.className = 'tab master-tab';
@@ -53,12 +56,14 @@ export function renderTabs(currentView) {
     if (currentView.type === 'snapshots') snapshotsTab.classList.add('active');
     tabsContainer.appendChild(snapshotsTab);
 
+    /* --- TEMPORARILY DISABLED for future UI upgrade ---
     const importsTab = document.createElement('div');
     importsTab.className = 'tab master-tab';
     importsTab.dataset.viewType = 'imports';
     importsTab.textContent = 'Imports';
     if (currentView.type === 'imports') importsTab.classList.add('active');
     tabsContainer.appendChild(importsTab);
+    */
 }
 
 export function renderLedger(allTransactions, ledgerSort) {
@@ -335,7 +340,7 @@ export async function renderDailyReport(date, activityMap) {
         tableTitle.textContent = titleText;
     }
 
-    if(performanceSummary) { performanceSummary.innerHTML = `<h3>Daily Performance: <span>...</span></h3><h3 id="realized-gains-summary">Realized: <span>$0.00</span></h3><h3 id="total-value-summary">Total Open Value: <span>$0.00</span></h3>`; }
+    if(performanceSummary) { performanceSummary.innerHTML = `<h3>Daily Performance: <span>...</span></h3><h3 id="realized-gains-summary">Realized: <span>--</span></h3><h3 id="total-value-summary">Total Open Value: <span>--</span></h3>`; }
 
     try {
         const perfResponse = await fetch(`/api/daily_performance/${date}?holder=${state.selectedAccountHolderId}`);
@@ -359,14 +364,34 @@ export async function renderDailyReport(date, activityMap) {
         if (!data || !data.dailyTransactions || !data.endOfDayPositions) { throw new Error("Invalid data structure received."); }
 
         if (logBody) {
+            let totalCostOfSoldShares = 0;
             logBody.innerHTML = '';
             if (data.dailyTransactions.length === 0) {
-                logBody.innerHTML = '<tr><td colspan="11">No transactions logged for this day.</td></tr>';
+                logBody.innerHTML = '<tr><td colspan="12">No transactions logged for this day.</td></tr>';
             } else {
                 data.dailyTransactions.forEach(tx => {
                     dailyRealizedPL += tx.realizedPL || 0;
-                    logBody.insertRow().innerHTML = `<td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td class="numeric">${formatQuantity(tx.quantity)}</td><td class="numeric">${formatAccounting(tx.price)}</td><td class="numeric">${formatAccounting(tx.realizedPL)}</td><td></td><td></td><td class="numeric">${formatAccounting(tx.limit_price_up)}</td><td class="numeric">${formatAccounting(tx.limit_price_down)}</td><td></td>`;
+                    if (tx.transaction_type === 'SELL' && tx.parent_buy_price) {
+                        totalCostOfSoldShares += tx.parent_buy_price * tx.quantity;
+                    }
+                    logBody.insertRow().innerHTML = `<td><input type="checkbox" class="confirmation-check"></td><td>${tx.ticker}</td><td>${tx.exchange}</td><td>${tx.transaction_type}</td><td class="numeric">${formatQuantity(tx.quantity)}</td><td class="numeric">${formatAccounting(tx.price)}</td><td class="numeric">${formatAccounting(tx.realizedPL)}</td><td></td><td></td><td class="numeric">${formatAccounting(tx.limit_price_up)}</td><td class="numeric">${formatAccounting(tx.limit_price_down)}</td><td></td>`;
                 });
+            }
+            
+            const realizedGainsSummarySpan = document.querySelector('#realized-gains-summary span');
+            let realizedText = `<strong>${formatAccounting(dailyRealizedPL)}</strong>`;
+            if (realizedGainsSummarySpan) {
+                if (totalCostOfSoldShares > 0) {
+                    const realizedPercent = (dailyRealizedPL / totalCostOfSoldShares) * 100;
+                    const colorClass = realizedPercent >= 0 ? 'positive' : 'negative';
+                    realizedText += ` (<span class="${colorClass}">${realizedPercent.toFixed(2)}%</span>)`;
+                }
+                realizedGainsSummarySpan.innerHTML = realizedText;
+            }
+
+            const headerSummary = document.getElementById('header-daily-summary');
+            if (headerSummary) {
+                headerSummary.innerHTML = `Realized: ${realizedText}`;
             }
         }
 
@@ -400,17 +425,14 @@ export async function renderDailyReport(date, activityMap) {
                         <td class="actions-cell">
                             <button class="edit-buy-btn modify-btn" data-id="${p.id}" title="Edit Original Buy Transaction">Edit</button>
                             <button class="set-limit-btn modify-btn" data-id="${p.id}" title="Set/Edit Limit Order">Limits</button>
-                            <button class="sell-from-lot-btn" data-id="${p.id}" data-buy-id="${p.id}" data-ticker="${p.ticker}" data-exchange="${p.exchange}" data-quantity="${p.quantity_remaining}">Sell</button>
+                            <button class="sell-from-lot-btn" data-buy-id="${p.id}" data-ticker="${p.ticker}" data-exchange="${p.exchange}" data-quantity="${p.quantity_remaining}">Sell</button>
                         </td>`;
                 });
             }
         }
-        
-        const realizedGainsSummarySpan = document.querySelector('#realized-gains-summary span');
-        if (realizedGainsSummarySpan) { realizedGainsSummarySpan.innerHTML = `<strong>${formatAccounting(dailyRealizedPL)}</strong>`; }
-
     } catch (error) {
         console.error("Failed to render daily report:", error);
+        if (logBody) logBody.innerHTML = '<tr><td colspan="12">Error loading transaction data.</td></tr>';
         if (summaryBody) summaryBody.innerHTML = '<tr><td colspan="11">Error loading position data.</td></tr>';
     }
 }
@@ -550,6 +572,45 @@ export async function renderOrdersPage() {
     } catch (error) {
         console.error(error);
         tableBody.innerHTML = `<tr><td colspan="7">Error loading pending orders.</td></tr>`;
+        showToast(error.message, 'error');
+    }
+}
+// Add this new function to the end of public/ui/renderers.js
+export async function renderAlertsPage() {
+    const tableBody = document.querySelector('#alerts-table tbody');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
+    state.activeAlerts = []; // Clear old data
+
+    try {
+        const response = await fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`);
+        if (!response.ok) throw new Error('Failed to fetch alerts.');
+        
+        const alerts = await response.json();
+        state.activeAlerts = alerts; // Save to state for event listeners
+        tableBody.innerHTML = '';
+
+        if (alerts.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="3">You have no new alerts.</td></tr>';
+            return;
+        }
+
+        alerts.forEach(alert => {
+            const row = tableBody.insertRow();
+            row.innerHTML = `
+                <td>${new Date(alert.created_at).toLocaleString()}</td>
+                <td>${alert.message}</td>
+                <td class="actions-cell">
+                    <button class="alert-yes-btn" data-notification-id="${alert.id}" data-pending-order-id="${alert.pending_order_id}">Yes, it Filled</button>
+                    <button class="alert-no-btn delete-btn" data-notification-id="${alert.id}">No, Dismiss</button>
+                    <button class="alert-pending-btn" data-notification-id="${alert.id}">Review Later</button>
+                </td>
+            `;
+        });
+    } catch (error) {
+        console.error(error);
+        tableBody.innerHTML = `<tr><td colspan="3">Error loading alerts.</td></tr>`;
         showToast(error.message, 'error');
     }
 }

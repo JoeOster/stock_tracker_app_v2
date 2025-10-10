@@ -1,11 +1,12 @@
 // public/app-main.js - v2.13 (Corrected Data Flow & UI Improvements)
 import { initializeEventListeners } from './event-listeners.js';
-import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, populatePricesFromCache } from './ui/renderers.js'; // Add renderOrdersPage
+import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage, populatePricesFromCache } from './ui/renderers.js'; // Add renderAlertsPage
 import { updatePricesForView } from './api.js';
 import { getCurrentESTDateString, showToast } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
 
 export const state = {
+    settings: { takeProfitPercent: 8, stopLossPercent: 8, theme: 'light', font: 'Inter', defaultAccountHolderId: null, notificationCooldown: 16 },
     settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15, theme: 'light', font: 'Inter', defaultAccountHolderId: null },
     currentView: { type: null, value: null },
     activityMap: new Map(),
@@ -13,6 +14,7 @@ export const state = {
     allTransactions: [],
     allSnapshots: [],
     pendingOrders: [],
+    activeAlerts: [],
     selectedAccountHolderId: 'all',
     ledgerSort: { column: 'transaction_date', direction: 'desc' },
     allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
@@ -41,12 +43,20 @@ export async function switchView(viewType, viewValue) {
     } else if (viewType === 'orders') {
         document.getElementById('orders-page-container').style.display = 'block';
         await renderOrdersPage();
+    } else if (viewType === 'alerts') {
+        document.getElementById('alerts-page-container').style.display = 'block';
+        await renderAlertsPage();        
     } else if (viewType === 'snapshots') {
         document.getElementById('snapshots-page-container').style.display = 'block';
         await refreshSnapshots();
         renderSnapshotsPage();
     } else if (viewType === 'imports') {
         document.getElementById('imports-page-container').style.display = 'block';
+    }
+        const headerSummary = document.getElementById('header-daily-summary');
+    if (headerSummary) {
+        // Show the summary only on a date view, hide it for all other views
+        headerSummary.style.display = viewType === 'date' ? 'block' : 'none';
     }
 }
 
@@ -73,6 +83,7 @@ export function saveSettings() {
     state.settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || 0;
     state.settings.theme = document.getElementById('theme-selector').value;
     state.settings.font = document.getElementById('font-selector').value;
+    state.settings.notificationCooldown = parseInt(document.getElementById('notification-cooldown').value, 10) || 16;
     const selectedDefaultHolder = document.querySelector('input[name="default-holder-radio"]:checked');
     if (selectedDefaultHolder) {
         state.settings.defaultAccountHolderId = selectedDefaultHolder.value;
@@ -243,7 +254,8 @@ async function initialize() {
         if (savedSettings) { state.settings = { ...state.settings, ...JSON.parse(savedSettings) }; }
         document.getElementById('take-profit-percent').value = state.settings.takeProfitPercent;
         document.getElementById('stop-loss-percent').value = state.settings.stopLossPercent;
-          
+        document.getElementById('notification-cooldown').value = state.settings.notificationCooldown;
+ 
         const themeSelector = document.getElementById('theme-selector');
         if(themeSelector) themeSelector.value = state.settings.theme;
         
@@ -284,7 +296,45 @@ if (state.settings.defaultAccountHolderId && state.allAccountHolders.some(h => h
     
     await switchView('date', viewDate);
     initializeScheduler(state);
+    initializeNotificationService(); 
 }
 
+function initializeNotificationService() {
+    let lastToastTimestamp = 0;
+
+    // This function will run every 30 seconds to check for new alerts
+    setInterval(async () => {
+        try {
+            // Fetch any unread notifications from the new API endpoint
+            const response = await fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`);
+            if (!response.ok) return;
+
+            const unreadNotifications = await response.json();
+            const alertsTab = document.querySelector('.tab[data-view-type="alerts"]');
+
+            // Update the warning icon on the tab header
+            if (alertsTab) {
+                if (unreadNotifications.length > 0) {
+                    if (!alertsTab.textContent.includes('⚠️')) {
+                        alertsTab.textContent = 'Alerts ⚠️';
+                    }
+                } else {
+                    alertsTab.textContent = 'Alerts';
+                }
+            }
+
+            // Check if we should show a toast notification based on the cooldown setting
+            const cooldownMinutes = state.settings.notificationCooldown;
+            const cooldownMilliseconds = cooldownMinutes * 60 * 1000;
+            
+            if (unreadNotifications.length > 0 && (Date.now() - lastToastTimestamp > cooldownMilliseconds)) {
+                showToast(`You have ${unreadNotifications.length} new alert(s). Check the Alerts tab.`, 'info');
+                lastToastTimestamp = Date.now();
+            }
+        } catch (error) {
+            console.error('Failed to fetch notifications:', error);
+        }
+    }, 30000); // Polls every 30 seconds
+}
 initialize();
 

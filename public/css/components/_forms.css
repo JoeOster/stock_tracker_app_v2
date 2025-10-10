@@ -1,0 +1,140 @@
+/* public/css/components/_forms.css */
+/* Contains general styles for forms, inputs, and buttons. */
+
+/* --- General Input & Button Styles --- */
+input, select {
+    padding: 10px;
+    border: 1px solid var(--container-border);
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: var(--container-bg);
+    color: var(--text-color);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 10px 15px;
+    border: 1px solid var(--primary-color);
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    background-color: var(--primary-color);
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.delete-btn {
+    background-color: var(--negative-color);
+    border-color: var(--negative-color);
+}
+
+
+/* --- Form Group & Layout Styles --- */
+.form-group { 
+    text-align: left; 
+    margin-bottom: 15px; 
+}
+
+.form-group label { 
+    display: block; 
+    margin-bottom: 5px; 
+    font-weight: 500; 
+    font-size: 0.9em; 
+}
+
+.form-group-with-button { 
+    display: flex; 
+    align-items: flex-end; 
+    gap: 5px; 
+}
+
+.form-group-with-button input { 
+    flex-grow: 1; 
+}
+
+.form-group-with-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group-with-checkbox input[type="checkbox"] {
+    width: auto;
+    flex-shrink: 0;
+}
+
+
+/* --- Specific Form Layouts --- */
+
+/* Ledger & Orders Page Single-Row Forms */
+#add-transaction-form, #add-pending-order-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+#add-transaction-form input, #add-transaction-form select,
+#add-pending-order-form input, #add-pending-order-form select {
+    flex: 1 1 150px;
+}
+
+#add-transaction-form button, #add-pending-order-form button {
+    flex-grow: 0;
+}
+
+/* Limit Order Group (within #add-transaction-form) */
+.form-row-divider {
+    width: 100%;
+    height: 1px;
+    background-color: var(--container-border);
+    margin: 10px 0;
+}
+
+.limit-order-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 400px;
+}
+
+.limit-order-group label {
+    flex-shrink: 0;
+}
+
+.limit-order-group input[type="checkbox"] {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.limit-order-group input[type="number"],
+.limit-order-group input[type="date"] {
+    width: 100%;
+}
+
+/* Settings Modal "Add" Form */
+.add-item-form { 
+    display: flex; 
+    gap: 10px; 
+    margin-top: 1rem; 
+}
+
+.add-item-form input { 
+    flex-grow: 1; 
+}
+
+/* Snapshot Page Form */
+#add-snapshot-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}

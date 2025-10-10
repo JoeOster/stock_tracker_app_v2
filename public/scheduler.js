@@ -1,8 +1,8 @@
-// public/scheduler.js  v2.15
+// public/scheduler.js (Corrected Version)
 import { updatePricesForView } from './api.js';
-import { populatePricesFromCache } from './ui/renderers.js'; // ADDED FOR v2.15
+import { populatePricesFromCache } from './ui/renderers.js'; // This import is added
 
-let nextApiCallTimestamp = 0; // This variable holds the timestamp for the next scheduled API call.
+let nextApiCallTimestamp = 0;
 
 export function initializeScheduler(state) {
     const refreshPricesBtn = document.getElementById('refresh-prices-btn');
@@ -25,7 +25,11 @@ export function initializeScheduler(state) {
         const isMarketHours = isTradingDay && (estHours > 9 || (estHours === 9 && estMinutes >= 30)) && estHours < 16;
 
         let triggerUpdate = false;
-        let currentIntervalMinutes = isMarketHours ? state.settings.marketHoursInterval : state.settings.afterHoursInterval;
+        // The settings for these intervals are now in app-main.js
+        let currentIntervalMinutes = isMarketHours ? 2 : 15; // Defaulting to 2 and 15
+        if (state.settings) {
+            currentIntervalMinutes = isMarketHours ? state.settings.marketHoursInterval : state.settings.afterHoursInterval;
+        }
         let currentIntervalMs = currentIntervalMinutes * 60 * 1000;
 
         if (Date.now() >= nextApiCallTimestamp) {
@@ -47,15 +51,16 @@ export function initializeScheduler(state) {
             apiTimerEl.textContent = "Market Closed";
         }
 
-if (triggerUpdate) {
-    console.log("Scheduler triggered update...");
-    const viewDate = state.currentView.value;
-    await updatePricesForView(viewDate, state.activityMap, state.priceCache);
+        if (triggerUpdate) {
+            console.log("Scheduler triggered update...");
+            const viewDate = state.currentView.value;
+            await updatePricesForView(viewDate, state.activityMap, state.priceCache);
 
-    // This new line populates the UI with the newly cached prices
-    populatePricesFromCache(state.activityMap, state.priceCache); 
-
-    nextApiCallTimestamp = Date.now() + currentIntervalMs;
-}
-    }, 5000);
+            // --- THIS IS THE FIX ---
+            // This new line populates the UI with the newly cached prices
+            populatePricesFromCache(state.activityMap, state.priceCache);
+            
+            nextApiCallTimestamp = Date.now() + currentIntervalMs;
+        }
+    }, 5000); // The interval runs every 5 seconds
 }

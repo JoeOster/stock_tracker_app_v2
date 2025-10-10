@@ -1,0 +1,45 @@
+/* public/css/base/_base.css */
+/* Contains global styles for the body, headings, and main page layout containers. */
+
+body {
+    font-family: var(--font-family-base, var(--font-inter));
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 2rem;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+h1,h2,h3,h4 {
+    color: var(--heading-color);
+    margin-top: 0;
+    font-weight: 600;
+}
+
+p.subtitle {
+    color: var(--text-muted-color);
+    text-align: center;
+    margin: -10px 0 20px;
+}
+
+.page-container {
+    background-color: var(--container-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    margin-bottom: 2rem;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow-x: auto;
+}
+
+.custom-date-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    padding: 0 0 1rem 0;
+    max-width: 1400px;
+    margin: 0 auto;
+}

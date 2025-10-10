@@ -28,6 +28,7 @@ beforeEach(async () => {
     await db.run('DELETE FROM transactions');
     await db.run('DELETE FROM account_holders WHERE id > 2'); // Keep Joe and the default
     await db.run('DELETE FROM pending_orders');
+    await db.run('DELETE FROM notifications');
 });
 
 describe('Transaction API Endpoints', () => {
@@ -52,7 +53,31 @@ describe('Transaction API Endpoints', () => {
         expect(newTransactionId).toBeDefined();
     });
 
-    // ... other transaction tests remain the same
+    it('should create a new SELL transaction and update the parent BUY lot', async () => {
+        // Setup: Create a BUY lot for 100 shares
+        const buyRes = await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', ['SELL-TEST', 'TestEx', 'BUY', 100, 50, '2025-10-01', 100, 100, 2]);
+        const buyId = buyRes.lastID;
+
+        // Action: Create a SELL transaction for 40 of those shares
+        const sellRes = await request(app)
+            .post('/api/transactions')
+            .send({
+                ticker: 'SELL-TEST',
+                exchange: 'TestEx',
+                transaction_type: 'SELL',
+                quantity: 40,
+                price: 60,
+                transaction_date: '2025-10-02',
+                account_holder_id: 2, // Must match the parent BUY's holder
+                parent_buy_id: buyId
+            });
+        
+        expect(sellRes.statusCode).toEqual(201);
+
+        // Assertion: Verify the parent BUY lot was updated correctly
+        const parentBuyLot = await db.get("SELECT * FROM transactions WHERE id = ?", buyId);
+        expect(parentBuyLot.quantity_remaining).toBe(60); // 100 - 40 = 60
+    });
 });
 
 describe('Account Holder API Endpoints', () => {
@@ -255,5 +280,42 @@ describe('Pending Orders API', () => {
         // Assert that the change was saved to the database
         const updatedOrder = await db.get("SELECT * FROM pending_orders WHERE id = ?", orderId);
         expect(updatedOrder.status).toBe('CANCELLED');
+    });
+});
+// Add this new block to the end of tests/api.test.js
+
+describe('Notifications API (v2.18)', () => {
+    it('should retrieve only UNREAD notifications for the correct account holder', async () => {
+        // Setup: Create various notifications to test the API's filtering
+        await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (2, 'Test message for user 2', 'UNREAD')");
+        await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (5, 'Test message for user 5', 'UNREAD')"); // Different user
+        await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (2, 'Dismissed message', 'DISMISSED')"); // Different status
+
+        // Action: Fetch unread notifications for account holder #2
+        const res = await request(app)
+            .get('/api/notifications?holder=2');
+
+        // Assertion: The API should return only the one correct notification
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toBeInstanceOf(Array);
+        expect(res.body.length).toBe(1);
+        expect(res.body[0].message).toBe('Test message for user 2');
+    });
+
+    it('should update the status of a notification', async () => {
+        // Setup: Create a single unread notification
+        const insertRes = await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (2, 'To be dismissed', 'UNREAD')");
+        const notificationId = insertRes.lastID;
+
+        // Action: Send a request to update its status to 'DISMISSED'
+        const res = await request(app)
+            .put(`/api/notifications/${notificationId}`)
+            .send({ status: 'DISMISSED' });
+
+        expect(res.statusCode).toEqual(200);
+
+        // Assertion: Verify the status was changed in the database
+        const updatedNotification = await db.get("SELECT * FROM notifications WHERE id = ?", notificationId);
+        expect(updatedNotification.status).toBe('DISMISSED');
     });
 });

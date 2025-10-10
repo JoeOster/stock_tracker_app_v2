@@ -1,0 +1,43 @@
+/* public/css/components/_daily-report.css */
+/* Contains styles specific to the Daily Report page. */
+
+#daily-performance-summary { 
+    display: flex; 
+    justify-content: space-around; 
+    align-items: center; 
+    background-color: var(--info-panel-bg); 
+    padding: 15px; 
+    border-radius: 8px; 
+    margin-bottom: 2rem; 
+    border: 1px solid var(--container-border); 
+}
+
+/* Style for clickable advice rows on the Open Lots table */
+#positions-summary-body tr {
+    cursor: pointer;
+}
+
+#positions-summary-body tr:hover {
+    background-color: var(--primary-color) !important;
+    color: #fff;
+}
+/* In public/css/components/_daily-report.css */
+
+/* FIX: Ensure sticky columns change background color on row hover */
+#positions-summary-body tr:hover td:first-child,
+#positions-summary-body tr:hover td:last-child {
+    background-color: var(--primary-color) !important;
+}
+
+#daily-performance-summary { 
+    /* ... existing styles ... */
+}
+
+/* Style for clickable advice rows on the Open Lots table */
+#positions-summary-body tr {
+    /* ... existing styles ... */
+}
+
+#positions-summary-body tr:hover {
+    /* ... existing styles ... */
+}

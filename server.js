@@ -4,8 +4,9 @@ require('dotenv').config();
 const fetch = require('node-fetch');
 const cron = require('node-cron');
 const setupDatabase = require('./database');
+const { formatAccounting } = require('./public/ui/helpers'); // Helper for logging
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -14,6 +15,7 @@ app.use(express.static('public'));
 async function setupApp() {
     const db = await setupDatabase();
 
+    // This is the original EOD cron job - IT STAYS AS IS
     if (process.env.NODE_ENV !== 'test') {
         cron.schedule('2 16 * * 1-5', () => {
             const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
@@ -21,69 +23,137 @@ async function setupApp() {
             captureEodPrices(db, today);
         }, { timezone: "America/New_York" });
     }
-// --- Automated Order Watcher Service ---
-    if (process.env.NODE_ENV !== 'test') {
-        // Runs every 5 minutes, from 9 AM to 4 PM (16:00), Monday to Friday, in the NY timezone.
-        cron.schedule('*/5 9-16 * * 1-5', async () => {
-            console.log('[CRON] Running Pending Order Watcher...');
-            try {
-                // 1. Get all active pending buy limit orders
-                const activeOrders = await db.all("SELECT * FROM pending_orders WHERE status = 'ACTIVE' AND order_type = 'BUY_LIMIT'");
-                if (activeOrders.length === 0) {
-                    return; // No orders to check, exit early
-                }
 
-                // 2. Get unique tickers to fetch prices for
-                const uniqueTickers = [...new Set(activeOrders.map(order => order.ticker))];
-                const apiKey = process.env.FINNHUB_API_KEY;
-
-                // 3. Fetch current prices for all relevant tickers
-                const currentPrices = {};
-                for (const ticker of uniqueTickers) {
+    async function captureEodPrices(db, dateToProcess) {
+        // ... (This entire function remains unchanged)
+        console.log(`[EOD Process] Running for date: ${dateToProcess}`);
+        try {
+            const soldTickers = await db.all(`SELECT DISTINCT ticker FROM transactions WHERE transaction_date = ? AND transaction_type = 'SELL'`, dateToProcess);
+            if (soldTickers.length === 0) {
+                console.log(`[EOD Process] No stocks sold on ${dateToProcess}.`);
+                return;
+            }
+            for (const { ticker } of soldTickers) {
+                const remaining = await db.get(`SELECT SUM(quantity_remaining) as total FROM transactions WHERE ticker = ?`, ticker);
+                if (remaining && remaining.total < 0.00001) {
+                    const existingPrice = await db.get('SELECT id FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, dateToProcess]);
+                    if (existingPrice) continue;
+                    console.log(`[EOD Process] Position for ${ticker} closed. Fetching closing price...`);
+                    const apiKey = process.env.FINNHUB_API_KEY;
                     const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
                     if (apiRes.ok) {
                         const data = await apiRes.json();
-                        if (data && data.c > 0) currentPrices[ticker] = data.c;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 150)); // Brief pause for rate limiting
-                }
-                
-                // 4. Check each order against the current market price
-                for (const order of activeOrders) {
-                    const currentPrice = currentPrices[order.ticker];
-                    if (currentPrice && currentPrice <= order.limit_price) {
-                        console.log(`[CRON] Triggered fill for ${order.ticker} at limit price ${order.limit_price}`);
-                        
-                        // 5. Atomically update status and create the new transaction
-                        await db.exec('BEGIN TRANSACTION');
-                        
-                        // Set the pending order status to 'FILLED'
-                        await db.run("UPDATE pending_orders SET status = 'FILLED' WHERE id = ?", order.id);
-
-                        // Create the new transaction in the main ledger
-                        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-                        const newTxQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id, advice_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                        
-                        await db.run(newTxQuery, [
-                            order.ticker, order.exchange, 'BUY', order.quantity, 
-                            order.limit_price, // Use the limit price as the execution price
-                            today, order.quantity, order.quantity, 
-                            order.account_holder_id, order.advice_source_id
-                        ]);
-
-                        await db.exec('COMMIT');
-                        console.log(`[CRON] Successfully filled order and created transaction for ${order.ticker}.`);
+                        const closePrice = (data && data.c > 0) ? data.c : null;
+                        if (closePrice) {
+                            await db.run('INSERT INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)', [ticker, dateToProcess, closePrice]);
+                            console.log(`[EOD Process] Froze price for ${ticker} at ${closePrice} for ${dateToProcess}.`);
+                        }
                     }
                 }
-            } catch (error) {
-                console.error('[CRON] Error in Pending Order Watcher:', error);
-                await db.exec('ROLLBACK'); // Roll back changes if any step failed
             }
-        }, {
+        } catch (error) {
+            console.error(`[EOD Process] Error for ${dateToProcess}:`, error);
+        }
+    }
+
+    // --- NEW testable function for the Order Watcher ---
+async function runOrderWatcher() {
+    console.log('[CRON] Running Order Watcher / Alert Generator...');
+    try {
+        // --- PART 1: Fetch all items that need price checks ---
+        const activeBuyOrders = await db.all("SELECT * FROM pending_orders WHERE status = 'ACTIVE' AND order_type = 'BUY_LIMIT'");
+        const openPositionsWithLimits = await db.all("SELECT * FROM transactions WHERE transaction_type = 'BUY' AND quantity_remaining > 0.00001 AND (limit_price_up IS NOT NULL OR limit_price_down IS NOT NULL)");
+
+        if (activeBuyOrders.length === 0 && openPositionsWithLimits.length === 0) {
+            return; // No orders or limits to check, exit early
+        }
+
+        const buyTickers = activeBuyOrders.map(order => order.ticker);
+        const sellTickers = openPositionsWithLimits.map(pos => pos.ticker);
+        const uniqueTickers = [...new Set([...buyTickers, ...sellTickers])];
+
+        // --- PART 2: Fetch all necessary prices in a batch ---
+        const currentPrices = {};
+        const apiKey = process.env.FINNHUB_API_KEY;
+        for (const ticker of uniqueTickers) {
+            const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
+            if (apiRes.ok) {
+                const data = await apiRes.json();
+                if (data && data.c > 0) currentPrices[ticker] = data.c;
+            }
+            await new Promise(resolve => setTimeout(resolve, 150));
+        }
+
+        // --- PART 3: Process Pending Buy Orders (Creates Notifications) ---
+        for (const order of activeBuyOrders) {
+            const currentPrice = currentPrices[order.ticker];
+            if (currentPrice && currentPrice <= order.limit_price) {
+                const existingNotification = await db.get("SELECT id FROM notifications WHERE pending_order_id = ? AND status = 'UNREAD'", order.id);
+                if (!existingNotification) {
+                    console.log(`[CRON] Price target met for BUY_LIMIT on ${order.ticker}. Creating notification.`);
+                    const message = `Price target of ${formatAccounting(order.limit_price)} met for ${order.ticker}. Current price is ${formatAccounting(currentPrice)}.`;
+                    await db.run("INSERT INTO notifications (account_holder_id, pending_order_id, message) VALUES (?, ?, ?)", [order.account_holder_id, order.id, message]);
+                }
+            }
+        }
+
+        // --- PART 4: Process Open Positions for Sell Limits (Executes Trades & Creates Notifications) ---
+        for (const position of openPositionsWithLimits) {
+            const currentPrice = currentPrices[position.ticker];
+            if (!currentPrice) continue;
+
+            let executedPrice = null;
+            let executionType = null;
+
+            // Check for Stop Loss trigger first
+            if (position.limit_price_down && currentPrice <= position.limit_price_down) {
+                executedPrice = position.limit_price_down;
+                executionType = 'Stop Loss';
+            } 
+            // Then check for Take Profit trigger
+            else if (position.limit_price_up && currentPrice >= position.limit_price_up) {
+                executedPrice = position.limit_price_up;
+                executionType = 'Take Profit';
+            }
+
+            if (executedPrice && executionType) {
+                console.log(`[CRON] ${executionType} triggered for ${position.ticker} at ${formatAccounting(executedPrice)}.`);
+                await db.exec('BEGIN TRANSACTION');
+
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+
+                // Create the new SELL transaction
+                await db.run(`INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
+                    [position.ticker, position.exchange, 'SELL', position.quantity_remaining, executedPrice, today, position.id, position.account_holder_id]
+                );
+
+                // Update the parent BUY lot to close it out
+                await db.run("UPDATE transactions SET quantity_remaining = 0, limit_price_up = NULL, limit_price_down = NULL WHERE id = ?", position.id);
+
+                // Create a notification for the user
+                const message = `${executionType} order for ${position.quantity_remaining} shares of ${position.ticker} was automatically executed at ${formatAccounting(executedPrice)}.`;
+                await db.run("INSERT INTO notifications (account_holder_id, message) VALUES (?, ?)", [position.account_holder_id, message]);
+
+                await db.exec('COMMIT');
+                console.log(`[CRON] Successfully created SELL transaction for ${position.ticker}.`);
+            }
+        }
+    } catch (error) {
+        console.error('[CRON] Error in Order Watcher:', error);
+        await db.exec('ROLLBACK');
+    }
+}
+
+    // --- Automated Order Watcher Service (Refactored) ---
+    if (process.env.NODE_ENV !== 'test') {
+        cron.schedule('*/5 9-16 * * 1-5', () => runOrderWatcher(), {
             scheduled: true,
             timezone: "America/New_York"
         });
     }
+
+    // --- ALL API ROUTES GO HERE ---
+    // (Your existing API routes like /api/prices/batch, /api/exchanges, etc. start from here)
     async function captureEodPrices(db, dateToProcess) {
         console.log(`[EOD Process] Running for date: ${dateToProcess}`);
         try {
@@ -266,7 +336,6 @@ async function setupApp() {
         }
     });
     // --- PENDING ORDERS API ENDPOINTS ---
-
     app.get('/api/pending_orders', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -325,7 +394,45 @@ async function setupApp() {
             res.status(500).json({ message: 'Error updating pending order.' });
         }
     });
-    
+
+    // --- NOTIFICATIONS API ENDPOINTS (v2.18) ---
+
+    app.get('/api/notifications', async (req, res) => {
+        try {
+            const holderId = req.query.holder;
+            let query = `SELECT * FROM notifications WHERE status = 'UNREAD'`;
+            const params = [];
+            if (holderId && holderId !== 'all') {
+                query += ' AND account_holder_id = ?';
+                params.push(holderId);
+            }
+            query += ' ORDER BY created_at DESC';
+            const notifications = await db.all(query, params);
+            res.json(notifications);
+        } catch (error) {
+            console.error("Failed to fetch notifications:", error);
+            res.status(500).json({ message: 'Error fetching notifications.' });
+        }
+    });
+
+    app.put('/api/notifications/:id', async (req, res) => {
+        try {
+            const { status } = req.body;
+            const { id } = req.params;
+
+            // Allowable statuses to be set by the user
+            if (!status || !['PENDING', 'DISMISSED'].includes(status)) {
+                return res.status(400).json({ message: 'Invalid status provided.' });
+            }
+
+            await db.run('UPDATE notifications SET status = ? WHERE id = ?', [status, id]);
+            res.json({ message: 'Notification status updated.' });
+        } catch (error) {
+            console.error('Failed to update notification:', error);
+            res.status(500).json({ message: 'Error updating notification.' });
+        }
+    });
+
     app.get('/api/daily_performance/:date', async (req, res) => {
         const selectedDate = req.params.date;
         const holderId = req.query.holder;

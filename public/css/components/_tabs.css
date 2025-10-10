@@ -1,0 +1,36 @@
+/* public/css/components/_tabs.css */
+/* Contains styles for the main navigation tab bar */
+
+.tabs {
+    display: flex;
+    border-bottom: 2px solid var(--container-border);
+    margin-bottom: 2rem;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    flex-wrap: wrap;
+}
+
+.tab {
+    padding: 10px 15px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-bottom: none;
+    margin-bottom: -2px;
+    color: var(--text-muted-color);
+    font-weight: 500;
+}
+
+.tab:hover {
+    background-color: var(--info-panel-bg);
+    color: var(--heading-color);
+}
+
+.tab.active {
+    border-color: var(--container-border);
+    border-bottom: 2px solid var(--container-bg);
+    background-color: var(--container-bg);
+    color: var(--heading-color);
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+}

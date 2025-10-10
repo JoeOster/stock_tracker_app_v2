@@ -24,20 +24,17 @@ jest.mock('../app-main.js', () => ({
 }));
 
 
-// In public/ui/renderers.test.js
 
 // In public/ui/renderers.test.js
 describe('renderTabs', () => {
+    // Define a single source of truth for the test
     const MOCK_DATE_TABS_COUNT = 2;
-    const STATIC_TABS = ['Charts', 'Ledger', 'Orders', 'Snapshots', 'Imports'];
+    const STATIC_TABS = ['Charts', 'Ledger', 'New Orders', 'Alerts', 'Snapshots'];
     const TOTAL_TABS_EXPECTED = MOCK_DATE_TABS_COUNT + STATIC_TABS.length;
 
     beforeEach(() => {
-        getTradingDays.mockClear();
-        getActivePersistentDates.mockClear();
         document.body.innerHTML = '<div id="tabs-container"></div>';
-
-        // FIX: Provide UNIQUE mock dates to prevent de-duplication by new Set()
+        // Use unique mock dates to prevent de-duplication
         getTradingDays.mockReturnValue(['2025-10-01', '2025-10-02']); 
         getActivePersistentDates.mockReturnValue([]);
     });
@@ -48,7 +45,6 @@ describe('renderTabs', () => {
         const tabsContainer = document.getElementById('tabs-container');
         const tabs = tabsContainer.querySelectorAll('.tab');
 
-        // FIX: Set expectation back to the correct total
         expect(tabs.length).toBe(TOTAL_TABS_EXPECTED);
 
         STATIC_TABS.forEach(tabName => {
@@ -57,7 +53,11 @@ describe('renderTabs', () => {
     });
 
     it('should correctly apply the "active" class to the current view tab', () => {
-        // ... (this test remains the same)
+        const mockCurrentView = { type: 'charts', value: null };
+        renderTabs(mockCurrentView);
+        const activeTab = document.querySelector('.tab.active');
+        expect(activeTab).not.toBeNull();
+        expect(activeTab.textContent).toBe('Charts');
     });
 });
 

@@ -53,8 +53,15 @@ async function runMigrations(db) {
 
 async function setup() {
     // Dynamically choose the database file based on the environment
-    const dbPath = process.env.NODE_ENV === 'test' ? './test-tracker.db' : './tracker.db';
-
+let dbPath;
+if (process.env.NODE_ENV === 'production') {
+    dbPath = './production.db';
+} else if (process.env.NODE_ENV === 'test') {
+    dbPath = './test.db';
+} else {
+    // Default to development
+    dbPath = './development.db';
+}
     const db = await open({
         filename: dbPath,
         driver: sqlite3.Database

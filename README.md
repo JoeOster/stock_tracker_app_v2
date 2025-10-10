@@ -1,106 +1,91 @@
-# **Live Stock Tracker V2**
+# Portfolio Tracker V2
 
-A personal, self-hosted web application designed as a broker-agnostic strategy and performance hub for active retail traders. This version includes a full multi-account integration, allowing for the tracking of portfolios for multiple individuals under a single interface.
+A personal, self-hosted web application designed as a broker-agnostic strategy and performance hub for active retail traders. This version includes full multi-account integration, automated trade execution for limit orders, and a robust deployment process.
 
-## **Project Overview**
+## Project Overview
 
-The Live Stock Tracker is a personal journal and analytical tool that allows users to track performance, analyze strategy, and evaluate the effectiveness of external trading advice, independent of any specific brokerage. Its core strength lies in detailed lot-based tracking, multi-account management, and a clean, modern user interface with multiple themes.
+The Portfolio Tracker is a personal journal and analytical tool that allows users to track performance, analyze strategy, and evaluate the effectiveness of external trading advice, independent of any specific brokerage. Its core strength lies in detailed lot-based tracking, multi-account management, and a clean, modern user interface. Recent additions have introduced automation to reduce manual data entry and increase proactive monitoring.
 
-## **Current State & Key Features**
+## Current State & Key Features
 
 The application is in a stable, feature-rich state with an automated testing suite to protect core functionality.
 
-### **Core Features**
+### Core Features
 
-* **Multi-Account Integration:** Track transactions and portfolio performance for multiple account holders.  
-* **Global Account Filter:** A master dropdown in the header allows for filtering the entire application's data for a specific account holder or viewing an aggregated "All Accounts" summary.  
-* **Transaction Management:** Full CRUD (Create, Read, Update, Delete) functionality for all buy and sell transactions, correctly linked to account holders.  
-* **Lot-Based Tracking:** Sells are logged against specific buy lots, enabling precise profit/loss calculation and accurate tracking of remaining shares.  
-* **Live Price Updates:** Open positions are updated with current market prices during trading hours, with a configurable auto-refresh scheduler.  
-* **Invalid Ticker Handling:** The UI provides clear feedback when a ticker symbol is invalid or cannot be found by the price API.
+* **Multi-Account Integration:** Track transactions and portfolio performance for multiple account holders.
+* **Transaction Management:** Full CRUD functionality for all buy and sell transactions, with sales logged against specific buy lots for precise profit/loss calculation.
+* **Pending Buy Limit Orders:** A dedicated "Orders" page to create and manage pending buy limit orders that are not yet executed.
+* **Automated Order Execution:** A backend "Order Watcher" service runs during market hours, automatically monitoring live prices and converting pending buy limit orders into executed `BUY` transactions when price targets are met.
+* **Live Price Updates:** Open positions are updated with current market prices during trading hours, with a configurable auto-refresh scheduler.
 
-### **Views & Analytics**
+### Views & Analytics
 
-* **Daily Reports:** View a snapshot of activity for any given day, including daily realized P\&L and a summary of open positions with correct Unrealized P/L calculations. The report title dynamically updates to show the currently viewed account holder.  
-* **Charts Page:**  
-  * **Portfolio Overview:** A consolidated view of all open positions with an accurate **weighted average cost basis** calculation. Includes "Day's Change" performance metrics.  
-  * **Historical Performance Charts:** Tracks the total value of brokerage accounts over time with "All Time," "Past Five Days," and custom "Date Range" views. Charts are theme-aware and handle accounts with no data gracefully.  
-  * **Realized P\&L Summaries:** View both a lifetime and a date-range selectable summary of realized profits and losses.  
-* **Ledger Page:**  
-  * A comprehensive, filterable, and sortable log of all transactions.  
-  * Features a dynamic summary panel that calculates totals for the filtered results.  
-  * Transactions are visually grouped by date for enhanced readability.  
-* **Snapshots Page:** A dedicated UI for manually logging and managing historical total account values, which populate the performance charts.  
-* **Imports Page:** A dedicated UI for importing historical BUY transactions from a CSV file into a selected account.
+* **Daily Reports:** A snapshot of activity for any given day, including daily realized P&L and a summary of open positions.
+    * **Advice Popup:** Clicking an open position opens a modal displaying calculated "Take Profit" and "Stop Loss" suggestions based on user settings, compared against any manually set limits.
+* **Charts Page:** Historical performance charts and a portfolio overview with weighted average cost basis calculations and "Day's Change" metrics.
+* **Ledger Page:** A comprehensive, filterable log of all transactions.
+    * **Limit Order Entry:** The "Add Transaction" form now supports entering "Take Profit" and "Stop Loss" limits when logging a new `BUY`, with auto-calculated suggestions.
+    * The ledger table now displays any set limit orders for each transaction.
+* **Orders Page:** A dedicated UI for creating new pending buy limit orders and viewing/canceling active ones.
 
-### **UI/UX & Customization**
+### UI/UX & Customization
 
-* **Modern Theming System:** A variable-based CSS architecture supports multiple themes.  
-* **Multiple Themes:** Includes Light (Default), Dark, Sepia, and High Contrast themes.  
-* **Font Selection:** Choose from a list of modern, professional fonts in the settings menu.  
-* **Modernized UI:** The application features a clean, spacious layout with the "Inter" font as the default, consistent rounded corners, and soft shadows.  
-* **Tabbed Settings Modal:** A redesigned, organized settings panel for managing themes, fonts, exchanges, and account holders.
+* **Modern Theming System:** Includes Light (Default), Dark, Sepia, and High Contrast themes, plus font selection.
+* **Sticky Table Columns:** Both the first column (e.g., Ticker) and the last "Actions" column are sticky for easier viewing of wide tables.
 
-### **Development & Stability**
+### Development, Testing, and Deployment
 
-* **Automated Testing Environment:** The project includes a full testing suite using **Jest** for both the backend API and frontend rendering logic.  
-* **Test-Driven Debugging:** Key bug fixes (like the weighted average calculation) are protected by specific, automated tests to prevent future regressions.
+* **Automated Testing:** A comprehensive test suite using Jest for both the backend API and frontend logic, integrated into the deployment process.
+* **Environment-Specific Databases:** The project uses separate database files (`development.db`, `production.db`, `test.db`) to ensure safety and data integrity between environments.
+* **Automated Deployment Script:** A `deploy.bat` script automates the entire production deployment process on Windows, including running tests, backing up the database, copying files, installing packages, and restarting the server.
+* **Development Seeding:** An `npm run seed-dev` command is available to instantly reset the development database with simple, verifiable sample data.
 
-## **Technology Stack**
+## Technology Stack
 
-* **Backend:** Node.js, Express.js  
-* **Database:** SQLite3 with a robust migration system  
-* **Frontend:** Vanilla JavaScript (ES6 Modules), HTML5, CSS3  
-* **Charting:** Chart.js  
+* **Backend:** Node.js, Express.js
+* **Database:** SQLite3 with a robust migration system
+* **Frontend:** Vanilla JavaScript (ES6 Modules), HTML5, CSS3
+* **Charting:** Chart.js
 * **Testing:** Jest, Supertest, JSDOM, Babel
+* **Deployment:** NSSM (Non-Sucking Service Manager) for Windows Services
 
-## **Setup and Installation**
+## Setup and Installation
 
-1. **Clone the repository:**  
-   git clone \[https://github.com/JoeOster/stock\_tracker\_app\_v2.git\](https://github.com/JoeOster/stock\_tracker\_app\_v2.git)
+### Development Setup
 
-2. **Navigate to the project directory:**  
-   cd stock\_tracker\_app\_v2
+1.  Clone the repository.
+2.  Install dependencies: `npm install`
+3.  Create a `.env` file in the project root. Add your Finnhub API key and set the development port:
+    ```
+    FINNHUB_API_KEY=YOUR_API_KEY_HERE
+    PORT=3111
+    ```
+4.  (Optional) Reset the development database with sample data: `npm run seed-dev`
+5.  Start the development server: `npm run dev`
 
-3. **Install dependencies:**  
-   npm install
+### Production Deployment (Windows)
 
-4. **Configure Environment Variables:**  
-   * Create a file named .env in the root of the project.  
-   * Add your Finnhub API key to this file:  
-     FINNHUB\_API\_KEY=YOUR\_API\_KEY\_HERE
+1.  **One-Time Setup:** Install the application as a Windows Service using `nssm.exe` 
+2.  **To Deploy:** Run the automated deployment script from your development folder. Use a switch to set the production port (e.g., 3000):
+    ```
+    .\deploy.bat --silent
+    ```
+    The script will handle testing, backup, file deployment, and restarting the service automatically.
 
-5. **Run the application:**  
-   node server.js
+## Future Plans & Long-Term Backlog
 
-   Or for development with auto-restarting:  
-   npm run dev
+### Recently Completed
 
-6. **Run the test suite:**  
-   npm test
+* **Set Default Account Holder:** Added an option in Settings to select a default account holder for the application to load on startup.
+* **Synchronize "Add Transaction" Form:** The "Account Holder" dropdown in the "Log a New Transaction" form now reflects the globally selected account holder.
 
-7. Open your browser and navigate to http://localhost:3000.
+### Backlogged UI/UX Tweaks
+* **Account Selector:** Autosize the "Viewing:" dropdown in the header to fit its content.
+* **Application Title:** Add a setting for a "Family Name" to dynamically change the title to `<Family Name> Portfolio Manager`.
+* **Smarter Market Status:** Enhance the market status indicator to be aware of 24/7 crypto or international exchanges.
+* **Delete Button:** Add a "Delete" button to the "Edit Transaction" modal.
 
-## **Future Plans & Long-Term Backlog**
+### Long-Term Roadmap
 
-The following major features are planned for future versions of the application.
-
-### **Immediate To-Do List**
-
-* **Set Default Account Holder:** Add an option in Settings to select a default account holder for the application to load on startup.  
-* **Synchronize "Add Transaction" Form:** Ensure the "Account Holder" dropdown in the "Log a New Transaction" form automatically reflects the currently selected global account holder.
-
-### **Long-Term Roadmap**
-
-* **Seamless Data Import:** An advanced "smart" CSV importer and a tool to parse trade confirmation emails.  
-* **Core Advisory & Alerting Engine:** Modules for tracking advisory performance, creating ROI dashboards, setting custom alerts, and managing a watch list. Includes a repository for relevant PDF documents.  
-* **Version 4.0 & Beyond (Advanced Analytics):**  
-  * Portfolio Composition & Diversity Dashboard.  
-  * Integrated Trading Journal with note-taking on transactions.  
-  * "What If" analysis for trade recommendations.  
-  * Event & News Tagging.
-
-### **Future Considerations**
-
-* **Direct Brokerage Integration:** Potentially connect to brokerage APIs to sync data automatically (e.g., via Plaid).  
-* **Desktop App Conversion:** Package the application as a standalone desktop app using Electron for easy sharing and local installation.
+* **Core Advisory & Alerting Engine:** Build a dedicated Journal feature to track the performance of advice sources, store PDFs, and set proactive price alerts.
+* **Seamless Data Import:** Create a "smart" CSV importer and a tool to parse trade confirmation emails.

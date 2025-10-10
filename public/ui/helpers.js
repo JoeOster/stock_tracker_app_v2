@@ -12,7 +12,7 @@ export function formatAccounting(number, isCurrency = true) {
     if (Math.abs(number) < 0.001 && !isCurrency) { return '-'; }
     const isNegative = number < 0;
     const absoluteValue = Math.abs(number);
-    let options = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+    let options = { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true };
     if (!isCurrency) { options.maximumFractionDigits = 5; }
     let formattedNumber = absoluteValue.toLocaleString('en-US', options);
     if (isCurrency) { formattedNumber = '$' + formattedNumber; }

@@ -24,7 +24,67 @@ export function initializeEventListeners() {
     const accountHolderList = document.getElementById('account-holder-list');
     const addAccountHolderBtn = document.getElementById('add-account-holder-btn');
     const newAccountHolderNameInput = document.getElementById('new-account-holder-name');
+    // --- NEW: Alerts Table Actions (v2.18) ---
+    const alertsTable = document.getElementById('alerts-table');
+    if (alertsTable) {
+        alertsTable.addEventListener('click', async (e) => {
+            const yesButton = e.target.closest('.alert-yes-btn');
+            const noButton = e.target.closest('.alert-no-btn');
+            const pendingButton = e.target.closest('.alert-pending-btn');
 
+            if (yesButton) {
+                const pendingOrderId = yesButton.dataset.pendingOrderId;
+                const order = state.pendingOrders.find(o => o.id == pendingOrderId);
+
+                if (!order) {
+                    // If the order isn't in the state, refresh the orders list first
+                    const { renderOrdersPage } = await import('./ui/renderers.js');
+                    await renderOrdersPage(); 
+                    const freshOrder = state.pendingOrders.find(o => o.id == pendingOrderId);
+                    if (!freshOrder) return showToast('Could not find original order details.', 'error');
+                }
+                
+                // Trigger the "Mark as Filled" button's logic by finding it and simulating a click
+                const fillButton = document.querySelector(`.fill-order-btn[data-id="${pendingOrderId}"]`);
+                if (fillButton) {
+                    fillButton.click();
+                } else {
+                     // Fallback if the button isn't currently rendered (e.g., user is not on Orders page)
+                     showToast("Please go to the 'Orders' tab and click 'Mark as Filled' for this item.", 'info');
+                }
+            } 
+            else if (noButton) {
+                const notificationId = noButton.dataset.notificationId;
+                try {
+                    const response = await fetch(`/api/notifications/${notificationId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'DISMISSED' })
+                    });
+                    if (!response.ok) throw new Error('Failed to dismiss alert.');
+                    showToast('Alert dismissed.', 'info');
+                    await renderAlertsPage(); // Refresh the alerts list
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            }
+            else if (pendingButton) {
+                const notificationId = pendingButton.dataset.notificationId;
+                try {
+                    const response = await fetch(`/api/notifications/${notificationId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'PENDING' })
+                    });
+                    if (!response.ok) throw new Error('Failed to update alert.');
+                    showToast('Alert marked for later review.', 'info');
+                    await renderAlertsPage(); // Refresh the alerts list
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            }
+        });
+    }
     // --- Global Filter Listener ---
     if (globalHolderFilter) {
         globalHolderFilter.addEventListener('change', (e) => {
@@ -184,6 +244,7 @@ if (transactionForm) {
     }
 
     // --- CSV Import ---
+    /*
     if(importCsvBtn) {
         importCsvBtn.addEventListener('click', () => {
             const file = csvFileInput.files[0];
@@ -225,7 +286,7 @@ if (transactionForm) {
             reader.readAsText(file);
         });
     }
-    
+    */
     // --- Table Sorting ---
     const ledgerTable = document.querySelector('#ledger-table');
     if(ledgerTable) {
@@ -297,7 +358,13 @@ if(dailyReportContainer) {
         const sellBtn = e.target.closest('.sell-from-lot-btn');
         if (sellBtn) {
             const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
+            
+            // FIX: Find the original lot data to get the correct account holder ID
+            const lotData = state.activityMap.get(`lot-${buyId}`);
+            if (!lotData) { return showToast('Error: Could not find original lot data.', 'error'); }
+            
             document.getElementById('sell-parent-buy-id').value = buyId;
+            document.getElementById('sell-account-holder-id').value = lotData.account_holder_id; // <-- ADD THIS LINE
             document.getElementById('sell-ticker-display').textContent = ticker;
             document.getElementById('sell-exchange-display').textContent = exchange;
             const quantityInput = document.getElementById('sell-quantity');
@@ -306,7 +373,7 @@ if(dailyReportContainer) {
             document.getElementById('sell-date').value = getCurrentESTDateString();
             sellFromPositionModal.classList.add('visible');
             return;
-        }
+}
         
         const setLimitBtn = e.target.closest('.set-limit-btn');
         const editBuyBtn = e.target.closest('.edit-buy-btn');
@@ -392,41 +459,40 @@ if(dailyReportContainer) {
         });
     }
 if(sellFromPositionForm) {
-        sellFromPositionForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const sellDetails = {
-                parent_buy_id: document.getElementById('sell-parent-buy-id').value,
-                quantity: parseFloat(document.getElementById('sell-quantity').value),
-                price: parseFloat(document.getElementById('sell-price').value),
-                transaction_date: document.getElementById('sell-date').value,
-                ticker: document.getElementById('sell-ticker-display').textContent,
-                exchange: document.getElementById('sell-exchange-display').textContent,
-                transaction_type: 'SELL',
-                account_holder_id: state.selectedAccountHolderId === 'all' ? null : state.selectedAccountHolderId
-            };
+    sellFromPositionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const sellDetails = {
+            // FIX: Read the account holder ID directly from the hidden form field
+            account_holder_id: document.getElementById('sell-account-holder-id').value,
+            parent_buy_id: document.getElementById('sell-parent-buy-id').value,
+            quantity: parseFloat(document.getElementById('sell-quantity').value),
+            price: parseFloat(document.getElementById('sell-price').value),
+            transaction_date: document.getElementById('sell-date').value,
+            ticker: document.getElementById('sell-ticker-display').textContent,
+            exchange: document.getElementById('sell-exchange-display').textContent,
+            transaction_type: 'SELL',
+        };
 
-            if(!sellDetails.account_holder_id) {
-                return showToast('Please select a specific account holder before logging a sale.', 'error');
+        // The old check for a null account_holder_id is no longer needed.
+        
+        const submitButton = sellFromPositionForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        try {
+            const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sellDetails) });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Server returned an error.');
             }
-
-            const submitButton = sellFromPositionForm.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            try {
-                const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sellDetails) });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Server returned an error.');
-                }
-                showToast('Sale logged successfully!', 'success');
-                sellFromPositionModal.classList.remove('visible');
-                await switchView(state.currentView.type, state.currentView.value);
-            } catch (error) {
-                showToast(`Failed to log sale: ${error.message}`, 'error');
-            } finally {
-                submitButton.disabled = false;
-            }
-        });
-    }
+            showToast('Sale logged successfully!', 'success');
+            sellFromPositionModal.classList.remove('visible');
+            await switchView(state.currentView.type, state.currentView.value);
+        } catch (error) {
+            showToast(`Failed to log sale: ${error.message}`, 'error');
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+}
 
     if(editForm) {
         // Listener for the form submission (Save Changes)
