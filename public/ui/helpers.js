@@ -70,3 +70,57 @@ export function showConfirmationModal(title, body, onConfirm) {
     cancelBtn.addEventListener('click', closeModal);
     confirmModal.classList.add('visible');
 }
+
+// --- MOVED FROM _dailyReport.js ---
+export function populatePricesFromCache(activityMap, priceCache) {
+    const totalValueSummarySpan = document.querySelector('#total-value-summary span');
+    let totalPortfolioValue = 0;
+    let totalUnrealizedPL = 0;
+
+    activityMap.forEach((lot, key) => {
+        const row = document.querySelector(`[data-key="${key}"]`);
+        if (!row) return;
+
+        const priceToUse = priceCache.get(lot.ticker);
+        const priceCell = row.querySelector('.current-price');
+        const plDollarCell = row.querySelector('.unrealized-pl-dollar');
+        const plPercentCell = row.querySelector('.unrealized-pl-percent');
+
+        if (priceToUse === 'invalid') {
+            if (priceCell) priceCell.innerHTML = `<span class="negative">Invalid</span>`;
+            if (plDollarCell) plDollarCell.innerHTML = '--';
+            if (plPercentCell) plPercentCell.innerHTML = '--';
+        } else if (priceToUse !== undefined && priceToUse !== null) {
+            const currentValue = lot.quantity_remaining * priceToUse;
+            const costOfRemaining = lot.quantity_remaining * lot.cost_basis;
+            const unrealizedPL = currentValue - costOfRemaining;
+            const unrealizedPercent = (costOfRemaining !== 0) ? (unrealizedPL / costOfRemaining) * 100 : 0;
+            
+            totalPortfolioValue += currentValue;
+            totalUnrealizedPL += unrealizedPL;
+            
+            if (priceCell) priceCell.innerHTML = formatAccounting(priceToUse);
+
+            if (plDollarCell) {
+                plDollarCell.innerHTML = formatAccounting(unrealizedPL);
+                plDollarCell.className = `numeric unrealized-pl-dollar ${unrealizedPL >= 0 ? 'positive' : 'negative'}`;
+            }
+            if (plPercentCell) {
+                plPercentCell.innerHTML = `${unrealizedPercent.toFixed(2)}%`;
+                plPercentCell.className = `numeric unrealized-pl-percent ${unrealizedPercent >= 0 ? 'positive' : 'negative'}`;
+            }
+        } else {
+            if (priceCell) priceCell.innerHTML = '--';
+            if (plDollarCell) plDollarCell.innerHTML = '--';
+            if (plPercentCell) plPercentCell.innerHTML = '--';
+        }
+    });
+
+    if (totalValueSummarySpan) { totalValueSummarySpan.innerHTML = `<strong>${formatAccounting(totalPortfolioValue)}</strong>`; }
+
+    const totalPlCell = document.getElementById('unrealized-pl-total');
+    if (totalPlCell) {
+        totalPlCell.innerHTML = `<strong>${formatAccounting(totalUnrealizedPL)}</strong>`;
+        totalPlCell.className = `numeric ${totalUnrealizedPL >= 0 ? 'positive' : 'negative'}`;
+    }
+}

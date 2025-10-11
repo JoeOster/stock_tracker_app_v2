@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { formatAccounting, getTradingDays } from './helpers.js';
+import { formatAccounting, getTradingDays, populatePricesFromCache } from './helpers.js';
 
 describe('formatAccounting', () => {
     it('should format positive currency values correctly', () => {
@@ -43,5 +43,42 @@ describe('getTradingDays', () => {
         const expected = ['2025-10-08', '2025-10-09', '2025-10-10'];
         
         expect(result).toEqual(expected);
+    });
+});
+
+// --- NEW TEST SUITE ---
+describe('populatePricesFromCache', () => {
+    beforeEach(() => {
+        // Setup the mock DOM
+        document.body.innerHTML = `
+            <table>
+                <tbody>
+                    <tr data-key="lot-1">
+                        <td class="current-price"></td>
+                        <td class="unrealized-pl-dollar"></td>
+                        <td class="unrealized-pl-percent"></td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr><td id="unrealized-pl-total"></td></tr>
+                </tfoot>
+            </table>
+            <div id="total-value-summary"><span></span></div>
+        `;
+    });
+
+    it('should correctly calculate and render unrealized P/L', () => {
+        const activityMap = new Map([['lot-1', { ticker: 'AAPL', quantity_remaining: 10, cost_basis: 100 }]]);
+        const priceCache = new Map([['AAPL', 115]]);
+
+        populatePricesFromCache(activityMap, priceCache);
+
+        // Expected P/L = (115 - 100) * 10 = 150
+        const plCell = document.querySelector('.unrealized-pl-dollar');
+        expect(plCell.textContent).toBe('($150.00)'); // Note: depends on your formatAccounting mock
+        expect(plCell.classList.contains('positive')).toBe(true);
+
+        const totalPlCell = document.getElementById('unrealized-pl-total');
+        expect(totalPlCell.textContent).toBe('($150.00)');
     });
 });

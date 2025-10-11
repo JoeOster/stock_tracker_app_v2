@@ -1,4 +1,4 @@
-// public/ui/renderers.js (Corrected)
+// public/ui/renderers.js
 
 // --- Central Export File for All Rendering Logic ---
 

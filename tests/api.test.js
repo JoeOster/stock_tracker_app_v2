@@ -59,12 +59,18 @@ describe('Transaction API Endpoints', () => {
 
 describe('Price Fetching API', () => {
     it('should return "invalid" for a ticker with no price data', async () => {
+        // Temporarily spy on console.warn and do nothing with it
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
         fetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ c: 0 }) });
         const res = await request(app)
-            .post('/api/utility/prices/batch') // <-- CORRECTED URL
+            .post('/api/utility/prices/batch')
             .send({ tickers: ['INVALIDTICKER'], date: '2025-10-08' });
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('INVALIDTICKER', 'invalid');
+
+        // Restore the original console.warn
+        consoleWarnSpy.mockRestore();
     });
 });
 

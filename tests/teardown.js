@@ -3,7 +3,8 @@ const path = require('path');
 
 // This script runs once after all tests are complete
 module.exports = async () => {
-  const dbPath = path.join(__dirname, '../test-tracker.db');
+  // FIX: Point to the correct test database file
+  const dbPath = path.join(__dirname, '../test.db');
 
   // Delete the test database
   try {
