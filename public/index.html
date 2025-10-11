@@ -11,7 +11,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Version 2.13 -->
     <header class="header">
         <div class="header-left">
              <label for="global-account-holder-filter">Viewing:</label>
@@ -40,8 +39,9 @@
         <div id="daily-performance-summary"></div>
         <table id="stock-table">
             <thead>
-                <tr><th colspan="11" class="table-section-header">Daily Transaction Log</th></tr>
+                <tr><th colspan="12" class="table-section-header">Daily Transaction Log</th></tr>
                 <tr>
+                    <th></th>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type">Action</th><th class="numeric" data-sort="quantity" data-type="numeric">Qty</th><th class="numeric" data-sort="price" data-type="numeric">Price</th><th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
                     <th class="numeric">Suggest Profit</th><th class="numeric">Suggest Loss</th><th class="numeric">My Limit Up</th><th class="numeric">My Limit Down</th>
                     <th></th>
@@ -302,7 +302,6 @@
                             </select>
                         </div>
                     </div>
-                    <!-- Data Management Panel -->
                     <div id="data-settings-panel" class="settings-panel">
                         <h2>Data Management</h2>
                         <div class="management-section">
@@ -449,4 +448,3 @@
 <script type="module" src="app-main.js" defer></script>
 </body>
 </html>
-
