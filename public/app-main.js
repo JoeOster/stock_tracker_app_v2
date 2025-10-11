@@ -1,13 +1,22 @@
 // public/app-main.js - v2.13 (Corrected Data Flow & UI Improvements)
+// public/app-main.js (Corrected)
 import { initializeEventListeners } from './event-listeners.js';
-import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage, populatePricesFromCache } from './ui/renderers.js'; // Add renderAlertsPage
+import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage, populatePricesFromCache } from './ui/renderers.js';
 import { updatePricesForView } from './api.js';
 import { getCurrentESTDateString, showToast } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
 
 export const state = {
-    settings: { takeProfitPercent: 8, stopLossPercent: 8, theme: 'light', font: 'Inter', defaultAccountHolderId: null, notificationCooldown: 16 },
-    settings: { takeProfitPercent: 8, stopLossPercent: 8, marketHoursInterval: 2, afterHoursInterval: 15, theme: 'light', font: 'Inter', defaultAccountHolderId: null },
+    settings: { 
+        takeProfitPercent: 8, 
+        stopLossPercent: 8, 
+        marketHoursInterval: 2, 
+        afterHoursInterval: 15, 
+        theme: 'light', 
+        font: 'Inter', 
+        defaultAccountHolderId: null,
+        notificationCooldown: 16
+    },
     currentView: { type: null, value: null },
     activityMap: new Map(),
     priceCache: new Map(),
@@ -19,6 +28,7 @@ export const state = {
     ledgerSort: { column: 'transaction_date', direction: 'desc' },
     allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
 };
+
 
 export async function switchView(viewType, viewValue) {
     state.currentView = { type: viewType, value: viewValue };
