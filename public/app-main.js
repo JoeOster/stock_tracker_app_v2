@@ -355,37 +355,34 @@ async function initialize() {
     initializeNotificationService(); 
 }
 
+// in public/app-main.js
 function initializeNotificationService() {
     let lastToastTimestamp = 0;
 
     setInterval(async () => {
         try {
-            const response = await fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`);
-            if (!response.ok) return;
+            const response = await fetch(`/api/orders/notifications?holder=${state.selectedAccountHolderId}`);
+            if (response.ok) {
+                const notifications = await response.json();
+                const now = Date.now();
+                const cooldown = (state.settings.notificationCooldown || 15) * 60 * 1000;
 
-            const unreadNotifications = await response.json();
-            const alertsTab = document.querySelector('.tab[data-view-type="alerts"]');
-
-            if (alertsTab) {
-                if (unreadNotifications.length > 0) {
-                    if (!alertsTab.textContent.includes('⚠️')) {
-                        alertsTab.textContent = 'Alerts ⚠️';
+                if (notifications.length > 0 && (now - lastToastTimestamp > cooldown)) {
+                    const alertTab = document.querySelector('.master-tab[data-view-type="alerts"]');
+                    if (alertTab) {
+                        alertTab.textContent = 'Alerts ❗';
                     }
-                } else {
-                    alertsTab.textContent = 'Alerts';
+                    lastToastTimestamp = now;
+                } else if (notifications.length === 0) {
+                    const alertTab = document.querySelector('.master-tab[data-view-type="alerts"]');
+                    if (alertTab) {
+                        alertTab.textContent = 'Alerts';
+                    }
                 }
-            }
-
-            const cooldownMinutes = state.settings.notificationCooldown;
-            const cooldownMilliseconds = cooldownMinutes * 60 * 1000;
-            
-            if (unreadNotifications.length > 0 && (Date.now() - lastToastTimestamp > cooldownMilliseconds)) {
-                showToast(`You have ${unreadNotifications.length} new alert(s). Check the Alerts tab.`, 'info');
-                lastToastTimestamp = Date.now();
             }
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
         }
-    }, 30000); 
+    }, 15000); // Poll every 15 seconds
 }
 initialize();

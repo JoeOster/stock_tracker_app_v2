@@ -1,4 +1,4 @@
-// public/ui/renderers/_alerts.js
+// in public/ui/renderers/_alerts.js
 import { state } from '../../app-main.js';
 import { showToast } from '../helpers.js';
 
@@ -10,7 +10,8 @@ export async function renderAlertsPage() {
     state.activeAlerts = []; // Clear old data
 
     try {
-        const response = await fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`);
+        // CORRECTED URL:
+        const response = await fetch(`/api/orders/notifications?holder=${state.selectedAccountHolderId}`);
         if (!response.ok) throw new Error('Failed to fetch alerts.');
         
         const alerts = await response.json();
