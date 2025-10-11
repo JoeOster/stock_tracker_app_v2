@@ -1,6 +1,6 @@
 // public/event-handlers/_navigation.js
-import { state, switchView } from '../../app-main.js';
-import { updateAllPrices } from '../../api.js';
+import { state, switchView } from '../app-main.js';
+import { updateAllPrices } from '../api.js';
 
 export function initializeNavigationHandlers() {
     const tabsContainer = document.getElementById('tabs-container');
