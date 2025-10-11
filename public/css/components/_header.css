@@ -58,3 +58,63 @@
 .header .account-holder-select {
     width: auto;
 }
+/* public/css/components/_header.css */
+/* Contains styles for the main application header */
+
+.header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.header-left, .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-right { 
+    justify-content: flex-end; 
+}
+
+.header-center { 
+    text-align: center; 
+}
+
+.header h1 { 
+    margin: 0; 
+    font-size: 1.5rem; 
+}
+
+#settings-btn {
+    background: 0 0;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    color: var(--heading-color);
+}
+
+#api-timer-container {
+    background-color: var(--info-panel-bg);
+    color: var(--text-muted-color);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: .9em;
+    font-family: monospace;
+}
+
+.header select, .header label {
+    font-size: 0.9em;
+}
+
+/* --- NEW: Autosize the account selector --- */
+.header .account-holder-select {
+    width: auto;
+}
