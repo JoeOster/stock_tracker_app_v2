@@ -1,4 +1,199 @@
 // public/event-handlers/_settings.js
+import { saveSettings, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList, refreshLedger } from '../../app-main.js';
+import { showToast, showConfirmationModal } from '../helpers.js';
+
 export function initializeSettingsHandlers() {
-    // Event listeners specific to the Settings modal will go here.
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const saveSettingsBtn = document.getElementById('save-settings-button');
+    const themeSelector = document.getElementById('theme-selector');
+    const fontSelector = document.getElementById('font-selector');
+    const exchangeList = document.getElementById('exchange-list');
+    const addExchangeBtn = document.getElementById('add-exchange-btn');
+    const newExchangeNameInput = /** @type {HTMLInputElement} */ (document.getElementById('new-exchange-name'));
+    const accountHolderList = document.getElementById('account-holder-list');
+    const addAccountHolderBtn = document.getElementById('add-account-holder-btn');
+    const newAccountHolderNameInput = /** @type {HTMLInputElement} */ (document.getElementById('new-account-holder-name'));
+    const settingsTabsContainer = document.querySelector('.settings-tabs');
+
+    // --- Settings Modal Opening/Saving ---
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            renderExchangeManagementList();
+            renderAccountHolderManagementList();
+            settingsModal.classList.add('visible');
+        });
+    }
+
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', () => {
+            saveSettings();
+            settingsModal.classList.remove('visible');
+        });
+    }
+
+    if (themeSelector) {
+        themeSelector.addEventListener('change', saveSettings);
+    }
+
+    if (fontSelector) {
+        fontSelector.addEventListener('change', saveSettings);
+    }
+
+    // --- Settings Modal Tab Navigation ---
+    if (settingsTabsContainer) {
+        settingsTabsContainer.addEventListener('click', (e) => {
+            const target = /** @type {HTMLElement} */ (e.target);
+            if (target.classList.contains('settings-tab')) {
+                const tabName = target.dataset.tab;
+
+                document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
+                target.classList.add('active');
+
+                document.querySelectorAll('.settings-panel').forEach(panel => panel.classList.remove('active'));
+                document.getElementById(`${tabName}-settings-panel`).classList.add('active');
+            }
+        });
+    }
+
+    // --- Exchange Management ---
+    if (addExchangeBtn) {
+        addExchangeBtn.addEventListener('click', async () => {
+            const name = newExchangeNameInput.value.trim();
+            if (!name) return showToast('Exchange name cannot be empty.', 'error');
+            try {
+                const res = await fetch('/api/accounts/exchanges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                await fetchAndRenderExchanges(); 
+                newExchangeNameInput.value = '';
+                renderExchangeManagementList();
+                showToast('Exchange added!', 'success');
+            } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+        });
+    }
+
+    if (exchangeList) {
+        exchangeList.addEventListener('click', async (e) => {
+            const li = /** @type {HTMLElement} */ (e.target).closest('li');
+            if (!li) return;
+            
+            const nameSpan = /** @type {HTMLElement} */ (li.querySelector('.exchange-name'));
+            const nameInput = /** @type {HTMLInputElement} */ (li.querySelector('.edit-exchange-input'));
+            const editBtn = /** @type {HTMLElement} */ (li.querySelector('.edit-exchange-btn'));
+            const saveBtn = /** @type {HTMLElement} */ (li.querySelector('.save-exchange-btn'));
+            const cancelBtn = /** @type {HTMLElement} */ (li.querySelector('.cancel-exchange-btn'));
+            const deleteBtn = /** @type {HTMLElement} */ (li.querySelector('.delete-exchange-btn'));
+
+            if (e.target === editBtn) {
+                nameSpan.style.display = 'none';
+                editBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
+                nameInput.style.display = 'inline-block';
+                saveBtn.style.display = 'inline-block';
+                cancelBtn.style.display = 'inline-block';
+                nameInput.focus();
+            } 
+            else if (e.target === cancelBtn) {
+                nameInput.style.display = 'none';
+                saveBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+                nameSpan.style.display = 'inline-block';
+                editBtn.style.display = 'inline-block';
+                deleteBtn.style.display = 'inline-block';
+                nameInput.value = nameSpan.textContent;
+            }
+            else if (e.target === saveBtn) {
+                const id = li.dataset.id;
+                const newName = nameInput.value.trim();
+                if (!newName) return showToast('Exchange name cannot be empty.', 'error');
+                try {
+                    const res = await fetch(`/api/accounts/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+                    if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                    await fetchAndRenderExchanges();
+                    await refreshLedger();
+                    renderExchangeManagementList();
+                    showToast('Exchange updated!', 'success');
+                } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+            } 
+            else if (e.target === deleteBtn) {
+                const id = li.dataset.id;
+                showConfirmationModal('Delete Exchange?', 'This cannot be undone.', async () => {
+                    try {
+                        const res = await fetch(`/api/accounts/exchanges/${id}`, { method: 'DELETE' });
+                        if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                        await fetchAndRenderExchanges();
+                        renderExchangeManagementList();
+                        showToast('Exchange deleted.', 'success');
+                    } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+                });
+            }
+        });
+    }
+
+    // --- Account Holder Management ---
+    if (addAccountHolderBtn) {
+        addAccountHolderBtn.addEventListener('click', async () => {
+            const name = newAccountHolderNameInput.value.trim();
+            if (!name) return showToast('Account holder name cannot be empty.', 'error');
+            try {
+                const res = await fetch('/api/accounts/holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                await fetchAndPopulateAccountHolders();
+                newAccountHolderNameInput.value = '';
+                renderAccountHolderManagementList();
+                showToast('Account holder added!', 'success');
+            } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+        });
+    }
+
+    if (accountHolderList) {
+        accountHolderList.addEventListener('click', async (e) => {
+            const li = /** @type {HTMLElement} */ (e.target).closest('li');
+            if (!li) return;
+            
+            const nameSpan = /** @type {HTMLElement} */ (li.querySelector('.holder-name'));
+            const nameInput = /** @type {HTMLInputElement} */ (li.querySelector('.edit-holder-input'));
+            const editBtn = /** @type {HTMLElement} */ (li.querySelector('.edit-holder-btn'));
+            const saveBtn = /** @type {HTMLElement} */ (li.querySelector('.save-holder-btn'));
+            const cancelBtn = /** @type {HTMLElement} */ (li.querySelector('.cancel-holder-btn'));
+
+            if ((/** @type {Element} */(e.target)).matches('.edit-holder-btn')) {
+                nameSpan.style.display = 'none';
+                editBtn.style.display = 'none';
+                nameInput.style.display = 'inline-block';
+                saveBtn.style.display = 'inline-block';
+                cancelBtn.style.display = 'inline-block';
+                nameInput.focus();
+            } else if ((/** @type {Element} */(e.target)).matches('.cancel-holder-btn')) {
+                nameInput.style.display = 'none';
+                saveBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+                nameSpan.style.display = 'inline-block';
+                editBtn.style.display = 'inline-block';
+                nameInput.value = nameSpan.textContent;
+            } else if ((/** @type {Element} */(e.target)).matches('.save-holder-btn')) {
+                const id = li.dataset.id;
+                const newName = nameInput.value.trim();
+                if (!newName) return showToast('Name cannot be empty.', 'error');
+                try {
+                    const res = await fetch(`/api/accounts/holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+                    if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                    await fetchAndPopulateAccountHolders();
+                    renderAccountHolderManagementList();
+                    showToast('Account holder updated!', 'success');
+                } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+            } else if ((/** @type {Element} */(e.target)).matches('.delete-holder-btn')) {
+                const id = li.dataset.id;
+                showConfirmationModal('Delete Account Holder?', 'This cannot be undone.', async () => {
+                    try {
+                        const res = await fetch(`/api/accounts/holders/${id}`, { method: 'DELETE' });
+                        if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+                        await fetchAndPopulateAccountHolders();
+                        renderAccountHolderManagementList();
+                        showToast('Account holder deleted.', 'success');
+                    } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
+                });
+            }
+        });
+    }
 }
