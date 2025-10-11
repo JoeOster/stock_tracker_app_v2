@@ -1,5 +1,5 @@
 const request = require('supertest');
-const setupApp = require('../server');
+const { setupApp, runOrderWatcher } = require('../server');
 const fetch = require('node-fetch');
 
 // Mock the node-fetch library. This replaces the default export with a Jest mock function.
