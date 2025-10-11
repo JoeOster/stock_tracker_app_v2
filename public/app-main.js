@@ -29,6 +29,7 @@ export const state = {
     allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
 };
 
+// --- NEW: Helper function to load HTML templates ---
 async function loadHTML(url, targetId) {
     try {
         const response = await fetch(url);
@@ -36,6 +37,7 @@ async function loadHTML(url, targetId) {
         const text = await response.text();
         const target = document.getElementById(targetId);
         if (target) {
+            // Use a temporary div to parse the HTML and append its children
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = text;
             while (tempDiv.firstChild) {
@@ -358,4 +360,32 @@ function initializeNotificationService() {
 
     setInterval(async () => {
         try {
-            const response = await fetch(`/api/notifications
+            const response = await fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`);
+            if (!response.ok) return;
+
+            const unreadNotifications = await response.json();
+            const alertsTab = document.querySelector('.tab[data-view-type="alerts"]');
+
+            if (alertsTab) {
+                if (unreadNotifications.length > 0) {
+                    if (!alertsTab.textContent.includes('⚠️')) {
+                        alertsTab.textContent = 'Alerts ⚠️';
+                    }
+                } else {
+                    alertsTab.textContent = 'Alerts';
+                }
+            }
+
+            const cooldownMinutes = state.settings.notificationCooldown;
+            const cooldownMilliseconds = cooldownMinutes * 60 * 1000;
+            
+            if (unreadNotifications.length > 0 && (Date.now() - lastToastTimestamp > cooldownMilliseconds)) {
+                showToast(`You have ${unreadNotifications.length} new alert(s). Check the Alerts tab.`, 'info');
+                lastToastTimestamp = Date.now();
+            }
+        } catch (error) {
+            console.error('Failed to fetch notifications:', error);
+        }
+    }, 30000); 
+}
+initialize();
