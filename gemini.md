@@ -1,52 +1,63 @@
-# Gemini Context File for Portfolio Tracker V2
+# **Gemini Context File for Portfolio Tracker V2**
 
-This document provides a comprehensive summary of the "Portfolio Tracker V2" project to assist AI prompts. It outlines the project's architecture, key files, recent changes, and development workflow.
+**Last Updated:** 2025-10-11
 
-## Project Summary
+This document provides a comprehensive summary of the "Portfolio Tracker V2" project and its strategic roadmap to assist AI prompts.
 
-Portfolio Tracker V2 is a self-hosted web application for active retail traders to track investment performance and strategy across multiple brokerage accounts. It is built with a Node.js/Express backend, a vanilla JavaScript frontend, and uses SQLite for data storage. The current version is **2.20**, which includes significant refactoring and UI improvements.
+## **1\. Project Summary**
 
-## Core Architecture
+Portfolio Tracker V2 is a self-hosted web application for active retail traders to track investment performance and strategy across multiple brokerage accounts. It is built with a Node.js/Express backend, a vanilla JavaScript frontend, and uses SQLite for data storage. The project has a modular architecture and an automated testing and deployment process.
 
-The project follows a modular structure, separating backend, frontend, and database logic.
+**GitHub Repository:** https://github.com/JoeOster/stock\_tracker\_app\_v2
 
-* **Backend (`/routes`, `/services`, `server.js`):** An Express.js server handles API requests. The logic is split into route files (e.g., `transactions.js`, `reporting.js`) and services (e.g., `cronJobs.js` for scheduled tasks).
-* **Database (`database.js`, `/migrations`):** Uses SQLite3 with a built-in migration system that automatically applies `.sql` files from the `/migrations` directory on startup to keep the schema up-to-date.
-* **Frontend (`/public`):**
-  * **`index.html`**: A minimal skeleton file that serves as the entry point. It contains placeholders (`<main id="main-content">`, `<div id="modal-container">`) where content is dynamically injected.
-  * **`app-main.js`**: The main frontend script. It manages application state, loads HTML templates, and initializes all other modules.
-  * **`/templates`**: Contains HTML partials for each page view (e.g., `_dailyReport.html`) and all modals (`_modals.html`). These are loaded into `index.html` by `app-main.js` on startup.
-  * **`/ui/renderers`**: A set of modules responsible for rendering data into the DOM (e.g., `_dailyReport.js` populates tables).
-  * **`/event-handlers`**: A set of modules for handling user interactions, with each file corresponding to a specific UI component (e.g., `_navigation.js`, `_modals.js`). All are initialized via `_init.js`.
+## **2\. Core Architecture**
 
-## Development & Deployment
+* **Backend (/routes, /services, server.js):** An Express.js server handles API requests. The logic is split into route files and services (e.g., cronJobs.js for scheduled tasks).  
+* **Database (database.js, /migrations):** Uses SQLite3 with a built-in migration system that automatically applies .sql files on startup.  
+* **Frontend (/public):**  
+  * **app-main.js**: The main script managing state, loading templates, and initializing modules.  
+  * **/templates**: Contains HTML partials for each page view.  
+  * **/ui/renderers**: Modules responsible for rendering data into the DOM.  
+  * **/event-handlers**: Modules for handling user interactions.
 
-* **Scripts (`package.json`):**
-  * `npm run dev`: Starts the server in development mode using `nodemon`.
-  * `npm run test`: Runs the Jest test suite for both backend and frontend components.
-  * `npm run seed-dev`: Resets the development database with sample data using `seed-dev-db.js`.
-* **Deployment (`deploy.bat`):** An automated script for Windows that stops the service, runs tests, backs up the database, copies files, and restarts the service.
+## **3\. Strategic Roadmap: Upcoming Features**
 
-## Recent Changes (v2.19 - v2.20)
+The following major features are planned for development.
 
-* **Major Frontend Refactoring:**
-  * The monolithic `index.html` was broken into smaller HTML template files stored in `public/templates/`. These are now loaded dynamically by `app-main.js`.
-  * The oversized `event-listeners.js` was refactored into a modular `public/event-handlers/` directory, with one file per UI component.
-* **UI/UX Improvements:**
-  * The "Unrealized P/L" columns in the "Open Lots" table were merged into a single column.
-  * Table headers were made sticky for better usability on long tables.
-  * The "Viewing:" account selector now autosizes to its content.
-  * A "Family Name" setting was added to customize the application title.
-  * A "Delete" button was added to the "Edit Transaction" modal.
-* **Code Quality:**
-  * `jsconfig.json` was added and configured to enable advanced type-checking in VS Code.
-  * JSDoc comments (`/** @type {...} */`) were added throughout the frontend code to resolve type warnings and improve code intelligence.
-    * Unit tests were updated and expanded to cover the refactored frontend modules.
+### **3.1. Intelligent CSV Importer**
 
-## Backlog
+This feature will replace the basic importer with a sophisticated, multi-step reconciliation workflow, treating the CSV as the definitive source of truth.
 
-The following items are on the backlog for future development, as per the `README.md` file:
+* **Database Prerequisite:** A source column will be added to the transactions table to distinguish 'MANUAL' from 'CSV\_IMPORT' entries.  
+* **Brokerage Templates:** The user will select a template (e.g., "Fidelity," "E-Trade") to pre-configure parsing and mapping logic, with an option to save new custom templates.  
+* **Unified Reconciliation UI:** A single review screen will handle all key actions:  
+  * **Filtering:** Automatically identify and ignore non-trade activities (e.g., deposits).  
+  * **Conflict Resolution:** Detect and flag conflicts between CSV data and existing manual entries, including "Direct Matches" (potential typos) and "Cross-Exchange Matches" (trades logged in the wrong account). The user will be prompted to Replace, Keep, Move & Replace, or Import as New.  
+  * **Orphaned Data:** Flag manual entries that exist in the database but not in the CSV for a given date range, prompting the user to keep or delete them.  
+  * **SELL Lot Assignment:** Require the user to manually assign all imported SELL transactions to specific BUY lots, with a FIFO suggestion as a default.
 
-* Enhance the market status indicator for 24/7 or international exchanges.
-* Build an intelligent CSV importer.
-* Build a dedicated "Advice Journal" feature.
+### **3.2. Strategy & Advice Journal**
+
+This feature will allow users to log, track, and analyze trading ideas from various sources.
+
+* **Database Schema:** New tables will be added:  
+  * strategies: To store metadata about sources (name, contact, platform).  
+  * journal\_entries: To log specific trade ideas ("paper trades") with entry/exit targets and a user-defined confidence score.  
+  * strategy\_documents: To link uploaded files (PDF, Markdown) to strategies and/or specific journal entries.  
+  * journal\_entry\_prices: To store time-series price data for open journal entries.  
+* **Direct Trade Linking:** The transactions table will be modified to allow a user's actual trade to be linked directly to a journal\_entry\_id, enabling direct performance comparison.  
+* **Intraday Price Tracking:**  
+  * **Data Collection:** The existing 5-minute cron job will be enhanced to fetch and store prices for all OPEN journal entries.  
+  * **Automated Alerts:** Instead of auto-closing trades, the system will create a notification in the "Alerts" tab when a profit\_target or stop\_loss is met, keeping the user in control.  
+  * **Data Gap Detection:** The system will detect interruptions in data collection (e.g., due to server reboots) and flag these gaps.  
+* **Journal Dashboard UI:** A new "Journal" page will feature:  
+  * A dashboard to analyze the performance of a strategy's "paper trades" and the user's personal ROI on trades taken from that strategy.  
+  * A modal chart to visualize the 5-minute intraday price history for a journal entry, with any data gaps clearly indicated.  
+  * A document management interface to view attached research.
+
+### **3.3. Ancillary Features & Improvements**
+
+* **Import Reminder System:** A client-side, exchange-specific reminder system using localStorage to notify the user if they haven't imported a file for a specific exchange within a set period.  
+* **Technical Improvements:**  
+  * The deploy.bat script will be updated to back up the new uploads/ directory.  
+  * A database index will be added to the journal\_entry\_prices table for performance.

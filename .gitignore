@@ -15,6 +15,7 @@
 # Logs are specific to a user's machine and runtime.
 *.log
 npm-debug.log*
+*.bat
 
 # Backups
 # The deploy script creates a backup folder in the production directory.

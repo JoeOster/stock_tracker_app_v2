@@ -1,6 +1,6 @@
-// public/scheduler.js
+// in public/scheduler.js
 import { updatePricesForView } from './api.js';
-import { populatePricesFromCache } from './ui/helpers.js';
+import { populatePricesFromCache, getUSMarketStatus } from './ui/helpers.js'; // Import the new function
 
 let nextApiCallTimestamp = 0;
 
@@ -15,14 +15,8 @@ export function initializeScheduler(state) {
             return;
         }
 
-        const now = new Date();
-        const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-        const estHours = estTime.getHours();
-        const estMinutes = estTime.getMinutes();
-        const dayOfWeek = estTime.getDay();
-        
-        const isTradingDay = dayOfWeek > 0 && dayOfWeek < 6;
-        const isMarketHours = isTradingDay && (estHours > 9 || (estHours === 9 && estMinutes >= 30)) && estHours < 16;
+        const marketStatus = getUSMarketStatus();
+        const isMarketHours = (marketStatus === 'Regular Hours');
 
         let triggerUpdate = false;
         let currentIntervalMinutes = isMarketHours ? 2 : 15; // Defaulting to 2 and 15
@@ -41,13 +35,13 @@ export function initializeScheduler(state) {
                 refreshPricesBtn.textContent = 'Auto-Refreshing';
             }
             let secondsRemaining = Math.max(0, Math.round((nextApiCallTimestamp - Date.now()) / 1000));
-            apiTimerEl.textContent = `Next: ${new Date(secondsRemaining * 1000).toISOString().substr(14, 5)}`;
+            apiTimerEl.innerHTML = `Next: <span class="positive">${new Date(secondsRemaining * 1000).toISOString().substr(14, 5)}</span>`;
         } else {
              if (refreshPricesBtn && refreshPricesBtn.disabled) {
                 refreshPricesBtn.disabled = false;
                 refreshPricesBtn.textContent = 'Refresh Prices';
             }
-            apiTimerEl.textContent = "Market Closed";
+            apiTimerEl.textContent = marketStatus;
         }
 
         if (triggerUpdate) {

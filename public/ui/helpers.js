@@ -121,3 +121,27 @@ export function populatePricesFromCache(activityMap, priceCache) {
         totalPlCell.className = `numeric ${totalUnrealizedPL >= 0 ? 'positive' : 'negative'}`;
     }
 }
+
+/**
+ * Gets the current status of the US stock market.
+ * @returns {string} 'Pre-Market', 'Regular Hours', 'After-Hours', or 'Closed'
+ */
+export function getUSMarketStatus() {
+    const now = new Date();
+    const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const dayOfWeek = estTime.getDay();
+    const hour = estTime.getHours();
+    const minute = estTime.getMinutes();
+
+    const isWeekday = dayOfWeek > 0 && dayOfWeek < 6;
+    if (!isWeekday) {
+        return 'Closed';
+    }
+
+    if (hour < 4) return 'Closed';
+    if (hour < 9 || (hour === 9 && minute < 30)) return 'Pre-Market';
+    if (hour < 16) return 'Regular Hours';
+    if (hour < 20) return 'After-Hours';
+
+    return 'Closed';
+}
