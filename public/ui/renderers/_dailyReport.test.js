@@ -28,16 +28,16 @@ jest.mock('../helpers.js', () => ({
 
 describe('renderDailyReport', () => {
     beforeEach(() => {
-        // Reset fetch mocks and DOM before each test
-        fetch.mockClear();
+        // FIX: Cast fetch to a Jest Mock to make type-checker aware of mock functions
+        /** @type {jest.Mock} */(global.fetch).mockClear();
+
+        // Set up the basic DOM structure required by the function
         document.body.innerHTML = `
             <div id="table-title"></div>
             <div id="daily-performance-summary"></div>
             <div id="header-daily-summary"></div>
             <table id="stock-table">
                 <tbody id="log-body"></tbody>
-            </table>
-            <table id="positions-summary-table">
                 <tbody id="positions-summary-body"></tbody>
             </table>
         `;
@@ -47,8 +47,7 @@ describe('renderDailyReport', () => {
         const mockDate = '2025-10-10';
         const mockActivityMap = new Map();
 
-        // FIX: Use mockImplementation for more robust fetch mocking
-        fetch.mockImplementation((url) => {
+        /** @type {jest.Mock} */(global.fetch).mockImplementation((url) => {
             if (url.includes('/api/reporting/daily_performance/')) {
                 return Promise.resolve({
                     ok: true,
@@ -74,12 +73,13 @@ describe('renderDailyReport', () => {
 
         await renderDailyReport(mockDate, mockActivityMap);
         
-        const logBody = document.getElementById('log-body');
+        // FIX: Cast the element to the specific type that has a 'rows' property
+        const logBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('log-body'));
         expect(logBody.rows.length).toBe(2);
         expect(logBody.textContent).toContain('AAPL');
         expect(logBody.textContent).toContain('GOOG');
 
-        const summaryBody = document.getElementById('positions-summary-body');
+        const summaryBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('positions-summary-body'));
         expect(summaryBody.rows.length).toBe(1);
         expect(summaryBody.querySelector('tr').dataset.key).toBe('lot-1');
 
@@ -90,9 +90,10 @@ describe('renderDailyReport', () => {
     it('should display an error message if the API call fails', async () => {
         const mockDate = '2025-10-10';
         const mockActivityMap = new Map();
+        
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-        // FIX: Use mockImplementation to simulate a specific endpoint failing
-        fetch.mockImplementation((url) => {
+        /** @type {jest.Mock} */(global.fetch).mockImplementation((url) => {
             if (url.includes('/api/reporting/daily_performance/')) {
                 return Promise.resolve({
                     ok: true,
@@ -115,5 +116,7 @@ describe('renderDailyReport', () => {
 
         expect(logBody.textContent).toContain('Error loading transaction data.');
         expect(summaryBody.textContent).toContain('Error loading position data.');
+
+        consoleErrorSpy.mockRestore();
     });
 });

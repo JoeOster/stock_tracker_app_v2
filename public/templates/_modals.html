@@ -1,0 +1,188 @@
+<div id="settings-modal" class="modal">
+    <div class="modal-content modal-large">
+        <span class="close-button">&times;</span>
+        <div class="settings-layout">
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="general">General</button>
+                <button class="settings-tab" data-tab="appearance">Appearance</button>
+                <button class="settings-tab" data-tab="data">Data Management</button>
+            </div>
+            <div class="settings-content">
+                <div id="general-settings-panel" class="settings-panel active">
+                    <h2>General Settings</h2>
+                    <div class="form-group">
+                        <label for="take-profit-percent">Suggested Take Profit %</label>
+                        <input type="number" id="take-profit-percent" step="any">
+                    </div>
+                    <div class="form-group">
+                        <label for="stop-loss-percent">Suggested Stop Loss %</label>
+                        <input type="number" id="stop-loss-percent" step="any">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notification-cooldown">Notification Cooldown (minutes)</label>
+                        <input type="number" id="notification-cooldown" step="1" min="0">
+                    </div>
+                </div>
+                <div id="appearance-settings-panel" class="settings-panel">
+                    <h2>Appearance</h2>
+                     <div class="form-group">
+                        <label for="theme-selector">Theme</label>
+                        <select id="theme-selector">
+                            <option value="light">Light</option><option value="dark">Dark</option><option value="sepia">Sepia</option><option value="contrast">High Contrast</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-selector">Font</label>
+                        <select id="font-selector">
+                            <option value="Inter">Inter</option><option value="Roboto">Roboto</option><option value="Lato">Lato</option><option value="Open Sans">Open Sans</option><option value="System">System Default</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="family-name">Family Name (App Title)</label>
+                        <input type="text" id="family-name" placeholder="e.g., Smith Family">
+                    </div>
+                </div>
+                <div id="data-settings-panel" class="settings-panel">
+                    <h2>Data Management</h2>
+                    <div class="management-section">
+                        <h3>Manage Exchanges</h3>
+                        <ul id="exchange-list" class="management-list"></ul>
+                        <div class="add-item-form">
+                            <input type="text" id="new-exchange-name" placeholder="New Exchange Name">
+                            <button id="add-exchange-btn">Add</button>
+                        </div>
+                    </div>
+                    <hr style="margin: 2rem 0;">
+                    <div class="management-section">
+                        <h3>Manage Account Holders</h3>
+                        <p class="subtitle" style="text-align: left; margin: 0 0 10px 0;">Select a default account to load on startup.</p>
+                        <ul id="account-holder-list" class="management-list"></ul>
+                         <div class="add-item-form">
+                            <input type="text" id="new-account-holder-name" placeholder="New Account Holder">
+                            <button id="add-account-holder-btn">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-footer">
+            <button id="save-settings-button">Save & Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="edit-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2 id="edit-modal-title">Edit Transaction</h2>
+        <form id="edit-transaction-form">
+            <input type="hidden" id="edit-id">
+            <fieldset id="edit-core-fields">
+                <div class="form-group"><label for="edit-account-holder">Account Holder</label><select id="edit-account-holder" class="account-holder-select"></select></div>
+                <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div>
+                <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div>
+                <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div>
+                <div class="form-group"><label for="edit-type">Type</label><select id="edit-type" disabled><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
+                <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div>
+                <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div>
+            </fieldset>
+            <fieldset id="edit-limit-fields">
+                <legend>Limit Orders</legend>
+                <div class="form-group"><label for="edit-limit-price-up">Take Profit Limit ($)</label><input type="number" id="edit-limit-price-up" step="any"></div>
+                <div class="form-group form-group-with-button"><label for="edit-limit-up-expiration">Take Profit Expiration</label><input type="date" id="edit-limit-up-expiration"><button type="button" class="clear-limit-btn" data-target="up" title="Clear Take Profit Limit">&times;</button></div>
+                <div class="form-group"><label for="edit-limit-price-down">Stop Loss Limit ($)</label><input type="number" id="edit-limit-price-down" step="any"></div>
+                <div class="form-group form-group-with-button"><label for="edit-limit-down-expiration">Stop Loss Expiration</label><input type="date" id="edit-limit-down-expiration"><button type="button" class="clear-limit-btn" data-target="down" title="Clear Stop Loss Limit">&times;</button></div>
+            </fieldset> 
+            <button type="submit">Save Changes</button>
+            <button type="button" id="edit-modal-cancel-btn">Cancel</button>
+            <button type="button" id="edit-modal-delete-btn" class="delete-btn" style="float: right;">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div id="chart-zoom-modal" class="modal">
+    <div class="modal-content modal-large"> <span class="close-button">&times;</span> <canvas id="zoomed-chart"></canvas> </div>
+</div>
+
+<div id="confirm-modal" class="modal">
+    <div class="modal-content">
+        <h2 id="confirm-modal-title">Confirm Action</h2>
+        <p id="confirm-modal-body">Are you sure?</p>
+        <div class="confirmation-actions" style="margin-top: 20px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="confirm-modal-cancel-btn">Cancel</button>
+            <button id="confirm-modal-confirm-btn" class="delete-btn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div id="sell-from-position-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Sell from Position</h2>
+        <form id="sell-from-position-form">
+            <input type="hidden" id="sell-parent-buy-id">
+            <div class="form-group"><label>Ticker</label><p id="sell-ticker-display" class="form-static-text"></p></div>
+            <div class="form-group"><label>Exchange</label><p id="sell-exchange-display" class="form-static-text"></p></div>
+            <div class="form-group"><label for="sell-quantity">Quantity to Sell</label><input type="number" id="sell-quantity" step="any" required min="0.00001"></div>
+            <div class="form-group"><label for="sell-price">Price Per Share</label><input type="number" id="sell-price" step="any" required min="0.01"></div>
+            <div class="form-group"><label for="sell-date">Transaction Date</label><input type="date" id="sell-date" required></div>
+            <input type="hidden" id="sell-account-holder-id">
+           <button type="submit">Confirm Sale</button>
+        </form>
+    </div>
+</div>
+
+<div id="advice-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2 id="advice-modal-title">Ticker Advice</h2>
+        <div id="advice-modal-content">
+            <p><strong>Cost Basis:</strong> <span id="advice-cost-basis">--</span></p>
+            <p><strong>Current Price:</strong> <span id="advice-current-price">--</span></p>
+            <hr>
+            <h4>Calculated Advice (from Settings)</h4>
+            <p><strong>Suggested Take Profit:</strong> <span id="advice-suggested-profit" class="positive">--</span> (<span id="advice-profit-percent">--</span>%)</p>
+            <p><strong>Suggested Stop Loss:</strong> <span id="advice-suggested-loss" class="negative">--</span> (<span id="advice-loss-percent">--</span>%)</p>
+            <hr>
+            <h4>Currently Set Limits</h4>
+            <p><strong>My Take Profit Limit:</strong> <span id="advice-current-limit-up">Not set</span></p>
+            <p><strong>My Stop Loss Limit:</strong> <span id="advice-current-limit-down">Not set</span></p>
+        </div>
+    </div>
+</div>
+
+<div id="confirm-fill-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Confirm Order Execution</h2>
+        <p class="subtitle">Confirm the final price and date for this buy limit order.</p>
+        <form id="confirm-fill-form">
+            <input type="hidden" id="fill-pending-order-id">
+            <input type="hidden" id="fill-account-holder-id">
+            <input type="hidden" id="fill-ticker">
+            <input type="hidden" id="fill-exchange">
+            <input type="hidden" id="fill-quantity">
+
+            <div class="form-group">
+                <label>Ticker</label>
+                <p id="fill-ticker-display" class="form-static-text"></p>
+            </div>
+            <div class="form-group">
+                <label>Original Limit Price</label>
+                <p id="fill-limit-price-display" class="form-static-text"></p>
+            </div>
+
+            <div class="form-group">
+                <label for="fill-execution-price">Actual Execution Price</label>
+                <input type="number" id="fill-execution-price" step="any" min="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="fill-execution-date">Execution Date</label>
+                <input type="date" id="fill-execution-date" required>
+            </div>
+
+            <button type="submit">Confirm and Log Transaction</button>
+        </form>
+    </div>
+</div>

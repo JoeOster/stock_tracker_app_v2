@@ -53,3 +53,8 @@
 .header select, .header label {
     font-size: 0.9em;
 }
+
+/* --- NEW: Autosize the account selector --- */
+.header .account-holder-select {
+    width: auto;
+}

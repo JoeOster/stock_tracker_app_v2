@@ -5,8 +5,8 @@ import { formatQuantity, formatAccounting } from '../helpers.js';
 export async function renderDailyReport(date, activityMap) {
     const tableTitle = document.getElementById('table-title');
     const performanceSummary = document.getElementById('daily-performance-summary');
-    const logBody = document.getElementById('log-body');
-    const summaryBody = document.getElementById('positions-summary-body');
+    const logBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('log-body'));
+    const summaryBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('positions-summary-body'));
     let dailyRealizedPL = 0;
 
     if (tableTitle) {

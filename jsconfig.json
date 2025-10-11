@@ -4,6 +4,11 @@
     "target": "es2020",
     "checkJs": true
   },
+  "typeAcquisition": {
+    "include": [
+      "jest"
+    ]
+  },
   "exclude": [
     "node_modules"
   ]

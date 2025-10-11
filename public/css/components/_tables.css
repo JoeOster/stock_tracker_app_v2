@@ -59,6 +59,12 @@ tbody tr:nth-child(even) {
 .negative { color: var(--negative-color); font-weight: 600; }
 .actions-cell { text-align: right; }
 
+/* --- NEW: Center Align Utility --- */
+.center-align {
+    text-align: center;
+}
+
+
 .table-section-header { 
     text-align: center !important; /* Force centering */
     font-size: 1.2rem; /* Make font larger */

@@ -14,7 +14,6 @@ describe('formatAccounting', () => {
     });
 
     it('should handle zero values with a specific placeholder', () => {
-        // Note: The result includes non-breaking spaces for alignment
         expect(formatAccounting(0)).toBe('$&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-');
     });
 
@@ -25,9 +24,7 @@ describe('formatAccounting', () => {
 });
 
 describe('getTradingDays', () => {
-    // We use fake timers to control the "current" date for a predictable test
     beforeAll(() => {
-        // Set the system time to a Sunday to test weekend skipping
         jest.useFakeTimers().setSystemTime(new Date('2025-10-12T12:00:00Z'));
     });
 
@@ -36,27 +33,20 @@ describe('getTradingDays', () => {
     });
 
     it('should return the correct preceding trading days, skipping weekends', () => {
-        // Get the 3 trading days before Sunday, Oct 12th
         const result = getTradingDays(3);
-
-        // Expected result is Wed, Thu, Fri
         const expected = ['2025-10-08', '2025-10-09', '2025-10-10'];
-        
         expect(result).toEqual(expected);
     });
 });
 
-// Test for the moved function
 describe('populatePricesFromCache', () => {
     beforeEach(() => {
-        // Setup the mock DOM
         document.body.innerHTML = `
             <table>
                 <tbody>
                     <tr data-key="lot-1">
                         <td class="current-price"></td>
-                        <td class="unrealized-pl-dollar"></td>
-                        <td class="unrealized-pl-percent"></td>
+                        <td class="numeric unrealized-pl-combined"></td>
                     </tr>
                 </tbody>
                 <tfoot>
@@ -73,11 +63,10 @@ describe('populatePricesFromCache', () => {
 
         populatePricesFromCache(activityMap, priceCache);
 
-        // Expected P/L = (115 - 100) * 10 = 150
-        const plCell = document.querySelector('.unrealized-pl-dollar');
+        const plCell = document.querySelector('.unrealized-pl-combined');
         
-        // FIX: The expected result for a positive number should not have parentheses
-        expect(plCell.textContent).toBe('$150.00'); 
+        // FIX: Expect the new combined string format
+        expect(plCell.textContent).toBe('$150.00 | 15.00%'); 
         expect(plCell.classList.contains('positive')).toBe(true);
 
         const totalPlCell = document.getElementById('unrealized-pl-total');

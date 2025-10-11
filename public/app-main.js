@@ -1,14 +1,11 @@
 // public/app-main.js
-import { initializeEventListeners } from './event-listeners.js';
-// FIX: Removed 'populatePricesFromCache' from this line
+import { initializeAllEventListeners } from './event-handlers/_init.js'; 
 import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage } from './ui/renderers.js'; 
-import { updatePricesForView } from './api.js';
-// FIX: Added 'populatePricesFromCache' to this line, its new home
 import { populatePricesFromCache, getCurrentESTDateString, showToast } from './ui/helpers.js';
+import { updatePricesForView } from './api.js';
 import { initializeScheduler } from './scheduler.js';
 
 export const state = {
-    // FIX: Consolidated the duplicate 'settings' object
     settings: { 
         takeProfitPercent: 8, 
         stopLossPercent: 8, 
@@ -17,7 +14,8 @@ export const state = {
         theme: 'light', 
         font: 'Inter', 
         defaultAccountHolderId: null,
-        notificationCooldown: 16
+        notificationCooldown: 16,
+        familyName: ''
     },
     currentView: { type: null, value: null },
     activityMap: new Map(),
@@ -31,42 +29,71 @@ export const state = {
     allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
 };
 
+// --- NEW: Helper function to load HTML templates ---
+async function loadHTML(url, targetId) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Could not load template: ${url}`);
+        const text = await response.text();
+        const target = document.getElementById(targetId);
+        if (target) {
+            // Use a temporary div to parse the HTML and append its children
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = text;
+            while (tempDiv.firstChild) {
+                target.appendChild(tempDiv.firstChild);
+            }
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 export async function switchView(viewType, viewValue) {
     state.currentView = { type: viewType, value: viewValue };
     renderTabs(state.currentView);
-    document.getElementById('global-account-holder-filter').value = state.selectedAccountHolderId;
+    (/** @type {HTMLSelectElement} */(document.getElementById('global-account-holder-filter'))).value = state.selectedAccountHolderId;
 
-    document.querySelectorAll('.page-container').forEach(c => c.style.display = 'none');
+    document.querySelectorAll('.page-container').forEach(/** @param {HTMLElement} c */ c => c.style.display = 'none');
+    
+    const containerIdMap = {
+        'ledger': 'ledger-page-container',
+        'orders': 'orders-page-container',
+        'alerts': 'alerts-page-container',
+        'snapshots': 'snapshots-page-container',
+        'imports': 'imports-page-container',
+        'charts': 'charts-container',
+        'date': 'daily-report-container'
+    };
+    
+    const finalContainerId = containerIdMap[viewType] || `${viewType}-container`;
+    const pageContainer = document.getElementById(finalContainerId);
+
+    if (pageContainer) {
+        pageContainer.style.display = 'block';
+    }
 
     if (viewType === 'date') {
-        document.getElementById('daily-report-container').style.display = 'block';
         await renderDailyReport(viewValue, state.activityMap);
         await updatePricesForView(viewValue, state.activityMap, state.priceCache);
         populatePricesFromCache(state.activityMap, state.priceCache);
     } else if (viewType === 'charts') {
-        document.getElementById('charts-container').style.display = 'block';
         await new Promise(resolve => setTimeout(resolve, 50));
         await refreshSnapshots();
         await renderChartsPage(state);
     } else if (viewType === 'ledger') {
-        document.getElementById('ledger-page-container').style.display = 'block';
         await refreshLedger();
     } else if (viewType === 'orders') {
-        document.getElementById('orders-page-container').style.display = 'block';
         await renderOrdersPage();
     } else if (viewType === 'alerts') {
-        document.getElementById('alerts-page-container').style.display = 'block';
         await renderAlertsPage();        
     } else if (viewType === 'snapshots') {
-        document.getElementById('snapshots-page-container').style.display = 'block';
         await refreshSnapshots();
         renderSnapshotsPage();
-    } else if (viewType === 'imports') {
-        document.getElementById('imports-page-container').style.display = 'block';
     }
-        const headerSummary = document.getElementById('header-daily-summary');
+    
+    const headerSummary = /** @type {HTMLElement} */ (document.getElementById('header-daily-summary'));
     if (headerSummary) {
-        // Show the summary only on a date view, hide it for all other views
         headerSummary.style.display = viewType === 'date' ? 'block' : 'none';
     }
 }
@@ -89,12 +116,14 @@ export async function refreshSnapshots() {
 
 export function saveSettings() {
     const oldTheme = state.settings.theme;
-    state.settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || 0;
-    state.settings.stopLossPercent = parseFloat(document.getElementById('stop-loss-percent').value) || 0;
-    state.settings.theme = document.getElementById('theme-selector').value;
-    state.settings.font = document.getElementById('font-selector').value;
-    state.settings.notificationCooldown = parseInt(document.getElementById('notification-cooldown').value, 10) || 16;
-    const selectedDefaultHolder = document.querySelector('input[name="default-holder-radio"]:checked');
+    state.settings.takeProfitPercent = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value) || 0;
+    state.settings.stopLossPercent = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'))).value) || 0;
+    state.settings.theme = (/** @type {HTMLSelectElement} */(document.getElementById('theme-selector'))).value;
+    state.settings.font = (/** @type {HTMLSelectElement} */(document.getElementById('font-selector'))).value;
+    state.settings.notificationCooldown = parseInt((/** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'))).value, 10) || 16;
+    state.settings.familyName = (/** @type {HTMLInputElement} */(document.getElementById('family-name'))).value.trim();
+
+    const selectedDefaultHolder = /** @type {HTMLInputElement} */ (document.querySelector('input[name="default-holder-radio"]:checked'));
     if (selectedDefaultHolder) {
         state.settings.defaultAccountHolderId = selectedDefaultHolder.value;
     } else {
@@ -113,6 +142,11 @@ function applyAppearanceSettings() {
     document.body.dataset.theme = state.settings.theme;
     const fontVar = state.settings.font === 'System' ? 'var(--font-system)' : `var(--font-${state.settings.font.toLowerCase().replace(' ', '-')})`;
     document.body.style.setProperty('--font-family-base', fontVar);
+
+    const appTitle = document.getElementById('app-title');
+    if (appTitle) {
+        appTitle.textContent = state.settings.familyName ? `${state.settings.familyName} Portfolio Tracker` : 'Live Stock Tracker';
+    }
 }
 
 export function sortTableByColumn(th, tbody) {
@@ -151,7 +185,7 @@ export async function fetchAndRenderExchanges() {
 
 function populateAllExchangeDropdowns() {
     const exchangeSelects = document.querySelectorAll('select[id*="exchange"]');
-    exchangeSelects.forEach(select => {
+    exchangeSelects.forEach(/** @param {HTMLSelectElement} select */ select => {
         const currentVal = select.value;
         select.innerHTML = '';
         const defaultOption = document.createElement('option');
@@ -175,7 +209,7 @@ export async function fetchAndPopulateAccountHolders() {
         state.allAccountHolders = await response.json();
         
         const holderSelects = document.querySelectorAll('.account-holder-select');
-        holderSelects.forEach(select => {
+        holderSelects.forEach(/** @param {HTMLSelectElement} select */ select => {
             select.innerHTML = ''; 
             
             if(select.id === 'global-account-holder-filter') {
@@ -257,26 +291,43 @@ export function renderAccountHolderManagementList() {
 }
 
 async function initialize() {
+    // --- UPDATED: Load all templates on startup ---
+    const mainContent = document.getElementById('main-content');
+    mainContent.innerHTML = ''; // Clear it out first
+    await Promise.all([
+        loadHTML('/templates/_dailyReport.html', 'main-content'),
+        loadHTML('/templates/_charts.html', 'main-content'),
+        loadHTML('/templates/_ledger.html', 'main-content'),
+        loadHTML('/templates/_orders.html', 'main-content'),
+        loadHTML('/templates/_alerts.html', 'main-content'),
+        loadHTML('/templates/_snapshots.html', 'main-content'),
+        loadHTML('/templates/_imports.html', 'main-content'),
+        loadHTML('/templates/_modals.html', 'modal-container')
+    ]);
+
     const loadSettings = () => {
         const savedSettings = localStorage.getItem('stockTrackerSettings');
         if (savedSettings) { state.settings = { ...state.settings, ...JSON.parse(savedSettings) }; }
-        document.getElementById('take-profit-percent').value = state.settings.takeProfitPercent;
-        document.getElementById('stop-loss-percent').value = state.settings.stopLossPercent;
-        document.getElementById('notification-cooldown').value = state.settings.notificationCooldown;
+        (/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value = String(state.settings.takeProfitPercent);
+        (/** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'))).value = String(state.settings.stopLossPercent);
+        (/** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'))).value = String(state.settings.notificationCooldown);
  
-        const themeSelector = document.getElementById('theme-selector');
+        const themeSelector = /** @type {HTMLSelectElement} */(document.getElementById('theme-selector'));
         if(themeSelector) themeSelector.value = state.settings.theme;
         
-        const fontSelector = document.getElementById('font-selector');
+        const fontSelector = /** @type {HTMLSelectElement} */(document.getElementById('font-selector'));
         if(fontSelector) fontSelector.value = state.settings.font;
         
+        const familyNameInput = /** @type {HTMLInputElement} */(document.getElementById('family-name'));
+        if(familyNameInput) familyNameInput.value = state.settings.familyName;
+
         applyAppearanceSettings();
-    }
+    };
     loadSettings();
     await fetchAndRenderExchanges();
     await fetchAndPopulateAccountHolders();
     
-    initializeEventListeners();
+    initializeAllEventListeners();
     await runEodFailoverCheck();
     
     const today = getCurrentESTDateString();
@@ -288,17 +339,17 @@ async function initialize() {
     }
     const viewDate = dateForView.toISOString().split('T')[0];
     
-    const transactionDateInput = document.getElementById('transaction-date');
+    const transactionDateInput = /** @type {HTMLInputElement} */ (document.getElementById('transaction-date'));
     if(transactionDateInput) transactionDateInput.value = today;
     
-const globalHolderFilter = document.getElementById('global-account-holder-filter');
-if (state.settings.defaultAccountHolderId && state.allAccountHolders.some(h => h.id == state.settings.defaultAccountHolderId)) {
-    globalHolderFilter.value = state.settings.defaultAccountHolderId;
-    state.selectedAccountHolderId = state.settings.defaultAccountHolderId;
-} else if (globalHolderFilter.options.length > 1) {
-    globalHolderFilter.value = 'all';
-    state.selectedAccountHolderId = 'all';
-}
+    const globalHolderFilter = /** @type {HTMLSelectElement} */(document.getElementById('global-account-holder-filter'));
+    if (state.settings.defaultAccountHolderId && state.allAccountHolders.some(h => h.id == state.settings.defaultAccountHolderId)) {
+        globalHolderFilter.value = state.settings.defaultAccountHolderId;
+        state.selectedAccountHolderId = state.settings.defaultAccountHolderId;
+    } else if (globalHolderFilter.options.length > 1) {
+        globalHolderFilter.value = 'all';
+        state.selectedAccountHolderId = 'all';
+    }
     
     await switchView('date', viewDate);
     initializeScheduler(state);

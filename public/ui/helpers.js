@@ -50,6 +50,7 @@ export function getActivePersistentDates() {
     if (activeDates.length < persistentDates.length) { localStorage.setItem('persistentDates', JSON.stringify(activeDates)); }
     return activeDates.map(d => d.date);
 }
+
 export function showConfirmationModal(title, body, onConfirm) {
     const confirmModal = document.getElementById('confirm-modal');
     document.getElementById('confirm-modal-title').textContent = title;
@@ -82,6 +83,7 @@ export function populatePricesFromCache(activityMap, priceCache) {
 
         const priceToUse = priceCache.get(lot.ticker);
         const priceCell = row.querySelector('.current-price');
+        // FIX: Target the new combined P/L cell
         const plCombinedCell = row.querySelector('.unrealized-pl-combined');
 
         if (priceToUse === 'invalid') {
@@ -98,6 +100,7 @@ export function populatePricesFromCache(activityMap, priceCache) {
             
             if (priceCell) priceCell.innerHTML = formatAccounting(priceToUse);
 
+            // FIX: Update the logic to populate the single combined cell
             if (plCombinedCell) {
                 const plDollarHTML = formatAccounting(unrealizedPL);
                 const plPercentHTML = `${unrealizedPercent.toFixed(2)}%`;
