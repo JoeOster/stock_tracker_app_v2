@@ -71,7 +71,7 @@ export async function refreshLedger() {
 
 export async function refreshSnapshots() {
      try {
-        const res = await fetch(`/api/snapshots?holder=${state.selectedAccountHolderId}`);
+        const res = await fetch(`/api/utility/snapshots?holder=${state.selectedAccountHolderId}`);
         if(res.ok) state.allSnapshots = await res.json();
     } catch (e) { console.error("Could not fetch snapshots", e); }
 }
@@ -131,7 +131,7 @@ export function sortTableByColumn(th, tbody) {
 
 export async function fetchAndRenderExchanges() {
     try {
-        const response = await fetch('/api/exchanges');
+        const response = await fetch('/api/accounts/holders');
         state.allExchanges = await response.json();
         populateAllExchangeDropdowns(); 
     } catch (error) {
@@ -161,7 +161,7 @@ function populateAllExchangeDropdowns() {
 
 export async function fetchAndPopulateAccountHolders() {
     try {
-        const response = await fetch('/api/account_holders');
+        const response = await fetch('/api/accounts/holders');
         state.allAccountHolders = await response.json();
         
         const holderSelects = document.querySelectorAll('.account-holder-select');

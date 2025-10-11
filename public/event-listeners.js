@@ -56,7 +56,7 @@ export function initializeEventListeners() {
             else if (noButton) {
                 const notificationId = noButton.dataset.notificationId;
                 try {
-                    const response = await fetch(`/api/notifications/${notificationId}`, {
+                    const response = await fetch(`/api/orders/notifications/${notificationId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'DISMISSED' })
@@ -71,7 +71,7 @@ export function initializeEventListeners() {
             else if (pendingButton) {
                 const notificationId = pendingButton.dataset.notificationId;
                 try {
-                    const response = await fetch(`/api/notifications/${notificationId}`, {
+                    const response = await fetch(`/api/orders/notifications/${notificationId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'PENDING' })
@@ -577,7 +577,7 @@ if(sellFromPositionForm) {
             const name = newExchangeNameInput.value.trim();
             if (!name) return showToast('Exchange name cannot be empty.', 'error');
             try {
-                const res = await fetch('/api/exchanges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+                const res = await fetch('/api/accounts/exchanges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                 await fetchAndRenderExchanges(); 
                 newExchangeNameInput.value = '';
@@ -622,7 +622,7 @@ if(sellFromPositionForm) {
                 const newName = nameInput.value.trim();
                 if (!newName) return showToast('Exchange name cannot be empty.', 'error');
                 try {
-                    const res = await fetch(`/api/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+                    const res = await fetch(`/api/accounts/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                     await fetchAndRenderExchanges();
                     await refreshLedger();
@@ -634,7 +634,7 @@ if(sellFromPositionForm) {
                 const id = li.dataset.id;
                 showConfirmationModal('Delete Exchange?', 'This cannot be undone.', async () => {
                     try {
-                        const res = await fetch(`/api/exchanges/${id}`, { method: 'DELETE' });
+                        const res = await fetch(`/api/accounts/exchanges/${id}`, { method: 'DELETE' });
                         if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                         await fetchAndRenderExchanges();
                         renderExchangeManagementList();
@@ -650,7 +650,7 @@ if(sellFromPositionForm) {
             const name = newAccountHolderNameInput.value.trim();
             if (!name) return showToast('Account holder name cannot be empty.', 'error');
             try {
-                const res = await fetch('/api/account_holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+                const res = await fetch('/api/accounts/holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                 await fetchAndPopulateAccountHolders();
                 newAccountHolderNameInput.value = '';
@@ -690,7 +690,7 @@ if(sellFromPositionForm) {
                 const newName = nameInput.value.trim();
                 if (!newName) return showToast('Name cannot be empty.', 'error');
                 try {
-                    const res = await fetch(`/api/account_holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+                    const res = await fetch(`/api/accounts/holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                     await fetchAndPopulateAccountHolders();
                     renderAccountHolderManagementList();
@@ -700,7 +700,7 @@ if(sellFromPositionForm) {
                 const id = li.dataset.id;
                 showConfirmationModal('Delete Account Holder?', 'This cannot be undone.', async () => {
                     try {
-                        const res = await fetch(`/api/account_holders/${id}`, { method: 'DELETE' });
+                        const res = await fetch(`/api/accounts/holders/${id}`, { method: 'DELETE' });
                         if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                         await fetchAndPopulateAccountHolders();
                         renderAccountHolderManagementList();
@@ -727,7 +727,7 @@ if(sellFromPositionForm) {
             };
 
             try {
-                const response = await fetch('/api/pending_orders', {
+                const response = await fetch('/api/orders/pending_orders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newOrder)
@@ -764,7 +764,7 @@ if (pendingOrdersTable) {
             const orderId = cancelButton.dataset.id;
             showConfirmationModal('Cancel Order?', 'This will change the order status to CANCELLED.', async () => {
                 try {
-                    const response = await fetch(`/api/pending_orders/${orderId}`, {
+                    const response = await fetch(`/api/orders/pending/${orderId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'CANCELLED' })
@@ -821,7 +821,7 @@ if (pendingOrdersTable) {
                 value: parseFloat(document.getElementById('snapshot-value').value)
             };
             try {
-                const res = await fetch('/api/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snapshot) });
+                const res = await fetch('/api/utility/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snapshot) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                 await refreshSnapshots();
                 renderSnapshotsPage();
@@ -914,7 +914,7 @@ if (pendingOrdersTable) {
             
             try {
                 // Step 1: Update the pending order's status to 'FILLED'
-                const updateRes = await fetch(`/api/pending_orders/${pendingOrderId}`, {
+                const updateRes = await fetch(`/api/orders/pending/${pendingOrderId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: 'FILLED' })
@@ -933,7 +933,7 @@ if (pendingOrdersTable) {
                 if (!createRes.ok) {
                     const err = await createRes.json();
                     // Attempt to roll back the status update if transaction creation fails
-                    await fetch(`/api/pending_orders/${pendingOrderId}`, {
+                    await fetch(`/api/orders/pending/${pendingOrderId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'ACTIVE' })

@@ -19,7 +19,7 @@ export async function updatePricesForView(viewDate, activityMap, priceCache) {
     });
 
     try {
-        const response = await fetch('/api/prices/batch', {
+        const response = await fetch('/api/utility/prices/batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tickers: allTickersInView, date: viewDate })
