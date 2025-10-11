@@ -49,12 +49,11 @@
             </thead>
             <tbody id="log-body"></tbody>
             <thead>
-                <tr><th colspan="11" class="table-section-header" id="positions-summary-title">Open Lots</th></tr>
+                <tr><th colspan="10" class="table-section-header" id="positions-summary-title">Open Lots</th></tr>
                 <tr>
                     <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="purchase_date">Purchase Date</th><th class="numeric" data-sort="cost_basis" data-type="numeric">Cost Basis</th>
                     <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Rem. Qty</th><th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
-                    <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($)</th>
-                    <th class="numeric" data-sort="unrealized-pl-percent" data-type="numeric">Unrealized P/L (%)</th>
+                    <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($ | %)</th>
                     <th class="numeric">Limit Up</th><th class="numeric">Limit Down</th><th>Actions</th>
                 </tr>
             </thead>
@@ -63,7 +62,7 @@
                 <tr>
                     <td colspan="6" style="text-align: right; font-weight: bold;">Total Unrealized P/L</td>
                     <td id="unrealized-pl-total" class="numeric">--</td>
-                    <td colspan="4"></td>
+                    <td colspan="3"></td>
                 </tr>
             </tfoot>
         </table>

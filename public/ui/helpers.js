@@ -71,7 +71,6 @@ export function showConfirmationModal(title, body, onConfirm) {
     confirmModal.classList.add('visible');
 }
 
-// --- MOVED FROM _dailyReport.js ---
 export function populatePricesFromCache(activityMap, priceCache) {
     const totalValueSummarySpan = document.querySelector('#total-value-summary span');
     let totalPortfolioValue = 0;
@@ -83,13 +82,11 @@ export function populatePricesFromCache(activityMap, priceCache) {
 
         const priceToUse = priceCache.get(lot.ticker);
         const priceCell = row.querySelector('.current-price');
-        const plDollarCell = row.querySelector('.unrealized-pl-dollar');
-        const plPercentCell = row.querySelector('.unrealized-pl-percent');
+        const plCombinedCell = row.querySelector('.unrealized-pl-combined');
 
         if (priceToUse === 'invalid') {
             if (priceCell) priceCell.innerHTML = `<span class="negative">Invalid</span>`;
-            if (plDollarCell) plDollarCell.innerHTML = '--';
-            if (plPercentCell) plPercentCell.innerHTML = '--';
+            if (plCombinedCell) plCombinedCell.innerHTML = '--';
         } else if (priceToUse !== undefined && priceToUse !== null) {
             const currentValue = lot.quantity_remaining * priceToUse;
             const costOfRemaining = lot.quantity_remaining * lot.cost_basis;
@@ -101,18 +98,15 @@ export function populatePricesFromCache(activityMap, priceCache) {
             
             if (priceCell) priceCell.innerHTML = formatAccounting(priceToUse);
 
-            if (plDollarCell) {
-                plDollarCell.innerHTML = formatAccounting(unrealizedPL);
-                plDollarCell.className = `numeric unrealized-pl-dollar ${unrealizedPL >= 0 ? 'positive' : 'negative'}`;
-            }
-            if (plPercentCell) {
-                plPercentCell.innerHTML = `${unrealizedPercent.toFixed(2)}%`;
-                plPercentCell.className = `numeric unrealized-pl-percent ${unrealizedPercent >= 0 ? 'positive' : 'negative'}`;
+            if (plCombinedCell) {
+                const plDollarHTML = formatAccounting(unrealizedPL);
+                const plPercentHTML = `${unrealizedPercent.toFixed(2)}%`;
+                plCombinedCell.innerHTML = `${plDollarHTML} | ${plPercentHTML}`;
+                plCombinedCell.className = `numeric unrealized-pl-combined ${unrealizedPL >= 0 ? 'positive' : 'negative'}`;
             }
         } else {
             if (priceCell) priceCell.innerHTML = '--';
-            if (plDollarCell) plDollarCell.innerHTML = '--';
-            if (plPercentCell) plPercentCell.innerHTML = '--';
+            if (plCombinedCell) plCombinedCell.innerHTML = '--';
         }
     });
 

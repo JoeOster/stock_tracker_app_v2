@@ -81,7 +81,7 @@ export async function renderDailyReport(date, activityMap) {
             summaryBody.innerHTML = '';
             activityMap.clear();
             if (data.endOfDayPositions.length === 0) {
-                summaryBody.innerHTML = '<tr><td colspan="11">No open positions at the end of this day.</td></tr>';
+                summaryBody.innerHTML = '<tr><td colspan="10">No open positions at the end of this day.</td></tr>';
             } else {
                 data.endOfDayPositions.forEach(p => {
                     const key = `lot-${p.id}`;
@@ -100,8 +100,7 @@ export async function renderDailyReport(date, activityMap) {
                         <td class="numeric">${formatAccounting(p.cost_basis)}</td>
                         <td class="numeric">${formatQuantity(p.quantity_remaining)}</td>
                         <td class="numeric current-price"><div class="loader"></div></td>
-                        <td class="numeric unrealized-pl-dollar">--</td>
-                        <td class="numeric unrealized-pl-percent">--</td>
+                        <td class="numeric unrealized-pl-combined">--</td>
                         <td class="numeric">${limitUpText}</td>
                         <td class="numeric">${limitDownText}</td>
                         <td class="actions-cell">
@@ -115,6 +114,6 @@ export async function renderDailyReport(date, activityMap) {
     } catch (error) {
         console.error("Failed to render daily report:", error);
         if (logBody) logBody.innerHTML = '<tr><td colspan="12">Error loading transaction data.</td></tr>';
-        if (summaryBody) summaryBody.innerHTML = '<tr><td colspan="11">Error loading position data.</td></tr>';
+        if (summaryBody) summaryBody.innerHTML = '<tr><td colspan="10">Error loading position data.</td></tr>';
     }
 }

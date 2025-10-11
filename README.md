@@ -31,14 +31,16 @@ The application is in a stable, feature-rich state with an automated testing sui
 
 ### UI/UX & Code Quality
 
-* **Refactored Codebase:** Both the backend (`server.js`) and the frontend CSS (`style.css`) have been refactored into smaller, modular, component-based files for improved organization and maintainability.
+* **Refactored Codebase:** Both the backend (`server.js`) and the frontend (`renderers.js`, `style.css`) have been refactored into smaller, modular, component-based files for improved organization and maintainability.
 * **Modern Theming System:** Includes Light (Default), Dark, Sepia, and High Contrast themes, plus font selection.
-* **Sticky Table Columns:** Key tables feature sticky columns on both the left and right for easier viewing of wide data.
+* **Improved Table UI:**
+    * The "Open Lots" table now features a combined column for Unrealized P/L, displaying both the dollar amount and percentage in a single, space-saving field.
+    * All tables now have sticky headers and sticky columns (left and right) for easier viewing of wide or long data sets.
 * **Click-and-Drag Scrolling:** Tables with horizontal overflow can be scrolled by clicking and dragging anywhere on the table.
 
 ### Development, Testing, and Deployment
 
-* **Automated Testing:** A comprehensive test suite using Jest for the backend API and frontend logic, integrated into the deployment process.
+* **Automated Testing:** A comprehensive test suite using Jest for both the backend API and the modular frontend renderer logic, integrated into the deployment process.
 * **Environment-Specific Databases:** The project uses separate database files (`production.db`, `development.db`, `test.db`) to ensure data safety.
 * **Automated Deployment Script:** A `deploy.bat` script automates the entire production deployment process on Windows. It requires Administrator privileges and handles stopping the service, running tests, backing up the database, copying files, installing packages, and restarting the server.
 * **Development Seeding:** An `npm run seed-dev` command is available to instantly reset the development database with simple, verifiable sample data.
