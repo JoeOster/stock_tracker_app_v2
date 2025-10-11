@@ -1,5 +1,5 @@
 // public/event-handlers/_ledger.js
-import { state, refreshLedger, sortTableByColumn } from '../../app-main.js';
+import { state, refreshLedger, sortTableByColumn } from '../app-main.js';
 import { renderLedger } from '../ui/renderers.js';
 import { showToast, getCurrentESTDateString, showConfirmationModal } from '../ui/helpers.js';
 

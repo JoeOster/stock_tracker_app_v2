@@ -1,5 +1,5 @@
 // public/event-handlers/_orders.js
-import { state } from '../../app-main.js';
+import { state } from '../app-main.js';
 import { formatAccounting, getCurrentESTDateString, showConfirmationModal, showToast } from '../ui/helpers.js';
 import { renderOrdersPage, renderAlertsPage } from '../ui/renderers.js';
 
@@ -20,7 +20,7 @@ export function initializeOrdersHandlers() {
                 limit_price: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('pending-order-limit-price'))).value),
                 expiration_date: (/** @type {HTMLInputElement} */(document.getElementById('pending-order-expiration'))).value || null,
                 created_date: getCurrentESTDateString(),
-                order_type: 'BUY_LIMIT', // This is hardcoded for now
+                order_type: 'BUY_LIMIT',
             };
 
             try {

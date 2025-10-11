@@ -1,6 +1,6 @@
 // public/event-handlers/_modals.js
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
-import { refreshLedger, state, switchView } from '../../app-main.js';
+import { refreshLedger, state, switchView } from '../app-main.js';
 
 export function initializeModalHandlers() {
     const editModal = document.getElementById('edit-modal');

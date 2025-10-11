@@ -1,6 +1,6 @@
 // public/event-handlers/_settings.js
-import { saveSettings, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList, refreshLedger } from '../../app-main.js';
-import { showToast, showConfirmationModal } from '../helpers.js';
+import { saveSettings, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList, refreshLedger } from '../app-main.js';
+import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 export function initializeSettingsHandlers() {
     const settingsBtn = document.getElementById('settings-btn');

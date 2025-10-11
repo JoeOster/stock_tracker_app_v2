@@ -1,7 +1,7 @@
 // public/event-handlers/_snapshots.js
-import { state, refreshSnapshots } from '../../app-main.js';
+import { state, refreshSnapshots } from '../app-main.js';
 import { renderSnapshotsPage } from '../ui/renderers.js';
-import { showToast, showConfirmationModal } from '../helpers.js';
+import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 export function initializeSnapshotsHandlers() {
     const addSnapshotForm = /** @type {HTMLFormElement} */ (document.getElementById('add-snapshot-form'));
