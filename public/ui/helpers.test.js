@@ -46,7 +46,7 @@ describe('getTradingDays', () => {
     });
 });
 
-// --- NEW TEST SUITE ---
+// Test for the moved function
 describe('populatePricesFromCache', () => {
     beforeEach(() => {
         // Setup the mock DOM
@@ -75,10 +75,12 @@ describe('populatePricesFromCache', () => {
 
         // Expected P/L = (115 - 100) * 10 = 150
         const plCell = document.querySelector('.unrealized-pl-dollar');
-        expect(plCell.textContent).toBe('($150.00)'); // Note: depends on your formatAccounting mock
+        
+        // FIX: The expected result for a positive number should not have parentheses
+        expect(plCell.textContent).toBe('$150.00'); 
         expect(plCell.classList.contains('positive')).toBe(true);
 
         const totalPlCell = document.getElementById('unrealized-pl-total');
-        expect(totalPlCell.textContent).toBe('($150.00)');
+        expect(totalPlCell.textContent).toBe('$150.00');
     });
 });

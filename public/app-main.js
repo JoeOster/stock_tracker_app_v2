@@ -1,13 +1,14 @@
-// public/app-main.js - v2.13 (Corrected Data Flow & UI Improvements)
-// public/app-main.js (Corrected)
+// public/app-main.js
 import { initializeEventListeners } from './event-listeners.js';
-import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage, populatePricesFromCache } from './ui/renderers.js';
+// FIX: Removed 'populatePricesFromCache' from this line
+import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage } from './ui/renderers.js'; 
 import { updatePricesForView } from './api.js';
-import { getCurrentESTDateString, showToast } from './ui/helpers.js';
+// FIX: Added 'populatePricesFromCache' to this line, its new home
 import { populatePricesFromCache, getCurrentESTDateString, showToast } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
 
 export const state = {
+    // FIX: Consolidated the duplicate 'settings' object
     settings: { 
         takeProfitPercent: 8, 
         stopLossPercent: 8, 
@@ -29,7 +30,6 @@ export const state = {
     ledgerSort: { column: 'transaction_date', direction: 'desc' },
     allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
 };
-
 
 export async function switchView(viewType, viewValue) {
     state.currentView = { type: viewType, value: viewValue };
@@ -87,7 +87,6 @@ export async function refreshSnapshots() {
     } catch (e) { console.error("Could not fetch snapshots", e); }
 }
 
-// In public/app-main.js
 export function saveSettings() {
     const oldTheme = state.settings.theme;
     state.settings.takeProfitPercent = parseFloat(document.getElementById('take-profit-percent').value) || 0;
@@ -206,8 +205,6 @@ export async function fetchAndPopulateAccountHolders() {
 }
 
 async function runEodFailoverCheck() { /* Unchanged */ }
-// In public/app-main.js
-// In public/app-main.js
 export function renderExchangeManagementList() {
     const list = document.getElementById('exchange-list');
     if (!list) return;
@@ -295,12 +292,10 @@ async function initialize() {
     if(transactionDateInput) transactionDateInput.value = today;
     
 const globalHolderFilter = document.getElementById('global-account-holder-filter');
-// Prioritize the saved default account holder on initial load
 if (state.settings.defaultAccountHolderId && state.allAccountHolders.some(h => h.id == state.settings.defaultAccountHolderId)) {
     globalHolderFilter.value = state.settings.defaultAccountHolderId;
     state.selectedAccountHolderId = state.settings.defaultAccountHolderId;
 } else if (globalHolderFilter.options.length > 1) {
-    // Fallback to 'All Accounts' if no default is set or is invalid
     globalHolderFilter.value = 'all';
     state.selectedAccountHolderId = 'all';
 }
@@ -313,17 +308,14 @@ if (state.settings.defaultAccountHolderId && state.allAccountHolders.some(h => h
 function initializeNotificationService() {
     let lastToastTimestamp = 0;
 
-    // This function will run every 30 seconds to check for new alerts
     setInterval(async () => {
         try {
-            // Fetch any unread notifications from the new API endpoint
             const response = await fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`);
             if (!response.ok) return;
 
             const unreadNotifications = await response.json();
             const alertsTab = document.querySelector('.tab[data-view-type="alerts"]');
 
-            // Update the warning icon on the tab header
             if (alertsTab) {
                 if (unreadNotifications.length > 0) {
                     if (!alertsTab.textContent.includes('⚠️')) {
@@ -334,7 +326,6 @@ function initializeNotificationService() {
                 }
             }
 
-            // Check if we should show a toast notification based on the cooldown setting
             const cooldownMinutes = state.settings.notificationCooldown;
             const cooldownMilliseconds = cooldownMinutes * 60 * 1000;
             
@@ -345,7 +336,6 @@ function initializeNotificationService() {
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
         }
-    }, 30000); // Polls every 30 seconds
+    }, 30000); 
 }
 initialize();
-

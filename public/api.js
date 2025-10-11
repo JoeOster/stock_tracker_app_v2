@@ -1,6 +1,6 @@
-// public/api.js - v2.13 (Corrected Data Flow)
+// public/api.js
 import { state } from './app-main.js';
-import { populatePricesFromCache } from './ui/renderers.js';
+import { populatePricesFromCache } from './ui/helpers.js';
 
 // This function now ONLY fetches prices and updates the cache.
 export async function updatePricesForView(viewDate, activityMap, priceCache) {
@@ -47,4 +47,3 @@ export async function updateAllPrices(activityMap, priceCache) {
     // After fetching, we must explicitly call the populator
     populatePricesFromCache(activityMap, priceCache);
 }
-

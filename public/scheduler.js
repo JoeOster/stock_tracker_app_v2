@@ -1,6 +1,6 @@
-// public/scheduler.js (Corrected Version)
+// public/scheduler.js
 import { updatePricesForView } from './api.js';
-import { populatePricesFromCache } from './ui/renderers.js'; // This import is added
+import { populatePricesFromCache } from './ui/helpers.js';
 
 let nextApiCallTimestamp = 0;
 
@@ -25,7 +25,6 @@ export function initializeScheduler(state) {
         const isMarketHours = isTradingDay && (estHours > 9 || (estHours === 9 && estMinutes >= 30)) && estHours < 16;
 
         let triggerUpdate = false;
-        // The settings for these intervals are now in app-main.js
         let currentIntervalMinutes = isMarketHours ? 2 : 15; // Defaulting to 2 and 15
         if (state.settings) {
             currentIntervalMinutes = isMarketHours ? state.settings.marketHoursInterval : state.settings.afterHoursInterval;
@@ -55,9 +54,7 @@ export function initializeScheduler(state) {
             console.log("Scheduler triggered update...");
             const viewDate = state.currentView.value;
             await updatePricesForView(viewDate, state.activityMap, state.priceCache);
-
-            // --- THIS IS THE FIX ---
-            // This new line populates the UI with the newly cached prices
+            
             populatePricesFromCache(state.activityMap, state.priceCache);
             
             nextApiCallTimestamp = Date.now() + currentIntervalMs;
