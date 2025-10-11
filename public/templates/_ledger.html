@@ -1,36 +1,7 @@
 <div id="ledger-page-container" class="page-container" style="display: none;">
     <h2>Transaction Ledger</h2>
-    <p class="subtitle">Log a new transaction or filter your complete history below.</p>
+    <p class="subtitle">Filter and review your complete transaction history below.</p>
 
-    <form id="add-transaction-form">
-        <select id="add-tx-account-holder" class="account-holder-select" required></select>
-        <input type="date" id="transaction-date" required>
-        <input type="text" id="ticker" placeholder="Ticker" required>
-        <select id="exchange" required></select>
-        <select id="transaction-type">
-            <option value="BUY">BUY</option>
-            <option value="SELL">SELL</option>
-        </select>
-        <input type="number" id="quantity" placeholder="Quantity" step="any" min="0.00001" required>
-        <input type="number" id="price" placeholder="Price Per Share" step="any" min="0.01" required>
-        <button type="submit">Log Transaction</button>
-
-        <div class="form-row-divider"></div>
-        <div class="limit-order-group">
-            <input type="checkbox" id="set-profit-limit-checkbox" title="Set Take Profit Limit">
-            <label for="add-limit-price-up">Take Profit:</label>
-            <input type="number" id="add-limit-price-up" step="any" placeholder="Price">
-            <label for="add-limit-up-expiration">Exp:</label>
-            <input type="date" id="add-limit-up-expiration">
-        </div>
-        <div class="limit-order-group">
-            <input type="checkbox" id="set-loss-limit-checkbox" title="Set Stop Loss Limit">
-            <label for="add-limit-price-down">Stop Loss:</label>
-            <input type="number" id="add-limit-price-down" step="any" placeholder="Price">
-            <label for="add-limit-down-expiration">Exp:</label>
-            <input type="date" id="add-limit-down-expiration">
-        </div>
-    </form>
     <div class="ledger-filters">
         <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
         <label for="ledger-filter-start">From:</label><input type="date" id="ledger-filter-start">

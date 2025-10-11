@@ -1,9 +1,73 @@
-// public/event-handlers/_orders.js
-import { state } from '../app-main.js';
+// in public/event-handlers/_orders.js
+import { state, refreshLedger } from '../app-main.js'; // Added refreshLedger
 import { formatAccounting, getCurrentESTDateString, showConfirmationModal, showToast } from '../ui/helpers.js';
 import { renderOrdersPage, renderAlertsPage } from '../ui/renderers.js';
 
 export function initializeOrdersHandlers() {
+    // --- MOVED FROM _ledger.js ---
+    const transactionForm = /** @type {HTMLFormElement} */ (document.getElementById('add-transaction-form'));
+    if (transactionForm) {
+		const priceInput = /** @type {HTMLInputElement} */ (document.getElementById('price'));
+		priceInput.addEventListener('change', () => {
+			const price = parseFloat(priceInput.value);
+			if (!price || isNaN(price)) return;
+
+			const takeProfitPercent = state.settings.takeProfitPercent;
+			const stopLossPercent = state.settings.stopLossPercent;
+
+			const suggestedProfit = price * (1 + takeProfitPercent / 100);
+			const suggestedLoss = price * (1 - stopLossPercent / 100);
+
+			(/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-up'))).value = suggestedProfit.toFixed(2);
+			(/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-down'))).value = suggestedLoss.toFixed(2);
+		});
+
+		transactionForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const isProfitLimitSet = (/** @type {HTMLInputElement} */(document.getElementById('set-profit-limit-checkbox'))).checked;
+			const profitExpirationDate = (/** @type {HTMLInputElement} */(document.getElementById('add-limit-up-expiration'))).value;
+			if (isProfitLimitSet && !profitExpirationDate) {
+				return showToast('A Take Profit limit requires an expiration date.', 'error');
+			}
+			const isLossLimitSet = (/** @type {HTMLInputElement} */(document.getElementById('set-loss-limit-checkbox'))).checked;
+			const lossExpirationDate = (/** @type {HTMLInputElement} */(document.getElementById('add-limit-down-expiration'))).value;
+			if (isLossLimitSet && !lossExpirationDate) {
+				return showToast('A Stop Loss limit requires an expiration date.', 'error');
+			}
+			const transaction = {
+				account_holder_id: (/** @type {HTMLSelectElement} */(document.getElementById('add-tx-account-holder'))).value,
+				transaction_date: (/** @type {HTMLInputElement} */(document.getElementById('transaction-date'))).value,
+				ticker: (/** @type {HTMLInputElement} */(document.getElementById('ticker'))).value.toUpperCase().trim(),
+				exchange: (/** @type {HTMLSelectElement} */(document.getElementById('exchange'))).value,
+				transaction_type: (/** @type {HTMLSelectElement} */(document.getElementById('transaction-type'))).value,
+				quantity: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('quantity'))).value),
+				price: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('price'))).value),
+				limit_price_up: isProfitLimitSet ? parseFloat((/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-up'))).value) : null,
+				limit_up_expiration: isProfitLimitSet ? profitExpirationDate : null,
+				limit_price_down: isLossLimitSet ? parseFloat((/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-down'))).value) : null,
+				limit_down_expiration: isLossLimitSet ? lossExpirationDate : null
+			};
+			const submitButton = /** @type {HTMLButtonElement} */ (transactionForm.querySelector('button[type="submit"]'));
+			submitButton.disabled = true;
+			try {
+				const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transaction) });
+				if (!response.ok) {
+					const errorData = await response.json();
+					throw new Error(errorData.message || 'Server responded with an error.');
+				}
+				showToast('Transaction logged successfully!', 'success');
+				transactionForm.reset();
+				(/** @type {HTMLInputElement} */(document.getElementById('transaction-date'))).value = getCurrentESTDateString();
+				await refreshLedger();
+			} catch (error) {
+				showToast(`Failed to log transaction: ${error.message}`, 'error');
+			} finally {
+				submitButton.disabled = false;
+			}
+		});
+	}
+    // --- END MOVED SECTION ---
+
     const addPendingOrderForm = /** @type {HTMLFormElement} */ (document.getElementById('add-pending-order-form'));
     const pendingOrdersTable = document.getElementById('pending-orders-table');
     const confirmFillForm = /** @type {HTMLFormElement} */ (document.getElementById('confirm-fill-form'));
