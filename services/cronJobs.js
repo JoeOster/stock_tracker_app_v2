@@ -1,40 +1,25 @@
+// Portfolio Tracker V3.0.6
 // services/cronJobs.js
 const cron = require('node-cron');
-const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
+const { getPrice, getBatchPrices } = require('./priceFetcher');
 
-/**
- * A simple utility to format a number as currency.
- * @param {number | null | undefined} num - The number to format.
- * @returns {string} The formatted currency string or '--' if input is invalid.
- */
+// ... (formatCurrency and backupDatabase functions are unchanged) ...
 const formatCurrency = (num) => (num ? `$${Number(num).toFixed(2)}` : '--');
-
-/**
- * Backs up the production database to a timestamped file in the /backup directory.
- * This function only runs in the 'production' environment.
- * @returns {Promise<void>}
- */
 async function backupDatabase() {
-    // Ensure this only runs in the production environment
     if (process.env.NODE_ENV !== 'production') {
         console.log('[Backup] Skipping backup in non-production environment.');
         return;
     }
-
     console.log('[Backup] Starting nightly database backup...');
     try {
         const dbPath = './production.db';
         const backupDir = './backup';
-
-        // Ensure the backup directory exists
         await fs.mkdir(backupDir, { recursive: true });
-
         const timestamp = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
         const backupFileName = `production-backup-${timestamp}.db`;
         const backupPath = path.join(backupDir, backupFileName);
-
         await fs.copyFile(dbPath, backupPath);
         console.log(`[Backup] Successfully created backup: ${backupPath}`);
     } catch (error) {
@@ -42,12 +27,6 @@ async function backupDatabase() {
     }
 }
 
-/**
- * Captures the end-of-day (EOD) closing price for any tickers that were fully sold off during a given day.
- * @param {import('sqlite').Database} db - The database connection object.
- * @param {string} dateToProcess - The date to process in 'YYYY-MM-DD' format.
- * @returns {Promise<void>}
- */
 async function captureEodPrices(db, dateToProcess) {
     console.log(`[EOD Process] Running for date: ${dateToProcess}`);
     try {
@@ -61,14 +40,9 @@ async function captureEodPrices(db, dateToProcess) {
                 const existingPrice = await db.get('SELECT id FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, dateToProcess]);
                 if (existingPrice) continue;
                 console.log(`[EOD Process] Position for ${ticker} closed. Fetching closing price...`);
-                const apiKey = process.env.FINNHUB_API_KEY;
-                const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
-                if (apiRes.ok) {
-                    const data = await apiRes.json();
-                    const closePrice = (data && data.c > 0) ? data.c : null;
-                    if (closePrice) {
-                        await db.run('INSERT INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)', [ticker, dateToProcess, closePrice]);
-                    }
+                const closePrice = await getPrice(ticker);
+                if (typeof closePrice === 'number') {
+                    await db.run('INSERT INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)', [ticker, dateToProcess, closePrice]);
                 }
             }
         }
@@ -77,12 +51,6 @@ async function captureEodPrices(db, dateToProcess) {
     }
 }
 
-/**
- * The main order watcher service. Fetches current prices for tickers with open orders/limits
- * and creates notifications for buy limit hits or automatically executes sell limit orders.
- * @param {import('sqlite').Database} db - The database connection object.
- * @returns {Promise<void>}
- */
 async function runOrderWatcher(db) {
     console.log('[CRON] Running Order Watcher / Alert Generator...');
     try {
@@ -92,20 +60,10 @@ async function runOrderWatcher(db) {
         const buyTickers = activeBuyOrders.map(order => order.ticker);
         const sellTickers = openPositionsWithLimits.map(pos => pos.ticker);
         const uniqueTickers = [...new Set([...buyTickers, ...sellTickers])];
-        const currentPrices = {};
-        const apiKey = process.env.FINNHUB_API_KEY;
-        for (const ticker of uniqueTickers) {
-            const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
-            if (apiRes.ok) {
-                const data = await apiRes.json();
-                if (data && data.c > 0) currentPrices[ticker] = data.c;
-            }
-            await new Promise(resolve => setTimeout(resolve, 150));
-        }
-        // Check for buy limit orders that have been hit
+        const currentPrices = await getBatchPrices(uniqueTickers);
         for (const order of activeBuyOrders) {
             const currentPrice = currentPrices[order.ticker];
-            if (currentPrice && currentPrice <= order.limit_price) {
+            if (typeof currentPrice === 'number' && currentPrice <= order.limit_price) {
                 const existingNotification = await db.get("SELECT id FROM notifications WHERE pending_order_id = ? AND status = 'UNREAD'", order.id);
                 if (!existingNotification) {
                     const message = `Price target of ${formatCurrency(order.limit_price)} met for ${order.ticker}. Current price is ${formatCurrency(currentPrice)}.`;
@@ -113,10 +71,9 @@ async function runOrderWatcher(db) {
                 }
             }
         }
-        // Check for sell limit orders (stop loss / take profit) that have been hit
         for (const position of openPositionsWithLimits) {
             const currentPrice = currentPrices[position.ticker];
-            if (!currentPrice) continue;
+            if (typeof currentPrice !== 'number') continue;
             let executedPrice = null;
             let executionType = null;
             if (position.limit_price_down && currentPrice <= position.limit_price_down) {
@@ -126,7 +83,6 @@ async function runOrderWatcher(db) {
                 executedPrice = position.limit_price_up;
                 executionType = 'Take Profit';
             }
-            // If a limit was hit, execute the sale automatically
             if (executedPrice && executionType) {
                 await db.exec('BEGIN TRANSACTION');
                 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
@@ -144,33 +100,20 @@ async function runOrderWatcher(db) {
     }
 }
 
-/**
- * Initializes and schedules all cron jobs for the application.
- * This function is called once on server startup.
- * @param {import('sqlite').Database} db - The database connection object.
- * @returns {void}
- */
 function initializeAllCronJobs(db) {
     if (process.env.NODE_ENV !== 'test') {
-        // Schedule EOD price capture for closed positions. Runs at 4:02 PM EST on weekdays.
         cron.schedule('2 16 * * 1-5', () => {
             const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
             captureEodPrices(db, today);
         }, { timezone: "America/New_York" });
-        
-        // Schedule the Order Watcher. Runs every 5 minutes during market hours (9 AM - 4 PM EST) on weekdays.
         cron.schedule('*/5 9-16 * * 1-5', () => runOrderWatcher(db), {
             timezone: "America/New_York"
         });
-
-        // --- NEW: Schedule Nightly Database Backup ---
-        // Runs at 2:00 AM EST every day.
         cron.schedule('0 2 * * *', () => {
             backupDatabase();
         }, {
             timezone: "America/New_York"
         });
-
         console.log("Cron jobs for EOD, Order Watcher, and Nightly Backups have been scheduled.");
     }
 }

@@ -1,7 +1,7 @@
-// Portfolio Tracker V3.03
+// Portfolio Tracker V3.0.6
 // public/ui/chart-builder.js
 
-/* global Chart */ // Informs the type checker about the global Chart object.
+/* global Chart */ // FIX: Informs the type checker about the global Chart object.
 
 import { state } from '../state.js';
 
@@ -60,15 +60,14 @@ export function createChart(ctx, snapshots) {
     const datasets = {};
     const labels = [...new Set(snapshots.map(s => s.snapshot_date))].sort();
 
-    // If there isn't enough data to draw a line, display a message instead.
-    if (snapshots.length === 0 || labels.length < 2) {
+    if (!snapshots || snapshots.length === 0 || labels.length < 2) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.font = "16px " + (state.settings.font || 'Inter');
         ctx.textAlign = "center";
         const isDarkMode = state.settings.theme === 'dark' || state.settings.theme === 'contrast';
         ctx.fillStyle = isDarkMode ? 'rgba(255, 255, 255, 0.5)' : '#666';
 
-        const message = labels.length < 2 && snapshots.length > 0
+        const message = labels.length < 2 && snapshots && snapshots.length > 0
             ? "At least two snapshots are needed to draw a chart for this date range."
             : "No snapshot data available for this account holder in this date range.";
         wrapText(ctx, message, ctx.canvas.width / 2, 50, ctx.canvas.width - 40, 20);
@@ -81,7 +80,6 @@ export function createChart(ctx, snapshots) {
 
     const exchangeNames = [...new Set(snapshots.map(s => s.exchange))];
 
-    // Group snapshot data by exchange to create separate datasets.
     exchangeNames.forEach(exchangeName => {
         datasets[exchangeName] = {
             label: exchangeName,
@@ -98,7 +96,7 @@ export function createChart(ctx, snapshots) {
         type: 'line',
         data: { labels: labels, datasets: Object.values(datasets) },
         options: {
-            spanGaps: true, // Connect lines across null data points
+            spanGaps: true,
             responsive: true, maintainAspectRatio: false,
             scales: {
                 y: { ticks: { color: textColor }, grid: { color: gridColor } },
@@ -108,7 +106,6 @@ export function createChart(ctx, snapshots) {
                 legend: { position: 'bottom', labels: { color: textColor } }
             },
             onClick: (e, elements, chart) => {
-                // On click, open a larger version of the chart in a modal.
                 const chartZoomModal = document.getElementById('chart-zoom-modal');
                 const zoomedChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('zoomed-chart'));
                 if (!chartZoomModal || !zoomedChartCanvas) return;

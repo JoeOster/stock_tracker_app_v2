@@ -1,8 +1,7 @@
-// Portfolio Tracker V3.0.5
+// Portfolio Tracker V3.0.6
 // public/event-handlers/_snapshots.js
-import { state } from '../state.js'; // FIX: Corrected import path
-import { refreshSnapshots } from '../app-main.js';
-import { renderSnapshotsPage } from '../ui/renderers.js';
+import { state } from '../state.js';
+import { switchView } from '../app-main.js'; // FIX: Import switchView instead of refreshSnapshots
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 /**
@@ -27,10 +26,10 @@ export function initializeSnapshotsHandlers() {
             try {
                 const res = await fetch('/api/utility/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snapshot) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                await refreshSnapshots(); // This fetches and updates state.allSnapshots
-                renderSnapshotsPage(state.allSnapshots); // FIX: Pass the updated state to the renderer
                 addSnapshotForm.reset();
                 showToast('Snapshot saved!', 'success');
+                // FIX: Re-trigger the view to fetch and render fresh data
+                await switchView('snapshots', null);
             } catch (error) {
                 showToast(`Error: ${error.message}`, 'error');
             }
@@ -47,9 +46,9 @@ export function initializeSnapshotsHandlers() {
                      try {
                         const res = await fetch(`/api/utility/snapshots/${id}`, { method: 'DELETE' });
                         if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                        state.allSnapshots = state.allSnapshots.filter(s => s.id != id);
-                        renderSnapshotsPage(state.allSnapshots); // FIX: Pass the updated state to the renderer
                         showToast('Snapshot deleted.', 'success');
+                        // FIX: Re-trigger the view to fetch and render fresh data
+                        await switchView('snapshots', null);
                     } catch (error) {
                         showToast(`Error: ${error.message}`, 'error');
                     }

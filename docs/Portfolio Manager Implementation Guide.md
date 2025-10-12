@@ -8,30 +8,30 @@ This document breaks down the V3.0 project plan into actionable development task
 
 ### **Task 0.1: Identify and Remove Unused Files**
 
-* [ ] Audit the project repository for any scripts, old documentation, or code files that are no longer being used.
-* [ ] Safely delete obsolete files, such as the `refactor-event-listeners.bat` script, which has already served its purpose.
+* [x] Audit the project repository for any scripts, old documentation, or code files that are no longer being used.
+* [x] Safely delete obsolete files, such as the `refactor-event-listeners.bat` script, which has already served its purpose.
 
 ### **Task 0.2: Create and Organize Project Documentation**
 
-* [ ] Create a new `/docs` directory in the project root.
-* [ ] Move all existing Markdown files (`README.md`, `gemini.md`, `Portfolio Manager Implementation Guide.md`, etc.) into the `/docs` directory.
-* [ ] Create a new `database_schema.md` file in the `/docs` directory that consolidates the final schema from all existing migration files.
+* [x] Create a new `/docs` directory in the project root.
+* [x] Move all existing Markdown files (`README.md`, `gemini.md`, `Portfolio Manager Implementation Guide.md`, etc.) into the `/docs` directory.
+* [x] Create a new `database_schema.md` file in the `/docs` directory that consolidates the final schema from all existing migration files.
 
 ### **Task 0.3: Improve Code Organization and Commenting**
 
-* [ ] Review all major JavaScript files and add JSDoc comments to functions, explaining their purpose, parameters, and return values.
-* [ ] Reorganize the code within each file by grouping related functions together.
+* [x] Review all major JavaScript files and add JSDoc comments to functions, explaining their purpose, parameters, and return values.
+* [x] Reorganize the code within each file by grouping related functions together.
 
 ### **Task 0.4: Refactor Large Frontend Modules**
 
-* [ ] **`app-main.js`**: Split the file into smaller, single-responsibility modules (e.g., `state.js`, `settings.js`, `data-service.js`).
-* [ ] **`_charts.js`**: Extract the generic chart-building logic into a new, dedicated module.
+* [x] **`app-main.js`**: Split the file into smaller, single-responsibility modules (e.g., `state.js`).
+* [x] **`_charts.js`**: Extract the generic chart-building logic into a new, dedicated module (`chart-builder.js`).
 
 ### **Task 0.5: Decouple Frontend Renderers from Data Fetching**
 
-* [ ] Create new functions in `/public/api.js` for each distinct API call.
-* [ ] Modify the renderer functions in `/public/ui/renderers/` to accept data as arguments.
-* [ ] Update `app-main.js` to orchestrate the API calls and pass data to the renderers.
+* [x] Create new functions in `/public/api.js` for each distinct API call.
+* [x] Modify the renderer functions in `/public/ui/renderers/` to accept data as arguments.
+* [x] Update `app-main.js` to orchestrate the API calls and pass data to the renderers.
 
 ### **Task 0.6: Consolidate Backend Services & Implement Rate Limiting**
 
@@ -47,9 +47,25 @@ This document breaks down the V3.0 project plan into actionable development task
 
 ### **Task 0.8: Enhance Testing Strategy**
 
-* [ ] Create separate Jest configurations for API and UI tests (e.g., `jest.config.api.js`, `jest.config.ui.js`).
-* [ ] Update the `scripts` in `package.json` to allow for running these test suites independently (e.g., `test:api`, `test:ui`).
+* [x] Create separate Jest configurations for API and UI tests (e.g., `jest.config.api.js`, `jest.config.ui.js`).
+* [x] Update the `scripts` in `package.json` to allow for running these test suites independently.
 * [ ] Consider adding a simple end-to-end (E2E) test to validate a full user workflow.
+
+### **Task 0.9: Update Configuration for V3 Standards**
+
+* [ ] **Server & Environment:**
+  * [ ] Update `server.js` to use port `3003` as the default production port.
+  * [ ] Create a `.env.template` or similar example file to instruct users to set `PORT=3111` for development.
+* [ ] **Windows Deployment (`deploy.bat`):**
+  * [ ] Modify the script to target the `c:\portfolio_managerV3` directory for production files.
+  * [ ] Update the backup logic within the script to use `c:\portfolio_manager_bu\v3\prod`.
+* [ ] **Raspberry Pi / Linux Deployment:**
+  * [ ] Update the `docs/RASPBERRY_PI_DEPLOYMENT.md` guide to reflect the new production port (`3003`).
+  * [ ] Modify the `docs/setup_pi.sh` script:
+    * Change the default port suggestion to `3003`.
+    * Update the backup script and cron job to use a Linux-appropriate path that mirrors the new standard (e.g., `/home/pi/portfolio_manager_bu/v3/prod`).
+* [ ] **Development Backup:**
+  * [ ] Create a new npm script (e.g., `npm run backup:dev`) that backs up the development database to `c:\portfolio_manager_bu\v3\dev` on Windows or an equivalent path for Linux/macOS.
 
 ## **Phase 0.5: Application Hardening**
 
@@ -91,3 +107,15 @@ This document breaks down the V3.0 project plan into actionable development task
 
 * [ ] Implement a user authentication and session management system on the backend.
 * [ ] Create a login page and integrate the authentication flow into the frontend.
+
+## **Phase 4: Finalization & Documentation**
+
+**Objective:** Ensure all project documentation is up-to-date with the new V3 features and architecture.
+
+### **Task 4.1: Update All Project Documentation**
+
+* [ ] Review and update `README.md` to include details about the Intelligent CSV Importer, Strategy & Advice Journal, and Authentication features.
+* [ ] Update `database_schema.md` with any schema changes introduced during the implementation of the new features.
+* [ ] Update `RASPBERRY_PI_DEPLOYMENT.md` and `setup_pi.sh` with any new environment variables, dependencies, or setup steps required for the V3 features.
+* [ ] Review all in-code JSDoc comments to ensure they accurately reflect the final V3 codebase.
+* [ ] Update `gemini.md` to incorporate the completed V3 features, preparing it for future development cycles.

@@ -1,4 +1,4 @@
-// Portfolio Tracker V3.0.5
+// Portfolio Tracker V3.0.6
 // public/app-main.js
 
 /* global Chart */
@@ -7,7 +7,7 @@ import { state } from './state.js';
 import { initializeAllEventListeners } from './event-handlers/_init.js';
 import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage } from './ui/renderers.js';
 import { populatePricesFromCache, getCurrentESTDateString, showToast, getMostRecentTradingDay } from './ui/helpers.js';
-import { updatePricesForView, fetchPendingOrders, fetchAlerts, fetchDailyPerformance, fetchPositions } from './api.js'; // Import the new fetch functions
+import { updatePricesForView, fetchPendingOrders, fetchAlerts, fetchDailyPerformance, fetchPositions, fetchSnapshots } from './api.js';
 import { initializeScheduler } from './scheduler.js';
 
 /**
@@ -65,48 +65,53 @@ export async function switchView(viewType, viewValue) {
     }
 
     if (viewType === 'date') {
-        // --- REFACTORED ORCHESTRATION ---
-        // Set loading states before fetching
         const performanceSummary = document.getElementById('daily-performance-summary');
         if(performanceSummary) { performanceSummary.innerHTML = `<h3>Daily Performance: <span>...</span></h3><h3 id="realized-gains-summary">Realized: <span>--</span></h3><h3 id="total-value-summary">Total Open Value: <span>--</span></h3>`; }
         const logBody = document.querySelector('#log-body');
         const summaryBody = document.querySelector('#positions-summary-body');
         if(logBody) logBody.innerHTML = `<tr><td colspan="12">Loading...</td></tr>`;
         if(summaryBody) summaryBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
-
         try {
-            // Fetch all required data in parallel
             const [perfData, positionData] = await Promise.all([
                 fetchDailyPerformance(viewValue, state.selectedAccountHolderId),
                 fetchPositions(viewValue, state.selectedAccountHolderId)
             ]);
-            
-            // Pass the fetched data to the renderer
             renderDailyReport(viewValue, state.activityMap, perfData, positionData);
-
-            // Fetch live prices for the newly rendered positions
             await updatePricesForView(viewValue, state.activityMap, state.priceCache);
             populatePricesFromCache(state.activityMap, state.priceCache);
         } catch (error) {
             console.error("Failed to load daily report:", error);
             showToast(error.message, 'error');
-            // Render error state using the now-pure renderer
             renderDailyReport(viewValue, state.activityMap, null, null);
              if(logBody) logBody.innerHTML = `<tr><td colspan="12">Error loading transaction data.</td></tr>`;
              if(summaryBody) summaryBody.innerHTML = '<tr><td colspan="10">Error loading position data.</td></tr>';
         }
-        // --- END REFACTOR ---
-    } else if (viewType === 'charts') {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        await refreshSnapshots();
-        await renderChartsPage();
+    } else if (viewType === 'charts' || viewType === 'snapshots') {
+        const snapshotsTableBody = document.querySelector('#snapshots-table tbody');
+        if (viewType === 'snapshots' && snapshotsTableBody) {
+            snapshotsTableBody.innerHTML = '<tr><td colspan="4">Loading snapshots...</td></tr>';
+        }
+        try {
+            const snapshots = await fetchSnapshots(state.selectedAccountHolderId);
+            if (viewType === 'snapshots') {
+                renderSnapshotsPage(snapshots);
+            } else { // 'charts'
+                state.allSnapshots = snapshots;
+                await new Promise(resolve => setTimeout(resolve, 50));
+                await renderChartsPage();
+            }
+        } catch (error) {
+            console.error(`Failed to load ${viewType} page:`, error);
+            showToast(error.message, 'error');
+            if (viewType === 'snapshots' && snapshotsTableBody) {
+                snapshotsTableBody.innerHTML = '<tr><td colspan="4">Error loading snapshots.</td></tr>';
+            }
+        }
     } else if (viewType === 'ledger') {
         await refreshLedger();
     } else if (viewType === 'orders') {
         const tableBody = document.querySelector('#pending-orders-table tbody');
-        if (tableBody) {
-            tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
-        }
+        if (tableBody) tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
         try {
             const orders = await fetchPendingOrders(state.selectedAccountHolderId);
             renderOrdersPage(orders);
@@ -119,9 +124,7 @@ export async function switchView(viewType, viewValue) {
         }
     } else if (viewType === 'alerts') {
         const tableBody = document.querySelector('#alerts-table tbody');
-        if (tableBody) {
-            tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
-        }
+        if (tableBody) tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
         try {
             const alerts = await fetchAlerts(state.selectedAccountHolderId);
             renderAlertsPage(alerts);
@@ -132,9 +135,6 @@ export async function switchView(viewType, viewValue) {
                 tableBody.innerHTML = '<tr><td colspan="3">Error loading alerts.</td></tr>';
             }
         }
-    } else if (viewType === 'snapshots') {
-        await refreshSnapshots();
-        renderSnapshotsPage();
     }
 
     const headerSummary = /** @type {HTMLElement} */ (document.getElementById('header-daily-summary'));
@@ -154,17 +154,6 @@ export async function refreshLedger() {
         state.allTransactions = await res.json();
         renderLedger(state.allTransactions, state.ledgerSort);
     } catch (error) { console.error("Failed to refresh ledger:", error); showToast("Could not refresh the ledger.", "error"); }
-}
-
-/**
- * Fetches the latest account snapshots from the server.
- * @returns {Promise<void>}
- */
-export async function refreshSnapshots() {
-     try {
-        const res = await fetch(`/api/utility/snapshots?holder=${state.selectedAccountHolderId}`);
-        if(res.ok) state.allSnapshots = await res.json();
-    } catch (e) { console.error("Could not fetch snapshots", e); }
 }
 
 /**

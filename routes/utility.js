@@ -1,7 +1,8 @@
+// Portfolio Tracker V3.0.6
 // routes/utility.js
 const express = require('express');
 const router = express.Router();
-const fetch = require('node-fetch');
+const { getBatchPrices } = require('../services/priceFetcher'); // Import the new price fetcher service
 
 /**
  * Creates and returns an Express router for handling utility and miscellaneous endpoints.
@@ -17,46 +18,43 @@ module.exports = (db, { captureEodPrices }) => {
     /**
      * POST /prices/batch
      * Fetches current or historical prices for a batch of tickers. It prioritizes fetching
-     * from a local cache (`historical_prices`) before querying the live API.
+     * from a local cache (`historical_prices`) before querying the live API via the priceFetcher service.
      */
     router.post('/prices/batch', async (req, res) => {
         const { tickers, date } = req.body;
         if (!tickers || !Array.isArray(tickers)) {
             return res.status(400).json({ message: 'Invalid request body, expected a "tickers" array.' });
         }
+
         const prices = {};
-        const apiKey = process.env.FINNHUB_API_KEY;
-        if (!apiKey) return res.status(500).json({ message: "API key not configured on server." });
+        const tickersToFetch = [];
 
+        // First, check for cached historical prices for the given date
         for (const ticker of tickers) {
-            try {
-                // First, check for a cached historical price for the given date
-                const cachedPrice = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, date]);
-                if (cachedPrice) {
-                    prices[ticker] = cachedPrice.close_price;
-                    continue; // Move to the next ticker
-                }
-
-                // If no cached price, fetch from the live API
-                const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
-                if (apiRes.ok) {
-                    const data = await apiRes.json();
-                    if (data && data.c > 0) {
-                        prices[ticker] = data.c;
-                    } else {
-                        prices[ticker] = 'invalid';
-                        console.warn(`[Price Fetch Warning] Ticker '${ticker}' returned a null or zero price. It may be an invalid symbol.`);
-                    }
-                } else {
-                    prices[ticker] = null;
-                }
-                // Brief pause to respect API rate limits
-                await new Promise(resolve => setTimeout(resolve, 150));
-            } catch (error) {
-                console.error(`Error fetching price for ${ticker} in batch:`, error);
-                prices[ticker] = null;
+            const cachedPrice = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, date]);
+            if (cachedPrice) {
+                prices[ticker] = cachedPrice.close_price;
+            } else {
+                tickersToFetch.push(ticker);
             }
         }
+
+        // Fetch remaining prices from the live API via the centralized service
+        if (tickersToFetch.length > 0) {
+            try {
+                const fetchedPrices = await getBatchPrices(tickersToFetch);
+                Object.assign(prices, fetchedPrices);
+            } catch (error) {
+                console.error("Error fetching batch prices from service:", error);
+                // Assign null to tickers that failed to fetch
+                tickersToFetch.forEach(ticker => {
+                    if (!prices[ticker]) {
+                        prices[ticker] = null;
+                    }
+                });
+            }
+        }
+        
         res.json(prices);
     });
 
@@ -66,7 +64,6 @@ module.exports = (db, { captureEodPrices }) => {
      */
     router.post('/tasks/capture-eod/:date', async (req, res) => {
         const { date } = req.params;
-        // The captureEodPrices function is now passed in and available in the closure
         if (captureEodPrices && typeof captureEodPrices === 'function') {
             captureEodPrices(db, date);
             res.status(202).json({ message: `EOD process for ${date} acknowledged.` });

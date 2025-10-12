@@ -1,7 +1,9 @@
+// Portfolio Tracker V3.0.6
 // routes/reporting.js
 const express = require('express');
 const router = express.Router();
-const fetch = require('node-fetch');
+// REFACTOR: Import both getPrice and getBatchPrices
+const { getPrice, getBatchPrices } = require('../services/priceFetcher');
 
 /**
  * Creates and returns an Express router for handling complex reporting and data aggregation endpoints.
@@ -33,40 +35,59 @@ module.exports = (db) => {
         /**
          * Calculates the total value of all open positions on a given date.
          * @param {string} date - The date for which to calculate the total value.
+         * @param {object} priceMap - A pre-fetched map of tickers to prices.
          * @returns {Promise<number>} The total calculated value.
          */
-        const calculateTotalValue = async (date) => {
+        // REFACTOR: This function now accepts a pre-fetched price map to avoid loops of API calls.
+        const calculateTotalValue = async (date, priceMap) => {
             const query = `
                 SELECT ticker, price as cost_basis, COALESCE(quantity_remaining, 0) as quantity_remaining
                 FROM transactions
                 WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?) AND COALESCE(quantity_remaining, 0) > 0.00001
                 ${holderFilter}
             `;
+            // @ts-ignore
             const openLots = await db.all(query, params.map(p => p === selectedDate ? date : p));
 
             let totalValue = 0;
             for (const lot of openLots) {
-                let price = null;
-                const cachedPrice = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date = ?', [lot.ticker, date]);
-                if (cachedPrice) { price = cachedPrice.close_price; }
-                else {
-                    try {
-                        const apiKey = process.env.FINNHUB_API_KEY;
-                        const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${lot.ticker}&token=${apiKey}`);
-                        if(apiRes.ok) {
-                            const data = await apiRes.json();
-                            if(data && data.c > 0) price = data.c;
-                        }
-                    } catch (e) { /* ignore */ }
-                }
-                totalValue += ((price || lot.cost_basis) * lot.quantity_remaining);
+                const priceToUse = priceMap[lot.ticker];
+                // Use the live price if it's a valid number, otherwise fall back to the lot's original cost basis.
+                const finalPrice = (typeof priceToUse === 'number') ? priceToUse : lot.cost_basis;
+                totalValue += (finalPrice * lot.quantity_remaining);
             }
             return totalValue;
         };
+
         try {
-            const currentValue = await calculateTotalValue(selectedDate);
-            const previousValue = await calculateTotalValue(previousDay);
+            // REFACTOR: Gather all unique tickers needed for both calculations first.
+            const lotsForTodayQuery = `SELECT DISTINCT ticker FROM transactions WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?) AND COALESCE(quantity_remaining, 0) > 0.00001 ${holderFilter}`;
+            // @ts-ignore
+            const lotsForYesterdayQuery = `SELECT DISTINCT ticker FROM transactions WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?) AND COALESCE(quantity_remaining, 0) > 0.00001 ${holderFilter}`;
+            
+            // @ts-ignore
+            const todayParams = params.map(p => p === selectedDate ? selectedDate : p);
+            // @ts-ignore
+            const yesterdayParams = params.map(p => p === selectedDate ? previousDay : p);
+
+            const [tickersToday, tickersYesterday] = await Promise.all([
+                db.all(lotsForTodayQuery, todayParams),
+                db.all(lotsForYesterdayQuery, yesterdayParams)
+            ]);
+
+            const uniqueTickers = [...new Set([
+                ...tickersToday.map(t => t.ticker), 
+                ...tickersYesterday.map(t => t.ticker)
+            ])];
+
+            // Make one single batch call for all prices needed.
+            const priceMap = await getBatchPrices(uniqueTickers);
+
+            // Now perform calculations using the pre-fetched prices.
+            const currentValue = await calculateTotalValue(selectedDate, priceMap);
+            const previousValue = await calculateTotalValue(previousDay, priceMap);
             const dailyChange = currentValue - previousValue;
+
             res.json({ currentValue, previousValue, dailyChange });
         } catch (error) {
             console.error("Failed to calculate daily performance:", error);
@@ -82,7 +103,6 @@ module.exports = (db) => {
         try {
             const selectedDate = req.params.date;
             const holderId = req.query.holder;
-
             let holderFilter = '';
             const params = [selectedDate];
             if (holderId && holderId !== 'all') {
@@ -90,7 +110,6 @@ module.exports = (db) => {
                 // @ts-ignore
                 params.push(holderId);
             }
-
             const dailyTransactionsQuery = `
                 SELECT daily_tx.*, parent_tx.price as parent_buy_price
                 FROM transactions AS daily_tx
