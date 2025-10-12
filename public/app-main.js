@@ -1,4 +1,3 @@
-// Portfolio Tracker V3.0.6
 // public/app-main.js
 
 /* global Chart */
@@ -71,14 +70,29 @@ export async function switchView(viewType, viewValue) {
         const summaryBody = document.querySelector('#positions-summary-body');
         if(logBody) logBody.innerHTML = `<tr><td colspan="12">Loading...</td></tr>`;
         if(summaryBody) summaryBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
+        
         try {
-            const [perfData, positionData] = await Promise.all([
-                fetchDailyPerformance(viewValue, state.selectedAccountHolderId),
-                fetchPositions(viewValue, state.selectedAccountHolderId)
-            ]);
-            renderDailyReport(viewValue, state.activityMap, perfData, positionData);
-            await updatePricesForView(viewValue, state.activityMap, state.priceCache);
-            populatePricesFromCache(state.activityMap, state.priceCache);
+            // Fetch only the essential position data first.
+            const positionData = await fetchPositions(viewValue, state.selectedAccountHolderId);
+            // Render the main table structure immediately.
+            renderDailyReport(viewValue, state.activityMap, null, positionData);
+
+            // Now, fetch the supplementary data in the background and update the UI when they complete.
+            fetchDailyPerformance(viewValue, state.selectedAccountHolderId).then(perfData => {
+                 const performanceSpan = document.querySelector('#daily-performance-summary h3:first-child span');
+                 if (performanceSpan && perfData) {
+                    const change = perfData.dailyChange;
+                    const percentage = (perfData.previousValue !== 0) ? (change / perfData.previousValue * 100).toFixed(2) : 0;
+                    const colorClass = change >= 0 ? 'positive' : 'negative';
+                    performanceSpan.className = colorClass;
+                    performanceSpan.innerHTML = `${formatAccounting(change)} (${percentage}%)`;
+                 }
+            });
+
+            updatePricesForView(viewValue, state.activityMap, state.priceCache).then(() => {
+                populatePricesFromCache(state.activityMap, state.priceCache);
+            });
+
         } catch (error) {
             console.error("Failed to load daily report:", error);
             showToast(error.message, 'error');

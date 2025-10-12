@@ -95,6 +95,8 @@ module.exports = (db) => {
         }
     });
 
+    // ... (rest of the file is unchanged)
+
     /**
      * GET /positions/:date
      * Fetches all transactions for a specific day and all open positions at the end of that day.

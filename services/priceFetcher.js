@@ -1,4 +1,3 @@
-// Portfolio Tracker V3.0.6
 // services/priceFetcher.js
 
 const fetch = require('node-fetch');
