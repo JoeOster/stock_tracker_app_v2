@@ -3,27 +3,22 @@
 
 table {
     width: 100%;
-    /* --- FIX: Switch to separate border model to solve sticky column bug --- */
     border-collapse: separate;
     border-spacing: 0;
-    /* --- End of FIX --- */
     min-width: 1200px;
-    border: 1px solid var(--container-border); /* Add border to table itself */
-    border-radius: 8px; /* Optional: for a cleaner look */
+    border: 1px solid var(--container-border);
+    border-radius: 8px;
 }
 
 th, td {
-    /* --- FIX: Remove general border and apply specific borders --- */
     border: none;
     border-bottom: 1px solid var(--container-border);
     border-right: 1px solid var(--container-border);
-    /* --- End of FIX --- */
     padding: 12px 15px;
     text-align: left;
     white-space: nowrap;
 }
 
-/* Remove the outer-right border from the last cell in each row */
 th:last-child, td:last-child {
     border-right: none;
 }
@@ -32,20 +27,17 @@ th {
     background-color: var(--table-header-bg);
     font-weight: 600;
     color: var(--heading-color);
-    /* Add a top border back to all header cells */
     border-top: 1px solid var(--container-border);
+    border-bottom: 2px solid var(--primary-color);
 }
 
-/* --- NEW: Sticky Header Styles --- */
 thead th {
-    position: -webkit-sticky; /* For Safari */
+    position: -webkit-sticky;
     position: sticky;
     top: 0;
-    z-index: 3; /* Must be higher than sticky columns */
+    z-index: 3;
 }
 
-
-/* Remove the bottom border from the last row of cells */
 tbody tr:last-child td {
     border-bottom: none;
 }
@@ -58,26 +50,30 @@ tbody tr:nth-child(even) {
 .positive { color: var(--positive-color); font-weight: 600; }
 .negative { color: var(--negative-color); font-weight: 600; }
 .actions-cell { text-align: right; }
+.center-align { text-align: center; }
 
-/* --- NEW: Center Align Utility --- */
-.center-align {
-    text-align: center;
+
+/* --- FINAL FIX for Section Header Centering --- */
+/* Target any 'th' inside the stock table that has a colspan attribute */
+#stock-table th[colspan] {
+    text-align: center !important;
+    font-size: 1.2rem;
 }
-
 
 .table-section-header { 
     text-align: center !important; /* Force centering */
     font-size: 1.2rem; /* Make font larger */
-    background-color: #f8f9f9; /* Legacy color, candidate for refactoring */
+    background-color: var(--table-header-bg); /* FIX: Use theme variable */
 }
 #positions-summary-title { 
     text-align: center !important; /* Force centering */
     font-size: 1.2rem; /* Make font larger */
-    background-color: #e8f6f3; /* Legacy color, candidate for refactoring */
+    background-color: var(--table-header-bg); /* FIX: Use theme variable */
 }
-/* --- Sticky Column Styles (Corrected for Separate Border Model) --- */
+/* --- END OF FINAL FIX --- */
 
-/* Sticky LEFT Column */
+
+/* --- Sticky Column Styles --- */
 #stock-table th:first-child, #stock-table td:first-child,
 #portfolio-overview-table th:first-child, #portfolio-overview-table td:first-child,
 #ledger-table th:first-child, #ledger-table td:first-child,
@@ -86,11 +82,9 @@ tbody tr:nth-child(even) {
     position: sticky;
     left: 0;
     z-index: 2;
-    /* Add the left border back since we removed it from all tds/ths */
     border-left: 1px solid var(--container-border);
 }
 
-/* Sticky RIGHT Column (Actions) */
 #stock-table th:last-child, #stock-table td:last-child,
 #ledger-table th:last-child, #ledger-table td:last-child,
 #pending-orders-table th:last-child, #snapshots-table th:last-child {
@@ -98,12 +92,9 @@ tbody tr:nth-child(even) {
     position: sticky;
     right: 0;
     z-index: 2;
-    /* Add a right border back since we removed it from all last-child cells */
     border-right: 1px solid var(--container-border);
 }
 
-
-/* Background color overrides for sticky columns */
 #stock-table th:first-child, #stock-table th:last-child,
 #portfolio-overview-table th:first-child,
 #ledger-table th:first-child, #ledger-table th:last-child,

@@ -18,8 +18,8 @@ describe('renderTabs', () => {
     beforeEach(() => {
         document.body.innerHTML = '<div id="tabs-container"></div>';
         // Use unique mock dates to prevent de-duplication
-        getTradingDays.mockReturnValue(['2025-10-01', '2025-10-02']); 
-        getActivePersistentDates.mockReturnValue([]);
+        /** @type {jest.Mock} */(getTradingDays).mockReturnValue(['2025-10-01', '2025-10-02']); 
+        /** @type {jest.Mock} */(getActivePersistentDates).mockReturnValue([]);
     });
 
     it('should render all static and dynamic tabs correctly', () => {

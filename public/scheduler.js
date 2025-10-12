@@ -5,7 +5,7 @@ import { populatePricesFromCache, getUSMarketStatus } from './ui/helpers.js'; //
 let nextApiCallTimestamp = 0;
 
 export function initializeScheduler(state) {
-    const refreshPricesBtn = document.getElementById('refresh-prices-btn');
+    const refreshPricesBtn = /** @type {HTMLButtonElement} */ (document.getElementById('refresh-prices-btn'));
     const apiTimerEl = document.getElementById('api-timer');
 
     setInterval(async () => {

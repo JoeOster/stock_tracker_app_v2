@@ -14,6 +14,7 @@ module.exports = (db) => {
         const params = [selectedDate];
         if (holderId && holderId !== 'all') {
             holderFilter = 'AND account_holder_id = ?';
+            // @ts-ignore
             params.push(holderId);
         }
 
@@ -69,6 +70,7 @@ module.exports = (db) => {
             const params = [selectedDate];
             if (holderId && holderId !== 'all') {
                 holderFilter = 'AND account_holder_id = ?';
+                // @ts-ignore
                 params.push(holderId);
             }
 

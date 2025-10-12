@@ -3,7 +3,7 @@ import { state } from '../../app-main.js';
 import { formatAccounting } from '../helpers.js';
 
 export function renderSnapshotsPage() {
-    const exchangeSelect = document.getElementById('snapshot-exchange');
+    const exchangeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('snapshot-exchange'));
     if (exchangeSelect) {
         const currentVal = exchangeSelect.value;
         exchangeSelect.innerHTML = '<option value="" disabled selected>Select Exchange</option>';
@@ -16,7 +16,7 @@ export function renderSnapshotsPage() {
         exchangeSelect.value = currentVal;
     }
 
-    const tableBody = document.querySelector('#snapshots-table tbody');
+    const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#snapshots-table tbody'));
     if (tableBody) {
         tableBody.innerHTML = '';
         if (state.allSnapshots.length === 0) {

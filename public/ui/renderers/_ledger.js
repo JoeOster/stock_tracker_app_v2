@@ -3,7 +3,7 @@ import { state } from '../../app-main.js';
 import { formatQuantity, formatAccounting } from '../helpers.js';
 
 export function renderLedger(allTransactions, ledgerSort) {
-    const ledgerTableBody = document.querySelector('#ledger-table tbody');
+    const ledgerTableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#ledger-table tbody'));
     const summaryContainer = document.getElementById('ledger-summary-container');
     if(!ledgerTableBody) return;
 
@@ -13,9 +13,9 @@ export function renderLedger(allTransactions, ledgerSort) {
         return;
     }
     
-    const ledgerFilterTicker = document.getElementById('ledger-filter-ticker');
-    const ledgerFilterStart = document.getElementById('ledger-filter-start');
-    const ledgerFilterEnd = document.getElementById('ledger-filter-end');
+    const ledgerFilterTicker = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-ticker'));
+    const ledgerFilterStart = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-start'));
+    const ledgerFilterEnd = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-end'));
     
     const filterTicker = ledgerFilterTicker.value.toUpperCase().trim();
     const filterStart = ledgerFilterStart.value;
@@ -60,8 +60,11 @@ export function renderLedger(allTransactions, ledgerSort) {
     });
 
     document.querySelectorAll('#ledger-table thead th[data-sort]').forEach(th => {
-        th.classList.remove('sorted-asc', 'sorted-desc');
-        if (th.dataset.sort === ledgerSort.column) { th.classList.add(ledgerSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc'); }
+        const headerElement = /** @type {HTMLElement} */ (th);
+        headerElement.classList.remove('sorted-asc', 'sorted-desc');
+        if (headerElement.dataset.sort === ledgerSort.column) { 
+            headerElement.classList.add(ledgerSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc'); 
+        }
     });
 
     ledgerTableBody.innerHTML = '';

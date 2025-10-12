@@ -2,7 +2,7 @@
 
 A personal, self-hosted web application designed as a broker-agnostic strategy and performance hub for active retail traders. This version includes full multi-account integration, automated trade execution for limit orders, a robust deployment process, and a modular, maintainable codebase.
 
-**GitHub Repository:** https://github.com/JoeOster/stock\_tracker\_app\_v2
+**GitHub Repository:** <https://github.com/JoeOster/stock\_tracker\_app\_v2>
 
 ## **Project Overview**
 

@@ -1,8 +1,11 @@
 // public/ui/renderers/_charts.js
+
+/* global Chart */ // FIX: Informs the type checker about the global Chart object
+
 import { state } from '../../app-main.js';
 import { formatQuantity, formatAccounting, getTradingDays, getCurrentESTDateString } from '../helpers.js';
 
-// --- Chart Creation Logic (previously in charts.js) ---
+// --- Chart Creation Logic ---
 
 function stringToHslColor(str, s = 75, l = 60) {
     let hash = 0;
@@ -82,8 +85,10 @@ function createChart(ctx, snapshots, state) {
             },
             onClick: (e, elements, chart) => {
                 const chartZoomModal = document.getElementById('chart-zoom-modal');
-                const zoomedChartCtx = document.getElementById('zoomed-chart').getContext('2d');
-                if (!chartZoomModal || !zoomedChartCtx) return;
+                const zoomedChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('zoomed-chart'));
+                if (!chartZoomModal || !zoomedChartCanvas) return;
+                const zoomedChartCtx = zoomedChartCanvas.getContext('2d');
+                if (!zoomedChartCtx) return;
                 if(state.zoomedChart) state.zoomedChart.destroy();
                 state.zoomedChart = new Chart(zoomedChartCtx, chart.config);
                 chartZoomModal.classList.add('visible');
@@ -126,8 +131,9 @@ function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance, snapsh
 
 export async function renderChartsPage(state) {
     const plSummaryTable = document.getElementById('pl-summary-table');
-    const allTimeChartCtx = document.getElementById('all-time-chart')?.getContext('2d');
-    if (!plSummaryTable || !allTimeChartCtx) return;
+    const allTimeChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('all-time-chart'));
+    if (!plSummaryTable || !allTimeChartCanvas) return;
+    const allTimeChartCtx = allTimeChartCanvas.getContext('2d');
 
     const overviewDateSpan = document.getElementById('overview-date');
     if(overviewDateSpan) {
@@ -136,10 +142,13 @@ export async function renderChartsPage(state) {
     }
 
     async function renderRangedPLSummary() {
-        const startDate = document.getElementById('pl-start-date').value;
-        const endDate = document.getElementById('pl-end-date').value;
+        const startDateInput = /** @type {HTMLInputElement} */ (document.getElementById('pl-start-date'));
+        const endDateInput = /** @type {HTMLInputElement} */ (document.getElementById('pl-end-date'));
         const rangedTable = document.getElementById('pl-summary-ranged-table');
-        if (!startDate || !endDate || !rangedTable) return;
+        if (!startDateInput || !endDateInput || !rangedTable) return;
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+
         try {
             const res = await fetch('/api/reporting/realized_pl/summary', {
                 method: 'POST',
@@ -170,10 +179,12 @@ export async function renderChartsPage(state) {
         }
     } catch (error) { console.error("Failed to render P&L Summary:", error); }
     
-    const fiveDayChartCtx = document.getElementById('five-day-chart')?.getContext('2d');
-    const dateRangeChartCtx = document.getElementById('date-range-chart')?.getContext('2d');
-    const chartStartDate = document.getElementById('chart-start-date');
-    const chartEndDate = document.getElementById('chart-end-date');
+    const fiveDayChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('five-day-chart'));
+    const dateRangeChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('date-range-chart'));
+    const fiveDayChartCtx = fiveDayChartCanvas ? fiveDayChartCanvas.getContext('2d') : null;
+    const dateRangeChartCtx = dateRangeChartCanvas ? dateRangeChartCanvas.getContext('2d') : null;
+    const chartStartDate = /** @type {HTMLInputElement} */ (document.getElementById('chart-start-date'));
+    const chartEndDate = /** @type {HTMLInputElement} */ (document.getElementById('chart-end-date'));
 
     if (chartStartDate && !chartStartDate.value) {
         if (state.allSnapshots.length > 0) {
@@ -200,8 +211,8 @@ export async function renderChartsPage(state) {
         chartEndDate.addEventListener('change', () => renderChartsPage(state));
     }
 
-    const plStartDate = document.getElementById('pl-start-date');
-    const plEndDate = document.getElementById('pl-end-date');
+    const plStartDate = /** @type {HTMLInputElement} */ (document.getElementById('pl-start-date'));
+    const plEndDate = /** @type {HTMLInputElement} */ (document.getElementById('pl-end-date'));
     if(plStartDate) plStartDate.value = '2025-09-30';
     if(plEndDate) plEndDate.value = getCurrentESTDateString();
     if(plStartDate) plStartDate.addEventListener('change', renderRangedPLSummary);
@@ -210,7 +221,7 @@ export async function renderChartsPage(state) {
 }
 
 export async function renderPortfolioOverview(priceCache) {
-    const overviewBody = document.getElementById('portfolio-overview-body');
+    const overviewBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('portfolio-overview-body'));
     if (!overviewBody) return;
     overviewBody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
     try {

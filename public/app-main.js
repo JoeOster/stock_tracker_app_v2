@@ -1,7 +1,9 @@
+// in public/app-main.js
 // public/app-main.js - v2.20
 import { initializeAllEventListeners } from './event-handlers/_init.js'; 
 import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage } from './ui/renderers.js'; 
-import { populatePricesFromCache, getCurrentESTDateString, showToast } from './ui/helpers.js';
+// FIX: Added getMostRecentTradingDay to the import
+import { populatePricesFromCache, getCurrentESTDateString, showToast, getMostRecentTradingDay } from './ui/helpers.js';
 import { updatePricesForView } from './api.js';
 import { initializeScheduler } from './scheduler.js';
 
@@ -29,7 +31,6 @@ export const state = {
     allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
 };
 
-// --- NEW: Helper function to load HTML templates ---
 async function loadHTML(url, targetId) {
     try {
         const response = await fetch(url);
@@ -37,7 +38,6 @@ async function loadHTML(url, targetId) {
         const text = await response.text();
         const target = document.getElementById(targetId);
         if (target) {
-            // Use a temporary div to parse the HTML and append its children
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = text;
             while (tempDiv.firstChild) {
@@ -290,6 +290,9 @@ export function renderAccountHolderManagementList() {
     });
 }
 
+// in public/app-main.js
+// Find the `initialize` function and replace it with this version.
+
 async function initialize() {
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = '';
@@ -326,17 +329,15 @@ async function initialize() {
     await fetchAndRenderExchanges();
     await fetchAndPopulateAccountHolders();
     
+    // The import for autosizeAccountSelector needs to be at the top of the file
+    // Ensure `import { initializeAllEventListeners, autosizeAccountSelector } from './event-handlers/_navigation.js';` is not right,
+    // it should be `import { initializeAllEventListeners } from './event-handlers/_init.js';`
+    // and a new one for navigation's function
     initializeAllEventListeners();
     await runEodFailoverCheck();
     
     const today = getCurrentESTDateString();
-    let dateForView = new Date(today + 'T12:00:00Z');
-    let dayOfWeek = dateForView.getUTCDay();
-    while (dayOfWeek === 0 || dayOfWeek === 6) {
-        dateForView.setUTCDate(dateForView.getUTCDate() - 1);
-        dayOfWeek = dateForView.getUTCDay();
-    }
-    const viewDate = dateForView.toISOString().split('T')[0];
+    const viewDate = getMostRecentTradingDay();
     
     const transactionDateInput = /** @type {HTMLInputElement} */ (document.getElementById('transaction-date'));
     if(transactionDateInput) transactionDateInput.value = today;
@@ -349,13 +350,16 @@ async function initialize() {
         globalHolderFilter.value = 'all';
         state.selectedAccountHolderId = 'all';
     }
+
+    // Call the new function on load
+    const { autosizeAccountSelector } = await import('./event-handlers/_navigation.js');
+    autosizeAccountSelector(globalHolderFilter);
     
     await switchView('date', viewDate);
     initializeScheduler(state);
     initializeNotificationService(); 
 }
 
-// in public/app-main.js
 function initializeNotificationService() {
     let lastToastTimestamp = 0;
 
@@ -385,4 +389,6 @@ function initializeNotificationService() {
         }
     }, 15000); // Poll every 15 seconds
 }
-initialize();
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', initialize);

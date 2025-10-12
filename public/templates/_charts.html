@@ -7,36 +7,38 @@
         </div>
     </div>
     <div class="chart-container"> 
-        <h2>Past Five Day Report</h2> 
+        <h2>Past Ten Day Report</h2> 
         <div class="chart-wrapper">
             <canvas id="five-day-chart" class="zoomable-chart"></canvas> 
         </div>
     </div>
     <div class="chart-container"> 
         <h2>By Date Chart</h2> 
-        <div class="date-range-header">...</div> 
+        <div class="date-range-inputs" style="text-align: center; margin-bottom: 1rem;">
+            <input type="date" id="chart-start-date">
+            <span>to</span>
+            <input type="date" id="chart-end-date">
+        </div>
         <div class="chart-wrapper">
             <canvas id="date-range-chart" class="zoomable-chart"></canvas> 
         </div>
     </div>
     </div>
-    
-<div class="pl-summary-grid">
-    <div class="pl-summary-container">
-        <h3>Lifetime Realized P&L Summary</h3>
-        <table id="pl-summary-table"></table>
-    </div>
-    <div class="pl-summary-container">
-        <h3>Realized P&L by Date Range</h3>
-        <div class="date-range-inputs">
-            <input type="date" id="pl-start-date">
-            <span>to</span>
-            <input type="date" id="pl-end-date">
+    <div class="pl-summary-grid">
+        <div class="pl-summary-container">
+            <h3>Lifetime Realized P&L Summary</h3>
+            <table id="pl-summary-table"></table>
         </div>
-        <table id="pl-summary-ranged-table"></table>
+        <div class="pl-summary-container">
+            <h3>Realized P&L by Date Range</h3>
+            <div class="date-range-inputs">
+                <input type="date" id="pl-start-date">
+                <span>to</span>
+                <input type="date" id="pl-end-date">
+            </div>
+            <table id="pl-summary-ranged-table"></table>
+        </div>
     </div>
-</div>
-
     <div class="portfolio-overview-container container">
         <h2>Portfolio Overview <span id="overview-date"></span></h2>
         <table id="portfolio-overview-table">

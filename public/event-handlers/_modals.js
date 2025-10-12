@@ -119,17 +119,22 @@ export function initializeModalHandlers() {
             deleteEditBtn.addEventListener('click', async () => {
                 const id = (/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value;
                 if (!id) return;
-
                 showConfirmationModal('Delete Transaction?', 'This is permanent.', async () => {
                     try {
                         const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-                        if (!res.ok) throw new Error('Server error during deletion.');
-                        
+
+                        if (!res.ok) {
+                            // This part is new: it reads the specific error from the server
+                            const errorData = await res.json();
+                            throw new Error(errorData.message || 'Server error during deletion.');
+                        }
+
                         editModal.classList.remove('visible');
                         showToast('Transaction deleted.', 'success');
                         await refreshLedger();
 
                     } catch (err) { 
+                        // This 'catch' block will now display the specific error message
                         showToast(`Failed to delete: ${err.message}`, 'error'); 
                     }
                 });

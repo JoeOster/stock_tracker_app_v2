@@ -23,6 +23,7 @@ global.fetch = jest.fn();
 jest.mock('../helpers.js', () => ({
     formatQuantity: (num) => num.toString(),
     formatAccounting: (num) => (num ? `$${num.toFixed(2)}` : '--'),
+    getTradingDays: jest.fn(() => ['2025-10-10']),
 }));
 
 

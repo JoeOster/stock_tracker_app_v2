@@ -1,6 +1,25 @@
-// public/event-handlers/_navigation.js
+// in public/event-handlers/_navigation.js
 import { state, switchView } from '../app-main.js';
 import { updateAllPrices } from '../api.js';
+
+/**
+ * Autosizes the account selector dropdown to fit the selected text.
+ * @param {HTMLSelectElement} selectElement The dropdown element to resize.
+ */
+export function autosizeAccountSelector(selectElement) {
+    if (!selectElement || selectElement.options.length === 0) return;
+
+    const tempSpan = document.createElement('span');
+    tempSpan.style.visibility = 'hidden';
+    tempSpan.style.position = 'absolute';
+    tempSpan.style.whiteSpace = 'pre'; // Prevent text wrapping
+    tempSpan.style.fontSize = window.getComputedStyle(selectElement).fontSize;
+    tempSpan.textContent = selectElement.options[selectElement.selectedIndex].text || 'All Accounts';
+    document.body.appendChild(tempSpan);
+    selectElement.style.width = `${tempSpan.offsetWidth + 30}px`;
+    document.body.removeChild(tempSpan);
+}
+
 
 export function initializeNavigationHandlers() {
     const tabsContainer = document.getElementById('tabs-container');
@@ -8,26 +27,16 @@ export function initializeNavigationHandlers() {
     const customDatePicker = /** @type {HTMLInputElement} */ (document.getElementById('custom-date-picker'));
     const refreshBtn = document.getElementById('refresh-prices-btn');
 
-    // --- Global Filter Listener ---
     if (globalHolderFilter) {
-        globalHolderFilter.addEventListener('change', (e) => {
+        // FIX: Make the event listener async to await the switchView function
+        globalHolderFilter.addEventListener('change', async (e) => {
             const target = /** @type {HTMLSelectElement} */ (e.target);
             state.selectedAccountHolderId = target.value;
-            switchView(state.currentView.type, state.currentView.value);
-            
-            // Auto-size the dropdown
-            const tempSpan = document.createElement('span');
-            tempSpan.style.visibility = 'hidden';
-            tempSpan.style.position = 'absolute';
-            tempSpan.style.fontSize = window.getComputedStyle(target).fontSize;
-            tempSpan.textContent = target.options[target.selectedIndex].text;
-            document.body.appendChild(tempSpan);
-            target.style.width = `${tempSpan.offsetWidth + 30}px`;
-            document.body.removeChild(tempSpan);
+            await switchView(state.currentView.type, state.currentView.value);
+            autosizeAccountSelector(target);
         });
     }
 
-    // --- Main View/Tab Navigation ---
     if (tabsContainer) {
         tabsContainer.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
@@ -41,7 +50,6 @@ export function initializeNavigationHandlers() {
         });
     }
 
-    // --- Custom Date Picker ---
     if (customDatePicker) {
         customDatePicker.addEventListener('change', (e) => {
             const selectedDate = (/** @type {HTMLInputElement} */ (e.target)).value;
@@ -56,7 +64,6 @@ export function initializeNavigationHandlers() {
         });
     }
 
-    // --- Manual Price Refresh Button ---
     if(refreshBtn) {
         refreshBtn.addEventListener('click', () => 
             updateAllPrices(state.activityMap, state.priceCache)

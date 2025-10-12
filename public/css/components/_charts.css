@@ -43,7 +43,10 @@
     margin-top: 0; 
 }
 
-#pl-summary-table { 
+/* in public/css/components/_charts.css */
+
+#pl-summary-table, 
+#pl-summary-ranged-table { 
     min-width: auto; 
     margin: 0 auto; 
     width: auto; 

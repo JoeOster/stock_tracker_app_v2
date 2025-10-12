@@ -4,7 +4,7 @@ const setupDatabase = require('../database');
 
 // This script runs once before all tests
 module.exports = async () => {
-  const dbPath = path.join(__dirname, '../test-tracker.db');
+const dbPath = path.join(__dirname, '../test.db');
   
   // Set the environment to 'test'
   process.env.NODE_ENV = 'test';

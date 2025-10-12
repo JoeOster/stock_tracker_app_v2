@@ -1,8 +1,38 @@
 // services/cronJobs.js
 const cron = require('node-cron');
 const fetch = require('node-fetch');
+const fs = require('fs').promises;
+const path = require('path');
 
 const formatCurrency = (num) => (num ? `$${Number(num).toFixed(2)}` : '--');
+
+// --- NEW: Nightly Database Backup Function ---
+async function backupDatabase() {
+    // Ensure this only runs in the production environment
+    if (process.env.NODE_ENV !== 'production') {
+        console.log('[Backup] Skipping backup in non-production environment.');
+        return;
+    }
+
+    console.log('[Backup] Starting nightly database backup...');
+    try {
+        const dbPath = './production.db';
+        const backupDir = './backup';
+        
+        // Ensure the backup directory exists
+        await fs.mkdir(backupDir, { recursive: true });
+
+        const timestamp = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+        const backupFileName = `production-backup-${timestamp}.db`;
+        const backupPath = path.join(backupDir, backupFileName);
+
+        await fs.copyFile(dbPath, backupPath);
+        console.log(`[Backup] Successfully created backup: ${backupPath}`);
+    } catch (error) {
+        console.error('[Backup] CRITICAL ERROR: Nightly database backup failed:', error);
+    }
+}
+
 
 async function captureEodPrices(db, dateToProcess) {
     console.log(`[EOD Process] Running for date: ${dateToProcess}`);
@@ -93,16 +123,26 @@ async function runOrderWatcher(db) {
 
 function initializeAllCronJobs(db) {
     if (process.env.NODE_ENV !== 'test') {
+        // Schedule EOD price capture
         cron.schedule('2 16 * * 1-5', () => {
             const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
             captureEodPrices(db, today);
         }, { timezone: "America/New_York" });
+        
+        // Schedule Order Watcher
         cron.schedule('*/5 9-16 * * 1-5', () => runOrderWatcher(db), {
-            scheduled: true,
             timezone: "America/New_York"
         });
-        console.log("Cron jobs for EOD and Order Watcher have been scheduled.");
+
+        // --- NEW: Schedule Nightly Database Backup ---
+        cron.schedule('0 2 * * *', () => {
+            backupDatabase();
+        }, {
+            timezone: "America/New_York"
+        });
+
+        console.log("Cron jobs for EOD, Order Watcher, and Nightly Backups have been scheduled.");
     }
 }
 
-module.exports = { initializeAllCronJobs, captureEodPrices, runOrderWatcher };
+module.exports = { initializeAllCronJobs, captureEodPrices, runOrderWatcher, backupDatabase };

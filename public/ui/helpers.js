@@ -1,4 +1,4 @@
-// public/ui/helpers.js
+// in public/ui/helpers.js
 export function formatQuantity(number) {
     if (number === null || number === undefined || isNaN(number)) { return ''; }
     const options = { maximumFractionDigits: 5 };
@@ -83,7 +83,6 @@ export function populatePricesFromCache(activityMap, priceCache) {
 
         const priceToUse = priceCache.get(lot.ticker);
         const priceCell = row.querySelector('.current-price');
-        // FIX: Target the new combined P/L cell
         const plCombinedCell = row.querySelector('.unrealized-pl-combined');
 
         if (priceToUse === 'invalid') {
@@ -100,7 +99,6 @@ export function populatePricesFromCache(activityMap, priceCache) {
             
             if (priceCell) priceCell.innerHTML = formatAccounting(priceToUse);
 
-            // FIX: Update the logic to populate the single combined cell
             if (plCombinedCell) {
                 const plDollarHTML = formatAccounting(unrealizedPL);
                 const plPercentHTML = `${unrealizedPercent.toFixed(2)}%`;
@@ -144,4 +142,25 @@ export function getUSMarketStatus() {
     if (hour < 20) return 'After-Hours';
 
     return 'Closed';
+}
+
+/**
+ * Gets the date string for the most recent trading day (Mon-Fri).
+ * @returns {string} The date string in YYYY-MM-DD format.
+ */
+export function getMostRecentTradingDay() {
+    let checkDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    let dayOfWeek = checkDate.getDay();
+
+    // If it's Sunday (0), subtract 2 days to get to Friday.
+    if (dayOfWeek === 0) {
+        checkDate.setDate(checkDate.getDate() - 2);
+    } 
+    // If it's Saturday (6), subtract 1 day to get to Friday.
+    else if (dayOfWeek === 6) {
+        checkDate.setDate(checkDate.getDate() - 1);
+    }
+    // It's a weekday, so we can use it as is.
+
+    return checkDate.toLocaleDateString('en-CA');
 }

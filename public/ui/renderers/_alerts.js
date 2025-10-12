@@ -3,14 +3,13 @@ import { state } from '../../app-main.js';
 import { showToast } from '../helpers.js';
 
 export async function renderAlertsPage() {
-    const tableBody = document.querySelector('#alerts-table tbody');
+    const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#alerts-table tbody'));
     if (!tableBody) return;
 
     tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
     state.activeAlerts = []; // Clear old data
 
     try {
-        // CORRECTED URL:
         const response = await fetch(`/api/orders/notifications?holder=${state.selectedAccountHolderId}`);
         if (!response.ok) throw new Error('Failed to fetch alerts.');
         

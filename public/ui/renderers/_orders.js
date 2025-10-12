@@ -3,7 +3,7 @@ import { state } from '../../app-main.js';
 import { formatQuantity, formatAccounting, showToast } from '../helpers.js';
 
 export async function renderOrdersPage() {
-    const tableBody = document.querySelector('#pending-orders-table tbody');
+    const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#pending-orders-table tbody'));
     if (!tableBody) return;
 
     tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
