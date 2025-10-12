@@ -1,11 +1,9 @@
 // Portfolio Tracker V3.03
 // public/ui/renderers/_charts.js
 
-/* global Chart */ // FIX: Informs the type checker about the global Chart object from the CDN.
-
 import { state } from '../../app-main.js';
 import { formatQuantity, formatAccounting, getTradingDays, getCurrentESTDateString } from '../helpers.js';
-
+import { Chart } from 'chart.js/auto';
 // --- Chart Creation Logic ---
 
 /**
