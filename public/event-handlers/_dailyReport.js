@@ -1,5 +1,5 @@
 // public/event-handlers/_dailyReport.js
-import { state, sortTableByColumn } from '../app-main.js';
+import { state } from '../state.js'; import { sortTableByColumn } from '../app-main.js';
 import { formatAccounting, getCurrentESTDateString, showToast } from '../ui/helpers.js';
 
 /**

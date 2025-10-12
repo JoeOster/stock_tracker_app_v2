@@ -1,42 +1,31 @@
-// in public/event-handlers/_orders.js
-import { state, refreshLedger } from '../app-main.js';
+// Portfolio Tracker V3.0.5
+// public/event-handlers/_orders.js
+import { state } from '../state.js'; // FIX: Corrected import path
+import { refreshLedger, switchView } from '../app-main.js'; // FIX: Corrected import path
 import { formatAccounting, getCurrentESTDateString, showConfirmationModal, showToast } from '../ui/helpers.js';
 import { renderOrdersPage, renderAlertsPage } from '../ui/renderers.js';
 
-/**
- * Initializes all event listeners for the "New Orders" and "Alerts" pages.
- * This includes handling the submission of new executed trades, new pending orders,
- * and actions on pending orders (fill, cancel) and alerts (yes, no, review later).
- * @returns {void}
- */
+// ... (rest of the file is unchanged, except for the parts below) ...
+
 export function initializeOrdersHandlers() {
-    // --- Get all relevant DOM elements ---
     const transactionForm = /** @type {HTMLFormElement} */ (document.getElementById('add-transaction-form'));
     const addPendingOrderForm = /** @type {HTMLFormElement} */ (document.getElementById('add-pending-order-form'));
     const pendingOrdersTable = document.getElementById('pending-orders-table');
     const confirmFillForm = /** @type {HTMLFormElement} */ (document.getElementById('confirm-fill-form'));
     const alertsTable = document.getElementById('alerts-table');
 
-    // --- Executed Trade Form Handler ---
     if (transactionForm) {
 		const priceInput = /** @type {HTMLInputElement} */ (document.getElementById('price'));
-
-        // Suggests take profit/stop loss prices when the price input changes.
 		priceInput.addEventListener('change', () => {
 			const price = parseFloat(priceInput.value);
 			if (!price || isNaN(price)) return;
-
 			const takeProfitPercent = state.settings.takeProfitPercent;
 			const stopLossPercent = state.settings.stopLossPercent;
-
 			const suggestedProfit = price * (1 + takeProfitPercent / 100);
 			const suggestedLoss = price * (1 - stopLossPercent / 100);
-
 			(/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-up'))).value = suggestedProfit.toFixed(2);
 			(/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-down'))).value = suggestedLoss.toFixed(2);
 		});
-
-        // Handles submission of a new, already-executed trade.
 		transactionForm.addEventListener('submit', async (e) => {
 			e.preventDefault();
 			const isProfitLimitSet = (/** @type {HTMLInputElement} */(document.getElementById('set-profit-limit-checkbox'))).checked;
@@ -81,8 +70,6 @@ export function initializeOrdersHandlers() {
 			}
 		});
 	}
-
-    // --- Pending Order Form Handler ---
     if (addPendingOrderForm) {
         addPendingOrderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -96,7 +83,6 @@ export function initializeOrdersHandlers() {
                 created_date: getCurrentESTDateString(),
                 order_type: 'BUY_LIMIT',
             };
-
             try {
                 const response = await fetch('/api/orders/pending', {
                     method: 'POST',
@@ -109,23 +95,20 @@ export function initializeOrdersHandlers() {
                 }
                 showToast('New buy limit order placed!', 'success');
                 addPendingOrderForm.reset();
-                
                 if (state.currentView.type === 'orders') {
-                    await renderOrdersPage();
+                    // FIX: Re-trigger the view switch to handle data fetching and rendering correctly.
+                    await switchView('orders', null);
                 }
             } catch (error) {
                 showToast(`Error placing order: ${error.message}`, 'error');
             }
         });
     }
-
-    // --- Pending Orders Table Action Handler (Fill/Cancel) ---
     if (pendingOrdersTable) {
         pendingOrdersTable.addEventListener('click', async (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             const cancelButton = /** @type {HTMLElement} */ (target.closest('.cancel-order-btn'));
             const fillButton = /** @type {HTMLElement} */ (target.closest('.fill-order-btn'));
-
             if (cancelButton) {
                 const orderId = cancelButton.dataset.id;
                 showConfirmationModal('Cancel Order?', 'This will change the order status to CANCELLED.', async () => {
@@ -140,7 +123,7 @@ export function initializeOrdersHandlers() {
                             throw new Error(err.message || 'Server error');
                         }
                         showToast('Order cancelled.', 'success');
-                        await renderOrdersPage();
+                        await switchView('orders', null); // FIX
                     } catch (error) {
                         showToast(`Error cancelling order: ${error.message}`, 'error');
                     }
@@ -149,13 +132,10 @@ export function initializeOrdersHandlers() {
             else if (fillButton) {
                 const orderId = fillButton.dataset.id;
                 const order = state.pendingOrders.find(o => o.id == orderId);
-
                 if (!order) {
                     showToast('Could not find order details.', 'error');
                     return;
                 }
-                
-                // Populate and show the 'Confirm Fill' modal
                 (/** @type {HTMLInputElement} */(document.getElementById('fill-pending-order-id'))).value = String(order.id);
                 (/** @type {HTMLInputElement} */(document.getElementById('fill-account-holder-id'))).value = String(order.account_holder_id);
                 (/** @type {HTMLInputElement} */(document.getElementById('fill-ticker'))).value = order.ticker;
@@ -165,21 +145,16 @@ export function initializeOrdersHandlers() {
                 document.getElementById('fill-limit-price-display').textContent = formatAccounting(order.limit_price);
                 (/** @type {HTMLInputElement} */(document.getElementById('fill-execution-price'))).value = String(order.limit_price);
                 (/** @type {HTMLInputElement} */(document.getElementById('fill-execution-date'))).value = getCurrentESTDateString();
-
                 document.getElementById('confirm-fill-modal').classList.add('visible');
             }
         });
     }
-
-    // --- 'Confirm Fill' Modal Submission Handler ---
     if (confirmFillForm) {
         confirmFillForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitButton = /** @type {HTMLButtonElement} */ (confirmFillForm.querySelector('button[type="submit"]'));
             submitButton.disabled = true;
-
             const pendingOrderId = (/** @type {HTMLInputElement} */(document.getElementById('fill-pending-order-id'))).value;
-
             const newTransaction = {
                 account_holder_id: (/** @type {HTMLInputElement} */(document.getElementById('fill-account-holder-id'))).value,
                 ticker: (/** @type {HTMLInputElement} */(document.getElementById('fill-ticker'))).value,
@@ -189,9 +164,7 @@ export function initializeOrdersHandlers() {
                 transaction_date: (/** @type {HTMLInputElement} */(document.getElementById('fill-execution-date'))).value,
                 transaction_type: 'BUY'
             };
-            
             try {
-                // First, update the pending order status to 'FILLED'
                 const updateRes = await fetch(`/api/orders/pending/${pendingOrderId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -201,14 +174,11 @@ export function initializeOrdersHandlers() {
                     const err = await updateRes.json();
                     throw new Error(err.message || 'Failed to update pending order status.');
                 }
-
-                // Then, create the new transaction record
                 const createRes = await fetch('/api/transactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newTransaction)
                 });
-                // If transaction creation fails, try to revert the order status.
                 if (!createRes.ok) {
                     const err = await createRes.json();
                     await fetch(`/api/orders/pending/${pendingOrderId}`, {
@@ -218,11 +188,9 @@ export function initializeOrdersHandlers() {
                     });
                     throw new Error(err.message || 'Failed to create new transaction.');
                 }
-
                 document.getElementById('confirm-fill-modal').classList.remove('visible');
                 showToast('Order filled and transaction logged!', 'success');
-                await renderOrdersPage();
-
+                await switchView('orders', null); // FIX
             } catch (error) {
                 showToast(`Error: ${error.message}`, 'error');
             } finally {
@@ -230,27 +198,22 @@ export function initializeOrdersHandlers() {
             }
         });
     }
-
-    // --- Alerts Table Action Handler ---
     if (alertsTable) {
         alertsTable.addEventListener('click', async (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             const yesButton = /** @type {HTMLElement} */ (target.closest('.alert-yes-btn'));
             const noButton = /** @type {HTMLElement} */ (target.closest('.alert-no-btn'));
             const pendingButton = /** @type {HTMLElement} */ (target.closest('.alert-pending-btn'));
-
             if (yesButton) {
-                // Simulates clicking the 'Mark as Filled' button on the orders page.
                 const pendingOrderId = yesButton.dataset.pendingOrderId;
                 const fillButton = /** @type {HTMLElement} */ (document.querySelector(`.fill-order-btn[data-id="${pendingOrderId}"]`));
                 if (fillButton) {
                     fillButton.click();
                 } else {
-                     showToast("Please go to the 'New Orders' tab and click 'Mark as Filled' for this item.", 'info');
+                     showToast("Please go to the 'Orders' tab and click 'Mark as Filled' for this item.", 'info');
                 }
             } 
             else if (noButton) {
-                // Dismisses the alert.
                 const notificationId = noButton.dataset.notificationId;
                 try {
                     const response = await fetch(`/api/orders/notifications/${notificationId}`, {
@@ -260,13 +223,12 @@ export function initializeOrdersHandlers() {
                     });
                     if (!response.ok) throw new Error('Failed to dismiss alert.');
                     showToast('Alert dismissed.', 'info');
-                    await renderAlertsPage();
+                    await switchView('alerts', null); // FIX
                 } catch (error) {
                     showToast(error.message, 'error');
                 }
             }
             else if (pendingButton) {
-                // Marks the alert for later review.
                 const notificationId = pendingButton.dataset.notificationId;
                 try {
                     const response = await fetch(`/api/orders/notifications/${notificationId}`, {
@@ -276,7 +238,7 @@ export function initializeOrdersHandlers() {
                     });
                     if (!response.ok) throw new Error('Failed to update alert.');
                     showToast('Alert marked for later review.', 'info');
-                    await renderAlertsPage();
+                    await switchView('alerts', null); // FIX
                 } catch (error) {
                     showToast(error.message, 'error');
                 }

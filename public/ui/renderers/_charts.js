@@ -1,142 +1,23 @@
 // Portfolio Tracker V3.03
 // public/ui/renderers/_charts.js
 
-import { state } from '../../app-main.js';
-import { formatQuantity, formatAccounting, getTradingDays, getCurrentESTDateString } from '../helpers.js';
-import { Chart } from 'chart.js/auto';
-// --- Chart Creation Logic ---
+import { state } from '../../state.js'; // FIX: Corrected import path
+import { formatAccounting, getTradingDays, getCurrentESTDateString } from '../helpers.js';
+import { createChart } from '../chart-builder.js'; // Import the generic chart builder
+
+// --- Chart Rendering Functions ---
 
 /**
- * Generates a consistent HSL color based on a string input.
- * Used to give each exchange a unique, but predictable, color in charts.
- * @param {string} str - The input string (e.g., an exchange name).
- * @param {number} [s=75] - The saturation percentage.
- * @param {number} [l=60] - The lightness percentage.
- * @returns {string} The HSL color string.
- */
-function stringToHslColor(str, s = 75, l = 60) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const h = hash % 360;
-    return `hsl(${h}, ${s}%, ${l}%)`;
-}
-
-/**
- * Wraps text within a canvas context to fit a maximum width.
- * @param {CanvasRenderingContext2D} context - The canvas rendering context.
- * @param {string} text - The text to wrap.
- * @param {number} x - The x-coordinate to start drawing.
- * @param {number} y - The y-coordinate to start drawing.
- * @param {number} maxWidth - The maximum width of a line.
- * @param {number} lineHeight - The height of each line.
- * @returns {void}
- */
-function wrapText(context, text, x, y, maxWidth, lineHeight) {
-    const words = text.split(' ');
-    let line = '';
-    for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = context.measureText(testLine);
-        const testWidth = metrics.width;
-        if (testWidth > maxWidth && n > 0) {
-            context.fillText(line, x, y);
-            line = words[n] + ' ';
-            y += lineHeight;
-        } else {
-            line = testLine;
-        }
-    }
-    context.fillText(line, x, y);
-}
-
-/**
- * The core chart creation function. It builds and configures a Chart.js line chart.
- * If there is not enough data, it displays a message on the canvas instead.
- * @param {CanvasRenderingContext2D} ctx - The canvas rendering context.
- * @param {any[]} snapshots - The array of snapshot data to plot.
- * @param {import('../../app-main.js').AppState} state - The main application state.
- * @returns {Chart|null} A new Chart.js instance or null if rendering is not possible.
- */
-function createChart(ctx, snapshots, state) {
-    const datasets = {};
-    const labels = [...new Set(snapshots.map(s => s.snapshot_date))].sort();
-
-    // If there isn't enough data to draw a line, display a message instead.
-    if (snapshots.length === 0 || labels.length < 2) {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.font = "16px " + (state.settings.font || 'Inter');
-        ctx.textAlign = "center";
-        const isDarkMode = state.settings.theme === 'dark' || state.settings.theme === 'contrast';
-        ctx.fillStyle = isDarkMode ? 'rgba(255, 255, 255, 0.5)' : '#666';
-
-        const message = labels.length < 2 && snapshots.length > 0
-            ? "At least two snapshots are needed to draw a chart for this date range."
-            : "No snapshot data available for this account holder in this date range.";
-        wrapText(ctx, message, ctx.canvas.width / 2, 50, ctx.canvas.width - 40, 20);
-        return null;
-    }
-
-    const isDarkMode = state.settings.theme === 'dark' || state.settings.theme === 'contrast';
-    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.7)' : '#666';
-
-    const exchangeNames = [...new Set(snapshots.map(s => s.exchange))];
-
-    // Group snapshot data by exchange to create separate datasets.
-    exchangeNames.forEach(exchangeName => {
-        datasets[exchangeName] = {
-            label: exchangeName,
-            data: [],
-            fill: false,
-            borderColor: stringToHslColor(exchangeName),
-            tension: 0.1
-        };
-        const valueMap = new Map(snapshots.filter(s => s.exchange === exchangeName).map(s => [s.snapshot_date, s.value]));
-        datasets[exchangeName].data = labels.map(label => valueMap.get(label) ?? null);
-    });
-
-    return new Chart(ctx, {
-        type: 'line',
-        data: { labels: labels, datasets: Object.values(datasets) },
-        options: {
-            spanGaps: true, // Connect lines across null data points
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                y: { ticks: { color: textColor }, grid: { color: gridColor } },
-                x: { ticks: { color: textColor }, grid: { color: gridColor } }
-            },
-            plugins: {
-                legend: { position: 'bottom', labels: { color: textColor } }
-            },
-            onClick: (e, elements, chart) => {
-                // On click, open a larger version of the chart in a modal.
-                const chartZoomModal = document.getElementById('chart-zoom-modal');
-                const zoomedChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('zoomed-chart'));
-                if (!chartZoomModal || !zoomedChartCanvas) return;
-                const zoomedChartCtx = zoomedChartCanvas.getContext('2d');
-                if (!zoomedChartCtx) return;
-                if(state.zoomedChart) state.zoomedChart.destroy();
-                state.zoomedChart = new Chart(zoomedChartCtx, chart.config);
-                chartZoomModal.classList.add('visible');
-            }
-        }
-    });
-}
-
-/**
- * Renders the 'All Time Value' chart.
+ * Renders the 'All Time Value' chart using the generic chart builder.
  * @param {CanvasRenderingContext2D} ctx - The canvas context.
  * @param {Chart | null} chartInstance - The existing chart instance to destroy, if any.
  * @param {any[]} snapshots - The snapshot data.
- * @param {import('../../app-main.js').AppState} state - The main application state.
  * @returns {Chart|null} The new chart instance.
  */
-function renderAllTimeChart(ctx, chartInstance, snapshots, state) {
-    if(chartInstance) chartInstance.destroy();
+function renderAllTimeChart(ctx, chartInstance, snapshots) {
+    if (chartInstance) chartInstance.destroy();
     if (!ctx) return null;
-    return createChart(ctx, snapshots, state);
+    return createChart(ctx, snapshots);
 }
 
 /**
@@ -144,18 +25,17 @@ function renderAllTimeChart(ctx, chartInstance, snapshots, state) {
  * @param {CanvasRenderingContext2D} ctx - The canvas context.
  * @param {Chart | null} chartInstance - The existing chart instance to destroy, if any.
  * @param {any[]} snapshots - The snapshot data.
- * @param {import('../../app-main.js').AppState} state - The main application state.
  * @returns {Chart|null} The new chart instance.
  */
-function renderFiveDayChart(ctx, chartInstance, snapshots, state) {
-    if(chartInstance) chartInstance.destroy();
+function renderFiveDayChart(ctx, chartInstance, snapshots) {
+    if (chartInstance) chartInstance.destroy();
     if (!ctx) return null;
     const fiveTradingDays = getTradingDays(5);
-    if(fiveTradingDays.length === 0) return createChart(ctx, [], state);
+    if (fiveTradingDays.length === 0) return createChart(ctx, []);
     const startDate = fiveTradingDays[0];
     const endDate = getCurrentESTDateString();
     const filteredSnapshots = snapshots.filter(s => s.snapshot_date >= startDate && s.snapshot_date <= endDate);
-    return createChart(ctx, filteredSnapshots, state);
+    return createChart(ctx, filteredSnapshots);
 }
 
 /**
@@ -165,11 +45,10 @@ function renderFiveDayChart(ctx, chartInstance, snapshots, state) {
  * @param {HTMLInputElement} endDateEl - The end date input element.
  * @param {Chart | null} chartInstance - The existing chart instance to destroy, if any.
  * @param {any[]} snapshots - The snapshot data.
- * @param {import('../../app-main.js').AppState} state - The main application state.
  * @returns {Chart|null} The new chart instance.
  */
-function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance, snapshots, state) {
-    if(chartInstance) chartInstance.destroy();
+function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance, snapshots) {
+    if (chartInstance) chartInstance.destroy();
     if (!ctx) return null;
     const start = startDateEl ? startDateEl.value : null;
     const end = endDateEl ? endDateEl.value : null;
@@ -177,7 +56,7 @@ function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance, snapsh
     if (start && end) {
         filteredSnapshots = snapshots.filter(s => s.snapshot_date >= start && s.snapshot_date <= end);
     }
-    return createChart(ctx, filteredSnapshots, state);
+    return createChart(ctx, filteredSnapshots);
 }
 
 
@@ -185,10 +64,9 @@ function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance, snapsh
 
 /**
  * Fetches all necessary data and renders all components on the Charts page.
- * @param {import('../../app-main.js').AppState} state - The main application state.
  * @returns {Promise<void>}
  */
-export async function renderChartsPage(state) {
+export async function renderChartsPage() {
     const plSummaryTable = document.getElementById('pl-summary-table');
     const allTimeChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('all-time-chart'));
     if (!plSummaryTable || !allTimeChartCanvas) return;
@@ -239,7 +117,7 @@ export async function renderChartsPage(state) {
             plSummaryTable.innerHTML = `<thead><tr><th>Exchange</th><th class="numeric">Realized P/L</th></tr></thead><tbody>${plBody}<tr><td><strong>Total</strong></td><td class="numeric"><strong>${formatAccounting(plData.total)}</strong></td></tr></tbody>`;
         }
     } catch (error) { console.error("Failed to render P&L Summary:", error); }
-    
+
     // --- Initialize Chart Canvases and Date Pickers ---
     const fiveDayChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('five-day-chart'));
     const dateRangeChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('date-range-chart'));
@@ -262,19 +140,19 @@ export async function renderChartsPage(state) {
     }
 
     // --- Render All Charts ---
-    state.allTimeChart = renderAllTimeChart(allTimeChartCtx, state.allTimeChart, state.allSnapshots, state);
-    state.fiveDayChart = renderFiveDayChart(fiveDayChartCtx, state.fiveDayChart, state.allSnapshots, state);
-    state.dateRangeChart = renderDateRangeChart(dateRangeChartCtx, chartStartDate, chartEndDate, state.dateRangeChart, state.allSnapshots, state);
-    
+    state.allTimeChart = renderAllTimeChart(allTimeChartCtx, state.allTimeChart, state.allSnapshots);
+    state.fiveDayChart = renderFiveDayChart(fiveDayChartCtx, state.fiveDayChart, state.allSnapshots);
+    state.dateRangeChart = renderDateRangeChart(dateRangeChartCtx, chartStartDate, chartEndDate, state.dateRangeChart, state.allSnapshots);
+
     // --- Render Portfolio Overview Table ---
     await renderPortfolioOverview(state.priceCache);
 
     // --- Add Event Listeners for Date Pickers ---
     if(chartStartDate) {
-        chartStartDate.addEventListener('change', () => renderChartsPage(state));
+        chartStartDate.addEventListener('change', () => renderChartsPage());
     }
     if(chartEndDate) {
-        chartEndDate.addEventListener('change', () => renderChartsPage(state));
+        chartEndDate.addEventListener('change', () => renderChartsPage());
     }
 
     const plStartDate = /** @type {HTMLInputElement} */ (document.getElementById('pl-start-date'));

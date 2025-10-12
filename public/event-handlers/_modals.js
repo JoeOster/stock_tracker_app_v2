@@ -1,6 +1,8 @@
+// Portfolio Tracker V3.0.5
 // public/event-handlers/_modals.js
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
-import { refreshLedger, state, switchView } from '../app-main.js';
+import { state } from '../state.js'; // FIX: Corrected import path
+import { refreshLedger, switchView } from '../app-main.js'; // FIX: Corrected import path
 
 /**
  * Initializes all event listeners related to modal dialogs.

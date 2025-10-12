@@ -1,7 +1,8 @@
-// in public/event-handlers/_navigation.js
-import { state, switchView } from '../app-main.js';
+// Portfolio Tracker V3.0.5
+// public/event-handlers/_navigation.js
+import { state } from '../state.js'; // FIX: Import state directly from the new state module
+import { switchView } from '../app-main.js'; // FIX: Continue to import functions from app-main
 import { updateAllPrices } from '../api.js';
-
 /**
  * Autosizes an HTMLSelectElement to fit the width of its currently selected option's text.
  * A temporary span is used to measure the text width accurately.

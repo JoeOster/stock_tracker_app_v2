@@ -1,6 +1,6 @@
 // Portfolio Tracker V3.03
 // public/ui/renderers/_ledger.js
-import { state } from '../../app-main.js';
+import { state } from '../../state.js'; // FIX: Corrected import path
 import { formatQuantity, formatAccounting } from '../helpers.js';
 
 /**

@@ -1,70 +1,14 @@
-// in public/app-main.js
-// public/app-main.js - v2.20
+// Portfolio Tracker V3.0.5
+// public/app-main.js
 
-/* global Chart */ // This informs the type checker about the global Chart object from the CDN.
+/* global Chart */
 
+import { state } from './state.js';
 import { initializeAllEventListeners } from './event-handlers/_init.js';
 import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage } from './ui/renderers.js';
 import { populatePricesFromCache, getCurrentESTDateString, showToast, getMostRecentTradingDay } from './ui/helpers.js';
-import { updatePricesForView } from './api.js';
+import { updatePricesForView, fetchPendingOrders, fetchAlerts, fetchDailyPerformance, fetchPositions } from './api.js'; // Import the new fetch functions
 import { initializeScheduler } from './scheduler.js';
-
-/**
- * @typedef {object} AppState
- * @property {object} settings - Application settings.
- * @property {number} settings.takeProfitPercent - Default take profit percentage.
- * @property {number} settings.stopLossPercent - Default stop loss percentage.
- * @property {number} settings.marketHoursInterval - Price refresh interval during market hours (minutes).
- * @property {number} settings.afterHoursInterval - Price refresh interval after hours (minutes).
- * @property {string} settings.theme - The current color theme.
- * @property {string} settings.font - The current font.
- * @property {string|null} settings.defaultAccountHolderId - The default account holder to load.
- * @property {number} settings.notificationCooldown - Cooldown for price alerts (minutes).
- * @property {string} settings.familyName - Custom name for the app title.
- * @property {{type: string|null, value: string|null}} currentView - The current active view.
- * @property {Map<string, object>} activityMap - A map of open positions for the current view.
- * @property {Map<string, number|string>} priceCache - A cache of recently fetched stock prices.
- * @property {any[]} allTransactions - All transactions for the selected account holder.
- * @property {any[]} allSnapshots - All account snapshots for the selected account holder.
- * @property {any[]} pendingOrders - All pending orders for the selected account holder.
- * @property {any[]} activeAlerts - All active alerts for the selected account holder.
- * @property {string} selectedAccountHolderId - The ID of the currently selected account holder.
- * @property {{column: string, direction: string}} ledgerSort - The current sorting for the ledger table.
- * @property {Chart|null} allTimeChart - Chart.js instance for the all-time chart.
- * @property {Chart|null} fiveDayChart - Chart.js instance for the five-day chart.
- * @property {Chart|null} dateRangeChart - Chart.js instance for the date-range chart.
- * @property {Chart|null} zoomedChart - Chart.js instance for the zoomed modal chart.
- * @property {any[]} allExchanges - All available exchanges.
- * @property {any[]} allAccountHolders - All available account holders.
- */
-
-/**
- * The main state object for the application.
- * @type {AppState}
- */
-export const state = {
-    settings: {
-        takeProfitPercent: 8,
-        stopLossPercent: 8,
-        marketHoursInterval: 2,
-        afterHoursInterval: 15,
-        theme: 'light',
-        font: 'Inter',
-        defaultAccountHolderId: null,
-        notificationCooldown: 16,
-        familyName: ''
-    },
-    currentView: { type: null, value: null },
-    activityMap: new Map(),
-    priceCache: new Map(),
-    allTransactions: [],
-    allSnapshots: [],
-    pendingOrders: [],
-    activeAlerts: [],
-    selectedAccountHolderId: 'all',
-    ledgerSort: { column: 'transaction_date', direction: 'desc' },
-    allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null
-};
 
 /**
  * Loads an HTML template from a URL and appends it to a target element.
@@ -121,19 +65,73 @@ export async function switchView(viewType, viewValue) {
     }
 
     if (viewType === 'date') {
-        await renderDailyReport(viewValue, state.activityMap);
-        await updatePricesForView(viewValue, state.activityMap, state.priceCache);
-        populatePricesFromCache(state.activityMap, state.priceCache);
+        // --- REFACTORED ORCHESTRATION ---
+        // Set loading states before fetching
+        const performanceSummary = document.getElementById('daily-performance-summary');
+        if(performanceSummary) { performanceSummary.innerHTML = `<h3>Daily Performance: <span>...</span></h3><h3 id="realized-gains-summary">Realized: <span>--</span></h3><h3 id="total-value-summary">Total Open Value: <span>--</span></h3>`; }
+        const logBody = document.querySelector('#log-body');
+        const summaryBody = document.querySelector('#positions-summary-body');
+        if(logBody) logBody.innerHTML = `<tr><td colspan="12">Loading...</td></tr>`;
+        if(summaryBody) summaryBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
+
+        try {
+            // Fetch all required data in parallel
+            const [perfData, positionData] = await Promise.all([
+                fetchDailyPerformance(viewValue, state.selectedAccountHolderId),
+                fetchPositions(viewValue, state.selectedAccountHolderId)
+            ]);
+            
+            // Pass the fetched data to the renderer
+            renderDailyReport(viewValue, state.activityMap, perfData, positionData);
+
+            // Fetch live prices for the newly rendered positions
+            await updatePricesForView(viewValue, state.activityMap, state.priceCache);
+            populatePricesFromCache(state.activityMap, state.priceCache);
+        } catch (error) {
+            console.error("Failed to load daily report:", error);
+            showToast(error.message, 'error');
+            // Render error state using the now-pure renderer
+            renderDailyReport(viewValue, state.activityMap, null, null);
+             if(logBody) logBody.innerHTML = `<tr><td colspan="12">Error loading transaction data.</td></tr>`;
+             if(summaryBody) summaryBody.innerHTML = '<tr><td colspan="10">Error loading position data.</td></tr>';
+        }
+        // --- END REFACTOR ---
     } else if (viewType === 'charts') {
         await new Promise(resolve => setTimeout(resolve, 50));
         await refreshSnapshots();
-        await renderChartsPage(state);
+        await renderChartsPage();
     } else if (viewType === 'ledger') {
         await refreshLedger();
     } else if (viewType === 'orders') {
-        await renderOrdersPage();
+        const tableBody = document.querySelector('#pending-orders-table tbody');
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
+        }
+        try {
+            const orders = await fetchPendingOrders(state.selectedAccountHolderId);
+            renderOrdersPage(orders);
+        } catch (error) {
+            console.error("Failed to load orders page:", error);
+            showToast(error.message, 'error');
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="7">Error loading pending orders.</td></tr>';
+            }
+        }
     } else if (viewType === 'alerts') {
-        await renderAlertsPage();
+        const tableBody = document.querySelector('#alerts-table tbody');
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
+        }
+        try {
+            const alerts = await fetchAlerts(state.selectedAccountHolderId);
+            renderAlertsPage(alerts);
+        } catch (error) {
+            console.error("Failed to load alerts page:", error);
+            showToast(error.message, 'error');
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="3">Error loading alerts.</td></tr>';
+            }
+        }
     } else if (viewType === 'snapshots') {
         await refreshSnapshots();
         renderSnapshotsPage();
@@ -192,7 +190,6 @@ export function saveSettings() {
 
     applyAppearanceSettings();
 
-    // FIX: Pass null for the second argument when the view type doesn't require a value.
     if (state.settings.theme !== oldTheme && state.currentView.type === 'charts') {
         switchView('charts', null);
     }
@@ -336,7 +333,6 @@ export function renderExchangeManagementList() {
 
     state.allExchanges.forEach(exchange => {
         const li = document.createElement('li');
-        // FIX: Convert numeric ID to a string for dataset attribute.
         li.dataset.id = String(exchange.id);
         li.innerHTML = `
             <span class="exchange-name">${exchange.name}</span>
@@ -367,7 +363,6 @@ export function renderAccountHolderManagementList() {
         const deleteButton = isProtected ? '' : `<button class="delete-holder-btn delete-btn" data-id="${holder.id}">Delete</button>`;
 
         const li = document.createElement('li');
-        // FIX: Convert numeric ID to a string for dataset attribute.
         li.dataset.id = String(holder.id);
         li.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -436,7 +431,6 @@ async function initialize() {
     if(transactionDateInput) transactionDateInput.value = today;
 
     const globalHolderFilter = /** @type {HTMLSelectElement} */(document.getElementById('global-account-holder-filter'));
-    // FIX: Ensure a strict string-to-string comparison for the default account holder.
     if (state.settings.defaultAccountHolderId && state.allAccountHolders.some(h => String(h.id) === state.settings.defaultAccountHolderId)) {
         globalHolderFilter.value = state.settings.defaultAccountHolderId;
         state.selectedAccountHolderId = state.settings.defaultAccountHolderId;

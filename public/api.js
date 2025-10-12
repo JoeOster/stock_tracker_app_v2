@@ -1,5 +1,6 @@
+// Portfolio Tracker V3.0.5
 // public/api.js
-import { state } from './app-main.js';
+import { state } from './state.js'; // FIX: Import directly from the new state module
 import { populatePricesFromCache } from './ui/helpers.js';
 
 /**
@@ -59,4 +60,80 @@ export async function updateAllPrices(activityMap, priceCache) {
     await updatePricesForView(state.currentView.value, activityMap, priceCache);
     // After fetching, we must explicitly call the populator
     populatePricesFromCache(activityMap, priceCache);
+}
+
+/**
+ * Fetches all active pending orders for a given account holder.
+ * @param {string} holderId - The ID of the account holder ('all' for everyone).
+ * @returns {Promise<any[]>} A promise that resolves to an array of pending order objects.
+ * @throws {Error} If the server response is not ok.
+ */
+export async function fetchPendingOrders(holderId) {
+    const response = await fetch(`/api/orders/pending?holder=${holderId}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch pending orders from the server.');
+    }
+    return await response.json();
+}
+
+/**
+ * Fetches all 'UNREAD' notifications for a given account holder.
+ * @param {string} holderId - The ID of the account holder ('all' for everyone).
+ * @returns {Promise<any[]>} A promise that resolves to an array of notification objects.
+ * @throws {Error} If the server response is not ok.
+ */
+export async function fetchAlerts(holderId) {
+    const response = await fetch(`/api/orders/notifications?holder=${holderId}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch alerts.');
+    }
+    return await response.json();
+}
+
+/**
+ * Fetches the daily performance summary for a given date and account holder.
+ * @param {string} date - The date for the report in 'YYYY-MM-DD' format.
+ * @param {string} holderId - The ID of the account holder.
+ * @returns {Promise<object>} A promise that resolves to the performance data.
+ * @throws {Error} If the server response is not ok.
+ */
+export async function fetchDailyPerformance(date, holderId) {
+    const response = await fetch(`/api/reporting/daily_performance/${date}?holder=${holderId}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch daily performance data.');
+    }
+    return await response.json();
+}
+
+/**
+ * Fetches the daily transactions and end-of-day positions for a given date and account holder.
+ * @param {string} date - The date for the report in 'YYYY-MM-DD' format.
+ * @param {string} holderId - The ID of the account holder.
+ * @returns {Promise<{dailyTransactions: any[], endOfDayPositions: any[]}>} A promise that resolves to an object containing dailyTransactions and endOfDayPositions.
+ * @throws {Error} If the server response is not ok or the data structure is invalid.
+ */
+export async function fetchPositions(date, holderId) {
+    const response = await fetch(`/api/reporting/positions/${date}?holder=${holderId}`);
+    if (!response.ok) {
+        throw new Error(`Server returned status ${response.status} for position data.`);
+    }
+    const data = await response.json();
+    if (!data || !data.dailyTransactions || !data.endOfDayPositions) {
+        throw new Error("Invalid data structure received for position data.");
+    }
+    return data;
+}
+
+/**
+ * Fetches all account value snapshots for a given account holder.
+ * @param {string} holderId - The ID of the account holder ('all' for everyone).
+ * @returns {Promise<any[]>} A promise that resolves to an array of snapshot objects.
+ * @throws {Error} If the server response is not ok.
+ */
+export async function fetchSnapshots(holderId) {
+    const response = await fetch(`/api/utility/snapshots?holder=${holderId}`);
+    if (!response.ok) {
+        throw new Error('Could not fetch snapshots.');
+    }
+    return await response.json();
 }

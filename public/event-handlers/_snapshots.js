@@ -1,5 +1,7 @@
+// Portfolio Tracker V3.0.5
 // public/event-handlers/_snapshots.js
-import { state, refreshSnapshots } from '../app-main.js';
+import { state } from '../state.js'; // FIX: Corrected import path
+import { refreshSnapshots } from '../app-main.js';
 import { renderSnapshotsPage } from '../ui/renderers.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
@@ -13,7 +15,6 @@ export function initializeSnapshotsHandlers() {
     const addSnapshotForm = /** @type {HTMLFormElement} */ (document.getElementById('add-snapshot-form'));
     const snapshotsTable = document.getElementById('snapshots-table');
 
-    // --- Add Snapshot Form Handler ---
     if (addSnapshotForm) {
         addSnapshotForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -26,8 +27,8 @@ export function initializeSnapshotsHandlers() {
             try {
                 const res = await fetch('/api/utility/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snapshot) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                await refreshSnapshots();
-                renderSnapshotsPage();
+                await refreshSnapshots(); // This fetches and updates state.allSnapshots
+                renderSnapshotsPage(state.allSnapshots); // FIX: Pass the updated state to the renderer
                 addSnapshotForm.reset();
                 showToast('Snapshot saved!', 'success');
             } catch (error) {
@@ -36,7 +37,6 @@ export function initializeSnapshotsHandlers() {
         });
     }
 
-    // --- Snapshots Table Action Handler (Delete) ---
     if (snapshotsTable) {
         snapshotsTable.addEventListener('click', async (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
@@ -47,9 +47,8 @@ export function initializeSnapshotsHandlers() {
                      try {
                         const res = await fetch(`/api/utility/snapshots/${id}`, { method: 'DELETE' });
                         if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                        // Remove the snapshot from the local state to avoid a full re-fetch.
                         state.allSnapshots = state.allSnapshots.filter(s => s.id != id);
-                        renderSnapshotsPage();
+                        renderSnapshotsPage(state.allSnapshots); // FIX: Pass the updated state to the renderer
                         showToast('Snapshot deleted.', 'success');
                     } catch (error) {
                         showToast(`Error: ${error.message}`, 'error');

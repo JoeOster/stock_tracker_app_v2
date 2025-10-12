@@ -25,7 +25,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node server.js",
     "dev": "cross-env NODE_ENV=development nodemon server.js",
-    "test": "cross-env NODE_ENV=test jest --testTimeout=10000",
+    "test": "cross-env NODE_ENV=test jest --config jest.config.api.js && jest --config jest.config.ui.js --testTimeout=10000",
     "seed-dev": "cross-env NODE_ENV=development node seed-dev-db.js"
   }
 }
