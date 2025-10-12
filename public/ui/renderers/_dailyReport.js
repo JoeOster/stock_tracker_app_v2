@@ -1,7 +1,14 @@
 // in public/ui/renderers/_dailyReport.js
 import { state } from '../../app-main.js';
-import { formatQuantity, formatAccounting, getCurrentESTDateString, getTradingDays} from '../helpers.js';
+import { formatQuantity, formatAccounting, getTradingDays} from '../helpers.js';
 
+/**
+ * Renders the full daily report for a specific date.
+ * This includes the performance summary, the daily transaction log, and the list of open positions at the end of the day.
+ * @param {string} date - The date for which to generate the report in 'YYYY-MM-DD' format.
+ * @param {Map<string, object>} activityMap - The application's activity map to be populated with the day's open positions.
+ * @returns {Promise<void>}
+ */
 export async function renderDailyReport(date, activityMap) {
     const tableTitle = document.getElementById('table-title');
     const performanceSummary = document.getElementById('daily-performance-summary');
@@ -13,10 +20,12 @@ export async function renderDailyReport(date, activityMap) {
     const lastTradingDay = getTradingDays(1)[0];
     const isCurrentTradingDay = (date === lastTradingDay);
 
+    // Show or hide the confirmation checkbox column based on whether it's the current day.
     if (confirmationHeader) {
         confirmationHeader.style.display = isCurrentTradingDay ? '' : 'none';
     }
 
+    // Set the main title for the report page.
     if (tableTitle) {
         let titleText = `Activity Report for ${new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
         let holderName = 'All Accounts';
@@ -30,6 +39,7 @@ export async function renderDailyReport(date, activityMap) {
 
     if(performanceSummary) { performanceSummary.innerHTML = `<h3>Daily Performance: <span>...</span></h3><h3 id="realized-gains-summary">Realized: <span>--</span></h3><h3 id="total-value-summary">Total Open Value: <span>--</span></h3>`; }
 
+    // Fetch and render the daily performance summary.
     try {
         const perfResponse = await fetch(`/api/reporting/daily_performance/${date}?holder=${state.selectedAccountHolderId}`);
         if(perfResponse.ok) {
@@ -45,6 +55,7 @@ export async function renderDailyReport(date, activityMap) {
         }
     } catch (e) { console.error("Could not fetch daily performance", e); }
 
+    // Fetch and render the transaction log and open positions.
     try {
         const response = await fetch(`/api/reporting/positions/${date}?holder=${state.selectedAccountHolderId}`);
         if (!response.ok) throw new Error(`Server returned status ${response.status}`);
@@ -55,7 +66,7 @@ export async function renderDailyReport(date, activityMap) {
             if (data.dailyTransactions.length === 0) {
                 logBody.innerHTML = '<tr><td colspan="12">No transactions logged for this day.</td></tr>';
             } else {
-                // --- OPTIMIZATION: Build HTML string array ---
+                // Build HTML string array for performance.
                 const rowsHTML = data.dailyTransactions.map(tx => {
                     dailyRealizedPL += tx.realizedPL || 0;
                     
@@ -79,9 +90,8 @@ export async function renderDailyReport(date, activityMap) {
                             <td></td>
                         </tr>`;
                 });
-                // Set innerHTML in a single operation for performance
+                // Set innerHTML in a single operation.
                 logBody.innerHTML = rowsHTML.join('');
-                // --- END OPTIMIZATION ---
             }
             
             const realizedGainsSummarySpan = document.querySelector('#realized-gains-summary span');

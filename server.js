@@ -17,6 +17,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static('public'));
 
+/**
+ * Sets up the Express application, initializes the database, and registers all routes and cron jobs.
+ * This function is the main entry point for both production and testing environments.
+ * @returns {Promise<{app: import('express').Express, db: import('sqlite').Database}>} A promise that resolves with the configured Express app and database connection.
+ */
 async function setupApp() {
     const db = await setupDatabase();
 
@@ -34,7 +39,8 @@ async function setupApp() {
     return { app, db };
 }
 
-// This part starts the server when run directly (e.g., 'npm start' or 'npm run dev')
+// This block runs only when the script is executed directly (e.g., `node server.js`).
+// It is skipped when the module is imported, such as in test files.
 if (require.main === module) {
     setupApp().then(({ app }) => {
         app.listen(PORT, () => {
@@ -43,5 +49,5 @@ if (require.main === module) {
     });
 }
 
-// This part exports the setup function for testing purposes
+// Export the setup function and other necessary components for testing purposes.
 module.exports = { setupApp, runOrderWatcher };

@@ -1,27 +1,34 @@
+// Portfolio Tracker V3.03
 // in public/ui/renderers/_alerts.js
 import { state } from '../../app-main.js';
 import { showToast } from '../helpers.js';
 
+/**
+ * Fetches active notifications from the API and renders them into the alerts table.
+ * It handles loading, empty, and error states for the alerts page.
+ * @returns {Promise<void>}
+ */
 export async function renderAlertsPage() {
     const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#alerts-table tbody'));
     if (!tableBody) return;
 
     tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
-    state.activeAlerts = []; // Clear old data
+    state.activeAlerts = []; // Clear old data before fetching
 
     try {
         const response = await fetch(`/api/orders/notifications?holder=${state.selectedAccountHolderId}`);
         if (!response.ok) throw new Error('Failed to fetch alerts.');
         
         const alerts = await response.json();
-        state.activeAlerts = alerts; // Save to state for event listeners
-        tableBody.innerHTML = '';
+        state.activeAlerts = alerts; // Save to state for event listeners to use
+        tableBody.innerHTML = ''; // Clear the loading message
 
         if (alerts.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="3">You have no new alerts.</td></tr>';
             return;
         }
 
+        // Build and append a row for each alert.
         alerts.forEach(alert => {
             const row = tableBody.insertRow();
             row.innerHTML = `

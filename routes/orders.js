@@ -2,12 +2,20 @@
 const express = require('express');
 const router = express.Router();
 
-// This module will be passed the database connection (db) from server.js
+/**
+ * Creates and returns an Express router for handling pending orders and notifications.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @returns {express.Router} The configured Express router.
+ */
 module.exports = (db) => {
 
     // --- PENDING ORDERS ENDPOINTS ---
     // Base path: /api/orders/pending
 
+    /**
+     * GET /pending
+     * Fetches all 'ACTIVE' pending orders, optionally filtered by an account holder.
+     */
     router.get('/pending', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -26,6 +34,10 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * POST /pending
+     * Creates a new pending order (e.g., a BUY_LIMIT order).
+     */
     router.post('/pending', async (req, res) => {
         try {
             const { account_holder_id, ticker, exchange, order_type, limit_price, quantity, created_date, expiration_date, notes, advice_source_id } = req.body;
@@ -50,6 +62,10 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * PUT /pending/:id
+     * Updates the status of a pending order (e.g., to 'FILLED' or 'CANCELLED').
+     */
     router.put('/pending/:id', async (req, res) => {
         try {
             const { status } = req.body;
@@ -71,6 +87,10 @@ module.exports = (db) => {
     // --- NOTIFICATIONS ENDPOINTS ---
     // Base path: /api/orders/notifications
 
+    /**
+     * GET /notifications
+     * Fetches all 'UNREAD' notifications, optionally filtered by an account holder.
+     */
     router.get('/notifications', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -89,6 +109,10 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * PUT /notifications/:id
+     * Updates the status of a notification (e.g., to 'PENDING' or 'DISMISSED').
+     */
     router.put('/notifications/:id', async (req, res) => {
         try {
             const { status } = req.body;

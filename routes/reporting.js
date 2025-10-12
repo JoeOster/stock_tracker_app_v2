@@ -3,9 +3,17 @@ const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 
-// This module will be passed the database connection (db) from server.js
+/**
+ * Creates and returns an Express router for handling complex reporting and data aggregation endpoints.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @returns {express.Router} The configured Express router.
+ */
 module.exports = (db) => {
 
+    /**
+     * GET /daily_performance/:date
+     * Calculates the portfolio's value change between the selected date and the previous day.
+     */
     router.get('/daily_performance/:date', async (req, res) => {
         const selectedDate = req.params.date;
         const holderId = req.query.holder;
@@ -22,6 +30,11 @@ module.exports = (db) => {
         prevDate.setUTCDate(prevDate.getUTCDate() - 1);
         const previousDay = prevDate.toISOString().split('T')[0];
 
+        /**
+         * Calculates the total value of all open positions on a given date.
+         * @param {string} date - The date for which to calculate the total value.
+         * @returns {Promise<number>} The total calculated value.
+         */
         const calculateTotalValue = async (date) => {
             const query = `
                 SELECT ticker, price as cost_basis, COALESCE(quantity_remaining, 0) as quantity_remaining
@@ -35,7 +48,7 @@ module.exports = (db) => {
             for (const lot of openLots) {
                 let price = null;
                 const cachedPrice = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date = ?', [lot.ticker, date]);
-                if (cachedPrice) { price = cachedPrice.close_price; } 
+                if (cachedPrice) { price = cachedPrice.close_price; }
                 else {
                     try {
                         const apiKey = process.env.FINNHUB_API_KEY;
@@ -61,6 +74,10 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * GET /positions/:date
+     * Fetches all transactions for a specific day and all open positions at the end of that day.
+     */
     router.get('/positions/:date', async (req, res) => {
         try {
             const selectedDate = req.params.date;
@@ -104,6 +121,10 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * GET /realized_pl/summary
+     * Calculates the total lifetime realized profit/loss, grouped by exchange.
+     */
     router.get('/realized_pl/summary', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -128,6 +149,10 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * POST /realized_pl/summary
+     * Calculates the realized profit/loss within a specific date range, grouped by exchange.
+     */
     router.post('/realized_pl/summary', async (req, res) => {
         try {
             const { startDate, endDate, accountHolderId } = req.body;
@@ -159,6 +184,11 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * GET /portfolio/overview
+     * Fetches a summarized overview of all current open positions, grouped by ticker.
+     * Calculates total quantity and weighted average cost for each ticker.
+     */
     router.get('/portfolio/overview', async (req, res) => {
         try {
             const holderId = req.query.holder;

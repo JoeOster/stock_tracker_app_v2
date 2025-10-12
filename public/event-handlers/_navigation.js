@@ -3,12 +3,15 @@ import { state, switchView } from '../app-main.js';
 import { updateAllPrices } from '../api.js';
 
 /**
- * Autosizes the account selector dropdown to fit the selected text.
+ * Autosizes an HTMLSelectElement to fit the width of its currently selected option's text.
+ * A temporary span is used to measure the text width accurately.
  * @param {HTMLSelectElement} selectElement The dropdown element to resize.
+ * @returns {void}
  */
 export function autosizeAccountSelector(selectElement) {
     if (!selectElement || selectElement.options.length === 0) return;
 
+    // Create a temporary, invisible span to measure the text width.
     const tempSpan = document.createElement('span');
     tempSpan.style.visibility = 'hidden';
     tempSpan.style.position = 'absolute';
@@ -16,11 +19,18 @@ export function autosizeAccountSelector(selectElement) {
     tempSpan.style.fontSize = window.getComputedStyle(selectElement).fontSize;
     tempSpan.textContent = selectElement.options[selectElement.selectedIndex].text || 'All Accounts';
     document.body.appendChild(tempSpan);
+
+    // Set the select element's width to the measured text width plus some padding.
     selectElement.style.width = `${tempSpan.offsetWidth + 30}px`;
     document.body.removeChild(tempSpan);
 }
 
 
+/**
+ * Initializes all event listeners related to main application navigation.
+ * This includes the tab container, global account filter, and custom date picker.
+ * @returns {void}
+ */
 export function initializeNavigationHandlers() {
     const tabsContainer = document.getElementById('tabs-container');
     const globalHolderFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
@@ -28,16 +38,18 @@ export function initializeNavigationHandlers() {
     const refreshBtn = document.getElementById('refresh-prices-btn');
 
     if (globalHolderFilter) {
-        // FIX: Make the event listener async to await the switchView function
+        // Handle changes to the global account holder filter.
         globalHolderFilter.addEventListener('change', async (e) => {
             const target = /** @type {HTMLSelectElement} */ (e.target);
             state.selectedAccountHolderId = target.value;
+            // Refresh the current view to reflect the new account holder selection.
             await switchView(state.currentView.type, state.currentView.value);
             autosizeAccountSelector(target);
         });
     }
 
     if (tabsContainer) {
+        // Handle clicks on the main navigation tabs.
         tabsContainer.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             if (target.classList.contains('master-tab')) {
@@ -51,20 +63,24 @@ export function initializeNavigationHandlers() {
     }
 
     if (customDatePicker) {
+        // Handle selection of a custom date, adding it to a persistent list.
         customDatePicker.addEventListener('change', (e) => {
             const selectedDate = (/** @type {HTMLInputElement} */ (e.target)).value;
             if (selectedDate) {
                 let persistentDates = JSON.parse(localStorage.getItem('persistentDates')) || [];
                 const newDate = { date: selectedDate, added: Date.now() };
+                // Ensure no duplicate dates exist.
                 persistentDates = persistentDates.filter(d => d.date !== selectedDate);
                 persistentDates.push(newDate);
                 localStorage.setItem('persistentDates', JSON.stringify(persistentDates));
+                // Switch the view to the newly selected date.
                 switchView('date', selectedDate);
             }
         });
     }
 
     if(refreshBtn) {
+        // Handle manual price refresh button clicks.
         refreshBtn.addEventListener('click', () => 
             updateAllPrices(state.activityMap, state.priceCache)
         );

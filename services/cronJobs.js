@@ -4,9 +4,18 @@ const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
 
+/**
+ * A simple utility to format a number as currency.
+ * @param {number | null | undefined} num - The number to format.
+ * @returns {string} The formatted currency string or '--' if input is invalid.
+ */
 const formatCurrency = (num) => (num ? `$${Number(num).toFixed(2)}` : '--');
 
-// --- NEW: Nightly Database Backup Function ---
+/**
+ * Backs up the production database to a timestamped file in the /backup directory.
+ * This function only runs in the 'production' environment.
+ * @returns {Promise<void>}
+ */
 async function backupDatabase() {
     // Ensure this only runs in the production environment
     if (process.env.NODE_ENV !== 'production') {
@@ -18,7 +27,7 @@ async function backupDatabase() {
     try {
         const dbPath = './production.db';
         const backupDir = './backup';
-        
+
         // Ensure the backup directory exists
         await fs.mkdir(backupDir, { recursive: true });
 
@@ -33,7 +42,12 @@ async function backupDatabase() {
     }
 }
 
-
+/**
+ * Captures the end-of-day (EOD) closing price for any tickers that were fully sold off during a given day.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @param {string} dateToProcess - The date to process in 'YYYY-MM-DD' format.
+ * @returns {Promise<void>}
+ */
 async function captureEodPrices(db, dateToProcess) {
     console.log(`[EOD Process] Running for date: ${dateToProcess}`);
     try {
@@ -63,6 +77,12 @@ async function captureEodPrices(db, dateToProcess) {
     }
 }
 
+/**
+ * The main order watcher service. Fetches current prices for tickers with open orders/limits
+ * and creates notifications for buy limit hits or automatically executes sell limit orders.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @returns {Promise<void>}
+ */
 async function runOrderWatcher(db) {
     console.log('[CRON] Running Order Watcher / Alert Generator...');
     try {
@@ -82,6 +102,7 @@ async function runOrderWatcher(db) {
             }
             await new Promise(resolve => setTimeout(resolve, 150));
         }
+        // Check for buy limit orders that have been hit
         for (const order of activeBuyOrders) {
             const currentPrice = currentPrices[order.ticker];
             if (currentPrice && currentPrice <= order.limit_price) {
@@ -92,6 +113,7 @@ async function runOrderWatcher(db) {
                 }
             }
         }
+        // Check for sell limit orders (stop loss / take profit) that have been hit
         for (const position of openPositionsWithLimits) {
             const currentPrice = currentPrices[position.ticker];
             if (!currentPrice) continue;
@@ -104,6 +126,7 @@ async function runOrderWatcher(db) {
                 executedPrice = position.limit_price_up;
                 executionType = 'Take Profit';
             }
+            // If a limit was hit, execute the sale automatically
             if (executedPrice && executionType) {
                 await db.exec('BEGIN TRANSACTION');
                 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
@@ -121,20 +144,27 @@ async function runOrderWatcher(db) {
     }
 }
 
+/**
+ * Initializes and schedules all cron jobs for the application.
+ * This function is called once on server startup.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @returns {void}
+ */
 function initializeAllCronJobs(db) {
     if (process.env.NODE_ENV !== 'test') {
-        // Schedule EOD price capture
+        // Schedule EOD price capture for closed positions. Runs at 4:02 PM EST on weekdays.
         cron.schedule('2 16 * * 1-5', () => {
             const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
             captureEodPrices(db, today);
         }, { timezone: "America/New_York" });
         
-        // Schedule Order Watcher
+        // Schedule the Order Watcher. Runs every 5 minutes during market hours (9 AM - 4 PM EST) on weekdays.
         cron.schedule('*/5 9-16 * * 1-5', () => runOrderWatcher(db), {
             timezone: "America/New_York"
         });
 
         // --- NEW: Schedule Nightly Database Backup ---
+        // Runs at 2:00 AM EST every day.
         cron.schedule('0 2 * * *', () => {
             backupDatabase();
         }, {

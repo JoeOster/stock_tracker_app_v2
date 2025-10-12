@@ -1,12 +1,22 @@
 // public/ui/renderers/_tabs.js
 import { getTradingDays, getActivePersistentDates } from '../helpers.js';
 
+/**
+ * Renders the main navigation tabs, including static tabs and dynamic date-based tabs.
+ * It highlights the currently active tab based on the application's state.
+ * @param {{type: string, value: string}} currentView - An object representing the current active view.
+ * @returns {void}
+ */
 export function renderTabs(currentView) {
     const tabsContainer = document.getElementById('tabs-container');
     if (!tabsContainer) return;
+
     tabsContainer.innerHTML = '';
+
+    // --- Dynamic Date Tabs ---
     const tradingDays = getTradingDays(6);
     const activePersistentDates = getActivePersistentDates();
+    // Combine and deduplicate recent trading days and any user-selected persistent dates.
     const allDates = [...new Set([...tradingDays, ...activePersistentDates])].sort();
 
     allDates.forEach(day => {
@@ -19,6 +29,7 @@ export function renderTabs(currentView) {
         tabsContainer.appendChild(tab);
     });
 
+    // --- Static Application Tabs ---
     const chartsTab = document.createElement('div');
     chartsTab.className = 'tab master-tab';
     chartsTab.dataset.viewType = 'charts';

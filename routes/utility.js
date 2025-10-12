@@ -3,13 +3,22 @@ const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 
-// This module will be passed the database connection (db) from server.js
-module.exports = (db) => {
+/**
+ * Creates and returns an Express router for handling utility and miscellaneous endpoints.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @param {object} dependencies - An object containing additional functions.
+ * @param {function(import('sqlite').Database, string): Promise<void>} dependencies.captureEodPrices - A function to capture end-of-day prices.
+ * @returns {express.Router} The configured Express router.
+ */
+module.exports = (db, { captureEodPrices }) => {
 
     // Base path is /api/utility
 
-    // This endpoint handles fetching current or historical prices for a batch of tickers.
-    // It was originally /api/prices/batch
+    /**
+     * POST /prices/batch
+     * Fetches current or historical prices for a batch of tickers. It prioritizes fetching
+     * from a local cache (`historical_prices`) before querying the live API.
+     */
     router.post('/prices/batch', async (req, res) => {
         const { tickers, date } = req.body;
         if (!tickers || !Array.isArray(tickers)) {
@@ -51,11 +60,13 @@ module.exports = (db) => {
         res.json(prices);
     });
 
-    // This endpoint allows manually triggering the EOD price capture for a specific date.
-    // It will be passed the 'captureEodPrices' function from server.js
+    /**
+     * POST /tasks/capture-eod/:date
+     * Manually triggers the EOD price capture service for a specific date.
+     */
     router.post('/tasks/capture-eod/:date', async (req, res) => {
         const { date } = req.params;
-        const { captureEodPrices } = req; // The function is passed via middleware
+        // The captureEodPrices function is now passed in and available in the closure
         if (captureEodPrices && typeof captureEodPrices === 'function') {
             captureEodPrices(db, date);
             res.status(202).json({ message: `EOD process for ${date} acknowledged.` });
@@ -64,8 +75,11 @@ module.exports = (db) => {
         }
     });
     
-    // This endpoint handles fetching all account snapshots.
-    // It was originally /api/snapshots
+    /**
+     * GET /snapshots
+     * Fetches all account value snapshots, optionally filtered by an account holder.
+     * If 'all' is specified, it aggregates values across all holders by date.
+     */
     router.get('/snapshots', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -89,6 +103,10 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * POST /snapshots
+     * Creates or replaces an account value snapshot for a given exchange and date.
+     */
     router.post('/snapshots', async (req, res) => {
         try {
             const { exchange, snapshot_date, value, account_holder_id } = req.body;
@@ -103,6 +121,10 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * DELETE /snapshots/:id
+     * Deletes a specific account value snapshot by its ID.
+     */
     router.delete('/snapshots/:id', async (req, res) => {
         try {
             await db.run('DELETE FROM account_snapshots WHERE id = ?', req.params.id);

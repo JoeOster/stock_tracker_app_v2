@@ -8,7 +8,10 @@ import { initializeModalHandlers } from './_modals.js';
 import { initializeSettingsHandlers } from './_settings.js';
 
 /**
- * Initializes all event listeners for the entire application.
+ * Initializes all event listeners for the entire application by calling
+ * the initializer function from each specific event handler module.
+ * This function is called once when the application starts.
+ * @returns {void}
  */
 export function initializeAllEventListeners() {
     initializeNavigationHandlers();

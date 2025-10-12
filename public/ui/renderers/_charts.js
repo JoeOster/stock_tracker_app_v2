@@ -1,12 +1,21 @@
+// Portfolio Tracker V3.03
 // public/ui/renderers/_charts.js
 
-/* global Chart */ // FIX: Informs the type checker about the global Chart object
+/* global Chart */ // FIX: Informs the type checker about the global Chart object from the CDN.
 
 import { state } from '../../app-main.js';
 import { formatQuantity, formatAccounting, getTradingDays, getCurrentESTDateString } from '../helpers.js';
 
 // --- Chart Creation Logic ---
 
+/**
+ * Generates a consistent HSL color based on a string input.
+ * Used to give each exchange a unique, but predictable, color in charts.
+ * @param {string} str - The input string (e.g., an exchange name).
+ * @param {number} [s=75] - The saturation percentage.
+ * @param {number} [l=60] - The lightness percentage.
+ * @returns {string} The HSL color string.
+ */
 function stringToHslColor(str, s = 75, l = 60) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -16,6 +25,16 @@ function stringToHslColor(str, s = 75, l = 60) {
     return `hsl(${h}, ${s}%, ${l}%)`;
 }
 
+/**
+ * Wraps text within a canvas context to fit a maximum width.
+ * @param {CanvasRenderingContext2D} context - The canvas rendering context.
+ * @param {string} text - The text to wrap.
+ * @param {number} x - The x-coordinate to start drawing.
+ * @param {number} y - The y-coordinate to start drawing.
+ * @param {number} maxWidth - The maximum width of a line.
+ * @param {number} lineHeight - The height of each line.
+ * @returns {void}
+ */
 function wrapText(context, text, x, y, maxWidth, lineHeight) {
     const words = text.split(' ');
     let line = '';
@@ -34,10 +53,19 @@ function wrapText(context, text, x, y, maxWidth, lineHeight) {
     context.fillText(line, x, y);
 }
 
+/**
+ * The core chart creation function. It builds and configures a Chart.js line chart.
+ * If there is not enough data, it displays a message on the canvas instead.
+ * @param {CanvasRenderingContext2D} ctx - The canvas rendering context.
+ * @param {any[]} snapshots - The array of snapshot data to plot.
+ * @param {import('../../app-main.js').AppState} state - The main application state.
+ * @returns {Chart|null} A new Chart.js instance or null if rendering is not possible.
+ */
 function createChart(ctx, snapshots, state) {
     const datasets = {};
     const labels = [...new Set(snapshots.map(s => s.snapshot_date))].sort();
 
+    // If there isn't enough data to draw a line, display a message instead.
     if (snapshots.length === 0 || labels.length < 2) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.font = "16px " + (state.settings.font || 'Inter');
@@ -58,6 +86,7 @@ function createChart(ctx, snapshots, state) {
 
     const exchangeNames = [...new Set(snapshots.map(s => s.exchange))];
 
+    // Group snapshot data by exchange to create separate datasets.
     exchangeNames.forEach(exchangeName => {
         datasets[exchangeName] = {
             label: exchangeName,
@@ -74,7 +103,7 @@ function createChart(ctx, snapshots, state) {
         type: 'line',
         data: { labels: labels, datasets: Object.values(datasets) },
         options: {
-            spanGaps: true,
+            spanGaps: true, // Connect lines across null data points
             responsive: true, maintainAspectRatio: false,
             scales: {
                 y: { ticks: { color: textColor }, grid: { color: gridColor } },
@@ -84,6 +113,7 @@ function createChart(ctx, snapshots, state) {
                 legend: { position: 'bottom', labels: { color: textColor } }
             },
             onClick: (e, elements, chart) => {
+                // On click, open a larger version of the chart in a modal.
                 const chartZoomModal = document.getElementById('chart-zoom-modal');
                 const zoomedChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('zoomed-chart'));
                 if (!chartZoomModal || !zoomedChartCanvas) return;
@@ -97,12 +127,28 @@ function createChart(ctx, snapshots, state) {
     });
 }
 
+/**
+ * Renders the 'All Time Value' chart.
+ * @param {CanvasRenderingContext2D} ctx - The canvas context.
+ * @param {Chart | null} chartInstance - The existing chart instance to destroy, if any.
+ * @param {any[]} snapshots - The snapshot data.
+ * @param {import('../../app-main.js').AppState} state - The main application state.
+ * @returns {Chart|null} The new chart instance.
+ */
 function renderAllTimeChart(ctx, chartInstance, snapshots, state) {
     if(chartInstance) chartInstance.destroy();
     if (!ctx) return null;
     return createChart(ctx, snapshots, state);
 }
 
+/**
+ * Renders the 'Past Ten Day Report' chart, filtering for the last 5 trading days.
+ * @param {CanvasRenderingContext2D} ctx - The canvas context.
+ * @param {Chart | null} chartInstance - The existing chart instance to destroy, if any.
+ * @param {any[]} snapshots - The snapshot data.
+ * @param {import('../../app-main.js').AppState} state - The main application state.
+ * @returns {Chart|null} The new chart instance.
+ */
 function renderFiveDayChart(ctx, chartInstance, snapshots, state) {
     if(chartInstance) chartInstance.destroy();
     if (!ctx) return null;
@@ -114,6 +160,16 @@ function renderFiveDayChart(ctx, chartInstance, snapshots, state) {
     return createChart(ctx, filteredSnapshots, state);
 }
 
+/**
+ * Renders the 'By Date Chart', filtering snapshots based on user-selected dates.
+ * @param {CanvasRenderingContext2D} ctx - The canvas context.
+ * @param {HTMLInputElement} startDateEl - The start date input element.
+ * @param {HTMLInputElement} endDateEl - The end date input element.
+ * @param {Chart | null} chartInstance - The existing chart instance to destroy, if any.
+ * @param {any[]} snapshots - The snapshot data.
+ * @param {import('../../app-main.js').AppState} state - The main application state.
+ * @returns {Chart|null} The new chart instance.
+ */
 function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance, snapshots, state) {
     if(chartInstance) chartInstance.destroy();
     if (!ctx) return null;
@@ -129,6 +185,11 @@ function renderDateRangeChart(ctx, startDateEl, endDateEl, chartInstance, snapsh
 
 // --- Main Page Rendering Functions ---
 
+/**
+ * Fetches all necessary data and renders all components on the Charts page.
+ * @param {import('../../app-main.js').AppState} state - The main application state.
+ * @returns {Promise<void>}
+ */
 export async function renderChartsPage(state) {
     const plSummaryTable = document.getElementById('pl-summary-table');
     const allTimeChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('all-time-chart'));
@@ -141,6 +202,7 @@ export async function renderChartsPage(state) {
         overviewDateSpan.textContent = `(as of ${today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })})`;
     }
 
+    /** Renders the realized P/L summary for a specific date range. */
     async function renderRangedPLSummary() {
         const startDateInput = /** @type {HTMLInputElement} */ (document.getElementById('pl-start-date'));
         const endDateInput = /** @type {HTMLInputElement} */ (document.getElementById('pl-end-date'));
@@ -170,6 +232,7 @@ export async function renderChartsPage(state) {
         }
     }
 
+    // --- Render Lifetime P&L Summary ---
     try {
         const plResponse = await fetch(`/api/reporting/realized_pl/summary?holder=${state.selectedAccountHolderId}`);
         if (plResponse.ok) {
@@ -179,6 +242,7 @@ export async function renderChartsPage(state) {
         }
     } catch (error) { console.error("Failed to render P&L Summary:", error); }
     
+    // --- Initialize Chart Canvases and Date Pickers ---
     const fiveDayChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('five-day-chart'));
     const dateRangeChartCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('date-range-chart'));
     const fiveDayChartCtx = fiveDayChartCanvas ? fiveDayChartCanvas.getContext('2d') : null;
@@ -186,6 +250,7 @@ export async function renderChartsPage(state) {
     const chartStartDate = /** @type {HTMLInputElement} */ (document.getElementById('chart-start-date'));
     const chartEndDate = /** @type {HTMLInputElement} */ (document.getElementById('chart-end-date'));
 
+    // Set default values for date range pickers if they are empty
     if (chartStartDate && !chartStartDate.value) {
         if (state.allSnapshots.length > 0) {
             const oldestDate = state.allSnapshots.reduce((oldest, current) => current.snapshot_date < oldest ? current.snapshot_date : oldest, state.allSnapshots[0].snapshot_date);
@@ -198,12 +263,15 @@ export async function renderChartsPage(state) {
         chartEndDate.value = getCurrentESTDateString();
     }
 
+    // --- Render All Charts ---
     state.allTimeChart = renderAllTimeChart(allTimeChartCtx, state.allTimeChart, state.allSnapshots, state);
     state.fiveDayChart = renderFiveDayChart(fiveDayChartCtx, state.fiveDayChart, state.allSnapshots, state);
     state.dateRangeChart = renderDateRangeChart(dateRangeChartCtx, chartStartDate, chartEndDate, state.dateRangeChart, state.allSnapshots, state);
     
+    // --- Render Portfolio Overview Table ---
     await renderPortfolioOverview(state.priceCache);
 
+    // --- Add Event Listeners for Date Pickers ---
     if(chartStartDate) {
         chartStartDate.addEventListener('change', () => renderChartsPage(state));
     }
@@ -220,6 +288,11 @@ export async function renderChartsPage(state) {
     renderRangedPLSummary();
 }
 
+/**
+ * Fetches and renders the portfolio overview table, which summarizes all open positions by ticker.
+ * @param {Map<string, number|string>} priceCache - The application's price cache.
+ * @returns {Promise<void>}
+ */
 export async function renderPortfolioOverview(priceCache) {
     const overviewBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('portfolio-overview-body'));
     if (!overviewBody) return;
@@ -247,14 +320,14 @@ export async function renderPortfolioOverview(priceCache) {
         let totalUnrealizedPL = 0;
         for (const pos of data) {
             const priceToUse = priceCache.get(pos.ticker);
-            const priceHTML = priceToUse && priceToUse !== 'invalid' ? formatAccounting(priceToUse) : `<span class="negative">${priceToUse || '--'}</span>`;
-            const totalValue = (priceToUse && priceToUse !== 'invalid') ? pos.total_quantity * priceToUse : null;
+            const priceHTML = (typeof priceToUse === 'number') ? formatAccounting(priceToUse) : `<span class="negative">${priceToUse || '--'}</span>`;
+            const totalValue = (typeof priceToUse === 'number') ? pos.total_quantity * priceToUse : null;
             const totalCost = pos.total_quantity * pos.weighted_avg_cost;
             const unrealizedPL = (totalValue !== null) ? totalValue - totalCost : null;
             if(unrealizedPL) totalUnrealizedPL += unrealizedPL;
 
-            const dayChangeAmount = (priceToUse && priceToUse !== 'invalid' && pos.previous_close) ? (priceToUse - pos.previous_close) * pos.total_quantity : null;
-            const dayChangePercent = (priceToUse && priceToUse !== 'invalid' && pos.previous_close && pos.previous_close !== 0) ? ((priceToUse - pos.previous_close) / pos.previous_close) * 100 : null;
+            const dayChangeAmount = (typeof priceToUse === 'number' && pos.previous_close) ? (priceToUse - pos.previous_close) * pos.total_quantity : null;
+            const dayChangePercent = (typeof priceToUse === 'number' && pos.previous_close && pos.previous_close !== 0) ? ((priceToUse - pos.previous_close) / pos.previous_close) * 100 : null;
 
             overviewBody.insertRow().innerHTML = `
                 <td>${pos.ticker}</td>

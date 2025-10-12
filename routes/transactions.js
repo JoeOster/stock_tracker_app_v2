@@ -2,11 +2,19 @@
 const express = require('express');
 const router = express.Router();
 
-// Note: This module needs access to the database object and other functions.
-// We will pass `db` and `captureEodPrices` in from server.js.
+/**
+ * Creates and returns an Express router for handling transaction-related API endpoints.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @param {function(import('sqlite').Database, string): Promise<void>} captureEodPrices - A function to capture end-of-day prices.
+ * @returns {express.Router} The configured Express router.
+ */
 module.exports = (db, captureEodPrices) => {
-    // The base path for these routes is '/api/transactions', so we use relative paths like '/' or '/:id'.
+    // The base path for these routes is '/api/transactions'
 
+    /**
+     * GET /
+     * Fetches all transactions, optionally filtered by an account holder.
+     */
     router.get('/', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -24,6 +32,12 @@ module.exports = (db, captureEodPrices) => {
         }
     });
 
+    /**
+     * POST /
+     * Creates a new transaction (BUY or SELL).
+     * For BUYs, it initializes lot-tracking columns.
+     * For SELLs, it validates against and updates the parent BUY lot.
+     */
     router.post('/', async (req, res) => {
         try {
             const { ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration, parent_buy_id, account_holder_id } = req.body;
@@ -51,6 +65,10 @@ module.exports = (db, captureEodPrices) => {
         }
     });
 
+    /**
+     * GET /:id
+     * Fetches a single transaction by its ID.
+     */
     router.get('/:id', async (req, res) => {
         try {
             const transaction = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
@@ -65,6 +83,11 @@ module.exports = (db, captureEodPrices) => {
         }
     });
 
+    /**
+     * PUT /:id
+     * Updates an existing transaction.
+     * Handles cascading updates to quantity_remaining for BUY and parent BUY lots.
+     */
     router.put('/:id', async (req, res) => {
         try {
             const { exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, account_holder_id } = req.body;
@@ -126,6 +149,12 @@ module.exports = (db, captureEodPrices) => {
         }
     });
 
+    /**
+     * DELETE /:id
+     * Deletes a transaction.
+     * If deleting a SELL, it "returns" the quantity to the parent BUY lot.
+     * Prevents deletion of a BUY lot that has associated sales.
+     */
     router.delete('/:id', async (req, res) => {
         try {
             const txToDelete = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
@@ -144,7 +173,10 @@ module.exports = (db, captureEodPrices) => {
         }
     });
 
-    // Batch import endpoint
+    /**
+     * POST /batch
+     * Imports a batch of BUY transactions, typically from a CSV file.
+     */
     router.post('/batch', async (req, res) => {
         const { transactions, account_holder_id } = req.body;
         if (!Array.isArray(transactions) || transactions.length === 0 || !account_holder_id) {

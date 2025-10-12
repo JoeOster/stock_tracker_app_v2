@@ -1,13 +1,19 @@
+// Portfolio Tracker V3.03
 // public/ui/renderers/_orders.js
 import { state } from '../../app-main.js';
 import { formatQuantity, formatAccounting, showToast } from '../helpers.js';
 
+/**
+ * Fetches pending orders from the API and renders them into the pending orders table.
+ * It handles loading states, empty states, and error states.
+ * @returns {Promise<void>}
+ */
 export async function renderOrdersPage() {
     const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#pending-orders-table tbody'));
     if (!tableBody) return;
 
     tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
-    state.pendingOrders = []; // Clear old data
+    state.pendingOrders = []; // Clear old data before fetching
 
     try {
         const response = await fetch(`/api/orders/pending?holder=${state.selectedAccountHolderId}`);
@@ -15,7 +21,7 @@ export async function renderOrdersPage() {
             throw new Error('Failed to fetch pending orders from the server.');
         }
         const orders = await response.json();
-        state.pendingOrders = orders; // Save data to state for event listeners
+        state.pendingOrders = orders; // Save data to state for event listeners to use
 
         tableBody.innerHTML = ''; // Clear loading message
 
@@ -24,6 +30,7 @@ export async function renderOrdersPage() {
             return;
         }
 
+        // Build and append a row for each pending order.
         orders.forEach(order => {
             const row = tableBody.insertRow();
             row.innerHTML = `
