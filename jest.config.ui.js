@@ -2,5 +2,6 @@
 module.exports = {
   displayName: 'UI',
   testEnvironment: 'jsdom',
-  testMatch: ['**/public/ui/**/*.test.js'],
+  // FIX: Update the pattern to find all .ui.test.js files
+  testMatch: ['**/public/**/*.ui.test.js'],
 };
