@@ -17,7 +17,7 @@ The application is in a stable, feature-rich state with an automated testing sui
 * **Automated Order Execution & Alerts:** A backend "Order Watcher" service runs during market hours, creating alerts for price targets and automatically executing limit orders on open positions.
 * **Live Price Updates:** Open positions are updated with current market prices via an auto-refresh scheduler.
 * **Modern Theming System:** Includes Light (Default), Dark, Sepia, and High Contrast themes, plus font selection.
-* **Refactored & Documented Codebase:** Both backend and frontend have been refactored into smaller, modular files for improved organization. Major modules now include JSDoc comments for enhanced maintainability.
+* **Refactored & Documented Codebase:** Both backend and frontend have been refactored into smaller, modular files for improved organization. Major modules now include JSDoc comments for enhanced maintainability. The database has also been cleaned up by removing deprecated tables.
 * **Environment-Specific Databases & Deployment:** The project uses separate databases for development, testing, and production, with separate Jest configurations for UI and API tests.
 
 ## **Development Roadmap: Upcoming Features**

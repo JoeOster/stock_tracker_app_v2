@@ -1,6 +1,6 @@
 # Database Schema
 
-**Last Updated:** 2025-10-12
+**Last Updated:** 2025-10-13
 
 This document outlines the final, consolidated schema for the Portfolio Tracker application database, based on the initial setup and all applied migrations.
 
@@ -112,26 +112,3 @@ Caches the closing price of a stock on a specific date, primarily used to get th
 | `ticker` | TEXT | NOT NULL | The stock symbol. |
 | `date` | TEXT | NOT NULL | The date of the closing price. |
 | `close_price` | REAL | NOT NULL | The closing price of the stock on that date. |
-
----
-
-## **(Deprecated) Tables**
-
-*These tables were created in early migrations but do not appear to be used in the current application logic. They may be safely removed in a future migration.*
-
-### `stock_prices`
-
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `ticker` | TEXT | PRIMARY KEY | The stock symbol. |
-| `last_price` | REAL | | The last known price. |
-| `last_updated` | TEXT | | The timestamp of the last update. |
-
-### `positions`
-
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `ticker` | TEXT | NOT NULL | The stock symbol. |
-| `exchange` | TEXT | NOT NULL | The brokerage account. |
-| `quantity` | REAL | NOT NULL | The total quantity held. |
-| `cost_basis`| REAL | NOT NULL | The average cost basis. |

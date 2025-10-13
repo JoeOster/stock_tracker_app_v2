@@ -16,6 +16,7 @@ This document breaks down the V3.0 project plan into actionable development task
 * [x] Create a new `/docs` directory in the project root.
 * [x] Move all existing Markdown files (`README.md`, `gemini.md`, `Portfolio Manager Implementation Guide.md`, etc.) into the `/docs` directory.
 * [x] Create a new `database_schema.md` file in the `/docs` directory that consolidates the final schema from all existing migration files.
+* [x] Remove deprecated tables (`stock_prices`, `positions`) via a new migration.
 
 ### **Task 0.3: Improve Code Organization and Commenting**
 
@@ -35,15 +36,8 @@ This document breaks down the V3.0 project plan into actionable development task
 
 ### **Task 0.6: Consolidate Backend Services & Implement Rate Limiting**
 
-* [ ] Create a new service file, e.g., `/services/priceFetcher.js`, to centralize all Finnhub API call logic.
-* [ ] Implement a queue or rate-limiting library to manage outgoing API requests robustly.
-* [ ] Refactor the reporting routes and cron jobs to use this new, rate-limited service.
-
-### **Task 0.7: Fix and Refactor Automated Deployment Script**
-
-* [ ] Investigate and resolve the silent exit issue in `deploy.bat`.
-* [ ] Refactor the script's error-handling logic using a more robust method.
-* [ ] Verify that the `robocopy` command is reliable and correctly copies all necessary files.
+* [x] Create a new service file, e.g., `/services/priceFetcher.js`, to centralize all Finnhub API call logic.
+* [ ] Enhance API rate limiting by replacing the current `setTimeout` implementation with a more robust library like `bottleneck` or `p-limit`.
 
 ### **Task 0.8: Enhance Testing Strategy**
 
@@ -66,6 +60,11 @@ This document breaks down the V3.0 project plan into actionable development task
     * Update the backup script and cron job to use a Linux-appropriate path that mirrors the new standard (e.g., `/home/pi/portfolio_manager_bu/v3/prod`).
 * [ ] **Development Backup:**
   * [ ] Create a new npm script (e.g., `npm run backup:dev`) that backs up the development database to `c:\portfolio_manager_bu\v3\dev` on Windows or an equivalent path for Linux/macOS.
+
+### **Task 0.10: Correct Ledger Table Layout**
+
+* [ ] Add `<th>` elements for "My Limit Up" and "My Limit Down" to `public/templates/_ledger.html`.
+* [ ] Ensure the renderer in `public/ui/renderers/_ledger.js` correctly populates these columns.
 
 ## **Phase 0.5: Application Hardening**
 
@@ -119,3 +118,11 @@ This document breaks down the V3.0 project plan into actionable development task
 * [ ] Update `RASPBERRY_PI_DEPLOYMENT.md` and `setup_pi.sh` with any new environment variables, dependencies, or setup steps required for the V3 features.
 * [ ] Review all in-code JSDoc comments to ensure they accurately reflect the final V3 codebase.
 * [ ] Update `gemini.md` to incorporate the completed V3 features, preparing it for future development cycles.
+
+## **Phase 6: Deployment & Infrastructure**
+
+### **Task 6.1: Fix and Refactor Automated Deployment Script**
+
+* [ ] Investigate and resolve the silent exit issue in `deploy.bat`.
+* [ ] Refactor the script's error-handling logic using a more robust method.
+* [ ] Verify that the `robocopy` command is reliable and correctly copies all necessary files.
