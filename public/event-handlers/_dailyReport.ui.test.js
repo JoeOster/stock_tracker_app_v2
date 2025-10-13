@@ -13,6 +13,7 @@ jest.mock('../state.js', () => ({
             takeProfitPercent: 10,
             stopLossPercent: 10,
         },
+        // We still provide a mock currentView, as it's good practice
         currentView: { type: 'date', value: '2025-10-10' }
     },
 }));
@@ -24,8 +25,9 @@ jest.mock('../ui/helpers.js', () => ({
     showToast: jest.fn(),
 }));
 
-// FIX: Completely mock the renderers module to prevent it from loading its dependencies.
-// The module under test only needs `renderDailyReport` to exist.
+// FIX: Completely mock the renderers module. The file we're testing (_dailyReport.js)
+// only needs `renderDailyReport` to exist, so we provide a dummy version.
+// This prevents the real renderers.js from loading _tabs.js and causing the error.
 jest.mock('../ui/renderers.js', () => ({
     renderDailyReport: jest.fn(),
 }));

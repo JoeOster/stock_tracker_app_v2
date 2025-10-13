@@ -1,19 +1,15 @@
 // public/app-main.js
 
-/* global Chart */
+/* global Chart, Papa */
 
 import { state } from './state.js';
 import { initializeAllEventListeners } from './event-handlers/_init.js';
-import { renderTabs, renderLedger } from './ui/renderers.js';
+import { renderTabs } from './ui/renderers.js';
 import { getCurrentESTDateString, getMostRecentTradingDay } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
 import { applyAppearanceSettings } from './ui/settings.js';
 import { fetchAndPopulateAccountHolders, fetchAndRenderExchanges } from './event-handlers/_settings.js';
-import { loadDailyReportPage } from './event-handlers/_dailyReport.js';
-import { loadChartsAndSnapshotsPage } from './event-handlers/_snapshots.js';
-import { loadOrdersPage } from './event-handlers/_orders.js';
-import { loadAlertsPage } from './event-handlers/_alerts.js';
-import { refreshLedger } from './api.js';
+import { autosizeAccountSelector, switchView } from './event-handlers/_navigation.js';
 
 /**
  * Loads an HTML template from a URL and appends it to a target element.
@@ -36,50 +32,6 @@ async function loadHTML(url, targetId) {
         }
     } catch (error) {
         console.error(error);
-    }
-}
-
-/**
- * Switches the main view of the application, rendering the appropriate page.
- * @param {string} viewType - The type of view to switch to (e.g., 'date', 'charts').
- * @param {string|null} viewValue - The value associated with the view (e.g., a specific date).
- * @returns {Promise<void>}
- */
-export async function switchView(viewType, viewValue) {
-    state.currentView = { type: viewType, value: viewValue };
-    renderTabs(state.currentView);
-    (/** @type {HTMLSelectElement} */(document.getElementById('global-account-holder-filter'))).value = state.selectedAccountHolderId;
-
-    document.querySelectorAll('.page-container').forEach(/** @param {HTMLElement} c */ c => c.style.display = 'none');
-
-    const containerIdMap = {
-        'ledger': 'ledger-page-container',
-        'orders': 'orders-page-container',
-        'alerts': 'alerts-page-container',
-        'snapshots': 'snapshots-page-container',
-        'imports': 'imports-page-container',
-        'charts': 'charts-container',
-        'date': 'daily-report-container'
-    };
-
-    const finalContainerId = containerIdMap[viewType] || `${viewType}-container`;
-    const pageContainer = document.getElementById(finalContainerId);
-
-    if (pageContainer) {
-        pageContainer.style.display = 'block';
-    }
-
-    // --- View Routing ---
-    if (viewType === 'date') {
-        await loadDailyReportPage(viewValue);
-    } else if (viewType === 'charts' || viewType === 'snapshots') {
-        await loadChartsAndSnapshotsPage(viewType);
-    } else if (viewType === 'ledger') {
-        await refreshLedger();
-    } else if (viewType === 'orders') {
-        await loadOrdersPage();
-    } else if (viewType === 'alerts') {
-        await loadAlertsPage();
     }
 }
 
@@ -113,16 +65,12 @@ async function initialize() {
         (/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value = String(state.settings.takeProfitPercent);
         (/** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'))).value = String(state.settings.stopLossPercent);
         (/** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'))).value = String(state.settings.notificationCooldown);
-
         const themeSelector = /** @type {HTMLSelectElement} */(document.getElementById('theme-selector'));
         if(themeSelector) themeSelector.value = state.settings.theme;
-
         const fontSelector = /** @type {HTMLSelectElement} */(document.getElementById('font-selector'));
         if(fontSelector) fontSelector.value = state.settings.font;
-
         const familyNameInput = /** @type {HTMLInputElement} */(document.getElementById('family-name'));
         if(familyNameInput) familyNameInput.value = state.settings.familyName;
-
         applyAppearanceSettings();
     };
     loadSettings();
@@ -146,8 +94,7 @@ async function initialize() {
         globalHolderFilter.value = 'all';
         state.selectedAccountHolderId = 'all';
     }
-
-    const { autosizeAccountSelector } = await import('./event-handlers/_navigation.js');
+    
     autosizeAccountSelector(globalHolderFilter);
 
     await switchView('date', viewDate);
@@ -172,22 +119,16 @@ function initializeNotificationService() {
 
                 if (notifications.length > 0 && (now - lastToastTimestamp > cooldown)) {
                     const alertTab = document.querySelector('.master-tab[data-view-type="alerts"]');
-                    if (alertTab) {
-                        alertTab.textContent = 'Alerts ❗';
-                    }
-                    lastToastTimestamp = now;
+                    if (alertTab) alertTab.textContent = 'Alerts ❗';
                 } else if (notifications.length === 0) {
                     const alertTab = document.querySelector('.master-tab[data-view-type="alerts"]');
-                    if (alertTab) {
-                        alertTab.textContent = 'Alerts';
-                    }
+                    if (alertTab) alertTab.textContent = 'Alerts';
                 }
             }
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
         }
-    }, 15000); // Poll every 15 seconds
+    }, 15000);
 }
 
-// Initialize the application
 document.addEventListener('DOMContentLoaded', initialize);
