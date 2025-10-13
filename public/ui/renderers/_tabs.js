@@ -65,3 +65,10 @@ export function renderTabs(currentView) {
     if (currentView.type === 'snapshots') snapshotsTab.classList.add('active');
     tabsContainer.appendChild(snapshotsTab);
 }
+    // FIX: Add the new Imports tab
+    const importsTab = document.createElement('div');
+    importsTab.className = 'tab master-tab';
+    importsTab.dataset.viewType = 'imports';
+    importsTab.textContent = 'Imports';
+    if (currentView.type === 'imports') importsTab.classList.add('active');
+    tabsContainer.appendChild(importsTab);

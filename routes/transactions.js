@@ -13,6 +13,78 @@ module.exports = (db, log, captureEodPrices) => {
     // The base path for these routes is '/api/transactions'
 
     /**
+     * POST /import
+     * Handles the batch import of reconciled transactions from the CSV importer.
+     * This operation is atomic: it will either complete fully or not at all.
+     */
+    router.post('/import', async (req, res) => {
+        const { toCreate, toDelete, accountHolderId } = req.body;
+
+        if (!accountHolderId || !Array.isArray(toCreate) || !Array.isArray(toDelete)) {
+            return res.status(400).json({ message: 'Invalid import payload.' });
+        }
+
+        try {
+            await db.exec('BEGIN TRANSACTION');
+
+            // 1. Delete transactions that the user chose to replace
+            if (toDelete.length > 0) {
+                const deleteStmt = await db.prepare('DELETE FROM transactions WHERE id = ?');
+                for (const id of toDelete) {
+                    await deleteStmt.run(id);
+                }
+                await deleteStmt.finalize();
+            }
+
+            // 2. Insert new transactions, handling SELLs by finding their parent BUY lot
+            if (toCreate.length > 0) {
+                // Sort by date to process buys before sells
+                toCreate.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                for (const tx of toCreate) {
+                    if (tx.action === 'BUY') {
+                        await db.run(
+                            'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            [tx.date, tx.ticker, tx.exchange, tx.action, tx.quantity, tx.price, accountHolderId, tx.quantity, tx.quantity]
+                        );
+                    } else if (tx.action === 'SELL') {
+                        let sellQuantity = tx.quantity;
+                        const openLots = await db.all(
+                            "SELECT * FROM transactions WHERE ticker = ? AND account_holder_id = ? AND quantity_remaining > 0.00001 ORDER BY transaction_date ASC",
+                            [tx.ticker, accountHolderId]
+                        );
+
+                        if (openLots.length === 0) {
+                            throw new Error(`No open BUY lot found for SELL transaction of ${tx.ticker} on ${tx.date}.`);
+                        }
+
+                        for (const lot of openLots) {
+                            if (sellQuantity <= 0) break;
+                            const sellableQuantity = Math.min(sellQuantity, lot.quantity_remaining);
+                            await db.run(
+                                'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, parent_buy_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                                [tx.date, tx.ticker, tx.exchange, tx.action, sellableQuantity, tx.price, accountHolderId, lot.id]
+                            );
+                            await db.run(
+                                'UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?',
+                                [sellableQuantity, lot.id]
+                            );
+                            sellQuantity -= sellableQuantity;
+                        }
+                    }
+                }
+            }
+
+            await db.exec('COMMIT');
+            res.status(201).json({ message: 'Import completed successfully!' });
+        } catch (error) {
+            await db.exec('ROLLBACK');
+            log(`[ERROR] Failed during batch import: ${error.message}`);
+            res.status(500).json({ message: `Import failed: ${error.message}` });
+        }
+    });
+
+    /**
      * GET /
      * Fetches all transactions, optionally filtered by an account holder.
      */

@@ -43,23 +43,22 @@ This document breaks down the V3.0 project plan into actionable development task
 
 * [x] Create separate Jest configurations for API and UI tests (e.g., `jest.config.api.js`, `jest.config.ui.js`).
 * [x] Update the `scripts` in `package.json` to allow for running these test suites independently.
-* [ ] Consider adding a simple end-to-end (E2E) test to validate a full user workflow.
 
 ### **Task 0.9: Update Configuration for V3 Standards**
 
-* [ ] **Server & Environment:**
-    * [ ] Update `server.js` to use port `3003` as the default production port.
-    * [ ] Create a `.env.template` or similar example file to instruct users to set `PORT=3111` for development.
-* [ ] **Windows Deployment (`deploy.bat`):**
-    * [ ] Modify the script to target the `c:\portfolio_managerV3` directory for production files.
-    * [ ] Update the backup logic within the script to use `c:\portfolio_manager_bu\v3\prod`.
-* [ ] **Raspberry Pi / Linux Deployment:**
-    * [ ] Update the `docs/RASPBERRY_PI_DEPLOYMENT.md` guide to reflect the new production port (`3003`).
+* **Server & Environment:**
+    * [x] Update `server.js` to use port `3003` as the default production port.
+    * [x] Create a `.env.template` or similar example file to instruct users to set `PORT=3111` for development.
+* **Windows Deployment (`deploy.bat`):**
+    * [x] Modify the script to target the `c:\portfolio_managerV3` directory for production files.
+    * [x] Update the backup logic within the script to use `c:\portfolio_manager_bu\v3\prod`.
+* **Raspberry Pi / Linux Deployment:**
+    * [x] Update the `docs/RASPBERRY_PI_DEPLOYMENT.md` guide to reflect the new production port (`3003`).
     * [ ] Modify the `docs/setup_pi.sh` script:
         * Change the default port suggestion to `3003`.
         * Update the backup script and cron job to use a Linux-appropriate path that mirrors the new standard (e.g., `/home/pi/portfolio_manager_bu/v3/prod`).
-* [ ] **Development Backup:**
-    * [ ] Create a new npm script (e.g., `npm run backup:dev`) that backs up the development database to `c:\portfolio_manager_bu\v3\dev` on Windows or an equivalent path for Linux/macOS.
+* **Development Backup:**
+    * [x] Create a new npm script (e.g., `npm run backup:dev`) that backs up the development database to `c:\portfolio_manager_bu\v3\dev` on Windows.
 
 ## **Phase 0.5: Application Hardening**
 
@@ -67,9 +66,9 @@ This document breaks down the V3.0 project plan into actionable development task
 
 ### **Task 0.5.1: Enhance Frontend Error Handling**
 
-* [ ] Audit all `fetch` calls in the frontend event handlers and API modules.
-* [ ] Ensure that the `catch` block for each call reads the JSON body of a failed response.
-* [ ] Update `showToast` calls to display the specific `error.message` from the server.
+* [x] Audit all `fetch` calls in the frontend event handlers and API modules.
+* [x] Ensure that the `catch` block for each call reads the JSON body of a failed response.
+* [x] Update `showToast` calls to display the specific `error.message` from the server.
 
 ### **Task 0.5.2: Improve Data Validation**
 
@@ -121,3 +120,6 @@ This document breaks down the V3.0 project plan into actionable development task
 * [ ] Investigate and resolve the silent exit issue in `deploy.bat`.
 * [ ] Refactor the script's error-handling logic using a more robust method.
 * [ ] Verify that the `robocopy` command is reliable and correctly copies all necessary files.
+
+### **Task 6.2: Enhance Testing Strategy**
+* [ ] Consider adding a simple end-to-end (E2E) test to validate a full user workflow.

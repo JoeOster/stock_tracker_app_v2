@@ -14,7 +14,6 @@ import { loadChartsAndSnapshotsPage } from './event-handlers/_snapshots.js';
 import { loadOrdersPage } from './event-handlers/_orders.js';
 import { loadAlertsPage } from './event-handlers/_alerts.js';
 import { refreshLedger } from './api.js';
-import { autosizeAccountSelector, switchView } from './event-handlers/_navigation.js';
 
 /**
  * Loads an HTML template from a URL and appends it to a target element.
@@ -37,6 +36,50 @@ async function loadHTML(url, targetId) {
         }
     } catch (error) {
         console.error(error);
+    }
+}
+
+/**
+ * Switches the main view of the application, rendering the appropriate page.
+ * @param {string} viewType - The type of view to switch to (e.g., 'date', 'charts').
+ * @param {string|null} viewValue - The value associated with the view (e.g., a specific date).
+ * @returns {Promise<void>}
+ */
+export async function switchView(viewType, viewValue) {
+    state.currentView = { type: viewType, value: viewValue };
+    renderTabs(state.currentView);
+    (/** @type {HTMLSelectElement} */(document.getElementById('global-account-holder-filter'))).value = state.selectedAccountHolderId;
+
+    document.querySelectorAll('.page-container').forEach(/** @param {HTMLElement} c */ c => c.style.display = 'none');
+
+    const containerIdMap = {
+        'ledger': 'ledger-page-container',
+        'orders': 'orders-page-container',
+        'alerts': 'alerts-page-container',
+        'snapshots': 'snapshots-page-container',
+        'imports': 'imports-page-container',
+        'charts': 'charts-container',
+        'date': 'daily-report-container'
+    };
+
+    const finalContainerId = containerIdMap[viewType] || `${viewType}-container`;
+    const pageContainer = document.getElementById(finalContainerId);
+
+    if (pageContainer) {
+        pageContainer.style.display = 'block';
+    }
+
+    // --- View Routing ---
+    if (viewType === 'date') {
+        await loadDailyReportPage(viewValue);
+    } else if (viewType === 'charts' || viewType === 'snapshots') {
+        await loadChartsAndSnapshotsPage(viewType);
+    } else if (viewType === 'ledger') {
+        await refreshLedger();
+    } else if (viewType === 'orders') {
+        await loadOrdersPage();
+    } else if (viewType === 'alerts') {
+        await loadAlertsPage();
     }
 }
 
@@ -104,6 +147,7 @@ async function initialize() {
         state.selectedAccountHolderId = 'all';
     }
 
+    const { autosizeAccountSelector } = await import('./event-handlers/_navigation.js');
     autosizeAccountSelector(globalHolderFilter);
 
     await switchView('date', viewDate);

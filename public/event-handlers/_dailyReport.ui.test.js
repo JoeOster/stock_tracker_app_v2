@@ -4,7 +4,7 @@
 import { initializeDailyReportHandlers } from './_dailyReport.js';
 import { state } from '../state.js';
 
-// Mock the entire state module
+// Mock the state module
 jest.mock('../state.js', () => ({
     state: {
         activityMap: new Map(),
@@ -13,15 +13,23 @@ jest.mock('../state.js', () => ({
             takeProfitPercent: 10,
             stopLossPercent: 10,
         },
+        currentView: { type: 'date', value: '2025-10-10' }
     },
 }));
 
-// Mock the helpers to prevent actual modals from appearing
+// Mock the helpers to prevent modals from appearing
 jest.mock('../ui/helpers.js', () => ({
-    ...jest.requireActual('../ui/helpers.js'), // Import and retain default behavior
-    showConfirmationModal: jest.fn(), // Mock the confirmation modal
-    showToast: jest.fn(), // Mock the toast notifications
+    ...jest.requireActual('../ui/helpers.js'),
+    showConfirmationModal: jest.fn(),
+    showToast: jest.fn(),
 }));
+
+// FIX: Completely mock the renderers module to prevent it from loading its dependencies.
+// The module under test only needs `renderDailyReport` to exist.
+jest.mock('../ui/renderers.js', () => ({
+    renderDailyReport: jest.fn(),
+}));
+
 
 describe('Daily Report Interactions', () => {
     it('should open the sell modal when a sell button is clicked', () => {
