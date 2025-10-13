@@ -43,7 +43,7 @@ async function setupApp() {
 // It is skipped when the module is imported, such as in test files.
 if (require.main === module) {
     setupApp().then(({ app }) => {
-        const PORT = process.env.PORT || 3000;
+        const PORT = process.env.PORT || 3003;
         app.listen(PORT, () => {
             console.log(`Server is running! Open your browser and go to http://localhost:${PORT}`);
         });

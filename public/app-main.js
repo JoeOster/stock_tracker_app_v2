@@ -5,7 +5,7 @@
 import { state } from './state.js';
 import { initializeAllEventListeners } from './event-handlers/_init.js';
 import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage } from './ui/renderers.js';
-import { populatePricesFromCache, getCurrentESTDateString, showToast, getMostRecentTradingDay } from './ui/helpers.js';
+import { populatePricesFromCache, getCurrentESTDateString, showToast, getMostRecentTradingDay, formatAccounting } from './ui/helpers.js';
 import { updatePricesForView, fetchPendingOrders, fetchAlerts, fetchDailyPerformance, fetchPositions, fetchSnapshots } from './api.js';
 import { initializeScheduler } from './scheduler.js';
 
@@ -72,12 +72,11 @@ export async function switchView(viewType, viewValue) {
         if(summaryBody) summaryBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
         
         try {
-            // Fetch only the essential position data first.
             const positionData = await fetchPositions(viewValue, state.selectedAccountHolderId);
-            // Render the main table structure immediately.
             renderDailyReport(viewValue, state.activityMap, null, positionData);
+            
+            const tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
 
-            // Now, fetch the supplementary data in the background and update the UI when they complete.
             fetchDailyPerformance(viewValue, state.selectedAccountHolderId).then(perfData => {
                  const performanceSpan = document.querySelector('#daily-performance-summary h3:first-child span');
                  if (performanceSpan && perfData) {
@@ -89,7 +88,7 @@ export async function switchView(viewType, viewValue) {
                  }
             });
 
-            updatePricesForView(viewValue, state.activityMap, state.priceCache).then(() => {
+            updatePricesForView(viewValue, tickersToUpdate).then(() => {
                 populatePricesFromCache(state.activityMap, state.priceCache);
             });
 
@@ -199,7 +198,7 @@ export function saveSettings() {
 }
 
 /**
- * Applies the theme and font settings to the document body.
+ * Applies the theme and font settings to the document body and page title.
  * @returns {void}
  */
 function applyAppearanceSettings() {
@@ -208,9 +207,17 @@ function applyAppearanceSettings() {
     document.body.style.setProperty('--font-family-base', fontVar);
 
     const appTitle = document.getElementById('app-title');
+    const baseTitle = state.settings.familyName ? `${state.settings.familyName} Portfolio Tracker` : 'Live Stock Tracker';
+
     if (appTitle) {
-        appTitle.textContent = state.settings.familyName ? `${state.settings.familyName} Portfolio Tracker` : 'Live Stock Tracker';
+        appTitle.textContent = baseTitle;
     }
+    
+    let pageTitle = baseTitle;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        pageTitle = `[DEV] ${baseTitle}`;
+    }
+    document.title = pageTitle;
 }
 
 /**

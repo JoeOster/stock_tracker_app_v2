@@ -65,3 +65,5 @@ This feature allows users to log, "paper trade," and analyze trading ideas from 
 ### **Production Deployment (Windows)**
 
 Run the automated `deploy.bat` script as an Administrator. The script handles stopping the service, running tests, backing up the database and uploaded documents, copying files, and restarting the service.
+
+**Note on Production Environment:** The `deploy.bat` script does **not** copy your local `.env` file. It automatically configures the Windows service to use the correct production settings (e.g., `NODE_ENV=production`). The Finnhub API key must be set manually on the service if it is not already configured.

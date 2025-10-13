@@ -2,83 +2,82 @@
 
 const fetch = require('node-fetch');
 
-// A simple queue to manage outgoing API requests.
-const requestQueue = [];
-let isProcessing = false;
-
 const API_KEY = process.env.FINNHUB_API_KEY;
-// FIX: Increased delay to stay within typical free-tier API rate limits (60 calls/minute).
-const API_RATE_LIMIT_DELAY = 1100; // Milliseconds to wait between each API call.
+// Read the rate limit from environment variables, defaulting to 60.
+const API_CALLS_PER_MINUTE = parseInt(process.env.API_CALLS_PER_MINUTE, 10) || 60;
+
+// --- Rate Limiting State ---
+let apiCallTimestamps = [];
 
 /**
- * Processes the request queue one by one, fetching the price for each ticker.
- * Includes a delay to respect API rate limits.
- * @returns {Promise<void>}
+ * Checks if an API call can be made and waits if the rate limit has been reached.
  */
-async function processQueue() {
-    if (isProcessing) return;
-    isProcessing = true;
+async function waitForRateLimit() {
+    const now = Date.now();
+    // Remove timestamps older than one minute.
+    apiCallTimestamps = apiCallTimestamps.filter(ts => now - ts < 60000);
 
-    while (requestQueue.length > 0) {
-        const { ticker, resolve } = requestQueue.shift();
-        try {
-            if (!API_KEY) {
-                throw new Error("API key not configured on server.");
-            }
-            const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${API_KEY}`);
-            if (apiRes.ok) {
-                const data = await apiRes.json();
-                if (data && data.c > 0) {
-                    resolve(data.c);
-                } else {
-                    console.warn(`[Price Fetch Warning] Ticker '${ticker}' returned a null or zero price. It may be an invalid symbol.`);
-                    resolve('invalid');
-                }
-            } else {
-                console.error(`[Price Fetch Error] API call for ${ticker} failed with status: ${apiRes.status}`);
-                resolve(null);
-            }
-        } catch (error) {
-            console.error(`[Price Fetch Error] Error fetching price for ${ticker}:`, error);
-            resolve(null);
-        }
-        // Wait before processing the next item in the queue.
-        await new Promise(res => setTimeout(res, API_RATE_LIMIT_DELAY));
+    if (apiCallTimestamps.length >= API_CALLS_PER_MINUTE) {
+        const oldestCall = apiCallTimestamps[0];
+        const timeToWait = 60000 - (now - oldestCall);
+        console.warn(`[Price Fetch] Rate limit reached. Waiting for ${timeToWait}ms...`);
+        await new Promise(res => setTimeout(res, timeToWait));
+        // Recursively check again after waiting, in case of concurrent requests.
+        await waitForRateLimit();
     }
-
-    isProcessing = false;
 }
 
 /**
- * Fetches the current price for a single stock ticker by adding it to a rate-limited queue.
+ * Fetches the current price for a single stock ticker, respecting the rate limit.
  * @param {string} ticker - The stock ticker symbol.
- * @returns {Promise<number|string|null>} A promise that resolves to the price (number), 'invalid' for a bad ticker, or null for an error.
+ * @returns {Promise<number|string|null>} A promise that resolves to the price, 'invalid', or null.
  */
-function getPrice(ticker) {
-    return new Promise((resolve) => {
-        requestQueue.push({ ticker, resolve });
-        if (!isProcessing) {
-            processQueue();
+async function getPrice(ticker) {
+    await waitForRateLimit();
+    apiCallTimestamps.push(Date.now());
+
+    try {
+        if (!API_KEY) {
+            throw new Error("API key not configured on server.");
         }
-    });
+        const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${API_KEY}`);
+        if (apiRes.ok) {
+            const data = await apiRes.json();
+            if (data && data.c > 0) {
+                return data.c;
+            } else {
+                console.warn(`[Price Fetch Warning] Ticker '${ticker}' returned a null or zero price.`);
+                return 'invalid';
+            }
+        } else {
+            console.error(`[Price Fetch Error] API call for ${ticker} failed with status: ${apiRes.status}`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`[Price Fetch Error] Error fetching price for ${ticker}:`, error);
+        return null;
+    }
 }
 
 /**
- * Fetches prices for a batch of tickers using the rate-limited queue.
+ * Fetches prices for a batch of tickers by sending requests in parallel.
+ * The rate limiter will automatically handle throttling.
  * @param {string[]} tickers - An array of ticker symbols.
  * @returns {Promise<{[ticker: string]: number|string|null}>} A promise that resolves to an object mapping tickers to their prices.
  */
 async function getBatchPrices(tickers) {
     /** @type {{[ticker: string]: number|string|null}} */
-    const prices = {};
-    const pricePromises = tickers.map(ticker => getPrice(ticker));
+    const allPrices = {};
+    const uniqueTickers = [...new Set(tickers)];
+
+    const pricePromises = uniqueTickers.map(ticker => getPrice(ticker));
     const resolvedPrices = await Promise.all(pricePromises);
 
-    tickers.forEach((ticker, index) => {
-        prices[ticker] = resolvedPrices[index];
+    uniqueTickers.forEach((ticker, index) => {
+        allPrices[ticker] = resolvedPrices[index];
     });
 
-    return prices;
+    return allPrices;
 }
 
 module.exports = { getPrice, getBatchPrices };
