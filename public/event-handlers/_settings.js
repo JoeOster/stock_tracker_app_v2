@@ -1,6 +1,6 @@
 // public/event-handlers/_settings.js
 import { state } from '../state.js';
-import { refreshLedger } from '../app-main.js';
+import { refreshLedger } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { saveSettings, renderExchangeManagementList, renderAccountHolderManagementList, applyAppearanceSettings } from '../ui/settings.js';
 

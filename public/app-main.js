@@ -13,6 +13,7 @@ import { loadDailyReportPage } from './event-handlers/_dailyReport.js';
 import { loadChartsAndSnapshotsPage } from './event-handlers/_snapshots.js';
 import { loadOrdersPage } from './event-handlers/_orders.js';
 import { loadAlertsPage } from './event-handlers/_alerts.js';
+import { refreshLedger } from './api.js';
 
 /**
  * Loads an HTML template from a URL and appends it to a target element.
@@ -80,19 +81,6 @@ export async function switchView(viewType, viewValue) {
     } else if (viewType === 'alerts') {
         await loadAlertsPage();
     }
-}
-
-/**
- * Fetches the latest transactions and re-renders the ledger view.
- * @returns {Promise<void>}
- */
-export async function refreshLedger() {
-    try {
-        const res = await fetch(`/api/transactions?holder=${state.selectedAccountHolderId}`);
-        if (!res.ok) throw new Error('Failed to fetch latest transactions');
-        state.allTransactions = await res.json();
-        renderLedger(state.allTransactions, state.ledgerSort);
-    } catch (error) { console.error("Failed to refresh ledger:", error); }
 }
 
 /**
