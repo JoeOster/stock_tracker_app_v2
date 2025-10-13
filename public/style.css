@@ -21,3 +21,10 @@
 /* --- UTILITIES --- */
 /* Contains helper classes like loaders and toasts. */
 @import url('./css/base/_utilities.css');
+
+/* ... other imports */
+@import url('./css/components/_daily-report.css');
+@import url('./css/components/_importer.css'); /* <-- Add this line */
+
+/* --- UTILITIES --- */
+/* ... */

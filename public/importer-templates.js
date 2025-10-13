@@ -1,62 +1,68 @@
-// public/importer-templates.js
-
-export const BROKERAGE_TEMPLATES = {
-    'fidelity': {
+// public/event-handlers/importer-templates.js
+export const brokerageTemplates = {
+    fidelity: {
         name: 'Fidelity',
-        dataStartRow: 2,
+        dataStartRow: 1,
         columns: {
-            date: 0,
-            action: 3,
-            symbol: 4,
-            quantity: 7,
-            price: 8,
-            amount: 12
+            date: 'Run Date',
+            action: 'Action',
+            ticker: 'Symbol',
+            quantity: 'Quantity',
+            price: 'Price ($)',
         },
-        isBuy: (row) => row[3].toLowerCase().includes('you bought'),
-        isSell: (row) => row[3].toLowerCase().includes('you sold'),
-        ignore: (row) => !row[3] || (!row[3].toLowerCase().includes('you bought') && !row[3].toLowerCase().includes('you sold'))
-    },
-    'etrade': {
-        name: 'E-Trade',
-        dataStartRow: 4,
-        columns: {
-            date: 0,
-            action: 1,
-            symbol: 3,
-            quantity: 4,
-            price: 6
+        filter: (row) => {
+            const action = row['Action'] || '';
+            return (action.toLowerCase().includes('you bought') || action.toLowerCase().includes('you sold')) 
+                   && row['Symbol'] 
+                   && !['BITCOIN', 'ETHEREUM', 'LITECOIN'].includes(row['Description']);
         },
-        isBuy: (row) => row[1].toLowerCase() === 'bought',
-        isSell: (row) => row[1].toLowerCase() === 'sold',
-        ignore: (row) => !row[1] || (row[1].toLowerCase() !== 'bought' && row[1].toLowerCase() !== 'sold')
+        transform: (row) => ({
+            date: new Date(row['Run Date']).toLocaleDateString('en-CA'),
+            ticker: row['Symbol'],
+            type: row['Action'].toLowerCase().includes('you bought') ? 'BUY' : 'SELL',
+            quantity: Math.abs(parseFloat(row['Quantity'])),
+            price: parseFloat(row['Price ($)']),
+            exchange: 'Fidelity',
+        }),
     },
-    'robinhood': {
+    robinhood: {
         name: 'Robinhood',
         dataStartRow: 1,
         columns: {
-            date: 0,
-            action: 5,
-            symbol: 3,
-            quantity: 6,
-            price: 7,
-            amount: 8
+            date: 'Activity Date',
+            ticker: 'Instrument',
+            type: 'Trans Code',
+            quantity: 'Quantity',
+            price: 'Price',
         },
-        isBuy: (row) => row[5].toLowerCase() === 'buy',
-        isSell: (row) => row[5].toLowerCase() === 'sell',
-        ignore: (row) => !row[5] || (row[5].toLowerCase() !== 'buy' && row[5].toLowerCase() !== 'sell')
+        filter: (row) => ['Buy', 'Sell'].includes(row['Trans Code']),
+        transform: (row) => ({
+            date: new Date(row['Activity Date']).toLocaleDateString('en-CA'),
+            ticker: row['Instrument'],
+            type: row['Trans Code'].toUpperCase(),
+            quantity: parseFloat(row['Quantity']),
+            price: parseFloat(row['Price']),
+            exchange: 'Robinhood',
+        }),
     },
-    'generic': {
-        name: 'Generic',
-        dataStartRow: 1,
+    etrade: {
+        name: 'E-Trade',
+        dataStartRow: 4,
         columns: {
-            date: 0,
-            symbol: 1,
-            action: 2,
-            quantity: 3,
-            price: 4
+            date: 'TransactionDate',
+            type: 'TransactionType',
+            ticker: 'Symbol',
+            quantity: 'Quantity',
+            price: 'Price',
         },
-        isBuy: (row) => row[2].toUpperCase() === 'BUY',
-        isSell: (row) => row[2].toUpperCase() === 'SELL',
-        ignore: (row) => !row[2] || (row[2].toUpperCase() !== 'BUY' && row[2].toUpperCase() !== 'SELL')
-    }
+        filter: (row) => ['Bought', 'Sold'].includes(row['TransactionType']),
+        transform: (row) => ({
+            date: new Date('20' + row['TransactionDate']).toLocaleDateString('en-CA'),
+            ticker: row['Symbol'],
+            type: row['TransactionType'] === 'Bought' ? 'BUY' : 'SELL',
+            quantity: Math.abs(parseFloat(row['Quantity'])),
+            price: parseFloat(row['Price']),
+            exchange: 'E-Trade',
+        }),
+    },
 };

@@ -22,3 +22,20 @@ export {
     renderAlertsPage,
     renderSnapshotsPage
 };
+
+// ...
+    const snapshotsTab = document.createElement('div');
+    snapshotsTab.className = 'tab master-tab';
+    snapshotsTab.dataset.viewType = 'snapshots';
+    snapshotsTab.textContent = 'Snapshots';
+    if (currentView.type === 'snapshots') snapshotsTab.classList.add('active');
+    tabsContainer.appendChild(snapshotsTab);
+
+    // --- NEW Importer Tab ---
+    const importsTab = document.createElement('div');
+    importsTab.className = 'tab master-tab';
+    importsTab.dataset.viewType = 'imports';
+    importsTab.textContent = 'Imports';
+    if (currentView.type === 'imports') importsTab.classList.add('active');
+    tabsContainer.appendChild(importsTab);
+}

@@ -4,7 +4,7 @@
 
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
-import { BROKERAGE_TEMPLATES } from '../importer-templates.js';
+import { brokerageTemplates } from './importer-templates.js';
 import { switchView } from './_navigation.js';
 
 let parsedCsvData = [];
@@ -185,7 +185,7 @@ export function initializeImporterHandlers() {
             return;
         }
 
-        const template = BROKERAGE_TEMPLATES[templateKey];
+        const template = brokerageTemplates [templateKey];
         parseAndReview(file, template, accountHolderId);
     });
 

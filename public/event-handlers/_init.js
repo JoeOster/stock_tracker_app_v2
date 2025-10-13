@@ -24,3 +24,14 @@ export function initializeAllEventListeners() {
     initializeSettingsHandlers();
     initializeAlertsHandlers();
 }
+// ... other imports
+import { initializeSettingsHandlers } from './_settings.js';
+import { initializeAlertsHandlers } from './_alerts.js';
+import { initializeImportHandlers } from './_imports.js'; // <-- Add this
+
+export function initializeAllEventListeners() {
+    // ... other initializers
+    initializeSettingsHandlers();
+    initializeAlertsHandlers();
+    initializeImportHandlers(); // <-- Add this
+}
