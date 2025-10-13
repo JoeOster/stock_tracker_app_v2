@@ -26,7 +26,7 @@ export function initializeScheduler(state) {
                 refreshPricesBtn.textContent = 'Auto-Refreshing';
             }
             let secondsRemaining = Math.max(0, Math.round((nextApiCallTimestamp - Date.now()) / 1000));
-            apiTimerEl.innerHTML = `Next: <span class="positive">${new Date(secondsRemaining * 1000).toISOString().substr(14, 5)}</span>`;
+            apiTimerEl.innerHTML = ` <span class="positive">${new Date(secondsRemaining * 1000).toISOString().substr(14, 5)}</span>`;
         } else {
             if (refreshPricesBtn && refreshPricesBtn.disabled) {
                 refreshPricesBtn.disabled = false;

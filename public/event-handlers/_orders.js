@@ -1,7 +1,8 @@
 // Portfolio Tracker V3.0.5
 // public/event-handlers/_orders.js
 import { state } from '../state.js';
-import { refreshLedger, switchView } from '../app-main.js';
+import { refreshLedger } from '../api.js'; // FIX: Corrected import path
+import { switchView } from './_navigation.js'; // This will be fixed in the next step
 import { formatAccounting, getCurrentESTDateString, showConfirmationModal, showToast } from '../ui/helpers.js';
 import { fetchPendingOrders } from '../api.js';
 import { renderOrdersPage } from '../ui/renderers.js';

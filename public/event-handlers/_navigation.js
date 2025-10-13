@@ -1,8 +1,14 @@
 // Portfolio Tracker V3.0.5
 // public/event-handlers/_navigation.js
 import { state } from '../state.js';
-import { switchView } from '../app-main.js';
 import { updateAllPrices } from '../api.js';
+import { renderTabs } from '../ui/renderers.js'; // FIX: Add missing import
+import { loadDailyReportPage } from './_dailyReport.js';
+import { loadChartsAndSnapshotsPage } from './_snapshots.js';
+import { loadOrdersPage } from './_orders.js';
+import { loadAlertsPage } from './_alerts.js';
+import { refreshLedger } from '../api.js';
+
 
 /**
  * Autosizes an HTMLSelectElement to fit the width of its currently selected option's text.
@@ -10,6 +16,7 @@ import { updateAllPrices } from '../api.js';
  * @param {HTMLSelectElement} selectElement The dropdown element to resize.
  * @returns {void}
  */
+// FIX: Add 'export' to the function declaration
 export function autosizeAccountSelector(selectElement) {
     if (!selectElement || selectElement.options.length === 0) return;
 
@@ -25,6 +32,49 @@ export function autosizeAccountSelector(selectElement) {
     // Set the select element's width to the measured text width plus some padding.
     selectElement.style.width = `${tempSpan.offsetWidth + 30}px`;
     document.body.removeChild(tempSpan);
+}
+
+/**
+ * Switches the main view of the application, rendering the appropriate page.
+ * @param {string} viewType - The type of view to switch to (e.g., 'date', 'charts').
+ * @param {string|null} viewValue - The value associated with the view (e.g., a specific date).
+ * @returns {Promise<void>}
+ */
+export async function switchView(viewType, viewValue) {
+    state.currentView = { type: viewType, value: viewValue };
+    renderTabs(state.currentView);
+    (/** @type {HTMLSelectElement} */(document.getElementById('global-account-holder-filter'))).value = state.selectedAccountHolderId;
+
+    document.querySelectorAll('.page-container').forEach(/** @param {HTMLElement} c */ c => c.style.display = 'none');
+
+    const containerIdMap = {
+        'ledger': 'ledger-page-container',
+        'orders': 'orders-page-container',
+        'alerts': 'alerts-page-container',
+        'snapshots': 'snapshots-page-container',
+        'imports': 'imports-page-container',
+        'charts': 'charts-container',
+        'date': 'daily-report-container'
+    };
+
+    const finalContainerId = containerIdMap[viewType] || `${viewType}-container`;
+    const pageContainer = document.getElementById(finalContainerId);
+
+    if (pageContainer) {
+        pageContainer.style.display = 'block';
+    }
+
+    if (viewType === 'date') {
+        await loadDailyReportPage(viewValue);
+    } else if (viewType === 'charts' || viewType === 'snapshots') {
+        await loadChartsAndSnapshotsPage(viewType);
+    } else if (viewType === 'ledger') {
+        await refreshLedger();
+    } else if (viewType === 'orders') {
+        await loadOrdersPage();
+    } else if (viewType === 'alerts') {
+        await loadAlertsPage();
+    }
 }
 
 
@@ -83,8 +133,10 @@ export function initializeNavigationHandlers() {
 
     if(refreshBtn) {
         // Handle manual price refresh button clicks.
+//        refreshBtn.addEventListener('click', () => 
+//            updateAllPrices(state.activityMap, state.priceCache)
         refreshBtn.addEventListener('click', () => 
-            updateAllPrices() // Corrected: No arguments are needed here.
+            updateAllPrices()
         );
     }
 }

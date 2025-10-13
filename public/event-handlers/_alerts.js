@@ -1,6 +1,6 @@
 // public/event-handlers/_alerts.js
 import { state } from '../state.js';
-import { switchView } from '../app-main.js';
+import { switchView } from './_navigation.js';
 import { showToast } from '../ui/helpers.js';
 import { fetchAlerts } from '../api.js';
 import { renderAlertsPage } from '../ui/renderers.js';

@@ -1,6 +1,6 @@
 // public/event-handlers/_ledger.js
 import { state } from '../state.js';
-import { refreshLedger } from '../app-main.js';
+import { refreshLedger } from '../api.js';
 import { renderLedger } from '../ui/renderers.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 

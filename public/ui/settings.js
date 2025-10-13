@@ -1,7 +1,6 @@
 // public/ui/settings.js - Contains all settings-related UI functions.
 import { state } from '../state.js';
-import { switchView } from '../app-main.js';
-
+import { switchView } from '../event-handlers/_navigation.js';
 /**
  * Saves the current settings from the UI to localStorage and applies them.
  * @returns {void}

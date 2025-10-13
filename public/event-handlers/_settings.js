@@ -3,7 +3,7 @@ import { state } from '../state.js';
 import { refreshLedger } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { saveSettings, renderExchangeManagementList, renderAccountHolderManagementList, applyAppearanceSettings } from '../ui/settings.js';
-
+//import { switchView } from '../event-handlers/_navigation.js';
 /**
  * Populates all exchange dropdowns on the page with the latest data from the state.
  * @returns {void}

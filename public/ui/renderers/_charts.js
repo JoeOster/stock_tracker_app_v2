@@ -1,9 +1,10 @@
 // Portfolio Tracker V3.03
 // public/ui/renderers/_charts.js
 
-import { state } from '../../state.js'; // FIX: Corrected import path
-import { formatAccounting, getTradingDays, getCurrentESTDateString } from '../helpers.js';
-import { createChart } from '../chart-builder.js'; // Import the generic chart builder
+import { state } from '../../state.js';
+// FIX: Add formatQuantity to the list of imports
+import { formatAccounting, formatQuantity, getTradingDays, getCurrentESTDateString } from '../helpers.js';
+import { createChart } from '../chart-builder.js';
 
 // --- Chart Rendering Functions ---
 
