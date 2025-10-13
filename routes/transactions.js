@@ -2,27 +2,49 @@
 const express = require('express');
 const router = express.Router();
 
-/**
- * Creates and returns an Express router for handling transaction-related API endpoints.
- * @param {import('sqlite').Database} db - The database connection object.
- * @param {function(string): void} log - The logging function.
- * @param {function(import('sqlite').Database, string): Promise<void>} captureEodPrices - A function to capture end-of-day prices.
- * @returns {express.Router} The configured Express router.
- */
-module.exports = (db, log, captureEodPrices) => {
+// NOTE: This assumes 'importSessions' is passed from server.js
+// We will need a small change in server.js to make this work.
+
+module.exports = (db, log, captureEodPrices, importSessions) => {
     // The base path for these routes is '/api/transactions'
 
     /**
      * POST /import
      * Handles the batch import of reconciled transactions from the CSV importer.
-     * This operation is atomic: it will either complete fully or not at all.
      */
     router.post('/import', async (req, res) => {
-        const { toCreate, toDelete, accountHolderId } = req.body;
+        // This route now uses the session data and resolutions from the frontend
+        const { sessionId, resolutions } = req.body;
 
-        if (!accountHolderId || !Array.isArray(toCreate) || !Array.isArray(toDelete)) {
+        if (!sessionId || !resolutions) {
             return res.status(400).json({ message: 'Invalid import payload.' });
         }
+
+        const session = importSessions.get(sessionId);
+        if (!session) {
+            return res.status(400).json({ message: 'Import session expired or not found.' });
+        }
+
+        const { data: sessionData, accountHolderId } = session;
+        const toCreate = [];
+        const toDelete = [];
+
+        // Process resolutions from the user
+        resolutions.forEach(res => {
+            const conflictItem = sessionData[res.csvIndex];
+            if (res.resolution === 'REPLACE') {
+                toDelete.push(conflictItem.matchedTx.id);
+                toCreate.push(conflictItem);
+            }
+            // If resolution is 'KEEP', we do nothing, as we keep the manual entry.
+        });
+        
+        // Add all undisputed "New" items from the session to the create list
+        sessionData.forEach(item => {
+            if (item.status === 'New') {
+                toCreate.push(item);
+            }
+        });
 
         try {
             await db.exec('BEGIN TRANSACTION');
@@ -36,18 +58,17 @@ module.exports = (db, log, captureEodPrices) => {
                 await deleteStmt.finalize();
             }
 
-            // 2. Insert new transactions, handling SELLs by finding their parent BUY lot
+            // 2. Insert new transactions
             if (toCreate.length > 0) {
-                // Sort by date to process buys before sells
                 toCreate.sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 for (const tx of toCreate) {
-                    if (tx.action === 'BUY') {
+                    if (tx.type === 'BUY') {
                         await db.run(
                             'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            [tx.date, tx.ticker, tx.exchange, tx.action, tx.quantity, tx.price, accountHolderId, tx.quantity, tx.quantity]
+                            [tx.date, tx.ticker, tx.exchange, tx.type, tx.quantity, tx.price, accountHolderId, tx.quantity, tx.quantity]
                         );
-                    } else if (tx.action === 'SELL') {
+                    } else if (tx.type === 'SELL') {
                         let sellQuantity = tx.quantity;
                         const openLots = await db.all(
                             "SELECT * FROM transactions WHERE ticker = ? AND account_holder_id = ? AND quantity_remaining > 0.00001 ORDER BY transaction_date ASC",
@@ -63,7 +84,7 @@ module.exports = (db, log, captureEodPrices) => {
                             const sellableQuantity = Math.min(sellQuantity, lot.quantity_remaining);
                             await db.run(
                                 'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, parent_buy_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                                [tx.date, tx.ticker, tx.exchange, tx.action, sellableQuantity, tx.price, accountHolderId, lot.id]
+                                [tx.date, tx.ticker, tx.exchange, tx.type, sellableQuantity, tx.price, accountHolderId, lot.id]
                             );
                             await db.run(
                                 'UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?',
@@ -76,6 +97,7 @@ module.exports = (db, log, captureEodPrices) => {
             }
 
             await db.exec('COMMIT');
+            importSessions.delete(sessionId); // Clean up the session
             res.status(201).json({ message: 'Import completed successfully!' });
         } catch (error) {
             await db.exec('ROLLBACK');
@@ -84,10 +106,8 @@ module.exports = (db, log, captureEodPrices) => {
         }
     });
 
-    /**
-     * GET /
-     * Fetches all transactions, optionally filtered by an account holder.
-     */
+    // ... (the rest of your transaction routes like GET /, POST /, PUT /, DELETE /)
+    
     router.get('/', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -106,12 +126,6 @@ module.exports = (db, log, captureEodPrices) => {
         }
     });
 
-    /**
-     * POST /
-     * Creates a new transaction (BUY or SELL).
-     * For BUYs, it initializes lot-tracking columns.
-     * For SELLs, it validates against and updates the parent BUY lot.
-     */
     router.post('/', async (req, res) => {
         try {
             const { ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration, parent_buy_id, account_holder_id } = req.body;
@@ -148,10 +162,6 @@ module.exports = (db, log, captureEodPrices) => {
         }
     });
 
-    /**
-     * PUT /:id
-     * Updates an existing transaction.
-     */
     router.put('/:id', async (req, res) => {
         try {
             const { id } = req.params;
@@ -164,7 +174,6 @@ module.exports = (db, log, captureEodPrices) => {
                 return res.status(400).json({ message: 'Invalid input. Ensure all fields are valid.' });
             }
 
-            // A simple update query; more complex logic would be needed if we allowed changing transaction type, etc.
             const query = `UPDATE transactions SET ticker = ?, exchange = ?, quantity = ?, price = ?, transaction_date = ?, limit_price_up = ?, limit_up_expiration = ?, limit_price_down = ?, limit_down_expiration = ?, account_holder_id = ? WHERE id = ?`;
             await db.run(query, [ticker.toUpperCase(), exchange, numQuantity, numPrice, transaction_date, limit_price_up || null, limit_up_expiration || null, limit_price_down || null, limit_down_expiration || null, account_holder_id, id]);
 
@@ -175,11 +184,7 @@ module.exports = (db, log, captureEodPrices) => {
             res.status(500).json({ message: 'Server error during transaction update.' });
         }
     });
-
-    /**
-     * DELETE /:id
-     * Deletes a transaction. If the deleted transaction is a SELL, it reverts the quantity_remaining on the parent BUY.
-     */
+    
     router.delete('/:id', async (req, res) => {
         try {
             const { id } = req.params;

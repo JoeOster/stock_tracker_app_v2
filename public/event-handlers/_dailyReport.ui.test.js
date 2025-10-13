@@ -62,7 +62,7 @@ describe('Daily Report Interactions', () => {
         initializeDailyReportHandlers();
 
         // 4. Simulate a user click
-        const sellButton = document.querySelector('.sell-from-lot-btn');
+        const sellButton = /** @type {HTMLButtonElement} */ (document.querySelector('.sell-from-lot-btn'));
         sellButton.click();
 
         // 5. Assert that the modal is now visible

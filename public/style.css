@@ -24,7 +24,7 @@
 
 /* ... other imports */
 @import url('./css/components/_daily-report.css');
-@import url('./css/components/_importer.css'); /* <-- Add this line */
+@import url('./css/components/_importers.css'); /* <-- Add this line */
 
 /* --- UTILITIES --- */
 /* ... */

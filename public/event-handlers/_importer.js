@@ -1,10 +1,10 @@
 // public/event-handlers/_importer.js
 
-/* global Papa */ // FIX: Add this line to inform the module about the global Papa object
+/* global Papa */ // Informs the type checker that Papa is a global variable.
 
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
-import { brokerageTemplates } from './importer-templates.js';
+import { brokerageTemplates } from '../importer-templates.js';
 import { switchView } from './_navigation.js';
 
 let parsedCsvData = [];
@@ -64,32 +64,20 @@ async function parseAndReview(file, template, accountHolderId) {
         existingTransactions = await response.json();
 
         Papa.parse(file, {
+            header: true, // Let PapaParse handle the headers
+            skipEmptyLines: true,
             complete: (results) => {
                 const data = results.data;
-                if (data.length < template.dataStartRow) {
+                if (data.length < 1) { // Check if there's any data at all
                     showToast('CSV file appears to be empty or malformed.', 'error');
                     return;
                 }
 
-                parsedCsvData = data.slice(template.dataStartRow - 1)
-                    .filter(row => row.length > 1 && !template.ignore(row)) // Ensure row is not empty
-                    .map(row => {
-                        const action = template.isBuy(row) ? 'BUY' : 'SELL';
-                        const amountStr = (row[template.columns.amount] || '0').replace(/[($)]/g, '');
-                        const quantity = Math.abs(parseFloat(row[template.columns.quantity]));
-                        let price = parseFloat(row[template.columns.price]);
-                        if ((!price || price === 0) && quantity) {
-                            price = Math.abs(parseFloat(amountStr) / quantity);
-                        }
-                        
-                        const parsedRow = {
-                            date: new Date(row[template.columns.date]).toLocaleDateString('en-CA'),
-                            ticker: row[template.columns.symbol] ? row[template.columns.symbol].trim().toUpperCase() : '',
-                            action,
-                            quantity,
-                            price
-                        };
-
+                parsedCsvData = data
+                    .slice(template.dataStartRow - 1)
+                    .filter(row => template.filter(row))
+                    .map(row => template.transform(row))
+                    .map(parsedRow => {
                         const { isValid, error } = validateRow(parsedRow);
                         if (!isValid) {
                             return { ...parsedRow, status: 'Invalid', error, resolution: null };
@@ -98,13 +86,13 @@ async function parseAndReview(file, template, accountHolderId) {
                         const { status, match } = findConflict(parsedRow);
                         return { ...parsedRow, status, matchedTx: match, resolution: null };
                     });
-                
+
                 if (parsedCsvData.length > 0) {
                     document.getElementById('import-step-1').style.display = 'none';
                     document.getElementById('import-step-2').style.display = 'block';
                     renderReconciliationTable(parsedCsvData);
                 } else {
-                    showToast('No valid buy or sell transactions found in the file.', 'info');
+                    showToast('No valid buy or sell transactions found in the file based on the template rules.', 'info');
                 }
             },
             error: (err) => {
@@ -117,9 +105,10 @@ async function parseAndReview(file, template, accountHolderId) {
 }
 
 function renderReconciliationTable(data) {
-    const tableBody = document.querySelector('#reconciliation-table tbody');
+    const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#reconciliation-table tbody'));
+    if (!tableBody) return;
     tableBody.innerHTML = '';
-    
+
     data.forEach((row, index) => {
         const tableRow = tableBody.insertRow();
         let statusClass = '';
@@ -149,7 +138,7 @@ function renderReconciliationTable(data) {
         tableRow.innerHTML = `
             <td>${row.date}</td>
             <td>${row.ticker}</td>
-            <td>${row.action}</td>
+            <td>${row.type}</td>
             <td class="numeric">${row.quantity}</td>
             <td class="numeric">${row.price ? row.price.toFixed(2) : 'N/A'}</td>
             <td class="${statusClass}">${statusText}</td>
@@ -160,12 +149,14 @@ function renderReconciliationTable(data) {
 
 
 export function initializeImporterHandlers() {
-    const brokerageSelect = document.getElementById('brokerage-template-select');
-    const fileInput = document.getElementById('csv-file-input');
-    const reviewBtn = document.getElementById('review-csv-btn');
-    const backBtn = document.getElementById('import-back-btn');
-    const reconciliationTable = document.getElementById('reconciliation-table');
-    const finalizeBtn = document.getElementById('finalize-import-btn');
+    const brokerageSelect = /** @type {HTMLSelectElement} */ (document.getElementById('brokerage-template-select'));
+    const fileInput = /** @type {HTMLInputElement} */ (document.getElementById('csv-file-input'));
+    const reviewBtn = /** @type {HTMLButtonElement} */ (document.getElementById('review-csv-btn'));
+    const backBtn = /** @type {HTMLButtonElement} */ (document.getElementById('import-back-btn'));
+    const reconciliationTable = /** @type {HTMLTableElement} */ (document.getElementById('reconciliation-table'));
+    const finalizeBtn = /** @type {HTMLButtonElement} */ (document.getElementById('finalize-import-btn'));
+    const accountHolderSelect = /** @type {HTMLSelectElement} */ (document.getElementById('import-account-holder'));
+
 
     brokerageSelect.addEventListener('change', () => {
         fileInput.disabled = false;
@@ -178,14 +169,14 @@ export function initializeImporterHandlers() {
     reviewBtn.addEventListener('click', () => {
         const templateKey = brokerageSelect.value;
         const file = fileInput.files[0];
-        const accountHolderId = document.getElementById('import-account-holder').value;
-        
+        const accountHolderId = accountHolderSelect.value;
+
         if (!templateKey || !file || !accountHolderId) {
             showToast('Please select an account, a brokerage template, and a file.', 'error');
             return;
         }
 
-        const template = brokerageTemplates [templateKey];
+        const template = brokerageTemplates[templateKey];
         parseAndReview(file, template, accountHolderId);
     });
 
@@ -197,7 +188,7 @@ export function initializeImporterHandlers() {
     });
 
     reconciliationTable.addEventListener('click', (e) => {
-        const target = e.target;
+        const target = /** @type {HTMLElement} */ (e.target);
         if (target.matches('.resolve-btn')) {
             const index = parseInt(target.dataset.index, 10);
             const action = target.dataset.action;
@@ -220,10 +211,10 @@ export function initializeImporterHandlers() {
     });
 
     finalizeBtn.addEventListener('click', async () => {
-        const accountHolderId = document.getElementById('import-account-holder').value;
-        const templateKey = document.getElementById('brokerage-template-select').value;
-        const exchange = BROKERAGE_TEMPLATES[templateKey].name;
-        
+        const accountHolderId = accountHolderSelect.value;
+        const templateKey = brokerageSelect.value;
+        const exchange = brokerageTemplates[templateKey].name;
+
         const payload = {
             toCreate: [],
             toDelete: [],
@@ -242,7 +233,7 @@ export function initializeImporterHandlers() {
                 payload.toCreate.push({ ...row, exchange });
             }
         }
-        
+
         if (payload.toCreate.length === 0 && payload.toDelete.length === 0) {
             showToast('No changes to import.', 'info');
             return;
@@ -275,3 +266,12 @@ export function initializeImporterHandlers() {
         }
     });
 }
+
+// Export internal functions for testing purposes.
+export const forTesting = {
+    validateRow,
+    findConflict,
+    setExistingTransactionsForTesting: (transactions) => {
+        existingTransactions = transactions;
+    }
+};

@@ -1,5 +1,6 @@
 // server.js (Refactored)
 const express = require('express');
+const fileUpload = require('express-fileupload'); // Added for importer
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
@@ -12,6 +13,7 @@ const accountRoutes = require('./routes/accounts');
 const reportingRoutes = require('./routes/reporting');
 const orderRoutes = require('./routes/orders');
 const utilityRoutes = require('./routes/utility');
+const importerRoutes = require('./routes/importer'); // Added importer route
 
 // --- Logger Setup ---
 const logDirectory = path.join(__dirname, 'logs');
@@ -39,6 +41,7 @@ function log(message) {
 async function setupApp() {
     const app = express();
     app.use(express.json());
+    app.use(fileUpload()); // Added for importer
     app.use(express.static('public'));
 
     // --- Request Logging Middleware ---
@@ -56,18 +59,21 @@ async function setupApp() {
         process.exit(1); // Exit if DB connection fails
     }
 
-
     // --- Initialize All Scheduled Tasks (but not in test) ---
     if (process.env.NODE_ENV !== 'test') {
         initializeAllCronJobs(db);
     }
+    
+    // Define the session map here to be shared with routes
+    const importSessions = new Map(); 
 
     // --- Register All API Routes ---
-    app.use('/api/transactions', transactionRoutes(db, log, captureEodPrices));
+    app.use('/api/transactions', transactionRoutes(db, log, captureEodPrices, importSessions)); // Pass sessions
     app.use('/api/accounts', accountRoutes(db, log));
     app.use('/api/reporting', reportingRoutes(db, log));
     app.use('/api/orders', orderRoutes(db, log));
     app.use('/api/utility', utilityRoutes(db, log, { captureEodPrices }));
+    app.use('/api/importer', importerRoutes(db, log, importSessions)); // Pass sessions
     
     return { app, db };
 }
