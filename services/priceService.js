@@ -2,7 +2,7 @@
 const fetch = require('node-fetch');
 
 const API_KEY = process.env.FINNHUB_API_KEY;
-const API_CALLS_PER_MINUTE = parseInt(process.env.API_CALLS_PER_MINUTE, 10) || 25; // Default to a safer 25
+const API_CALLS_PER_MINUTE = parseInt(process.env.API_CALLS_PER_MINUTE, 10) || 60; // Default to a safer 25
 const CACHE_EXPIRATION_MS = 60 * 1000; // Cache prices for 1 minute
 
 // --- In-memory cache and rate limiting state ---

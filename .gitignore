@@ -19,7 +19,7 @@ npm-debug.log*
 # Ignore all .bat files except for deploy.bat
 *.bat
 !deploy.bat
-
+!tools/inject-sample-data.bat
 # Backups
 # The deploy script creates a backup folder in the production directory.
 /backup/
