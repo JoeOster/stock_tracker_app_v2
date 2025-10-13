@@ -39,7 +39,8 @@ module.exports = (db, log, { captureEodPrices }) => {
 
         if (tickersToFetch.length > 0) {
             try {
-                const fetchedPrices = await getPrices(tickersToFetch);
+                // Pass a high priority (e.g., 3) for user-facing requests
+                const fetchedPrices = await getPrices(tickersToFetch, 3);
                 // Unwrap the price from the service's cache object
                 for (const ticker in fetchedPrices) {
                     prices[ticker] = fetchedPrices[ticker]?.price;

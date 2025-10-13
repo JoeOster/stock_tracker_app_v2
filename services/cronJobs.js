@@ -38,7 +38,8 @@ async function captureEodPrices(db, dateToProcess) {
                 const existingPrice = await db.get('SELECT id FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, dateToProcess]);
                 if (existingPrice) continue;
                 console.log(`[EOD Process] Position for ${ticker} closed. Fetching closing price...`);
-                const priceData = await getPrices([ticker]); // Use the new service
+                // Use a low priority (e.g., 8) for this background task
+                const priceData = await getPrices([ticker], 8);
                 const closePrice = priceData[ticker]?.price; // Unwrap the price object
                 if (typeof closePrice === 'number') {
                     await db.run('INSERT INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)', [ticker, dateToProcess, closePrice]);
@@ -59,7 +60,8 @@ async function runOrderWatcher(db) {
         const buyTickers = activeBuyOrders.map(order => order.ticker);
         const sellTickers = openPositionsWithLimits.map(pos => pos.ticker);
         const uniqueTickers = [...new Set([...buyTickers, ...sellTickers])];
-        const currentPrices = await getPrices(uniqueTickers); // Use the new service
+        // Use a low priority (e.g., 7) for the watcher
+        const currentPrices = await getPrices(uniqueTickers, 7);
         for (const order of activeBuyOrders) {
             const currentPrice = currentPrices[order.ticker]?.price; // Unwrap the price object
             if (typeof currentPrice === 'number' && currentPrice <= order.limit_price) {

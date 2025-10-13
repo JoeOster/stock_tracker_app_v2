@@ -37,7 +37,7 @@ This document breaks down the V3.0 project plan into actionable development task
 ### **Task 0.6: Consolidate Backend Services & Implement Rate Limiting**
 
 * [x] Create a new service file, e.g., `/services/priceFetcher.js`, to centralize all Finnhub API call logic.
-* [ ] Enhance API rate limiting by replacing the current `setTimeout` implementation with a more robust library like `bottleneck` or `p-limit`.
+* [x] Enhance API rate limiting by replacing the current `setTimeout` implementation with a more robust library like `bottleneck`.
 
 ### **Task 0.8: Enhance Testing Strategy**
 
@@ -48,23 +48,18 @@ This document breaks down the V3.0 project plan into actionable development task
 ### **Task 0.9: Update Configuration for V3 Standards**
 
 * [ ] **Server & Environment:**
-  * [ ] Update `server.js` to use port `3003` as the default production port.
-  * [ ] Create a `.env.template` or similar example file to instruct users to set `PORT=3111` for development.
+    * [ ] Update `server.js` to use port `3003` as the default production port.
+    * [ ] Create a `.env.template` or similar example file to instruct users to set `PORT=3111` for development.
 * [ ] **Windows Deployment (`deploy.bat`):**
-  * [ ] Modify the script to target the `c:\portfolio_managerV3` directory for production files.
-  * [ ] Update the backup logic within the script to use `c:\portfolio_manager_bu\v3\prod`.
+    * [ ] Modify the script to target the `c:\portfolio_managerV3` directory for production files.
+    * [ ] Update the backup logic within the script to use `c:\portfolio_manager_bu\v3\prod`.
 * [ ] **Raspberry Pi / Linux Deployment:**
-  * [ ] Update the `docs/RASPBERRY_PI_DEPLOYMENT.md` guide to reflect the new production port (`3003`).
-  * [ ] Modify the `docs/setup_pi.sh` script:
-    * Change the default port suggestion to `3003`.
-    * Update the backup script and cron job to use a Linux-appropriate path that mirrors the new standard (e.g., `/home/pi/portfolio_manager_bu/v3/prod`).
+    * [ ] Update the `docs/RASPBERRY_PI_DEPLOYMENT.md` guide to reflect the new production port (`3003`).
+    * [ ] Modify the `docs/setup_pi.sh` script:
+        * Change the default port suggestion to `3003`.
+        * Update the backup script and cron job to use a Linux-appropriate path that mirrors the new standard (e.g., `/home/pi/portfolio_manager_bu/v3/prod`).
 * [ ] **Development Backup:**
-  * [ ] Create a new npm script (e.g., `npm run backup:dev`) that backs up the development database to `c:\portfolio_manager_bu\v3\dev` on Windows or an equivalent path for Linux/macOS.
-
-### **Task 0.10: Correct Ledger Table Layout**
-
-* [ ] Add `<th>` elements for "My Limit Up" and "My Limit Down" to `public/templates/_ledger.html`.
-* [ ] Ensure the renderer in `public/ui/renderers/_ledger.js` correctly populates these columns.
+    * [ ] Create a new npm script (e.g., `npm run backup:dev`) that backs up the development database to `c:\portfolio_manager_bu\v3\dev` on Windows or an equivalent path for Linux/macOS.
 
 ## **Phase 0.5: Application Hardening**
 

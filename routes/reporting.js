@@ -40,7 +40,8 @@ module.exports = (db, log) => {
             const openLots = await db.all(openLotsQuery, params);
 
             const uniqueTickers = [...new Set(openLots.map(lot => lot.ticker))];
-            const priceMap = await getPrices(uniqueTickers);
+            // Pass a high priority (e.g., 4) for these reporting requests
+            const priceMap = await getPrices(uniqueTickers, 4);
 
             let previousValue = 0;
             for (const lot of openLots) {
