@@ -1,6 +1,6 @@
 // Portfolio Tracker V3.03
 // public/ui/renderers/_orders.js
-import { state } from '../../state.js'; // FIX: Corrected import path
+import { state } from '../../state.js';
 import { formatQuantity, formatAccounting } from '../helpers.js';
 
 /**

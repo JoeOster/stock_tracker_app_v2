@@ -1,5 +1,6 @@
 // public/event-handlers/_ledger.js
-import { state } from '../state.js'; import { refreshLedger } from '../app-main.js';
+import { state } from '../state.js';
+import { refreshLedger } from '../app-main.js';
 import { renderLedger } from '../ui/renderers.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
@@ -34,7 +35,6 @@ export function initializeLedgerHandlers() {
     if(ledgerTable) {
         // Handles sorting when a table header is clicked.
         ledgerTable.querySelector('thead').addEventListener('click', (e) => {
-            // FIX: Cast the result of .closest() to ensure the 'dataset' property is available.
             const th = /** @type {HTMLElement} */ ((/** @type {HTMLElement} */ (e.target)).closest('th[data-sort]'));
             if (!th) return;
             const newColumn = th.dataset.sort;

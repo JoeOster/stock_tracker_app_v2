@@ -1,6 +1,6 @@
 // Portfolio Tracker V3.03
 // in public/ui/renderers/_alerts.js
-import { state } from '../../state.js'; // FIX: Corrected import path
+import { state } from '../../state.js';
 import { showToast } from '../helpers.js';
 
 /**

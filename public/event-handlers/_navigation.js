@@ -1,8 +1,9 @@
 // Portfolio Tracker V3.0.5
 // public/event-handlers/_navigation.js
-import { state } from '../state.js'; // FIX: Import state directly from the new state module
-import { switchView } from '../app-main.js'; // FIX: Continue to import functions from app-main
+import { state } from '../state.js';
+import { switchView } from '../app-main.js';
 import { updateAllPrices } from '../api.js';
+
 /**
  * Autosizes an HTMLSelectElement to fit the width of its currently selected option's text.
  * A temporary span is used to measure the text width accurately.
@@ -83,7 +84,7 @@ export function initializeNavigationHandlers() {
     if(refreshBtn) {
         // Handle manual price refresh button clicks.
         refreshBtn.addEventListener('click', () => 
-            updateAllPrices(state.activityMap, state.priceCache)
+            updateAllPrices() // Corrected: No arguments are needed here.
         );
     }
 }

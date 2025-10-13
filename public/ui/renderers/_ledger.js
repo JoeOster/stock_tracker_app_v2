@@ -1,6 +1,6 @@
 // Portfolio Tracker V3.03
 // public/ui/renderers/_ledger.js
-import { state } from '../../state.js'; // FIX: Corrected import path
+import { state } from '../../state.js';
 import { formatQuantity, formatAccounting } from '../helpers.js';
 
 /**
@@ -95,8 +95,6 @@ export function renderLedger(allTransactions, ledgerSort) {
             row.classList.add('new-date-group');
         }
 
-        // Note: The template _ledger.html was found to be missing columns for limit orders.
-        // This renderer includes the data, but it will not be visible until the template is updated.
         let limitUpText = tx.limit_price_up ? formatAccounting(tx.limit_price_up) : '';
         if (tx.limit_up_expiration) limitUpText += ` (${tx.limit_up_expiration})`;
 

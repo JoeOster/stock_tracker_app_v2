@@ -1,8 +1,29 @@
-// Portfolio Tracker V3.0.6
 // public/event-handlers/_snapshots.js
 import { state } from '../state.js';
 import { switchView } from '../app-main.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
+import { fetchSnapshots } from '../api.js';
+import { renderChartsPage, renderSnapshotsPage } from '../ui/renderers.js';
+
+/**
+ * Loads snapshot data and then calls the appropriate renderer for the Charts or Snapshots page.
+ * @param {string} viewType - The type of view to load ('charts' or 'snapshots').
+ */
+export async function loadChartsAndSnapshotsPage(viewType) {
+    try {
+        const snapshots = await fetchSnapshots(state.selectedAccountHolderId);
+        state.allSnapshots = snapshots; // Update the central state
+
+        if (viewType === 'charts') {
+            await renderChartsPage();
+        } else if (viewType === 'snapshots') {
+            renderSnapshotsPage(snapshots);
+        }
+    } catch (error) {
+        console.error(`Failed to load page for view: ${viewType}`, error);
+        showToast(error.message, 'error');
+    }
+}
 
 /**
  * Initializes all event listeners for the Snapshots page.

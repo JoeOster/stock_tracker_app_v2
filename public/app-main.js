@@ -13,7 +13,7 @@ import { loadDailyReportPage } from './event-handlers/_dailyReport.js';
 import { loadChartsAndSnapshotsPage } from './event-handlers/_snapshots.js';
 import { loadOrdersPage } from './event-handlers/_orders.js';
 import { loadAlertsPage } from './event-handlers/_alerts.js';
-import { refreshLedger } from './api.js';
+import { fetchTransactions } from './api.js';
 
 /**
  * Loads an HTML template from a URL and appends it to a target element.
@@ -36,6 +36,19 @@ async function loadHTML(url, targetId) {
         }
     } catch (error) {
         console.error(error);
+    }
+}
+
+/**
+ * Fetches the latest transactions and re-renders the ledger view.
+ */
+export async function refreshLedger() {
+    try {
+        const transactions = await fetchTransactions();
+        state.allTransactions = transactions;
+        renderLedger(state.allTransactions, state.ledgerSort);
+    } catch (error) {
+        console.error("Failed to refresh ledger:", error);
     }
 }
 

@@ -1,6 +1,6 @@
 // Portfolio Tracker V3.0.5
 // public/ui/renderers/_snapshots.js
-import { state } from '../../state.js'; // FIX: Corrected import path
+import { state } from '../../state.js';
 import { formatAccounting } from '../helpers.js';
 
 /**
