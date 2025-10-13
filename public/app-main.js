@@ -4,10 +4,15 @@
 
 import { state } from './state.js';
 import { initializeAllEventListeners } from './event-handlers/_init.js';
-import { renderTabs, renderDailyReport, renderLedger, renderChartsPage, renderSnapshotsPage, renderOrdersPage, renderAlertsPage } from './ui/renderers.js';
-import { populatePricesFromCache, getCurrentESTDateString, showToast, getMostRecentTradingDay, formatAccounting } from './ui/helpers.js';
-import { updatePricesForView, fetchPendingOrders, fetchAlerts, fetchDailyPerformance, fetchPositions, fetchSnapshots } from './api.js';
+import { renderTabs, renderLedger } from './ui/renderers.js';
+import { getCurrentESTDateString, getMostRecentTradingDay } from './ui/helpers.js';
 import { initializeScheduler } from './scheduler.js';
+import { applyAppearanceSettings } from './ui/settings.js';
+import { fetchAndPopulateAccountHolders, fetchAndRenderExchanges } from './event-handlers/_settings.js';
+import { loadDailyReportPage } from './event-handlers/_dailyReport.js';
+import { loadChartsAndSnapshotsPage } from './event-handlers/_snapshots.js';
+import { loadOrdersPage } from './event-handlers/_orders.js';
+import { loadAlertsPage } from './event-handlers/_alerts.js';
 
 /**
  * Loads an HTML template from a URL and appends it to a target element.
@@ -63,96 +68,17 @@ export async function switchView(viewType, viewValue) {
         pageContainer.style.display = 'block';
     }
 
+    // --- View Routing ---
     if (viewType === 'date') {
-        const performanceSummary = document.getElementById('daily-performance-summary');
-        if(performanceSummary) { performanceSummary.innerHTML = `<h3>Daily Performance: <span>...</span></h3><h3 id="realized-gains-summary">Realized: <span>--</span></h3><h3 id="total-value-summary">Total Open Value: <span>--</span></h3>`; }
-        const logBody = document.querySelector('#log-body');
-        const summaryBody = document.querySelector('#positions-summary-body');
-        if(logBody) logBody.innerHTML = `<tr><td colspan="12">Loading...</td></tr>`;
-        if(summaryBody) summaryBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
-        
-        try {
-            const positionData = await fetchPositions(viewValue, state.selectedAccountHolderId);
-            renderDailyReport(viewValue, state.activityMap, null, positionData);
-            
-            const tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
-
-            fetchDailyPerformance(viewValue, state.selectedAccountHolderId).then(perfData => {
-                 const performanceSpan = document.querySelector('#daily-performance-summary h3:first-child span');
-                 if (performanceSpan && perfData) {
-                    const change = perfData.dailyChange;
-                    const percentage = (perfData.previousValue !== 0) ? (change / perfData.previousValue * 100).toFixed(2) : 0;
-                    const colorClass = change >= 0 ? 'positive' : 'negative';
-                    performanceSpan.className = colorClass;
-                    performanceSpan.innerHTML = `${formatAccounting(change)} (${percentage}%)`;
-                 }
-            });
-
-            updatePricesForView(viewValue, tickersToUpdate).then(() => {
-                populatePricesFromCache(state.activityMap, state.priceCache);
-            });
-
-        } catch (error) {
-            console.error("Failed to load daily report:", error);
-            showToast(error.message, 'error');
-            renderDailyReport(viewValue, state.activityMap, null, null);
-             if(logBody) logBody.innerHTML = `<tr><td colspan="12">Error loading transaction data.</td></tr>`;
-             if(summaryBody) summaryBody.innerHTML = '<tr><td colspan="10">Error loading position data.</td></tr>';
-        }
+        await loadDailyReportPage(viewValue);
     } else if (viewType === 'charts' || viewType === 'snapshots') {
-        const snapshotsTableBody = document.querySelector('#snapshots-table tbody');
-        if (viewType === 'snapshots' && snapshotsTableBody) {
-            snapshotsTableBody.innerHTML = '<tr><td colspan="4">Loading snapshots...</td></tr>';
-        }
-        try {
-            const snapshots = await fetchSnapshots(state.selectedAccountHolderId);
-            if (viewType === 'snapshots') {
-                renderSnapshotsPage(snapshots);
-            } else { // 'charts'
-                state.allSnapshots = snapshots;
-                await new Promise(resolve => setTimeout(resolve, 50));
-                await renderChartsPage();
-            }
-        } catch (error) {
-            console.error(`Failed to load ${viewType} page:`, error);
-            showToast(error.message, 'error');
-            if (viewType === 'snapshots' && snapshotsTableBody) {
-                snapshotsTableBody.innerHTML = '<tr><td colspan="4">Error loading snapshots.</td></tr>';
-            }
-        }
+        await loadChartsAndSnapshotsPage(viewType);
     } else if (viewType === 'ledger') {
         await refreshLedger();
     } else if (viewType === 'orders') {
-        const tableBody = document.querySelector('#pending-orders-table tbody');
-        if (tableBody) tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
-        try {
-            const orders = await fetchPendingOrders(state.selectedAccountHolderId);
-            renderOrdersPage(orders);
-        } catch (error) {
-            console.error("Failed to load orders page:", error);
-            showToast(error.message, 'error');
-            if (tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="7">Error loading pending orders.</td></tr>';
-            }
-        }
+        await loadOrdersPage();
     } else if (viewType === 'alerts') {
-        const tableBody = document.querySelector('#alerts-table tbody');
-        if (tableBody) tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
-        try {
-            const alerts = await fetchAlerts(state.selectedAccountHolderId);
-            renderAlertsPage(alerts);
-        } catch (error) {
-            console.error("Failed to load alerts page:", error);
-            showToast(error.message, 'error');
-            if (tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="3">Error loading alerts.</td></tr>';
-            }
-        }
-    }
-
-    const headerSummary = /** @type {HTMLElement} */ (document.getElementById('header-daily-summary'));
-    if (headerSummary) {
-        headerSummary.style.display = viewType === 'date' ? 'block' : 'none';
+        await loadAlertsPage();
     }
 }
 
@@ -166,165 +92,7 @@ export async function refreshLedger() {
         if (!res.ok) throw new Error('Failed to fetch latest transactions');
         state.allTransactions = await res.json();
         renderLedger(state.allTransactions, state.ledgerSort);
-    } catch (error) { console.error("Failed to refresh ledger:", error); showToast("Could not refresh the ledger.", "error"); }
-}
-
-/**
- * Saves the current settings from the UI to localStorage and applies them.
- * @returns {void}
- */
-export function saveSettings() {
-    const oldTheme = state.settings.theme;
-    state.settings.takeProfitPercent = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value) || 0;
-    state.settings.stopLossPercent = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'))).value) || 0;
-    state.settings.theme = (/** @type {HTMLSelectElement} */(document.getElementById('theme-selector'))).value;
-    state.settings.font = (/** @type {HTMLSelectElement} */(document.getElementById('font-selector'))).value;
-    state.settings.notificationCooldown = parseInt((/** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'))).value, 10) || 16;
-    state.settings.familyName = (/** @type {HTMLInputElement} */(document.getElementById('family-name'))).value.trim();
-
-    const selectedDefaultHolder = /** @type {HTMLInputElement} */ (document.querySelector('input[name="default-holder-radio"]:checked'));
-    if (selectedDefaultHolder) {
-        state.settings.defaultAccountHolderId = selectedDefaultHolder.value;
-    } else {
-        state.settings.defaultAccountHolderId = null;
-    }
-    localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
-
-    applyAppearanceSettings();
-
-    if (state.settings.theme !== oldTheme && state.currentView.type === 'charts') {
-        switchView('charts', null);
-    }
-}
-
-/**
- * Applies the theme and font settings to the document body and page title.
- * @returns {void}
- */
-function applyAppearanceSettings() {
-    document.body.dataset.theme = state.settings.theme;
-    const fontVar = state.settings.font === 'System' ? 'var(--font-system)' : `var(--font-${state.settings.font.toLowerCase().replace(' ', '-')})`;
-    document.body.style.setProperty('--font-family-base', fontVar);
-
-    const appTitle = document.getElementById('app-title');
-    const baseTitle = state.settings.familyName ? `${state.settings.familyName} Portfolio Tracker` : 'Live Stock Tracker';
-
-    if (appTitle) {
-        appTitle.textContent = baseTitle;
-    }
-    
-    let pageTitle = baseTitle;
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        pageTitle = `[DEV] ${baseTitle}`;
-    }
-    document.title = pageTitle;
-}
-
-/**
- * Sorts a table by a specific column.
- * @param {HTMLTableCellElement} th - The table header element that was clicked.
- * @param {HTMLTableSectionElement} tbody - The tbody element of the table to sort.
- * @returns {void}
- */
-export function sortTableByColumn(th, tbody) {
-    const column = th.cellIndex;
-    const dataType = th.dataset.type || 'string';
-    let direction = th.classList.contains('sorted-asc') ? 'desc' : 'asc';
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    rows.sort((a, b) => {
-        let valA = a.cells[column]?.textContent.trim() || '';
-        let valB = b.cells[column]?.textContent.trim() || '';
-        if (dataType === 'numeric') {
-            valA = parseFloat(valA.replace(/[$,\(\)]/g, '')) || 0;
-            valB = parseFloat(valB.replace(/[$,\(\)]/g, '')) || 0;
-            return direction === 'asc' ? valA - valB : valB - valA;
-        } else {
-            return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
-    });
-    const allHeaders = th.parentElement.children;
-    for (const header of allHeaders) {
-        header.classList.remove('sorted-asc', 'sorted-desc');
-    }
-    th.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
-    tbody.append(...rows);
-}
-
-/**
- * Fetches the list of exchanges and populates all relevant dropdowns.
- * @returns {Promise<void>}
- */
-export async function fetchAndRenderExchanges() {
-    try {
-        const response = await fetch('/api/accounts/exchanges');
-        state.allExchanges = await response.json();
-        populateAllExchangeDropdowns();
-    } catch (error) {
-        showToast('Could not load exchanges.', 'error');
-    }
-}
-
-/**
- * Populates all exchange dropdowns on the page with the latest data from the state.
- * @returns {void}
- */
-function populateAllExchangeDropdowns() {
-    const exchangeSelects = document.querySelectorAll('select[id*="exchange"]');
-    exchangeSelects.forEach(/** @param {HTMLSelectElement} select */ select => {
-        const currentVal = select.value;
-        select.innerHTML = '';
-        const defaultOption = document.createElement('option');
-        defaultOption.value = "";
-        defaultOption.textContent = "Select Exchange";
-        defaultOption.disabled = true;
-        select.appendChild(defaultOption);
-        state.allExchanges.forEach(ex => {
-            const option = document.createElement('option');
-            option.value = ex.name;
-            option.textContent = ex.name;
-            select.appendChild(option);
-        });
-        select.value = currentVal;
-    });
-}
-
-/**
- * Fetches the list of account holders and populates all relevant dropdowns.
- * @returns {Promise<void>}
- */
-export async function fetchAndPopulateAccountHolders() {
-    try {
-        const response = await fetch('/api/accounts/holders');
-        state.allAccountHolders = await response.json();
-
-        const holderSelects = document.querySelectorAll('.account-holder-select');
-        holderSelects.forEach(/** @param {HTMLSelectElement} select */ select => {
-            select.innerHTML = '';
-
-            if(select.id === 'global-account-holder-filter') {
-                const allOption = document.createElement('option');
-                allOption.value = 'all';
-                allOption.textContent = 'All Accounts';
-                select.appendChild(allOption);
-            } else {
-                 const defaultOption = document.createElement('option');
-                defaultOption.value = "";
-                defaultOption.textContent = "Select Holder";
-                defaultOption.disabled = true;
-                select.appendChild(defaultOption);
-            }
-
-            state.allAccountHolders.forEach(holder => {
-                const option = document.createElement('option');
-                option.value = holder.id;
-                option.textContent = holder.name;
-                select.appendChild(option);
-            });
-        });
-
-    } catch (error) {
-        showToast('Could not load account holders.', 'error');
-    }
+    } catch (error) { console.error("Failed to refresh ledger:", error); }
 }
 
 /**
@@ -332,64 +100,6 @@ export async function fetchAndPopulateAccountHolders() {
  * @returns {Promise<void>}
  */
 async function runEodFailoverCheck() { /* Unchanged */ }
-/**
- * Renders the list of exchanges in the settings modal for management.
- * @returns {void}
- */
-export function renderExchangeManagementList() {
-    const list = document.getElementById('exchange-list');
-    if (!list) return;
-    list.innerHTML = '';
-
-    state.allExchanges.forEach(exchange => {
-        const li = document.createElement('li');
-        li.dataset.id = String(exchange.id);
-        li.innerHTML = `
-            <span class="exchange-name">${exchange.name}</span>
-            <input type="text" class="edit-exchange-input" value="${exchange.name}" style="display: none;">
-            <div>
-                <button class="edit-exchange-btn" data-id="${exchange.id}">Edit</button>
-                <button class="save-exchange-btn" data-id="${exchange.id}" style="display: none;">Save</button>
-                <button class="cancel-exchange-btn" data-id="${exchange.id}" style="display: none;">Cancel</button>
-                <button class="delete-exchange-btn delete-btn" data-id="${exchange.id}">Delete</button>
-            </div>
-        `;
-        list.appendChild(li);
-    });
-}
-
-/**
- * Renders the list of account holders in the settings modal for management.
- * @returns {void}
- */
-export function renderAccountHolderManagementList() {
-    const list = document.getElementById('account-holder-list');
-    if (!list) return;
-    list.innerHTML = '';
-
-    state.allAccountHolders.forEach(holder => {
-        const isDefault = state.settings.defaultAccountHolderId == holder.id;
-        const isProtected = holder.id == 1;
-        const deleteButton = isProtected ? '' : `<button class="delete-holder-btn delete-btn" data-id="${holder.id}">Delete</button>`;
-
-        const li = document.createElement('li');
-        li.dataset.id = String(holder.id);
-        li.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <input type="radio" id="holder_radio_${holder.id}" name="default-holder-radio" value="${holder.id}" ${isDefault ? 'checked' : ''}>
-                <label for="holder_radio_${holder.id}" class="holder-name">${holder.name}</label>
-                <input type="text" class="edit-holder-input" value="${holder.name}" style="display: none;">
-            </div>
-            <div>
-                <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
-                <button class="save-holder-btn" data-id="${holder.id}" style="display: none;">Save</button>
-                <button class="cancel-holder-btn" data-id="${holder.id}" style="display: none;">Cancel</button>
-                ${deleteButton}
-            </div>
-        `;
-        list.appendChild(li);
-    });
-}
 
 /**
  * Initializes the application on page load.

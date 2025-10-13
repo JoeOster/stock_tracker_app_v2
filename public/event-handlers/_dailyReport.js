@@ -1,6 +1,67 @@
 // public/event-handlers/_dailyReport.js
-import { state } from '../state.js'; import { sortTableByColumn } from '../app-main.js';
-import { formatAccounting, getCurrentESTDateString, showToast } from '../ui/helpers.js';
+import { state } from '../state.js';
+import { formatAccounting, getCurrentESTDateString, showToast, sortTableByColumn, populatePricesFromCache } from '../ui/helpers.js';
+import { renderDailyReport } from '../ui/renderers.js';
+import { fetchPositions, fetchDailyPerformance, updatePricesForView } from '../api.js';
+
+/**
+ * Loads all data for the daily report page and triggers rendering.
+ * @param {string} viewValue - The date for the report.
+ */
+export async function loadDailyReportPage(viewValue) {
+    const performanceSummary = document.getElementById('daily-performance-summary');
+    if(performanceSummary) { performanceSummary.innerHTML = `<h3>Daily Performance: <span>...</span></h3><h3 id="realized-gains-summary">Realized: <span>--</span></h3><h3 id="total-value-summary">Total Open Value: <span>--</span></h3>`; }
+    const logBody = document.querySelector('#log-body');
+    const summaryBody = document.querySelector('#positions-summary-body');
+    if(logBody) logBody.innerHTML = `<tr><td colspan="12">Loading...</td></tr>`;
+    if(summaryBody) summaryBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
+    
+    try {
+        // First, get the positions and the previous day's total value.
+        const [positionData, perfData] = await Promise.all([
+            fetchPositions(viewValue, state.selectedAccountHolderId),
+            fetchDailyPerformance(viewValue, state.selectedAccountHolderId)
+        ]);
+
+        // Render the main table structure with the data we have so far.
+        renderDailyReport(viewValue, state.activityMap, null, positionData);
+        
+        // Now, gather all the unique tickers from the open positions for a single price fetch.
+        const tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
+        
+        // Fetch the live prices for today's open positions.
+        await updatePricesForView(viewValue, tickersToUpdate);
+        
+        // Populate the price cells with the freshly fetched data.
+        populatePricesFromCache(state.activityMap, state.priceCache);
+
+        // Now that we have live prices, calculate the current portfolio value on the client-side.
+        let currentValue = 0;
+        state.activityMap.forEach(lot => {
+            const priceToUse = state.priceCache.get(lot.ticker);
+            const finalPrice = (typeof priceToUse === 'number') ? priceToUse : lot.cost_basis;
+            currentValue += (finalPrice * lot.quantity_remaining);
+        });
+
+        const { previousValue } = perfData;
+        const dailyChange = currentValue - previousValue;
+        const percentage = (previousValue !== 0) ? (dailyChange / previousValue * 100).toFixed(2) : 0;
+        
+        const performanceSpan = document.querySelector('#daily-performance-summary h3:first-child span');
+        if (performanceSpan) {
+            const colorClass = dailyChange >= 0 ? 'positive' : 'negative';
+            performanceSpan.className = colorClass;
+            performanceSpan.innerHTML = `${formatAccounting(dailyChange)} (${percentage}%)`;
+        }
+
+    } catch (error) {
+        console.error("Failed to load daily report:", error);
+        showToast(error.message, 'error');
+        renderDailyReport(viewValue, state.activityMap, null, null);
+         if(logBody) logBody.innerHTML = `<tr><td colspan="12">Error loading transaction data.</td></tr>`;
+         if(summaryBody) summaryBody.innerHTML = '<tr><td colspan="10">Error loading position data.</td></tr>';
+    }
+}
 
 /**
  * Initializes all event listeners for the Daily Report page.
@@ -18,7 +79,6 @@ export function initializeDailyReportHandlers() {
             const target = /** @type {HTMLElement} */ (e.target);
 
             // --- Table Sorting Handler ---
-            // FIX: Cast the found element to HTMLTableCellElement for sortTableByColumn.
 			const th = /** @type {HTMLTableCellElement} */ (target.closest('th[data-sort]'));
 			if (th) {
 				const thead = th.closest('thead');
@@ -44,7 +104,6 @@ export function initializeDailyReportHandlers() {
 				const suggestedLoss = costBasis * (1 - stopLossPercent / 100);
 				document.getElementById('advice-modal-title').textContent = `${lotData.ticker} Advice`;
 				document.getElementById('advice-cost-basis').textContent = formatAccounting(costBasis);
-                // FIX: Use a typeof check to ensure priceData is a number before formatting.
 				document.getElementById('advice-current-price').textContent = (typeof priceData === 'number') ? formatAccounting(priceData) : 'N/A';
 				document.getElementById('advice-suggested-profit').textContent = formatAccounting(suggestedProfit);
 				document.getElementById('advice-suggested-loss').textContent = formatAccounting(suggestedLoss);

@@ -4,6 +4,18 @@
 import { initializeDailyReportHandlers } from './_dailyReport.js';
 import { state } from '../state.js';
 
+// Mock the entire state module
+jest.mock('../state.js', () => ({
+    state: {
+        activityMap: new Map(),
+        priceCache: new Map(),
+        settings: {
+            takeProfitPercent: 10,
+            stopLossPercent: 10,
+        },
+    },
+}));
+
 // Mock the helpers to prevent actual modals from appearing
 jest.mock('../ui/helpers.js', () => ({
     ...jest.requireActual('../ui/helpers.js'), // Import and retain default behavior

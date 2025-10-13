@@ -10,6 +10,12 @@ const API_CALLS_PER_MINUTE = parseInt(process.env.API_CALLS_PER_MINUTE, 10) || 6
 let apiCallTimestamps = [];
 
 /**
+ * Gets a formatted timestamp string.
+ * @returns {string} The timestamp.
+ */
+const getTimestamp = () => new Date().toISOString();
+
+/**
  * Checks if an API call can be made and waits if the rate limit has been reached.
  */
 async function waitForRateLimit() {
@@ -20,7 +26,7 @@ async function waitForRateLimit() {
     if (apiCallTimestamps.length >= API_CALLS_PER_MINUTE) {
         const oldestCall = apiCallTimestamps[0];
         const timeToWait = 60000 - (now - oldestCall);
-        console.warn(`[Price Fetch] Rate limit reached. Waiting for ${timeToWait}ms...`);
+        console.warn(`[${getTimestamp()}] [Price Fetch] Rate limit reached. Waiting for ${timeToWait}ms...`);
         await new Promise(res => setTimeout(res, timeToWait));
         // Recursively check again after waiting, in case of concurrent requests.
         await waitForRateLimit();
@@ -40,28 +46,30 @@ async function getPrice(ticker) {
         if (!API_KEY) {
             throw new Error("API key not configured on server.");
         }
-        const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${API_KEY}`);
+        const url = `https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${API_KEY}`;
+        console.log(`[${getTimestamp()}] [Price Fetch] Submitting request for ${ticker}`);
+        const apiRes = await fetch(url);
         if (apiRes.ok) {
             const data = await apiRes.json();
+            console.log(`[${getTimestamp()}] [Price Fetch] Received data for ${ticker}: ${JSON.stringify(data)}`);
             if (data && data.c > 0) {
                 return data.c;
             } else {
-                console.warn(`[Price Fetch Warning] Ticker '${ticker}' returned a null or zero price.`);
+                console.warn(`[${getTimestamp()}] [Price Fetch Warning] Ticker '${ticker}' returned a null or zero price.`);
                 return 'invalid';
             }
         } else {
-            console.error(`[Price Fetch Error] API call for ${ticker} failed with status: ${apiRes.status}`);
+            console.error(`[${getTimestamp()}] [Price Fetch Error] API call for ${ticker} failed with status: ${apiRes.status}`);
             return null;
         }
     } catch (error) {
-        console.error(`[Price Fetch Error] Error fetching price for ${ticker}:`, error);
+        console.error(`[${getTimestamp()}] [Price Fetch Error] Error fetching price for ${ticker}:`, error.message);
         return null;
     }
 }
 
 /**
- * Fetches prices for a batch of tickers by sending requests in parallel.
- * The rate limiter will automatically handle throttling.
+ * Fetches prices for a batch of tickers sequentially to respect rate limits.
  * @param {string[]} tickers - An array of ticker symbols.
  * @returns {Promise<{[ticker: string]: number|string|null}>} A promise that resolves to an object mapping tickers to their prices.
  */
@@ -70,12 +78,14 @@ async function getBatchPrices(tickers) {
     const allPrices = {};
     const uniqueTickers = [...new Set(tickers)];
 
-    const pricePromises = uniqueTickers.map(ticker => getPrice(ticker));
-    const resolvedPrices = await Promise.all(pricePromises);
-
-    uniqueTickers.forEach((ticker, index) => {
-        allPrices[ticker] = resolvedPrices[index];
-    });
+    for (const ticker of uniqueTickers) {
+        try {
+            allPrices[ticker] = await getPrice(ticker);
+        } catch (error) {
+            console.error(`[${getTimestamp()}] [Batch Price Fetch Error] Failed to process price for ${ticker}:`, error.message);
+            allPrices[ticker] = null;
+        }
+    }
 
     return allPrices;
 }

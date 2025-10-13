@@ -130,7 +130,6 @@ export function populatePricesFromCache(activityMap, priceCache) {
         const priceCell = row.querySelector('.current-price');
         const plCombinedCell = row.querySelector('.unrealized-pl-combined');
 
-        // FIX: Ensure priceToUse is a valid number before performing calculations.
         if (priceToUse === 'invalid') {
             if (priceCell) priceCell.innerHTML = `<span class="negative">Invalid</span>`;
             if (plCombinedCell) plCombinedCell.innerHTML = '--';
@@ -199,15 +198,45 @@ export function getMostRecentTradingDay() {
     let checkDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
     let dayOfWeek = checkDate.getDay();
 
-    // If it's Sunday (0), subtract 2 days to get to Friday.
     if (dayOfWeek === 0) {
         checkDate.setDate(checkDate.getDate() - 2);
     }
-    // If it's Saturday (6), subtract 1 day to get to Friday.
     else if (dayOfWeek === 6) {
         checkDate.setDate(checkDate.getDate() - 1);
     }
-    // It's a weekday, so we can use it as is.
 
     return checkDate.toLocaleDateString('en-CA');
+}
+
+/**
+ * Sorts a table by a specific column.
+ * @param {HTMLTableCellElement} th - The table header element that was clicked.
+ * @param {HTMLTableSectionElement} tbody - The tbody element of the table to sort.
+ * @returns {void}
+ */
+export function sortTableByColumn(th, tbody) {
+    const column = th.cellIndex;
+    const dataType = th.dataset.type || 'string';
+    let direction = th.classList.contains('sorted-asc') ? 'desc' : 'asc';
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+        const valA = a.cells[column]?.textContent.trim() || '';
+        const valB = b.cells[column]?.textContent.trim() || '';
+
+        if (dataType === 'numeric') {
+            const numA = parseFloat(valA.replace(/[$,\(\)]/g, '')) || 0;
+            const numB = parseFloat(valB.replace(/[$,\(\)]/g, '')) || 0;
+            return direction === 'asc' ? numA - numB : numB - numA;
+        } else {
+            return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+    });
+
+    const allHeaders = th.parentElement.children;
+    for (const header of allHeaders) {
+        header.classList.remove('sorted-asc', 'sorted-desc');
+    }
+    th.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    tbody.append(...rows);
 }

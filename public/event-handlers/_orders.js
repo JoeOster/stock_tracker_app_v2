@@ -1,17 +1,34 @@
 // Portfolio Tracker V3.0.5
 // public/event-handlers/_orders.js
-import { state } from '../state.js'; // FIX: Corrected import path
-import { refreshLedger, switchView } from '../app-main.js'; // FIX: Corrected import path
+import { state } from '../state.js';
+import { refreshLedger, switchView } from '../app-main.js';
 import { formatAccounting, getCurrentESTDateString, showConfirmationModal, showToast } from '../ui/helpers.js';
+import { fetchPendingOrders } from '../api.js';
+import { renderOrdersPage } from '../ui/renderers.js';
 
-// ... (rest of the file is unchanged, except for the parts below) ...
+/**
+ * Loads data for the orders page and triggers rendering.
+ */
+export async function loadOrdersPage() {
+    const tableBody = document.querySelector('#pending-orders-table tbody');
+    if (tableBody) tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
+    try {
+        const orders = await fetchPendingOrders(state.selectedAccountHolderId);
+        renderOrdersPage(orders);
+    } catch (error) {
+        console.error("Failed to load orders page:", error);
+        showToast(error.message, 'error');
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="7">Error loading pending orders.</td></tr>';
+        }
+    }
+}
 
 export function initializeOrdersHandlers() {
     const transactionForm = /** @type {HTMLFormElement} */ (document.getElementById('add-transaction-form'));
     const addPendingOrderForm = /** @type {HTMLFormElement} */ (document.getElementById('add-pending-order-form'));
     const pendingOrdersTable = document.getElementById('pending-orders-table');
     const confirmFillForm = /** @type {HTMLFormElement} */ (document.getElementById('confirm-fill-form'));
-    const alertsTable = document.getElementById('alerts-table');
 
     if (transactionForm) {
 		const priceInput = /** @type {HTMLInputElement} */ (document.getElementById('price'));
@@ -95,7 +112,6 @@ export function initializeOrdersHandlers() {
                 showToast('New buy limit order placed!', 'success');
                 addPendingOrderForm.reset();
                 if (state.currentView.type === 'orders') {
-                    // FIX: Re-trigger the view switch to handle data fetching and rendering correctly.
                     await switchView('orders', null);
                 }
             } catch (error) {
@@ -122,7 +138,7 @@ export function initializeOrdersHandlers() {
                             throw new Error(err.message || 'Server error');
                         }
                         showToast('Order cancelled.', 'success');
-                        await switchView('orders', null); // FIX
+                        await switchView('orders', null);
                     } catch (error) {
                         showToast(`Error cancelling order: ${error.message}`, 'error');
                     }
@@ -189,58 +205,11 @@ export function initializeOrdersHandlers() {
                 }
                 document.getElementById('confirm-fill-modal').classList.remove('visible');
                 showToast('Order filled and transaction logged!', 'success');
-                await switchView('orders', null); // FIX
+                await switchView('orders', null);
             } catch (error) {
                 showToast(`Error: ${error.message}`, 'error');
             } finally {
                 submitButton.disabled = false;
-            }
-        });
-    }
-    if (alertsTable) {
-        alertsTable.addEventListener('click', async (e) => {
-            const target = /** @type {HTMLElement} */ (e.target);
-            const yesButton = /** @type {HTMLElement} */ (target.closest('.alert-yes-btn'));
-            const noButton = /** @type {HTMLElement} */ (target.closest('.alert-no-btn'));
-            const pendingButton = /** @type {HTMLElement} */ (target.closest('.alert-pending-btn'));
-            if (yesButton) {
-                const pendingOrderId = yesButton.dataset.pendingOrderId;
-                const fillButton = /** @type {HTMLElement} */ (document.querySelector(`.fill-order-btn[data-id="${pendingOrderId}"]`));
-                if (fillButton) {
-                    fillButton.click();
-                } else {
-                     showToast("Please go to the 'Orders' tab and click 'Mark as Filled' for this item.", 'info');
-                }
-            } 
-            else if (noButton) {
-                const notificationId = noButton.dataset.notificationId;
-                try {
-                    const response = await fetch(`/api/orders/notifications/${notificationId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: 'DISMISSED' })
-                    });
-                    if (!response.ok) throw new Error('Failed to dismiss alert.');
-                    showToast('Alert dismissed.', 'info');
-                    await switchView('alerts', null); // FIX
-                } catch (error) {
-                    showToast(error.message, 'error');
-                }
-            }
-            else if (pendingButton) {
-                const notificationId = pendingButton.dataset.notificationId;
-                try {
-                    const response = await fetch(`/api/orders/notifications/${notificationId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: 'PENDING' })
-                    });
-                    if (!response.ok) throw new Error('Failed to update alert.');
-                    showToast('Alert marked for later review.', 'info');
-                    await switchView('alerts', null); // FIX
-                } catch (error) {
-                    showToast(error.message, 'error');
-                }
             }
         });
     }

@@ -6,10 +6,10 @@
  */
 
 import { renderDailyReport } from './_dailyReport.js';
-import { state } from '../../state.js'; // FIX: Corrected import path
+import { state } from '../../state.js';
 
-// Mock the entire app-main module to control the state
-jest.mock('../../app-main.js', () => ({
+// Mock the state module directly
+jest.mock('../../state.js', () => ({
     state: {
         selectedAccountHolderId: '2',
         allAccountHolders: [

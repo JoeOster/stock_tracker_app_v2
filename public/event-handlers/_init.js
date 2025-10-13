@@ -6,6 +6,7 @@ import { initializeOrdersHandlers } from './_orders.js';
 import { initializeSnapshotsHandlers } from './_snapshots.js';
 import { initializeModalHandlers } from './_modals.js';
 import { initializeSettingsHandlers } from './_settings.js';
+import { initializeAlertsHandlers } from './_alerts.js';
 
 /**
  * Initializes all event listeners for the entire application by calling
@@ -21,4 +22,5 @@ export function initializeAllEventListeners() {
     initializeSnapshotsHandlers();
     initializeModalHandlers();
     initializeSettingsHandlers();
+    initializeAlertsHandlers();
 }

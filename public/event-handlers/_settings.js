@@ -1,6 +1,86 @@
 // public/event-handlers/_settings.js
-import { saveSettings, fetchAndRenderExchanges, renderExchangeManagementList, fetchAndPopulateAccountHolders, renderAccountHolderManagementList, refreshLedger } from '../app-main.js';
+import { state } from '../state.js';
+import { refreshLedger } from '../app-main.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
+import { saveSettings, renderExchangeManagementList, renderAccountHolderManagementList, applyAppearanceSettings } from '../ui/settings.js';
+
+/**
+ * Populates all exchange dropdowns on the page with the latest data from the state.
+ * @returns {void}
+ */
+function populateAllExchangeDropdowns() {
+    const exchangeSelects = document.querySelectorAll('select[id*="exchange"]');
+    exchangeSelects.forEach(/** @param {HTMLSelectElement} select */ select => {
+        const currentVal = select.value;
+        select.innerHTML = '';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = "";
+        defaultOption.textContent = "Select Exchange";
+        defaultOption.disabled = true;
+        select.appendChild(defaultOption);
+        state.allExchanges.forEach(ex => {
+            const option = document.createElement('option');
+            option.value = ex.name;
+            option.textContent = ex.name;
+            select.appendChild(option);
+        });
+        select.value = currentVal;
+    });
+}
+
+/**
+ * Fetches the list of exchanges and populates all relevant dropdowns.
+ * @returns {Promise<void>}
+ */
+export async function fetchAndRenderExchanges() {
+    try {
+        const response = await fetch('/api/accounts/exchanges');
+        state.allExchanges = await response.json();
+        populateAllExchangeDropdowns();
+    } catch (error) {
+        showToast('Could not load exchanges.', 'error');
+    }
+}
+
+/**
+ * Fetches the list of account holders and populates all relevant dropdowns.
+ * @returns {Promise<void>}
+ */
+export async function fetchAndPopulateAccountHolders() {
+    try {
+        const response = await fetch('/api/accounts/holders');
+        state.allAccountHolders = await response.json();
+
+        const holderSelects = document.querySelectorAll('.account-holder-select');
+        holderSelects.forEach(/** @param {HTMLSelectElement} select */ select => {
+            select.innerHTML = '';
+
+            if(select.id === 'global-account-holder-filter') {
+                const allOption = document.createElement('option');
+                allOption.value = 'all';
+                allOption.textContent = 'All Accounts';
+                select.appendChild(allOption);
+            } else {
+                 const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "Select Holder";
+                defaultOption.disabled = true;
+                select.appendChild(defaultOption);
+            }
+
+            state.allAccountHolders.forEach(holder => {
+                const option = document.createElement('option');
+                option.value = holder.id;
+                option.textContent = holder.name;
+                select.appendChild(option);
+            });
+        });
+
+    } catch (error) {
+        showToast('Could not load account holders.', 'error');
+    }
+}
+
 
 /**
  * Initializes all event listeners within the Settings modal.
@@ -12,8 +92,8 @@ export function initializeSettingsHandlers() {
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
     const saveSettingsBtn = document.getElementById('save-settings-button');
-    const themeSelector = document.getElementById('theme-selector');
-    const fontSelector = document.getElementById('font-selector');
+    const themeSelector = /** @type {HTMLSelectElement} */ (document.getElementById('theme-selector'));
+    const fontSelector = /** @type {HTMLSelectElement} */ (document.getElementById('font-selector'));
     const exchangeList = document.getElementById('exchange-list');
     const addExchangeBtn = document.getElementById('add-exchange-btn');
     const newExchangeNameInput = /** @type {HTMLInputElement} */ (document.getElementById('new-exchange-name'));
@@ -41,11 +121,17 @@ export function initializeSettingsHandlers() {
 
     // --- Live Appearance Updates ---
     if (themeSelector) {
-        themeSelector.addEventListener('change', saveSettings);
+        themeSelector.addEventListener('change', () => {
+            state.settings.theme = themeSelector.value;
+            applyAppearanceSettings();
+        });
     }
-
+    
     if (fontSelector) {
-        fontSelector.addEventListener('change', saveSettings);
+        fontSelector.addEventListener('change', () => {
+            state.settings.font = fontSelector.value;
+            applyAppearanceSettings();
+        });
     }
 
     // --- Settings Modal Tab Navigation ---

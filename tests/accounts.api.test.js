@@ -10,7 +10,7 @@ beforeAll(async () => {
     const { app: runningApp, db: database } = await setupApp();
     app = runningApp;
     db = database;
-    server = app.listen(3003); // Use a different port
+    server = app.listen(3006); // Use a different port
 });
 
 afterAll(async () => {

@@ -1,24 +1,23 @@
-// Portfolio Tracker V3.0.6
 // routes/utility.js
 const express = require('express');
 const router = express.Router();
-const { getBatchPrices } = require('../services/priceFetcher'); // Import the new price fetcher service
+const { getPrices } = require('../services/priceService'); // Use the new centralized price service
 
 /**
  * Creates and returns an Express router for handling utility and miscellaneous endpoints.
  * @param {import('sqlite').Database} db - The database connection object.
+ * @param {function(string): void} log - The logging function.
  * @param {object} dependencies - An object containing additional functions.
  * @param {function(import('sqlite').Database, string): Promise<void>} dependencies.captureEodPrices - A function to capture end-of-day prices.
  * @returns {express.Router} The configured Express router.
  */
-module.exports = (db, { captureEodPrices }) => {
+module.exports = (db, log, { captureEodPrices }) => {
 
     // Base path is /api/utility
 
     /**
      * POST /prices/batch
-     * Fetches current or historical prices for a batch of tickers. It prioritizes fetching
-     * from a local cache (`historical_prices`) before querying the live API via the priceFetcher service.
+     * Fetches current or historical prices for a batch of tickers.
      */
     router.post('/prices/batch', async (req, res) => {
         const { tickers, date } = req.body;
@@ -29,7 +28,6 @@ module.exports = (db, { captureEodPrices }) => {
         const prices = {};
         const tickersToFetch = [];
 
-        // First, check for cached historical prices for the given date
         for (const ticker of tickers) {
             const cachedPrice = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, date]);
             if (cachedPrice) {
@@ -39,14 +37,15 @@ module.exports = (db, { captureEodPrices }) => {
             }
         }
 
-        // Fetch remaining prices from the live API via the centralized service
         if (tickersToFetch.length > 0) {
             try {
-                const fetchedPrices = await getBatchPrices(tickersToFetch);
-                Object.assign(prices, fetchedPrices);
+                const fetchedPrices = await getPrices(tickersToFetch);
+                // Unwrap the price from the service's cache object
+                for (const ticker in fetchedPrices) {
+                    prices[ticker] = fetchedPrices[ticker]?.price;
+                }
             } catch (error) {
-                console.error("Error fetching batch prices from service:", error);
-                // Assign null to tickers that failed to fetch
+                log(`[ERROR] Error fetching batch prices from service: ${error.message}`);
                 tickersToFetch.forEach(ticker => {
                     if (!prices[ticker]) {
                         prices[ticker] = null;
@@ -68,6 +67,7 @@ module.exports = (db, { captureEodPrices }) => {
             captureEodPrices(db, date);
             res.status(202).json({ message: `EOD process for ${date} acknowledged.` });
         } else {
+            log(`[ERROR] EOD capture function not available on manual trigger.`);
             res.status(500).json({ message: 'EOD capture function not available.'});
         }
     });
@@ -75,7 +75,6 @@ module.exports = (db, { captureEodPrices }) => {
     /**
      * GET /snapshots
      * Fetches all account value snapshots, optionally filtered by an account holder.
-     * If 'all' is specified, it aggregates values across all holders by date.
      */
     router.get('/snapshots', async (req, res) => {
         try {
@@ -95,7 +94,7 @@ module.exports = (db, { captureEodPrices }) => {
             }
             res.json(snapshots);
         } catch (error) {
-            console.error("Failed to fetch snapshots:", error);
+            log(`[ERROR] Failed to fetch snapshots: ${error.message}`);
             res.status(500).json({ message: "Error fetching snapshots" });
         }
     });
@@ -113,7 +112,7 @@ module.exports = (db, { captureEodPrices }) => {
             await db.run(`INSERT OR REPLACE INTO account_snapshots (exchange, snapshot_date, value, account_holder_id) VALUES (?, ?, ?, ?)`, [exchange, snapshot_date, value, account_holder_id]);
             res.status(201).json({ message: 'Snapshot saved.' });
         } catch (error) {
-            console.error('Error saving snapshot:', error);
+            log(`[ERROR] Error saving snapshot: ${error.message}`);
             res.status(500).json({ message: 'Error saving snapshot.' });
         }
     });
@@ -127,7 +126,7 @@ module.exports = (db, { captureEodPrices }) => {
             await db.run('DELETE FROM account_snapshots WHERE id = ?', req.params.id);
             res.json({ message: 'Snapshot deleted successfully' });
         } catch (error) {
-            console.error('Failed to delete snapshot:', error);
+            log(`[ERROR] Failed to delete snapshot with ID ${req.params.id}: ${error.message}`);
             res.status(500).json({ message: 'Error deleting snapshot' });
         }
     });

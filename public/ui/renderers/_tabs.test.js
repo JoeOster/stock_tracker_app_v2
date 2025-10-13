@@ -4,7 +4,7 @@
 
 import { renderTabs } from './_tabs.js';
 
-// Mock the helpers module
+// Mock the helpers module with the correct path
 jest.mock('../helpers.js', () => ({
     getTradingDays: jest.fn(),
     getActivePersistentDates: jest.fn(),

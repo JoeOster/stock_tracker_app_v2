@@ -1,101 +1,62 @@
-// Portfolio Tracker V3.0.6
 // routes/reporting.js
 const express = require('express');
 const router = express.Router();
-// REFACTOR: Import both getPrice and getBatchPrices
-const { getPrice, getBatchPrices } = require('../services/priceFetcher');
+const { getPrices } = require('../services/priceService'); // Use the new centralized price service
 
 /**
  * Creates and returns an Express router for handling complex reporting and data aggregation endpoints.
  * @param {import('sqlite').Database} db - The database connection object.
+ * @param {function(string): void} log - The logging function.
  * @returns {express.Router} The configured Express router.
  */
-module.exports = (db) => {
+module.exports = (db, log) => {
 
     /**
      * GET /daily_performance/:date
-     * Calculates the portfolio's value change between the selected date and the previous day.
+     * Calculates the portfolio's value at the end of the day PRIOR to the selected date.
      */
     router.get('/daily_performance/:date', async (req, res) => {
         const selectedDate = req.params.date;
         const holderId = req.query.holder;
 
-        let holderFilter = '';
-        const params = [selectedDate];
-        if (holderId && holderId !== 'all') {
-            holderFilter = 'AND account_holder_id = ?';
-            // @ts-ignore
-            params.push(holderId);
-        }
+        try {
+            let prevDate = new Date(selectedDate + 'T12:00:00Z');
+            prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+            const previousDay = prevDate.toISOString().split('T')[0];
 
-        let prevDate = new Date(selectedDate + 'T12:00:00Z');
-        prevDate.setUTCDate(prevDate.getUTCDate() - 1);
-        const previousDay = prevDate.toISOString().split('T')[0];
+            let holderFilter = '';
+            const params = [previousDay];
+            if (holderId && holderId !== 'all') {
+                holderFilter = 'AND account_holder_id = ?';
+                params.push(holderId);
+            }
 
-        /**
-         * Calculates the total value of all open positions on a given date.
-         * @param {string} date - The date for which to calculate the total value.
-         * @param {object} priceMap - A pre-fetched map of tickers to prices.
-         * @returns {Promise<number>} The total calculated value.
-         */
-        // REFACTOR: This function now accepts a pre-fetched price map to avoid loops of API calls.
-        const calculateTotalValue = async (date, priceMap) => {
-            const query = `
+            const openLotsQuery = `
                 SELECT ticker, price as cost_basis, COALESCE(quantity_remaining, 0) as quantity_remaining
                 FROM transactions
                 WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?) AND COALESCE(quantity_remaining, 0) > 0.00001
                 ${holderFilter}
             `;
-            // @ts-ignore
-            const openLots = await db.all(query, params.map(p => p === selectedDate ? date : p));
+            const openLots = await db.all(openLotsQuery, params);
 
-            let totalValue = 0;
+            const uniqueTickers = [...new Set(openLots.map(lot => lot.ticker))];
+            const priceMap = await getPrices(uniqueTickers);
+
+            let previousValue = 0;
             for (const lot of openLots) {
-                const priceToUse = priceMap[lot.ticker];
-                // Use the live price if it's a valid number, otherwise fall back to the lot's original cost basis.
+                // Unwrap the price from the service's cache object
+                const priceToUse = priceMap[lot.ticker]?.price;
                 const finalPrice = (typeof priceToUse === 'number') ? priceToUse : lot.cost_basis;
-                totalValue += (finalPrice * lot.quantity_remaining);
+                previousValue += (finalPrice * lot.quantity_remaining);
             }
-            return totalValue;
-        };
 
-        try {
-            // REFACTOR: Gather all unique tickers needed for both calculations first.
-            const lotsForTodayQuery = `SELECT DISTINCT ticker FROM transactions WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?) AND COALESCE(quantity_remaining, 0) > 0.00001 ${holderFilter}`;
-            // @ts-ignore
-            const lotsForYesterdayQuery = `SELECT DISTINCT ticker FROM transactions WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?) AND COALESCE(quantity_remaining, 0) > 0.00001 ${holderFilter}`;
-            
-            // @ts-ignore
-            const todayParams = params.map(p => p === selectedDate ? selectedDate : p);
-            // @ts-ignore
-            const yesterdayParams = params.map(p => p === selectedDate ? previousDay : p);
+            res.json({ previousValue });
 
-            const [tickersToday, tickersYesterday] = await Promise.all([
-                db.all(lotsForTodayQuery, todayParams),
-                db.all(lotsForYesterdayQuery, yesterdayParams)
-            ]);
-
-            const uniqueTickers = [...new Set([
-                ...tickersToday.map(t => t.ticker), 
-                ...tickersYesterday.map(t => t.ticker)
-            ])];
-
-            // Make one single batch call for all prices needed.
-            const priceMap = await getBatchPrices(uniqueTickers);
-
-            // Now perform calculations using the pre-fetched prices.
-            const currentValue = await calculateTotalValue(selectedDate, priceMap);
-            const previousValue = await calculateTotalValue(previousDay, priceMap);
-            const dailyChange = currentValue - previousValue;
-
-            res.json({ currentValue, previousValue, dailyChange });
         } catch (error) {
-            console.error("Failed to calculate daily performance:", error);
+            log(`[ERROR] Failed to calculate previous day value for daily performance: ${error.message}`);
             res.status(500).json({ message: "Error calculating daily performance" });
         }
     });
-
-    // ... (rest of the file is unchanged)
 
     /**
      * GET /positions/:date
@@ -109,7 +70,6 @@ module.exports = (db) => {
             const params = [selectedDate];
             if (holderId && holderId !== 'all') {
                 holderFilter = 'AND account_holder_id = ?';
-                // @ts-ignore
                 params.push(holderId);
             }
             const dailyTransactionsQuery = `
@@ -137,7 +97,7 @@ module.exports = (db) => {
             const endOfDayPositions = await db.all(endOfDayPositionsQuery, params);
             res.json({ dailyTransactions, endOfDayPositions });
         } catch (error) {
-            console.error("CRITICAL ERROR in /api/positions/:date:", error);
+            log(`[ERROR] CRITICAL ERROR in /api/positions/:date: ${error.message}`);
             res.status(500).json({ message: "Internal Server Error" });
         }
     });
@@ -165,7 +125,7 @@ module.exports = (db) => {
             const total = byExchange.reduce((sum, row) => sum + row.total_pl, 0);
             res.json({ byExchange, total });
         } catch (error) {
-            console.error("Failed to get realized P&L summary:", error);
+            log(`[ERROR] Failed to get realized P&L summary: ${error.message}`);
             res.status(500).json({ message: "Error fetching realized P&L summary." });
         }
     });
@@ -200,7 +160,7 @@ module.exports = (db) => {
             const total = byExchange.reduce((sum, row) => sum + row.total_pl, 0);
             res.json({ byExchange, total });
         } catch (error) {
-            console.error("Failed to get ranged realized P&L summary:", error);
+            log(`[ERROR] Failed to get ranged realized P&L summary: ${error.message}`);
             res.status(500).json({ message: "Error fetching ranged realized P&L summary." });
         }
     });
@@ -241,7 +201,7 @@ module.exports = (db) => {
             }
             res.json(overview);
         } catch (error) {
-            console.error("Failed to get portfolio overview:", error);
+            log(`[ERROR] Failed to get portfolio overview: ${error.message}`);
             res.status(500).json({ message: "Error fetching portfolio overview." });
         }
     });

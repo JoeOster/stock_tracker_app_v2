@@ -1,6 +1,8 @@
 // server.js (Refactored)
 const express = require('express');
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const setupDatabase = require('./database');
 const { initializeAllCronJobs, captureEodPrices, runOrderWatcher } = require('./services/cronJobs');
 
@@ -11,18 +13,49 @@ const reportingRoutes = require('./routes/reporting');
 const orderRoutes = require('./routes/orders');
 const utilityRoutes = require('./routes/utility');
 
+// --- Logger Setup ---
+const logDirectory = path.join(__dirname, 'logs');
+const logFile = path.join(logDirectory, 'log.log');
+
+// Ensure log directory exists
+if (!fs.existsSync(logDirectory)) {
+    fs.mkdirSync(logDirectory);
+}
+
+/**
+ * Appends a message to the log file with a timestamp.
+ * @param {string} message The message to log.
+ */
+function log(message) {
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(logFile, `${timestamp} - ${message}\n`);
+}
+
 /**
  * Sets up the Express application, initializes the database, and registers all routes and cron jobs.
  * This function is the main entry point for both production and testing environments.
  * @returns {Promise<{app: import('express').Express, db: import('sqlite').Database}>} A promise that resolves with the configured Express app and database connection.
  */
 async function setupApp() {
-    // FIX: Create the express app inside the setup function to ensure test isolation.
     const app = express();
     app.use(express.json());
     app.use(express.static('public'));
 
-    const db = await setupDatabase();
+    // --- Request Logging Middleware ---
+    app.use('/api', (req, res, next) => {
+        log(`[REQUEST] ${req.method} ${req.originalUrl}`);
+        next();
+    });
+
+    let db;
+    try {
+        db = await setupDatabase();
+    } catch (error) {
+        console.error("CRITICAL: Failed to connect to the database.", error);
+        log(`CRITICAL: Failed to connect to the database. ${error.message}`);
+        process.exit(1); // Exit if DB connection fails
+    }
+
 
     // --- Initialize All Scheduled Tasks (but not in test) ---
     if (process.env.NODE_ENV !== 'test') {
@@ -30,11 +63,11 @@ async function setupApp() {
     }
 
     // --- Register All API Routes ---
-    app.use('/api/transactions', transactionRoutes(db, captureEodPrices));
-    app.use('/api/accounts', accountRoutes(db));
-    app.use('/api/reporting', reportingRoutes(db));
-    app.use('/api/orders', orderRoutes(db));
-    app.use('/api/utility', utilityRoutes(db, { captureEodPrices }));
+    app.use('/api/transactions', transactionRoutes(db, log, captureEodPrices));
+    app.use('/api/accounts', accountRoutes(db, log));
+    app.use('/api/reporting', reportingRoutes(db, log));
+    app.use('/api/orders', orderRoutes(db, log));
+    app.use('/api/utility', utilityRoutes(db, log, { captureEodPrices }));
     
     return { app, db };
 }
@@ -46,6 +79,7 @@ if (require.main === module) {
         const PORT = process.env.PORT || 3003;
         app.listen(PORT, () => {
             console.log(`Server is running! Open your browser and go to http://localhost:${PORT}`);
+            log(`Server started on port ${PORT}`);
         });
     });
 }

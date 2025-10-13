@@ -1,11 +1,9 @@
-// Portfolio Tracker V3.0.6
 // services/cronJobs.js
 const cron = require('node-cron');
 const fs = require('fs').promises;
 const path = require('path');
-const { getPrice, getBatchPrices } = require('./priceFetcher');
+const { getPrices } = require('./priceService'); // Use the new centralized price service
 
-// ... (formatCurrency and backupDatabase functions are unchanged) ...
 const formatCurrency = (num) => (num ? `$${Number(num).toFixed(2)}` : '--');
 async function backupDatabase() {
     if (process.env.NODE_ENV !== 'production') {
@@ -40,7 +38,8 @@ async function captureEodPrices(db, dateToProcess) {
                 const existingPrice = await db.get('SELECT id FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, dateToProcess]);
                 if (existingPrice) continue;
                 console.log(`[EOD Process] Position for ${ticker} closed. Fetching closing price...`);
-                const closePrice = await getPrice(ticker);
+                const priceData = await getPrices([ticker]); // Use the new service
+                const closePrice = priceData[ticker]?.price; // Unwrap the price object
                 if (typeof closePrice === 'number') {
                     await db.run('INSERT INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)', [ticker, dateToProcess, closePrice]);
                 }
@@ -60,9 +59,9 @@ async function runOrderWatcher(db) {
         const buyTickers = activeBuyOrders.map(order => order.ticker);
         const sellTickers = openPositionsWithLimits.map(pos => pos.ticker);
         const uniqueTickers = [...new Set([...buyTickers, ...sellTickers])];
-        const currentPrices = await getBatchPrices(uniqueTickers);
+        const currentPrices = await getPrices(uniqueTickers); // Use the new service
         for (const order of activeBuyOrders) {
-            const currentPrice = currentPrices[order.ticker];
+            const currentPrice = currentPrices[order.ticker]?.price; // Unwrap the price object
             if (typeof currentPrice === 'number' && currentPrice <= order.limit_price) {
                 const existingNotification = await db.get("SELECT id FROM notifications WHERE pending_order_id = ? AND status = 'UNREAD'", order.id);
                 if (!existingNotification) {
@@ -72,7 +71,7 @@ async function runOrderWatcher(db) {
             }
         }
         for (const position of openPositionsWithLimits) {
-            const currentPrice = currentPrices[position.ticker];
+            const currentPrice = currentPrices[position.ticker]?.price; // Unwrap the price object
             if (typeof currentPrice !== 'number') continue;
             let executedPrice = null;
             let executionType = null;

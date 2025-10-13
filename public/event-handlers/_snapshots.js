@@ -1,7 +1,7 @@
 // Portfolio Tracker V3.0.6
 // public/event-handlers/_snapshots.js
 import { state } from '../state.js';
-import { switchView } from '../app-main.js'; // FIX: Import switchView instead of refreshSnapshots
+import { switchView } from '../app-main.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 /**
@@ -24,11 +24,14 @@ export function initializeSnapshotsHandlers() {
                 value: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('snapshot-value'))).value)
             };
             try {
+                // Add a specific check for the account holder before fetching
+                if (!snapshot.account_holder_id) {
+                    throw new Error("Please select an account holder.");
+                }
                 const res = await fetch('/api/utility/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snapshot) });
                 if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                 addSnapshotForm.reset();
                 showToast('Snapshot saved!', 'success');
-                // FIX: Re-trigger the view to fetch and render fresh data
                 await switchView('snapshots', null);
             } catch (error) {
                 showToast(`Error: ${error.message}`, 'error');
@@ -47,7 +50,6 @@ export function initializeSnapshotsHandlers() {
                         const res = await fetch(`/api/utility/snapshots/${id}`, { method: 'DELETE' });
                         if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
                         showToast('Snapshot deleted.', 'success');
-                        // FIX: Re-trigger the view to fetch and render fresh data
                         await switchView('snapshots', null);
                     } catch (error) {
                         showToast(`Error: ${error.message}`, 'error');

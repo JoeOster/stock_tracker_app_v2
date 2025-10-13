@@ -5,9 +5,10 @@ const router = express.Router();
 /**
  * Creates and returns an Express router for handling account-related endpoints (holders and exchanges).
  * @param {import('sqlite').Database} db - The database connection object.
+ * @param {function(string): void} log - The logging function.
  * @returns {express.Router} The configured Express router.
  */
-module.exports = (db) => {
+module.exports = (db, log) => {
 
     // --- ACCOUNT HOLDER ENDPOINTS ---
     // Base path: /api/accounts/holders
@@ -21,6 +22,7 @@ module.exports = (db) => {
             const holders = await db.all('SELECT * FROM account_holders ORDER BY name');
             res.json(holders);
         } catch (error) {
+            log(`[ERROR] Failed to fetch account holders: ${error.message}`);
             res.status(500).json({ message: 'Error fetching account holders.' });
         }
     });
@@ -38,6 +40,7 @@ module.exports = (db) => {
             const result = await db.run('INSERT INTO account_holders (name) VALUES (?)', name);
             res.status(201).json({ id: result.lastID, name });
         } catch (error) {
+            log(`[ERROR] Failed to add account holder: ${error.message}`);
             if (error.code === 'SQLITE_CONSTRAINT') {
                 res.status(409).json({ message: 'Account holder name already exists.' });
             } else {
@@ -59,6 +62,7 @@ module.exports = (db) => {
             await db.run('UPDATE account_holders SET name = ? WHERE id = ?', [name, req.params.id]);
             res.json({ message: 'Account holder updated successfully.' });
         } catch (error) {
+            log(`[ERROR] Failed to update account holder with ID ${req.params.id}: ${error.message}`);
             res.status(500).json({ message: 'Error updating account holder.' });
         }
     });
@@ -82,6 +86,7 @@ module.exports = (db) => {
             await db.run('DELETE FROM account_holders WHERE id = ?', id);
             res.json({ message: 'Account holder deleted successfully.' });
         } catch (error) {
+            log(`[ERROR] Failed to delete account holder with ID ${req.params.id}: ${error.message}`);
             res.status(500).json({ message: 'Error deleting account holder.' });
         }
     });
@@ -99,6 +104,7 @@ module.exports = (db) => {
             const exchanges = await db.all('SELECT * FROM exchanges ORDER BY name');
             res.json(exchanges);
         } catch (error) {
+            log(`[ERROR] Failed to fetch exchanges: ${error.message}`);
             res.status(500).json({ message: 'Error fetching exchanges.' });
         }
     });
@@ -114,6 +120,7 @@ module.exports = (db) => {
             const result = await db.run('INSERT INTO exchanges (name) VALUES (?)', name);
             res.status(201).json({ id: result.lastID, name });
         } catch (error) {
+            log(`[ERROR] Failed to add exchange: ${error.message}`);
             if (error.code === 'SQLITE_CONSTRAINT') { res.status(409).json({ message: 'Exchange name already exists.' }); }
             else { res.status(500).json({ message: 'Error adding exchange.' }); }
         }
@@ -135,6 +142,7 @@ module.exports = (db) => {
             }
             res.json({ message: 'Exchange updated successfully.' });
         } catch (error) {
+            log(`[ERROR] Failed to update exchange with ID ${req.params.id}: ${error.message}`);
             res.status(500).json({ message: 'Error updating exchange.' });
         }
     });
@@ -153,6 +161,7 @@ module.exports = (db) => {
             await db.run('DELETE FROM exchanges WHERE id = ?', req.params.id);
             res.json({ message: 'Exchange deleted successfully.' });
         } catch (error) {
+            log(`[ERROR] Failed to delete exchange with ID ${req.params.id}: ${error.message}`);
             res.status(500).json({ message: 'Error deleting exchange.' });
         }
     });
