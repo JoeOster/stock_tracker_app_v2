@@ -67,6 +67,35 @@ describe('Transaction API Endpoints', () => {
         expect(sellRes.body.message).toBe('Sell quantity exceeds remaining quantity.');
     });
 
+    it('should fail to create a SELL transaction with a date before the buy date', async () => {
+        const buyRes = await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', ['SELL-TEST', 'TestEx', 'BUY', 100, 50, '2025-10-05', 100, 100, 2]);
+        const buyId = buyRes.lastID;
+
+        const sellRes = await request(app)
+            .post('/api/transactions')
+            .send({
+                ticker: 'SELL-TEST', exchange: 'TestEx', transaction_type: 'SELL',
+                quantity: 50, price: 60, transaction_date: '2025-10-04', // Date is before buy date
+                account_holder_id: 2, parent_buy_id: buyId
+            });
+
+        expect(sellRes.statusCode).toEqual(400);
+        expect(sellRes.body.message).toBe('Sell date cannot be before the buy date.');
+    });
+
+    it('should successfully delete a SELL and restore the quantity to the parent BUY', async () => {
+        const buyRes = await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', ['DEL-TEST', 'TestEx', 'BUY', 100, 50, '2025-10-01', 100, 60, 2]);
+        const buyId = buyRes.lastID;
+        const sellRes = await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', ['DEL-TEST', 'TestEx', 'SELL', 40, 60, '2025-10-02', buyId, 2]);
+        const sellId = sellRes.lastID;
+
+        const deleteRes = await request(app).delete(`/api/transactions/${sellId}`);
+        expect(deleteRes.statusCode).toEqual(200);
+
+        const parentBuyLot = await db.get("SELECT * FROM transactions WHERE id = ?", buyId);
+        expect(parentBuyLot.quantity_remaining).toBe(100);
+    });
+
     it('should return a 400 error for invalid input data', async () => {
         const res = await request(app)
             .post('/api/transactions')

@@ -1,6 +1,16 @@
 // public/ui/renderers/_tabs.js
 import { getTradingDays, getActivePersistentDates } from '../helpers.js';
 
+// FIX: Define and export the list of static tabs to be used by the test file.
+export const staticTabs = [
+    { viewType: 'charts', textContent: 'Charts' },
+    { viewType: 'ledger', textContent: 'Ledger' },
+    { viewType: 'orders', textContent: 'New Orders' },
+    { viewType: 'alerts', textContent: 'Alerts' },
+    { viewType: 'snapshots', textContent: 'Snapshots' },
+    { viewType: 'imports', textContent: 'Imports' }
+];
+
 /**
  * Renders the main navigation tabs, including static tabs and dynamic date-based tabs.
  * It highlights the currently active tab based on the application's state.
@@ -30,46 +40,15 @@ export function renderTabs(currentView) {
     });
 
     // --- Static Application Tabs ---
-    const chartsTab = document.createElement('div');
-    chartsTab.className = 'tab master-tab';
-    chartsTab.dataset.viewType = 'charts';
-    chartsTab.textContent = 'Charts';
-    if (currentView.type === 'charts') chartsTab.classList.add('active');
-    tabsContainer.appendChild(chartsTab);
-
-    const ledgerTab = document.createElement('div');
-    ledgerTab.className = 'tab master-tab';
-    ledgerTab.dataset.viewType = 'ledger';
-    ledgerTab.textContent = 'Ledger';
-    if (currentView.type === 'ledger') ledgerTab.classList.add('active');
-    tabsContainer.appendChild(ledgerTab);
-
-    const ordersTab = document.createElement('div');
-    ordersTab.className = 'tab master-tab';
-    ordersTab.dataset.viewType = 'orders';
-    ordersTab.textContent = 'New Orders';
-    if (currentView.type === 'orders') ordersTab.classList.add('active');
-    tabsContainer.appendChild(ordersTab);
-    
-    const alertsTab = document.createElement('div');
-    alertsTab.className = 'tab master-tab';
-    alertsTab.dataset.viewType = 'alerts';
-    alertsTab.textContent = 'Alerts';
-    if (currentView.type === 'alerts') alertsTab.classList.add('active');
-    tabsContainer.appendChild(alertsTab);
-
-    const snapshotsTab = document.createElement('div');
-    snapshotsTab.className = 'tab master-tab';
-    snapshotsTab.dataset.viewType = 'snapshots';
-    snapshotsTab.textContent = 'Snapshots';
-    if (currentView.type === 'snapshots') snapshotsTab.classList.add('active');
-    tabsContainer.appendChild(snapshotsTab);
-
-    // FIX: Add the new Imports tab
-    const importsTab = document.createElement('div');
-    importsTab.className = 'tab master-tab';
-    importsTab.dataset.viewType = 'imports';
-    importsTab.textContent = 'Imports';
-    if (currentView.type === 'imports') importsTab.classList.add('active');
-    tabsContainer.appendChild(importsTab);
+    // FIX: Loop through the exported array to create the static tabs.
+    staticTabs.forEach(tabInfo => {
+        const tab = document.createElement('div');
+        tab.className = 'tab master-tab';
+        tab.dataset.viewType = tabInfo.viewType;
+        tab.textContent = tabInfo.textContent;
+        if (currentView.type === tabInfo.viewType) {
+            tab.classList.add('active');
+        }
+        tabsContainer.appendChild(tab);
+    });
 }

@@ -17,6 +17,11 @@ const limiter = new Bottleneck({
     maxConcurrent: 2 // Max 2 API calls at the same time
 });
 
+// FIX: Add a disconnect function to stop the limiter's timers
+const disconnect = () => {
+    limiter.disconnect();
+};
+
 async function fetchSinglePrice(ticker) {
     try {
         if (!API_KEY) throw new Error("API key not configured on server.");
@@ -83,4 +88,4 @@ async function getPrices(tickers, priority = 5) {
     return results;
 }
 
-module.exports = { getPrices };
+module.exports = { getPrices, disconnect };

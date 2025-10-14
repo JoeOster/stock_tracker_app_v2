@@ -14,20 +14,24 @@ module.exports = {
             },
             filter: (row) => {
                 const action = row['Action'] || '';
-                // FIX: Add a check for a valid date to filter out footer rows
+                // Add a check for a valid date to filter out footer rows
                 return row['Run Date'] &&
                        (action.toLowerCase().includes('you bought') || action.toLowerCase().includes('you sold')) &&
                        row['Symbol'] &&
                        !['BITCOIN', 'ETHEREUM', 'LITECOIN'].includes(row['Description']);
             },
-            transform: (row) => ({
-                date: new Date(row['Run Date']).toLocaleDateString('en-CA'),
-                ticker: row['Symbol'],
-                type: row['Action'].toLowerCase().includes('you bought') ? 'BUY' : 'SELL',
-                quantity: Math.abs(parseFloat(row['Quantity'])),
-                price: parseFloat(row['Price ($)']),
-                exchange: 'Fidelity',
-            }),
+            transform: (row) => {
+                // FIX: Clean up the Action string to remove newlines before processing.
+                const cleanedAction = (row['Action'] || '').replace(/\r?\n/g, ' ');
+                return {
+                    date: new Date(row['Run Date']).toLocaleDateString('en-CA'),
+                    ticker: row['Symbol'],
+                    type: cleanedAction.toLowerCase().includes('you bought') ? 'BUY' : 'SELL',
+                    quantity: Math.abs(parseFloat(row['Quantity'])),
+                    price: parseFloat(row['Price ($)']),
+                    exchange: 'Fidelity',
+                }
+            },
         },
         robinhood: {
             name: 'Robinhood',
@@ -39,7 +43,7 @@ module.exports = {
                 quantity: 'Quantity',
                 price: 'Price',
             },
-            // FIX: Make the filter more specific to only include Buy and Sell transactions
+            // Make the filter more specific to only include Buy and Sell transactions
             filter: (row) => ['Buy', 'Sell'].includes(row['Trans Code']),
             transform: (row) => ({
                 date: new Date(row['Activity Date']).toLocaleDateString('en-CA'),
@@ -52,8 +56,8 @@ module.exports = {
         },
         etrade: {
             name: 'E-Trade',
-            // FIX: Adjust the starting row to account for extra header lines
-            dataStartRow: 5,
+            // Adjust the starting row to account for extra header lines
+            dataStartRow: 4,
             columns: {
                 date: 'TransactionDate',
                 type: 'TransactionType',
@@ -63,7 +67,7 @@ module.exports = {
             },
             filter: (row) => ['Bought', 'Sold'].includes(row['TransactionType']),
             transform: (row) => ({
-                // FIX: Correctly handle the 'MM/DD/YY' date format
+                // Correctly handle the 'MM/DD/YY' date format
                 date: new Date('20' + row['TransactionDate']).toLocaleDateString('en-CA'),
                 ticker: row['Symbol'],
                 type: row['TransactionType'] === 'Bought' ? 'BUY' : 'SELL',

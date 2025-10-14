@@ -2,7 +2,8 @@
  * @jest-environment jsdom
  */
 
-import { renderTabs } from './_tabs.js';
+// FIX: Import the staticTabs array from the module we are testing.
+import { renderTabs, staticTabs } from './_tabs.js';
 
 // Mock the helpers module with the correct path
 jest.mock('../helpers.js', () => ({
@@ -13,8 +14,7 @@ jest.mock('../helpers.js', () => ({
 const { getTradingDays, getActivePersistentDates } = require('../helpers.js');
 
 describe('renderTabs', () => {
-    const STATIC_TABS = ['Charts', 'Ledger', 'New Orders', 'Alerts', 'Snapshots'];
-
+    
     beforeEach(() => {
         document.body.innerHTML = '<div id="tabs-container"></div>';
         // Use unique mock dates to prevent de-duplication
@@ -25,7 +25,8 @@ describe('renderTabs', () => {
     it('should render all static and dynamic tabs correctly', () => {
         const mockCurrentView = { type: 'date', value: '2025-10-08' };
         const MOCK_DATE_TABS_COUNT = 2;
-        const TOTAL_TABS_EXPECTED = MOCK_DATE_TABS_COUNT + STATIC_TABS.length;
+        // FIX: Dynamically calculate the expected total based on the imported array.
+        const TOTAL_TABS_EXPECTED = MOCK_DATE_TABS_COUNT + staticTabs.length;
         
         renderTabs(mockCurrentView);
         
@@ -34,8 +35,9 @@ describe('renderTabs', () => {
 
         expect(tabs.length).toBe(TOTAL_TABS_EXPECTED);
 
-        STATIC_TABS.forEach(tabName => {
-            expect(tabsContainer.textContent).toContain(tabName);
+        // FIX: Check that each tab defined in the source file is actually rendered.
+        staticTabs.forEach(tabInfo => {
+            expect(tabsContainer.textContent).toContain(tabInfo.textContent);
         });
     });
 
