@@ -1,66 +1,51 @@
 // joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/public/event-handlers/_imports.js
+// public/event-handlers/_imports.js
 import { showToast } from '../ui/helpers.js';
 import { switchView } from './_navigation.js';
 
 let brokerageTemplates = {}; // This will be populated by fetching the templates.
 
-function renderReconciliationUI(data, summary) {
+function renderReconciliationUI(data) {
     const newTransactionsBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('new-transactions-body'));
     const conflictsBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('conflicts-body'));
-    const summaryContainer = document.getElementById('import-summary-container');
 
-    if (!newTransactionsBody || !conflictsBody || !summaryContainer) return;
-
-    summaryContainer.innerHTML = `
-        <div class="summary-item"><strong>Buys Found:</strong> ${summary.buys}</div>
-        <div class="summary-item"><strong>Sells Found:</strong> ${summary.sells}</div>
-        <div class="summary-item"><strong>Conflicts Found:</strong> ${summary.conflicts}</div>
-        <div class="summary-item"><strong>Other Rows Ignored:</strong> ${summary.other}</div>
-    `;
+    if (!newTransactionsBody || !conflictsBody) return;
 
     newTransactionsBody.innerHTML = '';
     conflictsBody.innerHTML = '';
 
-    if (data.newTransactions.length === 0) {
-        newTransactionsBody.innerHTML = '<tr><td colspan="5">No new transactions to import.</td></tr>';
-    } else {
-        data.newTransactions.forEach(item => {
-            const row = newTransactionsBody.insertRow();
-            row.innerHTML = `
-                <td>${item.date}</td>
-                <td>${item.ticker}</td>
-                <td>${item.type}</td>
-                <td class="numeric">${item.quantity}</td>
-                <td class="numeric">${item.price.toFixed(2)}</td>
-            `;
-        });
-    }
+    data.newTransactions.forEach(item => {
+        const row = newTransactionsBody.insertRow();
+        row.innerHTML = `
+            <td>${item.date}</td>
+            <td>${item.ticker}</td>
+            <td>${item.type}</td>
+            <td class="numeric">${item.quantity}</td>
+            <td class="numeric">${item.price.toFixed(2)}</td>
+        `;
+    });
 
-    if (data.conflicts.length === 0) {
-        conflictsBody.innerHTML = '<tr><td colspan="11">No conflicts detected.</td></tr>';
-    } else {
-        data.conflicts.forEach(item => {
-            const row = conflictsBody.insertRow();
-            row.innerHTML = `
-                <td>${item.csvData.date}</td>
-                <td>${item.csvData.ticker}</td>
-                <td>${item.csvData.type}</td>
-                <td class="numeric">${item.csvData.quantity}</td>
-                <td class="numeric">${item.csvData.price.toFixed(2)}</td>
-                <td>--></td>
-                <td>${item.manualTransaction.transaction_date}</td>
-                <td>${item.manualTransaction.ticker}</td>
-                <td class="numeric">${item.manualTransaction.quantity}</td>
-                <td class="numeric">${item.manualTransaction.price.toFixed(2)}</td>
-                <td>
-                    <select class="conflict-resolution" data-manual-id="${item.manualTransaction.id}" data-csv-index="${item.csvRowIndex}">
-                        <option value="KEEP">Keep Manual</option>
-                        <option value="REPLACE" selected>Replace with CSV</option>
-                    </select>
-                </td>
-            `;
-        });
-    }
+    data.conflicts.forEach(item => {
+        const row = conflictsBody.insertRow();
+        row.innerHTML = `
+            <td>${item.csvData.date}</td>
+            <td>${item.csvData.ticker}</td>
+            <td>${item.csvData.type}</td>
+            <td class="numeric">${item.csvData.quantity}</td>
+            <td class="numeric">${item.csvData.price.toFixed(2)}</td>
+            <td>--></td>
+            <td>${item.manualTransaction.transaction_date}</td>
+            <td>${item.manualTransaction.ticker}</td>
+            <td class="numeric">${item.manualTransaction.quantity}</td>
+            <td class="numeric">${item.manualTransaction.price.toFixed(2)}</td>
+            <td>
+                <select class="conflict-resolution" data-manual-id="${item.manualTransaction.id}" data-csv-index="${item.csvRowIndex}">
+                    <option value="KEEP">Keep Manual</option>
+                    <option value="REPLACE" selected>Replace with CSV</option>
+                </select>
+            </td>
+        `;
+    });
 
     document.getElementById('reconciliation-section').style.display = 'block';
 }
@@ -82,7 +67,6 @@ export function initializeImportHandlers() {
 
     const importCsvBtn = /** @type {HTMLButtonElement} */ (document.getElementById('import-csv-btn'));
     const commitBtn = /** @type {HTMLButtonElement} */ (document.getElementById('commit-import-btn'));
-    const cancelBtn = /** @type {HTMLButtonElement} */ (document.getElementById('cancel-import-btn'));
     const fileInput = /** @type {HTMLInputElement} */ (document.getElementById('csv-file-input'));
     const accountHolderSelect = /** @type {HTMLSelectElement} */ (document.getElementById('import-account-holder'));
     const brokerageSelect = /** @type {HTMLSelectElement} */ (document.getElementById('brokerage-template-select'));
@@ -119,10 +103,11 @@ export function initializeImportHandlers() {
                 const reconSection = document.getElementById('reconciliation-section');
                 if (reconSection) {
                     reconSection.dataset.sessionId = result.importSessionId;
-                    renderReconciliationUI(result.reconciliationData, result.summary);
+                    renderReconciliationUI(result.reconciliationData);
                 }
 
             } catch (error) {
+                console.error("Full error object from CSV upload:", error);
                 showToast(`Error: ${error.message}`, 'error', 10000);
             }
         });
@@ -165,15 +150,6 @@ export function initializeImportHandlers() {
                 commitBtn.disabled = false;
                 commitBtn.textContent = "Commit Changes";
             }
-        });
-    }
-
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-            document.getElementById('reconciliation-section').style.display = 'none';
-            fileInput.value = '';
-            accountHolderSelect.value = '';
-            brokerageSelect.value = '';
         });
     }
 }
