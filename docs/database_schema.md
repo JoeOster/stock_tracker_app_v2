@@ -1,3 +1,5 @@
+# joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/docs/database_schema.md
+
 # Database Schema
 
 **Last Updated:** 2025-10-13
@@ -29,6 +31,8 @@ Stores all buy and sell transaction records. This is the central table for all f
 | `limit_up_expiration`| TEXT | | Expiration date for the 'take profit' limit order. |
 | `limit_down_expiration`| TEXT | | Expiration date for the 'stop loss' limit order. |
 | `account_holder_id`| INTEGER | FOREIGN KEY (account_holders.id) | Links to the account holder who owns this transaction. |
+| `source` | TEXT | DEFAULT 'MANUAL' | The source of the entry ('MANUAL' or 'CSV_IMPORT'). |
+| `created_at` | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | The timestamp when the transaction was created. |
 
 ---
 

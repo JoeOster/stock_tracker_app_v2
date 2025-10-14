@@ -1,3 +1,4 @@
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/public/event-handlers/_imports.js
 // public/event-handlers/_imports.js
 import { showToast } from '../ui/helpers.js';
 import { switchView } from './_navigation.js';
@@ -111,7 +112,6 @@ export function initializeImportHandlers() {
         });
     }
     
-    // FIX: This entire event listener for the commit button was missing.
     if (commitBtn) {
         commitBtn.addEventListener('click', async () => {
             const reconSection = document.getElementById('reconciliation-section');
@@ -128,7 +128,6 @@ export function initializeImportHandlers() {
             commitBtn.textContent = "Importing...";
 
             try {
-                // FIX: Point to the correct backend endpoint: /api/transactions/import
                 const response = await fetch('/api/transactions/import', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

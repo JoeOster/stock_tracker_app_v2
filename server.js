@@ -1,3 +1,4 @@
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/server.js
 // server.js (Refactored)
 const express = require('express');
 const fileUpload = require('express-fileupload');
@@ -12,8 +13,8 @@ const transactionRoutes = require('./routes/transactions');
 const accountRoutes = require('./routes/accounts');
 const reportingRoutes = require('./routes/reporting');
 const orderRoutes = require('./routes/orders');
-const utilityRoutes = require('./routes/utility'); // This was missing from app.use
-const importerRoutes = require('./routes/importer'); // This was missing from app.use
+const utilityRoutes = require('./routes/utility');
+const importerRoutes = require('./routes/importer');
 
 // --- Logger Setup ---
 const logDirectory = path.join(__dirname, 'logs');
@@ -55,7 +56,6 @@ async function setupApp() {
     const importSessions = new Map(); 
 
     // --- Register All API Routes ---
-    // FIX: Add the missing app.use calls for utility and importer routes
     app.use('/api/transactions', transactionRoutes(db, log, captureEodPrices, importSessions));
     app.use('/api/accounts', accountRoutes(db, log));
     app.use('/api/reporting', reportingRoutes(db, log));

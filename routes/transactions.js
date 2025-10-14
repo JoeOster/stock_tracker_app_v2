@@ -62,25 +62,31 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                     const price = parseFloat(tx.price);
 
                     if (tx.type === 'BUY') {
-                        await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            [tx.date, tx.ticker, tx.exchange, tx.type, quantity, price, accountHolderId, quantity, quantity]);
+                        await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            [tx.date, tx.ticker, tx.exchange, tx.type, quantity, price, accountHolderId, quantity, quantity, 'CSV_IMPORT']);
                     } else if (tx.type === 'SELL') {
                         let sellQuantity = quantity;
                         const openLots = await db.all("SELECT * FROM transactions WHERE ticker = ? AND account_holder_id = ? AND quantity_remaining > 0.00001 ORDER BY transaction_date ASC", [tx.ticker, accountHolderId]);
 
-                        // FIX: Change this from a throw to a proper 400 error response
                         if (openLots.length === 0) {
-                             await db.exec('ROLLBACK'); // Abort the transaction
-                             return res.status(400).json({ message: `Import failed: Cannot import a SELL for ${tx.ticker} because no open BUY lots were found for this account holder. Please import your BUYs first.` });
+                             log(`[IMPORT WARNING] No open BUY lot for SELL of ${tx.ticker} on ${tx.date}. Skipping and creating notification.`);
+                             const message = `An imported SELL transaction for ${tx.quantity} shares of ${tx.ticker} on ${tx.date} was ignored because no corresponding open BUY lot could be found.`;
+                             await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (?, ?, ?)", [accountHolderId, message, 'UNREAD']);
+                             continue; // Skip this transaction and continue with the next one
                         }
 
                         for (const lot of openLots) {
                             if (sellQuantity <= 0) break;
                             const sellableQuantity = Math.min(sellQuantity, lot.quantity_remaining);
-                            await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, parent_buy_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                                [tx.date, tx.ticker, tx.exchange, tx.type, sellableQuantity, price, accountHolderId, lot.id]);
+                            await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, parent_buy_id, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                                [tx.date, tx.ticker, tx.exchange, tx.type, sellableQuantity, price, accountHolderId, lot.id, 'CSV_IMPORT']);
                             await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [sellableQuantity, lot.id]);
                             sellQuantity -= sellableQuantity;
+                        }
+                         if (sellQuantity > 0.00001) {
+                            log(`[IMPORT WARNING] Not enough shares to cover entire SELL of ${tx.ticker} on ${tx.date}. ${sellQuantity} shares were not sold.`);
+                            const message = `An imported SELL transaction for ${tx.ticker} on ${tx.date} could not be fully completed. There were not enough shares in open lots to cover the entire sale. ${sellQuantity} shares were not recorded as sold.`;
+                            await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (?, ?, ?)", [accountHolderId, message, 'UNREAD']);
                         }
                     }
                 }
@@ -138,8 +144,8 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                 if (parentBuy.quantity_remaining < numQuantity) return res.status(400).json({ message: 'Sell quantity exceeds remaining quantity.' });
                 await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [numQuantity, parent_buy_id]);
             }
-            const query = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, parent_buy_id, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-            await db.run(query, [ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, limit_price_up || null, limit_price_down || null, limit_up_expiration || null, limit_down_expiration || null, parent_buy_id || null, original_quantity, quantity_remaining, account_holder_id]);
+            const query = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, parent_buy_id, original_quantity, quantity_remaining, account_holder_id, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            await db.run(query, [ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, limit_price_up || null, limit_price_down || null, limit_up_expiration || null, limit_down_expiration || null, parent_buy_id || null, original_quantity, quantity_remaining, account_holder_id, 'MANUAL']);
             
             if (transaction_type === 'SELL' && process.env.NODE_ENV !== 'test' && typeof captureEodPrices === 'function') {
                 captureEodPrices(db, transaction_date); 
