@@ -12,13 +12,29 @@
     margin-right: auto;
 }
 
-.header-left, .header-right {
-    display: flex;
+.header-left {
+    display: grid;
+    /* This change creates two columns, forcing the items to wrap into two rows */
+    grid-template-columns: auto 1fr;
+    gap: 8px 10px;
     align-items: center;
-    gap: 1rem;
+}
+
+.header-left label {
+    justify-self: end;
+    white-space: nowrap;
+}
+
+.header-left select,
+.header-left input {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .header-right { 
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     justify-content: flex-end; 
 }
 
@@ -52,9 +68,4 @@
 
 .header select, .header label {
     font-size: 0.9em;
-}
-
-/* --- NEW: Autosize the account selector --- */
-.header .account-holder-select {
-    width: auto;
 }

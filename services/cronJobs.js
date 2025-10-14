@@ -1,4 +1,4 @@
-// services/cronJobs.js
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/services/cronJobs.js
 const cron = require('node-cron');
 const fs = require('fs').promises;
 const path = require('path');
@@ -84,20 +84,26 @@ async function runOrderWatcher(db) {
                 executedPrice = position.limit_price_up;
                 executionType = 'Take Profit';
             }
+
             if (executedPrice && executionType) {
-                await db.exec('BEGIN TRANSACTION');
-                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-                await db.run(`INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [position.ticker, position.exchange, 'SELL', position.quantity_remaining, executedPrice, today, position.id, position.account_holder_id]);
-                await db.run("UPDATE transactions SET quantity_remaining = 0, limit_price_up = NULL, limit_price_down = NULL WHERE id = ?", position.id);
-                const message = `${executionType} order for ${position.quantity_remaining} shares of ${position.ticker} was automatically executed at ${formatCurrency(executedPrice)}.`;
-                await db.run("INSERT INTO notifications (account_holder_id, message) VALUES (?, ?)", [position.account_holder_id, message]);
-                await db.exec('COMMIT');
+                try {
+                    await db.exec('BEGIN TRANSACTION');
+                    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+                    const createdAt = new Date().toISOString();
+                    await db.run(`INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [position.ticker, position.exchange, 'SELL', position.quantity_remaining, executedPrice, today, position.id, position.account_holder_id, 'AUTO_LIMIT', createdAt]);
+                    await db.run("UPDATE transactions SET quantity_remaining = 0, limit_price_up = NULL, limit_price_down = NULL WHERE id = ?", position.id);
+                    const message = `${executionType} order for ${position.quantity_remaining} shares of ${position.ticker} was automatically executed at ${formatCurrency(executedPrice)}.`;
+                    await db.run("INSERT INTO notifications (account_holder_id, message) VALUES (?, ?)", [position.account_holder_id, message]);
+                    await db.exec('COMMIT');
+                } catch (transactionError) {
+                    console.error('[CRON] Error during auto-execution transaction:', transactionError);
+                    await db.exec('ROLLBACK');
+                }
             }
         }
     } catch (error) {
         console.error('[CRON] Error in Order Watcher:', error);
-        await db.exec('ROLLBACK');
     }
 }
 

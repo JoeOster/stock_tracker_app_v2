@@ -29,7 +29,9 @@
     <div id="reconciliation-section" style="display: none;">
         <h3>Step 2: Review and Resolve</h3>
         
-        <h4>New Transactions to be Imported</h4>
+        <div id="import-summary-container"></div>
+
+        <h4 style="margin-top: 1.5rem;">New Transactions to be Imported</h4>
         <table id="new-transactions-table">
             <thead>
                 <tr>
@@ -70,7 +72,8 @@
             <tbody id="conflicts-body"></tbody>
         </table>
 
-        <div style="text-align: right; margin-top: 2rem;">
+        <div style="text-align: right; margin-top: 2rem; display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="cancel-import-btn" class="delete-btn">Cancel</button>
             <button id="commit-import-btn">Commit Changes</button>
         </div>
     </div>

@@ -1,4 +1,4 @@
-// routes/transactions.js
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/routes/transactions.js
 const express = require('express');
 const router = express.Router();
 
@@ -60,10 +60,11 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                 for (const tx of toCreate) {
                     const quantity = parseFloat(tx.quantity);
                     const price = parseFloat(tx.price);
+                    const createdAt = new Date().toISOString();
 
                     if (tx.type === 'BUY') {
-                        await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            [tx.date, tx.ticker, tx.exchange, tx.type, quantity, price, accountHolderId, quantity, quantity, 'CSV_IMPORT']);
+                        await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            [tx.date, tx.ticker, tx.exchange, tx.type, quantity, price, accountHolderId, quantity, quantity, 'CSV_IMPORT', createdAt]);
                     } else if (tx.type === 'SELL') {
                         let sellQuantity = quantity;
                         const openLots = await db.all("SELECT * FROM transactions WHERE ticker = ? AND account_holder_id = ? AND quantity_remaining > 0.00001 ORDER BY transaction_date ASC", [tx.ticker, accountHolderId]);
@@ -78,8 +79,8 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                         for (const lot of openLots) {
                             if (sellQuantity <= 0) break;
                             const sellableQuantity = Math.min(sellQuantity, lot.quantity_remaining);
-                            await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, parent_buy_id, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                                [tx.date, tx.ticker, tx.exchange, tx.type, sellableQuantity, price, accountHolderId, lot.id, 'CSV_IMPORT']);
+                            await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, parent_buy_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                                [tx.date, tx.ticker, tx.exchange, tx.type, sellableQuantity, price, accountHolderId, lot.id, 'CSV_IMPORT', createdAt]);
                             await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [sellableQuantity, lot.id]);
                             sellQuantity -= sellableQuantity;
                         }
@@ -101,8 +102,6 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
             res.status(500).json({ message: `Import failed: ${error.message}` });
         }
     });
-
-    // ... (rest of your existing transaction routes: GET /, POST /, PUT /, DELETE /)
 
     router.get('/', async (req, res) => {
         try {
@@ -144,8 +143,8 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                 if (parentBuy.quantity_remaining < numQuantity) return res.status(400).json({ message: 'Sell quantity exceeds remaining quantity.' });
                 await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [numQuantity, parent_buy_id]);
             }
-            const query = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, parent_buy_id, original_quantity, quantity_remaining, account_holder_id, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-            await db.run(query, [ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, limit_price_up || null, limit_price_down || null, limit_up_expiration || null, limit_down_expiration || null, parent_buy_id || null, original_quantity, quantity_remaining, account_holder_id, 'MANUAL']);
+            const query = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, parent_buy_id, original_quantity, quantity_remaining, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            await db.run(query, [ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, limit_price_up || null, limit_price_down || null, limit_up_expiration || null, limit_down_expiration || null, parent_buy_id || null, original_quantity, quantity_remaining, account_holder_id, 'MANUAL', new Date().toISOString()]);
             
             if (transaction_type === 'SELL' && process.env.NODE_ENV !== 'test' && typeof captureEodPrices === 'function') {
                 captureEodPrices(db, transaction_date); 
