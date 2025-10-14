@@ -1,0 +1,8 @@
+For Account:,#####7178
+
+
+TransactionDate,TransactionType,SecurityType,Symbol,Quantity,Amount,Price,Commission,Description
+
+10/10/25,Bought,EQ,CIFR,72,-1296,18,0,CIPHER MINING INC UNSOLICITED TRADE
+10/10/25,Sold,EQ,CIFR,-65,1299.99,20,0,CIPHER MINING INC UNSOLICITED TRADE
+10/09/25,Bought,EQ,CIFR,65,-1124.49,17.2999,0,CIPHER MINING INC UNSOLICITED TRADE

@@ -22,7 +22,7 @@ npm-debug.log*
 !deploy.bat
 !tools/inject-sample-data.bat
 !tools/**
-|tools/impoter-testing/**
+
 # Backups
 # The deploy script creates a backup folder in the production directory.
 /backup/
@@ -34,3 +34,7 @@ Thumbs.db
 
 # Editor/IDE directories (optional but recommended)
 .vscode/
+
+# Importer test files
+test-importer.bat
+test-server.js
