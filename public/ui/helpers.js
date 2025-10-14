@@ -38,7 +38,7 @@ export function formatAccounting(number, isCurrency = true) {
  * @param {number} [duration=10000] - The duration in milliseconds to show the toast.
  * @returns {void}
  */
-export function showToast(message, type = 'info', duration = 10000) {
+export function showToast(message, type = 'info', duration = 15000) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;

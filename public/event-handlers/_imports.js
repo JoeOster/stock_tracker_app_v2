@@ -1,12 +1,8 @@
 // public/event-handlers/_imports.js
-
-/* global Papa */ // Informs the type checker that Papa is a global variable.
-
 import { showToast } from '../ui/helpers.js';
 import { switchView } from './_navigation.js';
 
-// This will be populated by fetching the templates from the server.
-let brokerageTemplates = {};
+let brokerageTemplates = {}; // This will be populated by fetching the templates.
 
 function renderReconciliationUI(data) {
     const newTransactionsBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('new-transactions-body'));
@@ -55,21 +51,17 @@ function renderReconciliationUI(data) {
 
 
 export function initializeImportHandlers() {
-    // Fetch the templates from the server once when the app initializes.
-    fetch('/importer-templates.js')
+    // Fetch the templates from the new API endpoint.
+    fetch('/api/utility/importer-templates')
         .then(response => {
-            // Since the file is a JS file exporting a variable, we need to treat it as text
-            // and then evaluate it to get the object. A cleaner way would be to serve it as JSON.
-            // For now, let's assume it's served as a script that we can parse.
-            // A better backend approach would be a dedicated endpoint that returns JSON.
-            // But let's work with the current setup. We'll adjust server.js to serve this.
+            if (!response.ok) throw new Error('Network response was not ok');
             return response.json();
         })
         .then(data => {
             brokerageTemplates = data.brokerageTemplates;
         }).catch(err => {
             console.error("Could not load importer templates:", err);
-            showToast("Error: Could not load importer templates.", "error");
+            showToast("Error: Could not load importer templates.", "error", 10000);
         });
 
     const importCsvBtn = /** @type {HTMLButtonElement} */ (document.getElementById('import-csv-btn'));
@@ -85,17 +77,14 @@ export function initializeImportHandlers() {
             }
             const file = fileInput.files[0];
 
-            const accountHolderId = accountHolderSelect.value;
-            const brokerage = brokerageSelect.value;
-
-            if (!accountHolderId || !brokerage) {
+            if (!accountHolderSelect.value || !brokerageSelect.value) {
                 return showToast('Please select an account and a brokerage template.', 'error');
             }
 
             const formData = new FormData();
             formData.append('csvfile', file);
-            formData.append('accountHolderId', accountHolderId);
-            formData.append('brokerageTemplate', brokerage);
+            formData.append('accountHolderId', accountHolderSelect.value);
+            formData.append('brokerageTemplate', brokerageSelect.value);
 
             try {
                 const response = await fetch('/api/importer/upload', {
@@ -117,11 +106,12 @@ export function initializeImportHandlers() {
                 }
 
             } catch (error) {
-                showToast(`Error: ${error.message}`, 'error');
+                showToast(`Error: ${error.message}`, 'error', 10000);
             }
         });
     }
     
+    // FIX: This entire event listener for the commit button was missing.
     if (commitBtn) {
         commitBtn.addEventListener('click', async () => {
             const reconSection = document.getElementById('reconciliation-section');
@@ -138,6 +128,7 @@ export function initializeImportHandlers() {
             commitBtn.textContent = "Importing...";
 
             try {
+                // FIX: Point to the correct backend endpoint: /api/transactions/import
                 const response = await fetch('/api/transactions/import', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -150,11 +141,11 @@ export function initializeImportHandlers() {
                 }
 
                 const result = await response.json();
-                showToast(result.message, 'success');
+                showToast(result.message, 'success', 10000);
                 await switchView('ledger', null);
 
             } catch (error) {
-                showToast(`Import failed: ${error.message}`, 'error');
+                showToast(`Import failed: ${error.message}`, 'error', 10000);
             } finally {
                 commitBtn.disabled = false;
                 commitBtn.textContent = "Commit Changes";

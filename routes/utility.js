@@ -1,7 +1,7 @@
 // routes/utility.js
 const express = require('express');
 const router = express.Router();
-const { getPrices } = require('../services/priceService'); // Use the new centralized price service
+const { getPrices } = require('../services/priceService');
 
 /**
  * Creates and returns an Express router for handling utility and miscellaneous endpoints.
@@ -14,6 +14,25 @@ const { getPrices } = require('../services/priceService'); // Use the new centra
 module.exports = (db, log, { captureEodPrices }) => {
 
     // Base path is /api/utility
+
+    /**
+     * GET /importer-templates
+     * Serves the brokerage templates as a JSON object for the frontend.
+     */
+    router.get('/importer-templates', (req, res) => {
+        try {
+            const templates = require('../public/importer-templates.js');
+            res.json(templates);
+        } catch (error) {
+            log(`[ERROR] Failed to load importer templates: ${error.message}`);
+            res.status(500).json({ message: 'Could not load importer templates.' });
+        }
+    });
+
+    // ... (keep all the other routes like /prices/batch, /snapshots, etc.)
+
+    return router;
+};
 
     /**
      * POST /prices/batch
