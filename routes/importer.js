@@ -4,118 +4,86 @@ const router = express.Router();
 const Papa = require('papaparse');
 const { v4: uuidv4 } = require('uuid');
 
-// In-memory cache to hold the state of an import session.
-const importSessions = new Map();
-
-// Path to the templates from the server's perspective
 const { brokerageTemplates } = require('../public/importer-templates.js');
 
-/**
- * Compares a parsed CSV row against existing transactions to find potential duplicates.
- * @param {object} parsedRow - The transaction parsed from the CSV.
- * @param {any[]} existingTransactions - Array of transactions from the database.
- * @returns {{status: string, match: object|null}} - The status ('New' or 'Potential Duplicate') and the matched transaction if found.
- */
 function findConflict(parsedRow, existingTransactions) {
-    const TOLERANCE = 0.02; // 2 cents tolerance for price matching
+    const TOLERANCE = 0.02;
 
     for (const existingTx of existingTransactions) {
-        const isSameDay = existingTx.transaction_date === parsedRow.date;
-        const isSameTicker = existingTx.ticker.trim().toUpperCase() === parsedRow.ticker.trim().toUpperCase();
-        const isSameAction = existingTx.transaction_type === parsedRow.type;
-        const isSimilarPrice = Math.abs(existingTx.price - parsedRow.price) <= TOLERANCE;
-        const isSameQuantity = existingTx.quantity === parsedRow.quantity;
-
-        if (isSameDay && isSameTicker && isSameAction && isSimilarPrice && isSameQuantity) {
+        if (
+            existingTx.transaction_date === parsedRow.date &&
+            existingTx.ticker.trim().toUpperCase() === parsedRow.ticker.trim().toUpperCase() &&
+            existingTx.transaction_type === parsedRow.type &&
+            Math.abs(existingTx.price - parsedRow.price) <= TOLERANCE &&
+            existingTx.quantity === parsedRow.quantity
+        ) {
             return { status: 'Potential Duplicate', match: existingTx };
         }
     }
     return { status: 'New', match: null };
 }
 
-module.exports = (db, log) => {
+module.exports = (db, log, importSessions) => {
 
-    /**
-     * POST /api/importer/upload
-     * Handles the CSV file upload, parses it, and performs an initial reconciliation.
-     */
     router.post('/upload', async (req, res) => {
-        if (!req.files || Object.keys(req.files).length === 0) {
+        if (!req.files || !req.files.csvfile) {
             return res.status(400).json({ message: 'No file was uploaded.' });
         }
 
-        const { accountHolderId, brokerageTemplate } = req.body;
-        const csvFile = req.files.csvfile;
+        // FIX: Handle single file upload and satisfy type checker
+        const csvFile = /** @type {any} */ (req.files.csvfile);
+        if (Array.isArray(csvFile)) {
+            return res.status(400).json({ message: 'Please upload a single file.' });
+        }
 
+        const { accountHolderId, brokerageTemplate } = req.body;
         if (!accountHolderId || !brokerageTemplate) {
             return res.status(400).json({ message: 'Account Holder and Brokerage Template are required.' });
         }
 
         const template = brokerageTemplates[brokerageTemplate];
         if (!template) {
-            return res.status(400).json({ message: 'Invalid brokerage template selected.' });
+            return res.status(400).json({ message: 'Invalid brokerage template.' });
         }
 
         try {
             const csvData = csvFile.data.toString('utf8');
-            const parseResult = Papa.parse(csvData, {
-                header: true,
-                skipEmptyLines: true,
-            });
-
+            const parseResult = Papa.parse(csvData, { header: true, skipEmptyLines: true });
+            
             const processedData = parseResult.data
-                .slice(template.dataStartRow - 1)
+                .slice(template.dataStartRow > 0 ? template.dataStartRow - 1 : 0)
                 .filter(row => template.filter(row))
                 .map(row => template.transform(row));
 
-            // --- Reconciliation Logic ---
-            // Fetch all existing transactions for the account holder for comparison.
             const existingTransactions = await db.all(
                 "SELECT * FROM transactions WHERE account_holder_id = ?",
                 [accountHolderId]
             );
 
-            const reconciliationData = {
-                newTransactions: [],
-                conflicts: []
-            };
-
+            const reconciliationData = { newTransactions: [], conflicts: [] };
             const importSessionData = [];
 
             processedData.forEach((csvRow, csvRowIndex) => {
                 const { status, match } = findConflict(csvRow, existingTransactions);
+                const sessionRow = { ...csvRow, status, matchedTx: match, csvRowIndex };
 
                 if (status === 'Potential Duplicate') {
-                    reconciliationData.conflicts.push({
-                        csvData: csvRow,
-                        manualTransaction: match,
-                        csvRowIndex: csvRowIndex
-                    });
+                    reconciliationData.conflicts.push({ csvData: csvRow, manualTransaction: match, csvRowIndex });
                 } else {
                     reconciliationData.newTransactions.push(csvRow);
                 }
-
-                importSessionData.push({
-                    ...csvRow,
-                    status: status,
-                    matchedTx: match
-                });
+                importSessionData.push(sessionRow);
             });
 
             const importSessionId = uuidv4();
-            importSessions.set(importSessionId, { data: importSessionData, accountHolderId: accountHolderId });
+            importSessions.set(importSessionId, { data: importSessionData, accountHolderId });
+            setTimeout(() => importSessions.delete(importSessionId), 3600 * 1000); // 1-hour expiry
 
-            // Clean up old sessions after 1 hour to prevent memory leaks.
-            setTimeout(() => importSessions.delete(importSessionId), 3600 * 1000);
-
-            res.json({
-                importSessionId: importSessionId,
-                reconciliationData: reconciliationData
-            });
+            res.json({ importSessionId, reconciliationData });
 
         } catch (error) {
-            log(`[ERROR] CSV Upload/Reconciliation failed: ${error.message}`);
-            res.status(500).json({ message: `Failed to process CSV file: ${error.message}` });
+            log(`[ERROR] CSV Upload failed: ${error.message}`);
+            res.status(500).json({ message: `Failed to process CSV: ${error.message}` });
         }
     });
 
