@@ -1,80 +1,58 @@
-// public/importer-templates.js
-// This file is in CommonJS format to be compatible with the Node.js server.
-module.exports = {
-    brokerageTemplates: {
-        fidelity: {
-            name: 'Fidelity',
-            dataStartRow: 1,
-            columns: {
-                date: 'Run Date',
-                action: 'Action',
-                ticker: 'Symbol',
-                quantity: 'Quantity',
-                price: 'Price ($)',
-            },
-            filter: (row) => {
-                const action = row['Action'] || '';
-                // Add a check for a valid date to filter out footer rows
-                return row['Run Date'] &&
-                       (action.toLowerCase().includes('you bought') || action.toLowerCase().includes('you sold')) &&
-                       row['Symbol'] &&
-                       !['BITCOIN', 'ETHEREUM', 'LITECOIN'].includes(row['Description']);
-            },
-            transform: (row) => {
-                // FIX: Clean up the Action string to remove newlines before processing.
-                const cleanedAction = (row['Action'] || '').replace(/\r?\n/g, ' ');
-                return {
-                    date: new Date(row['Run Date']).toLocaleDateString('en-CA'),
-                    ticker: row['Symbol'],
-                    type: cleanedAction.toLowerCase().includes('you bought') ? 'BUY' : 'SELL',
-                    quantity: Math.abs(parseFloat(row['Quantity'])),
-                    price: parseFloat(row['Price ($)']),
-                    exchange: 'Fidelity',
-                }
-            },
-        },
-        robinhood: {
-            name: 'Robinhood',
-            dataStartRow: 1,
-            columns: {
-                date: 'Activity Date',
-                ticker: 'Instrument',
-                type: 'Trans Code',
-                quantity: 'Quantity',
-                price: 'Price',
-            },
-            // Make the filter more specific to only include Buy and Sell transactions
-            filter: (row) => ['Buy', 'Sell'].includes(row['Trans Code']),
-            transform: (row) => ({
-                date: new Date(row['Activity Date']).toLocaleDateString('en-CA'),
-                ticker: row['Instrument'],
-                type: row['Trans Code'].toUpperCase(),
-                quantity: parseFloat(row['Quantity']),
-                price: parseFloat(row['Price']),
-                exchange: 'Robinhood',
-            }),
-        },
-        etrade: {
-            name: 'E-Trade',
-            // Adjust the starting row to account for extra header lines
-            dataStartRow: 4,
-            columns: {
-                date: 'TransactionDate',
-                type: 'TransactionType',
-                ticker: 'Symbol',
-                quantity: 'Quantity',
-                price: 'Price',
-            },
-            filter: (row) => ['Bought', 'Sold'].includes(row['TransactionType']),
-            transform: (row) => ({
-                // Correctly handle the 'MM/DD/YY' date format
-                date: new Date('20' + row['TransactionDate']).toLocaleDateString('en-CA'),
+/**
+ * @fileoverview This file contains templates for parsing different broker CSV formats.
+ * @module public/importer-templates
+ */
+
+const importerTemplates = {
+    /**
+     * @property {object} fidelity - Template for Fidelity brokerage CSVs.
+     */
+    fidelity: {
+        /**
+         * @function
+         * @name map
+         * @description Maps a row from a Fidelity CSV to a standard transaction object.
+         * @param {object} row - A single row object from the parsed CSV.
+         * @returns {object|null} A standardized transaction object or null if the row is invalid.
+         */
+        map: (row) => {
+            // Check for essential columns to identify a valid transaction row.
+            if (!row['Run Date'] || !row['Action'] || !row['Symbol']) {
+                return null;
+            }
+            
+            const actionParts = row['Action'].toUpperCase().split(' ');
+            // FIX: Check for "BOUGHT" and "SOLD" instead of "BUY" and "SELL".
+            const type = actionParts.includes('BOUGHT') ? 'BUY' : (actionParts.includes('SOLD') ? 'SELL' : null);
+
+            // If the action is not a BUY or SELL, skip this row.
+            if (!type) {
+                return null;
+            }
+
+            return {
+                holder: 1, // Defaulting to the primary account holder for imports
+                transaction_date: new Date(row['Run Date']).toISOString().split('T')[0],
                 ticker: row['Symbol'],
-                type: row['TransactionType'] === 'Bought' ? 'BUY' : 'SELL',
-                quantity: Math.abs(parseFloat(row['Quantity'])),
-                price: parseFloat(row['Price']),
-                exchange: 'E-Trade',
-            }),
-        },
-    }
+                type: type,
+                quantity: parseFloat(row['Quantity']),
+                price: parseFloat(row['Price ($)']),
+                exchange: 'Fidelity', // Set the exchange based on the template
+            };
+        }
+    },
+    // Future templates for 'robinhood', 'etrade', etc. would be added here.
 };
+
+/**
+ * @function getImporterTemplate
+ * @description Retrieves the mapping template for a given importer type.
+ * @param {string} type - The type of the importer (e.g., 'fidelity').
+ * @returns {object|undefined} The template object or undefined if not found.
+ */
+function getImporterTemplate(type) {
+    return importerTemplates[type];
+}
+
+// Export the function to make it available to the importer route.
+module.exports = { getImporterTemplate };

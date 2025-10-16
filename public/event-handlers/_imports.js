@@ -1,4 +1,3 @@
-// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/public/event-handlers/_imports.js
 // public/event-handlers/_imports.js
 import { showToast } from '../ui/helpers.js';
 import { switchView } from './_navigation.js';
@@ -21,7 +20,7 @@ function renderReconciliationUI(data) {
             <td>${item.ticker}</td>
             <td>${item.type}</td>
             <td class="numeric">${item.quantity}</td>
-            <td class="numeric">${item.price.toFixed(2)}</td>
+            <td class="numeric">${item.price ? item.price.toFixed(2) : 'N/A'}</td>
         `;
     });
 
@@ -32,16 +31,17 @@ function renderReconciliationUI(data) {
             <td>${item.csvData.ticker}</td>
             <td>${item.csvData.type}</td>
             <td class="numeric">${item.csvData.quantity}</td>
-            <td class="numeric">${item.csvData.price.toFixed(2)}</td>
+            <td class="numeric">${item.csvData.price ? item.csvData.price.toFixed(2) : 'N/A'}</td>
             <td>--></td>
             <td>${item.manualTransaction.transaction_date}</td>
             <td>${item.manualTransaction.ticker}</td>
             <td class="numeric">${item.manualTransaction.quantity}</td>
-            <td class="numeric">${item.manualTransaction.price.toFixed(2)}</td>
+            <td class="numeric">${item.manualTransaction.price ? item.manualTransaction.price.toFixed(2) : 'N/A'}</td>
             <td>
                 <select class="conflict-resolution" data-manual-id="${item.manualTransaction.id}" data-csv-index="${item.csvRowIndex}">
                     <option value="KEEP">Keep Manual</option>
                     <option value="REPLACE" selected>Replace with CSV</option>
+                    <option value="DISCARD">Discard CSV</option>
                 </select>
             </td>
         `;
@@ -67,6 +67,7 @@ export function initializeImportHandlers() {
 
     const importCsvBtn = /** @type {HTMLButtonElement} */ (document.getElementById('import-csv-btn'));
     const commitBtn = /** @type {HTMLButtonElement} */ (document.getElementById('commit-import-btn'));
+    const cancelBtn = /** @type {HTMLButtonElement} */ (document.getElementById('cancel-import-btn'));
     const fileInput = /** @type {HTMLInputElement} */ (document.getElementById('csv-file-input'));
     const accountHolderSelect = /** @type {HTMLSelectElement} */ (document.getElementById('import-account-holder'));
     const brokerageSelect = /** @type {HTMLSelectElement} */ (document.getElementById('brokerage-template-select'));
@@ -112,6 +113,15 @@ export function initializeImportHandlers() {
             }
         });
     }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            document.getElementById('reconciliation-section').style.display = 'none';
+            document.getElementById('new-transactions-body').innerHTML = '';
+            document.getElementById('conflicts-body').innerHTML = '';
+            fileInput.value = ''; // Clear the file input
+        });
+    }
     
     if (commitBtn) {
         commitBtn.addEventListener('click', async () => {
@@ -143,6 +153,7 @@ export function initializeImportHandlers() {
                 const result = await response.json();
                 showToast(result.message, 'success', 10000);
                 await switchView('ledger', null);
+                location.reload();
 
             } catch (error) {
                 showToast(`Import failed: ${error.message}`, 'error', 10000);
