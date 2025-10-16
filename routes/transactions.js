@@ -1,4 +1,3 @@
-// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/routes/transactions.js
 const express = require('express');
 const router = express.Router();
 
@@ -61,6 +60,14 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                     const quantity = parseFloat(tx.quantity);
                     const price = parseFloat(tx.price);
                     const createdAt = new Date().toISOString();
+
+                    // FIX: Add a check for a valid price.
+                    if (isNaN(price)) {
+                        log(`[IMPORT WARNING] Invalid price for ${tx.ticker} on ${tx.date}. Skipping and creating notification.`);
+                        const message = `An imported transaction for ${tx.quantity} shares of ${tx.ticker} on ${tx.date} was ignored because the price was invalid.`;
+                        await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (?, ?, ?)", [accountHolderId, message, 'UNREAD']);
+                        continue; // Skip this transaction
+                    }
 
                     if (tx.type === 'BUY') {
                         await db.run('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',

@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPrices } = require('../services/priceService');
-const { brokerageTemplates } = require('../public/importer-templates.js');
+const { brokerageTemplates } = require('../user-settings/importer-templates.js');
 
 module.exports = (db, log, services) => {
     // The base path for these routes is '/api/utility'

@@ -1,9 +1,14 @@
-// public/event-handlers/_imports.js
 import { showToast } from '../ui/helpers.js';
 import { switchView } from './_navigation.js';
 
 let brokerageTemplates = {}; // This will be populated by fetching the templates.
 
+/**
+ * Renders the reconciliation UI with new transactions and conflicts.
+ * @param {object} data - The reconciliation data.
+ * @param {Array<object>} data.newTransactions - Transactions to be added.
+ * @param {Array<object>} data.conflicts - Transactions that conflict with existing ones.
+ */
 function renderReconciliationUI(data) {
     const newTransactionsBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('new-transactions-body'));
     const conflictsBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('conflicts-body'));
@@ -50,9 +55,11 @@ function renderReconciliationUI(data) {
     document.getElementById('reconciliation-section').style.display = 'block';
 }
 
-
+/**
+ * Initializes all event handlers for the CSV importer functionality.
+ */
 export function initializeImportHandlers() {
-    // Fetch the templates from the new API endpoint.
+    // Fetch the templates from the API endpoint.
     fetch('/api/utility/importer-templates')
         .then(response => {
             if (!response.ok) throw new Error('Network response was not ok');
@@ -71,6 +78,22 @@ export function initializeImportHandlers() {
     const fileInput = /** @type {HTMLInputElement} */ (document.getElementById('csv-file-input'));
     const accountHolderSelect = /** @type {HTMLSelectElement} */ (document.getElementById('import-account-holder'));
     const brokerageSelect = /** @type {HTMLSelectElement} */ (document.getElementById('brokerage-template-select'));
+
+    // FIX: Add event listener to refresh the UI when the brokerage selection changes.
+    if (brokerageSelect) {
+        brokerageSelect.addEventListener('change', () => {
+            const reconSection = document.getElementById('reconciliation-section');
+            if (reconSection && reconSection.style.display !== 'none') {
+                reconSection.style.display = 'none';
+                const newTransactionsBody = document.getElementById('new-transactions-body');
+                const conflictsBody = document.getElementById('conflicts-body');
+                if (newTransactionsBody) newTransactionsBody.innerHTML = '';
+                if (conflictsBody) conflictsBody.innerHTML = '';
+                if (fileInput) fileInput.value = '';
+                showToast('Brokerage template changed. Please select your file again.', 'info');
+            }
+        });
+    }
 
     if (importCsvBtn) {
         importCsvBtn.addEventListener('click', async () => {
@@ -117,15 +140,18 @@ export function initializeImportHandlers() {
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
             document.getElementById('reconciliation-section').style.display = 'none';
-            document.getElementById('new-transactions-body').innerHTML = '';
-            document.getElementById('conflicts-body').innerHTML = '';
-            fileInput.value = ''; // Clear the file input
+            const newTransactionsBody = document.getElementById('new-transactions-body');
+            const conflictsBody = document.getElementById('conflicts-body');
+            if (newTransactionsBody) newTransactionsBody.innerHTML = '';
+            if (conflictsBody) conflictsBody.innerHTML = '';
+            if (fileInput) fileInput.value = '';
         });
     }
     
     if (commitBtn) {
         commitBtn.addEventListener('click', async () => {
             const reconSection = document.getElementById('reconciliation-section');
+            if (!reconSection) return;
             const sessionId = reconSection.dataset.sessionId;
             const resolutions = Array.from(document.querySelectorAll('.conflict-resolution')).map(select => ({
                 manualId: (/** @type {HTMLSelectElement} */(select)).dataset.manualId,
