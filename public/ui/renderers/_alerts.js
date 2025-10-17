@@ -1,4 +1,5 @@
-// /public/ui/renderers/_alerts.js
+﻿// /public/ui/renderers/_alerts.js
+// Version 0.1.5
 /**
  * @file Renderer for the alerts table.
  * @module renderers/_alerts

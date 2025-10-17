@@ -1,4 +1,4 @@
-// /public/ui/renderers.js
+﻿// /public/ui/renderers.js
 /**
  * @file This file acts as a central hub for importing and exporting all the renderer modules.
  */

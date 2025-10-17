@@ -1,4 +1,4 @@
-// /public/ui/renderers/_snapshots.js
+﻿// /public/ui/renderers/_snapshots.js
 /**
  * @file Renderer for the snapshots page.
  * @module renderers/_snapshots
@@ -44,14 +44,14 @@ export function renderSnapshots(snapshots) {
 
         sortedSnapshots.forEach(snap => {
             const row = tableBody.insertRow();
-            row.innerHTML = `
-                <td>${snap.snapshot_date}</td>
-                <td>${snap.exchange}</td>
-                <td class="numeric">${formatAccounting(snap.value)}</td>
+            row.innerHTML = \
+                <td>\</td>
+                <td>\</td>
+                <td class="numeric">\</td>
                 <td class="actions-cell">
-                    <button class="delete-snapshot-btn delete-btn" data-id="${snap.id}">Delete</button>
+                    <button class="delete-snapshot-btn delete-btn" data-id="\">Delete</button>
                 </td>
-            `;
+            \;
         });
     }
 }
