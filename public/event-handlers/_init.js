@@ -1,5 +1,5 @@
 // /public/event-handlers/_init.js
-// Version 0.1.9
+// Version 0.1.16
 /**
  * @file Initializes all event handlers for the application.
  * @module event-handlers/_init

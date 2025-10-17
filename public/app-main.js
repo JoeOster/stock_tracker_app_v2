@@ -1,5 +1,5 @@
 // /public/app-main.js
-// Version 0.1.8
+// Version 0.1.16
 /**
  * @file Main application entry point. Handles initialization, state management,
  * and view switching.
@@ -8,15 +8,17 @@
 
 import { initializeAllEventHandlers } from './event-handlers/_init.js';
 import { state, updateState } from './state.js';
-import {
-    renderAlerts,
-    renderPortfolioCharts,
-    renderDailyReport,
-    renderTransactionLedger,
-    renderOpenOrders,
-    renderSnapshots,
-} from './ui/renderers.js';
-import { renderTabs, styleActiveTab } from './ui/renderers/_tabs.js'; // <-- Direct import
+import { refreshLedger } from './api.js';
+import { loadAlertsPage } from './event-handlers/_alerts.js';
+import { loadDailyReportPage } from './event-handlers/_dailyReport.js';
+import { loadOrdersPage } from './event-handlers/_orders.js';
+import { loadChartsAndSnapshotsPage } from './event-handlers/_snapshots.js';
+import { renderPortfolioCharts } from './ui/renderers/_charts.js';
+import { renderLedgerPage } from './ui/renderers/_ledger.js';
+import { renderOpenOrders } from './ui/renderers/_orders.js';
+import { renderSnapshots } from './ui/renderers/_snapshots.js';
+import { renderAlerts } from './ui/renderers/_alerts.js';
+import { renderTabs, styleActiveTab } from './ui/renderers/_tabs.js';
 import { showToast } from './ui/helpers.js';
 
 /**
@@ -24,7 +26,36 @@ import { showToast } from './ui/helpers.js';
  * @returns {Promise<void>}
  */
 async function fetchInitialData() {
-    // ... (rest of the function is unchanged)
+    try {
+        const [
+            transactions,
+            openOrders,
+            snapshots,
+            alerts,
+            accountHolders,
+            exchanges
+        ] = await Promise.all([
+            fetch(`/api/transactions?holder=${state.selectedAccountHolderId}`).then(res => res.json()),
+            fetch(`/api/orders/pending?holder=${state.selectedAccountHolderId}`).then(res => res.json()),
+            fetch(`/api/reporting/snapshots?holder=${state.selectedAccountHolderId}`).then(res => res.json()),
+            fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`).then(res => res.json()),
+            fetch('/api/accounts/holders').then(res => res.json()),
+            fetch('/api/accounts/exchanges').then(res => res.json())
+        ]);
+
+        updateState({
+            transactions,
+            openOrders,
+            allSnapshots: snapshots,
+            activeAlerts: alerts,
+            allAccountHolders: accountHolders,
+            allExchanges: exchanges
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch initial data:', error);
+        showToast('Error loading initial application data.', 'error');
+    }
 }
 
 /**
@@ -36,48 +67,44 @@ export async function switchView(viewType, viewValue = null) {
     updateState({ currentView: { type: viewType, value: viewValue } });
     styleActiveTab(state.currentView);
 
-    const containers = document.querySelectorAll('.page-container');
-    containers.forEach(c => {
-        const container = /** @type {HTMLElement} */ (c);
-        container.style.display = 'none';
-    });
+    document.querySelectorAll('.page-container').forEach(c => (/** @type {HTMLElement} */ (c)).style.display = 'none');
 
     try {
-        let data;
+        let container;
         switch (viewType) {
             case 'charts':
-                document.getElementById('charts-page-container').style.display = 'block';
-                await renderPortfolioCharts();
+                container = document.getElementById('charts-container');
+                if (container) container.style.display = 'block';
+                await loadChartsAndSnapshotsPage('charts');
                 break;
             case 'ledger':
-                data = await (await fetch(`/api/transactions?holder=${state.selectedAccountHolderId}`)).json();
-                updateState({ transactions: data });
-                document.getElementById('ledger-page-container').style.display = 'block';
-                renderTransactionLedger(data);
+                container = document.getElementById('ledger-page-container');
+                if (container) container.style.display = 'block';
+                await refreshLedger();
                 break;
             case 'orders':
-                data = await (await fetch(`/api/orders/pending?holder=${state.selectedAccountHolderId}`)).json();
-                updateState({ openOrders: data });
-                document.getElementById('orders-page-container').style.display = 'block';
-                renderOpenOrders(data);
+                container = document.getElementById('orders-page-container');
+                if (container) container.style.display = 'block';
+                await loadOrdersPage();
                 break;
             case 'alerts':
-                data = await (await fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`)).json();
-                updateState({ activeAlerts: data });
-                document.getElementById('alerts-page-container').style.display = 'block';
-                renderAlerts(data);
+                container = document.getElementById('alerts-page-container');
+                if (container) container.style.display = 'block';
+                await loadAlertsPage();
                 break;
             case 'snapshots':
-                data = await (await fetch(`/api/reporting/snapshots?holder=${state.selectedAccountHolderId}`)).json();
-                updateState({ allSnapshots: data });
-                document.getElementById('snapshots-page-container').style.display = 'block';
-                renderSnapshots(data);
+                container = document.getElementById('snapshots-page-container');
+                if (container) container.style.display = 'block';
+                await loadChartsAndSnapshotsPage('snapshots');
                 break;
             case 'imports':
-                document.getElementById('imports-page-container').style.display = 'block';
+                container = document.getElementById('imports-page-container');
+                if (container) container.style.display = 'block';
                 break;
             case 'date':
-                // This will be updated when we decouple the daily report renderer
+                container = document.getElementById('daily-report-container');
+                if (container) container.style.display = 'block';
+                if(viewValue) await loadDailyReportPage(viewValue);
                 break;
         }
     } catch (error) {
@@ -94,9 +121,18 @@ async function initializeApp() {
     await fetchInitialData();
 
     renderTabs(state.currentView);
-    switchView(state.currentView.type, state.currentView.value);
+    await switchView(state.currentView.type, state.currentView.value);
 
-    // ... (rest of the function is unchanged)
+    const accountHolderSelectors = document.querySelectorAll('.account-holder-select');
+    accountHolderSelectors.forEach(select => {
+        const selector = /** @type {HTMLSelectElement} */ (select);
+        selector.innerHTML = '';
+        state.allAccountHolders.forEach(holder => {
+            const option = new Option(holder.name, String(holder.id));
+            selector.add(option);
+        });
+        selector.value = String(state.selectedAccountHolderId);
+    });
 }
 
 // --- App Entry Point ---

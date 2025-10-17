@@ -1,5 +1,5 @@
 // /public/state.js
-// Version 0.1.9
+// Version 0.1.16
 /**
  * @file Manages the application's global state.
  * @module state

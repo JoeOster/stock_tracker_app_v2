@@ -1,10 +1,9 @@
 // /public/ui/renderers/_ledger.js
-// Version 0.1.11
+// Version 0.1.15
 /**
  * @file Renderer for the transaction ledger.
  * @module renderers/_ledger
  */
-
 import { formatAccounting, formatQuantity } from '../helpers.js';
 
 /**
