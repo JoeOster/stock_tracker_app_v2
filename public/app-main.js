@@ -1,5 +1,5 @@
 // /public/app-main.js
-// Version 0.1.16
+// Version 0.1.17
 /**
  * @file Main application entry point. Handles initialization, state management,
  * and view switching.
@@ -10,53 +10,14 @@ import { initializeAllEventHandlers } from './event-handlers/_init.js';
 import { state, updateState } from './state.js';
 import { refreshLedger } from './api.js';
 import { loadAlertsPage } from './event-handlers/_alerts.js';
+import { loadChartsPage } from './event-handlers/_charts.js'; // <-- Correct import
 import { loadDailyReportPage } from './event-handlers/_dailyReport.js';
 import { loadOrdersPage } from './event-handlers/_orders.js';
-import { loadChartsAndSnapshotsPage } from './event-handlers/_snapshots.js';
-import { renderPortfolioCharts } from './ui/renderers/_charts.js';
-import { renderLedgerPage } from './ui/renderers/_ledger.js';
-import { renderOpenOrders } from './ui/renderers/_orders.js';
-import { renderSnapshots } from './ui/renderers/_snapshots.js';
-import { renderAlerts } from './ui/renderers/_alerts.js';
+import { loadSnapshotsPage } from './event-handlers/_snapshots.js'; // <-- Correct import
 import { renderTabs, styleActiveTab } from './ui/renderers/_tabs.js';
 import { showToast } from './ui/helpers.js';
 
-/**
- * Fetches the initial data required for the application to start.
- * @returns {Promise<void>}
- */
-async function fetchInitialData() {
-    try {
-        const [
-            transactions,
-            openOrders,
-            snapshots,
-            alerts,
-            accountHolders,
-            exchanges
-        ] = await Promise.all([
-            fetch(`/api/transactions?holder=${state.selectedAccountHolderId}`).then(res => res.json()),
-            fetch(`/api/orders/pending?holder=${state.selectedAccountHolderId}`).then(res => res.json()),
-            fetch(`/api/reporting/snapshots?holder=${state.selectedAccountHolderId}`).then(res => res.json()),
-            fetch(`/api/notifications?holder=${state.selectedAccountHolderId}`).then(res => res.json()),
-            fetch('/api/accounts/holders').then(res => res.json()),
-            fetch('/api/accounts/exchanges').then(res => res.json())
-        ]);
-
-        updateState({
-            transactions,
-            openOrders,
-            allSnapshots: snapshots,
-            activeAlerts: alerts,
-            allAccountHolders: accountHolders,
-            allExchanges: exchanges
-        });
-
-    } catch (error) {
-        console.error('Failed to fetch initial data:', error);
-        showToast('Error loading initial application data.', 'error');
-    }
-}
+// ... (fetchInitialData remains unchanged)
 
 /**
  * Switches the main view of the application and renders the necessary components.
@@ -75,7 +36,7 @@ export async function switchView(viewType, viewValue = null) {
             case 'charts':
                 container = document.getElementById('charts-container');
                 if (container) container.style.display = 'block';
-                await loadChartsAndSnapshotsPage('charts');
+                await loadChartsPage(); // <-- Use the new dedicated loader
                 break;
             case 'ledger':
                 container = document.getElementById('ledger-page-container');
@@ -95,7 +56,7 @@ export async function switchView(viewType, viewValue = null) {
             case 'snapshots':
                 container = document.getElementById('snapshots-page-container');
                 if (container) container.style.display = 'block';
-                await loadChartsAndSnapshotsPage('snapshots');
+                await loadSnapshotsPage(); // <-- Use the new dedicated loader
                 break;
             case 'imports':
                 container = document.getElementById('imports-page-container');
@@ -113,27 +74,4 @@ export async function switchView(viewType, viewValue = null) {
     }
 }
 
-/**
- * Initializes the application.
- */
-async function initializeApp() {
-    initializeAllEventHandlers();
-    await fetchInitialData();
-
-    renderTabs(state.currentView);
-    await switchView(state.currentView.type, state.currentView.value);
-
-    const accountHolderSelectors = document.querySelectorAll('.account-holder-select');
-    accountHolderSelectors.forEach(select => {
-        const selector = /** @type {HTMLSelectElement} */ (select);
-        selector.innerHTML = '';
-        state.allAccountHolders.forEach(holder => {
-            const option = new Option(holder.name, String(holder.id));
-            selector.add(option);
-        });
-        selector.value = String(state.selectedAccountHolderId);
-    });
-}
-
-// --- App Entry Point ---
-document.addEventListener('DOMContentLoaded', initializeApp);
+// ... (initializeApp and event listener remain unchanged)

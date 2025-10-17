@@ -1,5 +1,5 @@
 // /public/event-handlers/_snapshots.js
-// Version 0.1.10
+// Version 0.1.17
 /**
  * @file Initializes all event handlers for the Snapshots page.
  * @module event-handlers/_snapshots
@@ -8,33 +8,25 @@ import { state } from '../state.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { fetchSnapshots } from '../api.js';
 import { renderSnapshots } from '../ui/renderers/_snapshots.js';
-import { renderPortfolioCharts } from '../ui/renderers/_charts.js';
 import { switchView } from './_navigation.js';
 
 /**
- * Loads data for the charts and snapshots pages and triggers the appropriate renderer.
- * @param {string} viewType - The specific view to render ('charts' or 'snapshots').
+ * Loads data for the snapshots page and triggers the renderer.
  */
-export async function loadChartsAndSnapshotsPage(viewType) {
+export async function loadSnapshotsPage() {
     const tableBody = document.querySelector('#snapshots-table tbody');
-    if (viewType === 'snapshots' && tableBody) {
+    if (tableBody) {
         tableBody.innerHTML = '<tr><td colspan="4">Loading snapshots...</td></tr>';
     }
     
     try {
-        // FIX: Ensure the account holder ID is always a string before passing to the API.
         const snapshots = await fetchSnapshots(String(state.selectedAccountHolderId));
         state.allSnapshots = snapshots; // Ensure state is updated before rendering
-
-        if (viewType === 'charts') {
-            await renderPortfolioCharts();
-        } else {
-            renderSnapshots(snapshots);
-        }
+        renderSnapshots(snapshots);
     } catch (error) {
-        console.error(`Failed to load ${viewType} page:`, error);
+        console.error(`Failed to load snapshots page:`, error);
         showToast(error.message, 'error');
-        if (viewType === 'snapshots' && tableBody) {
+        if (tableBody) {
             tableBody.innerHTML = '<tr><td colspan="4">Error loading snapshots.</td></tr>';
         }
     }
