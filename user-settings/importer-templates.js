@@ -1,4 +1,4 @@
-// user-settings/importer-templates.js
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-PortfolioManagerTake3/user-settings/importer-templates.js
 // This file is in CommonJS format to be compatible with the Node.js server.
 module.exports = {
     brokerageTemplates: {
@@ -49,7 +49,9 @@ module.exports = {
             filter: (row) => ['Buy', 'Sell'].includes(row['Trans Code']),
             transform: (row) => {
                 const quantity = parseFloat(row['Quantity']);
-                const amount = parseFloat(row['Amount']);
+                // FIX: Remove accounting symbols before parsing the amount.
+                const cleanedAmount = (row['Amount'] || '').replace(/[$,()]/g, '');
+                const amount = parseFloat(cleanedAmount);
                 const price = (quantity && amount) ? Math.abs(amount / quantity) : 0;
                 // Standardize date parsing
                 const date = new Date(row['Activity Date']);
