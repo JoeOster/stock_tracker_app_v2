@@ -1,5 +1,5 @@
 // /public/app-main.js
-// Version 0.1.19
+// Version 0.1.20
 /**
  * @file Main application entry point. Handles initialization, state management,
  * and view switching.
@@ -7,70 +7,59 @@
  */
 
 import { initializeAllEventHandlers } from './event-handlers/_init.js';
-import { state, updateState } from './state.js';
-import { refreshLedger } from './api.js';
-import { loadAlertsPage } from './event-handlers/_alerts.js';
-import { loadChartsPage } from './event-handlers/_charts.js';
-import { loadDailyReportPage } from './event-handlers/_dailyReport.js';
-import { loadOrdersPage } from './event-handlers/_orders.js';
-import { loadSnapshotsPage } from './event-handlers/_snapshots.js';
-import { renderTabs, styleActiveTab } from './ui/renderers/_tabs.js';
 import { showToast } from './ui/helpers.js';
-
-// ... (fetchInitialData remains unchanged)
+import { switchView } from './event-handlers/_navigation.js';
 
 /**
- * Switches the main view of the application and renders the necessary components.
- * @param {string} viewType - The type of view to switch to (e.g., 'charts', 'ledger').
- * @param {string|null} [viewValue=null] - An optional value for the view (e.g., a date).
+ * Initializes the application after the DOM is fully loaded.
+ * It fetches all necessary HTML templates, injects them into the main page,
+ * initializes all event handlers, and then loads the default view.
  */
-export async function switchView(viewType, viewValue = null) {
-    updateState({ currentView: { type: viewType, value: viewValue } });
-    styleActiveTab(state.currentView);
+async function initialize() {
+    console.log("DOM fully loaded and parsed");
 
-    document.querySelectorAll('.page-container').forEach(c => (/** @type {HTMLElement} */ (c)).style.display = 'none');
+    const mainContent = document.getElementById('main-content');
+    const modalContainer = document.getElementById('modal-container');
+    if (!mainContent || !modalContainer) {
+        console.error("Fatal: Main content or modal container not found.");
+        return;
+    }
 
     try {
-        let container;
-        switch (viewType) {
-            case 'charts':
-                container = document.getElementById('charts-container');
-                if (container) container.style.display = 'block';
-                await loadChartsPage();
-                break;
-            case 'ledger':
-                container = document.getElementById('ledger-page-container');
-                if (container) container.style.display = 'block';
-                await refreshLedger();
-                break;
-            case 'orders':
-                container = document.getElementById('orders-page-container');
-                if (container) container.style.display = 'block';
-                await loadOrdersPage();
-                break;
-            case 'alerts':
-                container = document.getElementById('alerts-page-container');
-                if (container) container.style.display = 'block';
-                await loadAlertsPage();
-                break;
-            case 'snapshots':
-                container = document.getElementById('snapshots-page-container');
-                if (container) container.style.display = 'block';
-                await loadSnapshotsPage();
-                break;
-            case 'imports':
-                container = document.getElementById('imports-page-container');
-                if (container) container.style.display = 'block';
-                break;
-            case 'date':
-                container = document.getElementById('daily-report-container');
-                if (container) container.style.display = 'block';
-                if(viewValue) await loadDailyReportPage(viewValue);
-                break;
-        }
+        // Fetch all page and modal templates in parallel.
+        const [
+            alerts, charts, dailyReport, imports, ledger, modals, orders, snapshots, watchlist
+        ] = await Promise.all([
+            fetch('./templates/_alerts.html').then(res => res.text()),
+            fetch('./templates/_charts.html').then(res => res.text()),
+            fetch('./templates/_dailyReport.html').then(res => res.text()),
+            fetch('./templates/_imports.html').then(res => res.text()),
+            fetch('./templates/_ledger.html').then(res => res.text()),
+            fetch('./templates/_modals.html').then(res => res.text()),
+            fetch('./templates/_orders.html').then(res => res.text()),
+            fetch('./templates/_snapshots.html').then(res => res.text()),
+            fetch('./templates/_watchlist.html').then(res => res.text()),
+        ]);
+        
+        // Inject the templates into the DOM.
+        mainContent.innerHTML = alerts + charts + dailyReport + imports + ledger + orders + snapshots + watchlist;
+        modalContainer.innerHTML = modals;
+        console.log("All templates loaded successfully.");
+
     } catch (error) {
-        console.error(`Failed to switch view to ${viewType}:`, error);
-        showToast('Error loading page data.', 'error');
+        console.error("Failed to load one or more templates:", error);
+        showToast('Error loading page templates. Please refresh.', 'error');
+        return;
     }
+
+    // Now that templates are in the DOM, initialize all event handlers.
+    initializeAllEventHandlers();
+
+    // Load the default 'charts' view to start the application.
+    await switchView('charts');
 }
 
+
+// --- Application Entry Point ---
+// Waits for the DOM to be fully loaded before initializing the application.
+document.addEventListener('DOMContentLoaded', initialize);

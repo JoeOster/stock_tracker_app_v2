@@ -1,7 +1,13 @@
 // public/event-handlers/_dailyReport.js
+// Version 0.1.20
+/**
+ * @file Loads data for and initializes event handlers for the Daily Report page.
+ * @module event-handlers/_dailyReport
+ */
 import { state } from '../state.js';
 import { formatAccounting, getCurrentESTDateString, showToast, sortTableByColumn, populatePricesFromCache } from '../ui/helpers.js';
-import { renderDailyReport } from '../ui/renderers.js';
+// FIX: Import directly from the specific renderer module and use the correct function name.
+import { renderDailyReportPage } from '../ui/renderers/_dailyReport.js';
 import { fetchPositions, fetchDailyPerformance, updatePricesForView } from '../api.js';
 
 /**
@@ -24,7 +30,7 @@ export async function loadDailyReportPage(viewValue) {
         ]);
 
         // Render the main table structure with the data we have so far.
-        renderDailyReport(viewValue, state.activityMap, null, positionData);
+        renderDailyReportPage(viewValue, state.activityMap, null, positionData);
         
         // Now, gather all the unique tickers from the open positions for a single price fetch.
         const tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
@@ -57,7 +63,7 @@ export async function loadDailyReportPage(viewValue) {
     } catch (error) {
         console.error("Failed to load daily report:", error);
         showToast(error.message, 'error');
-        renderDailyReport(viewValue, state.activityMap, null, null);
+        renderDailyReportPage(viewValue, state.activityMap, null, null);
          if(logBody) logBody.innerHTML = `<tr><td colspan="12">Error loading transaction data.</td></tr>`;
          if(summaryBody) summaryBody.innerHTML = '<tr><td colspan="10">Error loading position data.</td></tr>';
     }

@@ -1,7 +1,13 @@
 // public/api.js
+// Version 0.1.20
+/**
+ * @file This file centralizes all client-side API (fetch) calls to the server.
+ * @module api
+ */
 import { state } from './state.js';
 import { populatePricesFromCache, getCurrentESTDateString } from './ui/helpers.js';
-import { renderLedger } from './ui/renderers.js';
+// FIX: Import directly from the specific renderer module.
+import { renderLedgerPage } from './ui/renderers/_ledger.js';
 
 /**
  * A helper function to handle fetch responses, throwing an error with a server message if not ok.
@@ -18,22 +24,23 @@ async function handleResponse(response) {
 
 /**
  * Fetches the latest transactions and re-renders the ledger view.
- * This function now lives in api.js to break the circular dependency.
  * @returns {Promise<void>}
  */
 export async function refreshLedger() {
     try {
         const res = await fetch(`/api/transactions?holder=${state.selectedAccountHolderId}`);
-        if (!res.ok) throw new Error('Failed to fetch latest transactions');
-        state.allTransactions = await res.json();
-        renderLedger(state.allTransactions, state.ledgerSort);
-    } catch (error) { console.error("Failed to refresh ledger:", error); }
+        state.transactions = await handleResponse(res);
+        renderLedgerPage(state.transactions, state.ledgerSort);
+    } catch (error) { 
+        console.error("Failed to refresh ledger:", error); 
+        // Optionally, render an error state in the ledger
+        renderLedgerPage([], state.ledgerSort);
+    }
 }
 
 
 /**
  * Fetches the latest market prices for a given list of tickers and updates the price cache.
- * It intelligently decides whether to fetch live data or rely on cached historical data based on the date.
  * @param {string} viewDate - The date for which to fetch prices.
  * @param {string[]} tickersToUpdate - The specific list of tickers to fetch.
  * @returns {Promise<void>}

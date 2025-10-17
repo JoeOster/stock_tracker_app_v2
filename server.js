@@ -34,7 +34,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(fileUpload());
 
 /**
- * Main function to set up and start the application.
+ * Main function to set up the application routes and services.
  */
 async function setupApp() {
     console.log("Server.js - Step 9: setupApp() called.");
@@ -61,14 +61,12 @@ async function setupApp() {
     apiRouter.use('/watchlist', require('./routes/watchlist.js')(db, log));
 
     app.use('/api', apiRouter);
+    
+    console.log("Server.js - Step 19: API routes configured.");
 
-    // --- Frontend Catch-all for SPA ---
-    // FIX: Use a regular expression to catch all routes that are not API routes.
-    app.get(/^(?!\/api).*/, (req, res) => {
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    });
+    // FIX: The catch-all route is moved outside of this setup function
+    // to ensure it is the last route handler added to the app.
 
-    console.log("Server.js - Step 19: All routes configured.");
     return { app, db, log, importSessions };
 }
 
@@ -87,8 +85,20 @@ function startServer(appInstance) {
 // --- Application Start ---
 console.log("Server.js - Step 20: Beginning application startup process.");
 if (require.main === module) {
-    setupApp().then(({ app }) => {
-        startServer(app);
+    setupApp().then(({ app: configuredApp }) => {
+        
+        // --- Frontend Catch-all for SPA ---
+        // This MUST be the last route handler.
+        configuredApp.get('*', (req, res) => {
+            // This ensures that any request that is not for an API endpoint
+            // or an existing static file will be served the index.html file.
+            if (!req.path.startsWith('/api/')) {
+                res.sendFile(path.join(__dirname, 'public', 'index.html'));
+            }
+        });
+        
+        startServer(configuredApp);
+
     }).catch(err => {
         log(`[FATAL] Failed to start application: ${err.message}`);
         process.exit(1);
