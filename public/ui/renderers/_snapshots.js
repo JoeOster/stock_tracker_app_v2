@@ -1,21 +1,21 @@
-// Portfolio Tracker V3.0.5
-// public/ui/renderers/_snapshots.js
+// /public/ui/renderers/_snapshots.js
+/**
+ * @file Renderer for the snapshots page.
+ * @module renderers/_snapshots
+ */
 import { state } from '../../state.js';
 import { formatAccounting } from '../helpers.js';
 
 /**
  * Renders the content of the Snapshots page from a given array of snapshot data.
- * This function no longer fetches its own data.
  * @param {any[]} snapshots - An array of snapshot objects to render.
  * @returns {void}
  */
-export function renderSnapshotsPage(snapshots) {
+export function renderSnapshots(snapshots) {
     const exchangeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('snapshot-exchange'));
     
-    // Update the global state with the new data.
     state.allSnapshots = snapshots;
 
-    // Populate the exchange dropdown with the latest list of exchanges.
     if (exchangeSelect) {
         const currentVal = exchangeSelect.value;
         exchangeSelect.innerHTML = '<option value="" disabled selected>Select Exchange</option>';
@@ -30,20 +30,18 @@ export function renderSnapshotsPage(snapshots) {
 
     const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#snapshots-table tbody'));
     if (tableBody) {
-        tableBody.innerHTML = ''; // Clear existing content
+        tableBody.innerHTML = '';
         if (snapshots.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4">No snapshots have been logged yet for this account holder.</td></tr>';
             return;
         }
         
-        // Sort snapshots by date (newest first) and then by exchange name.
         const sortedSnapshots = [...snapshots].sort((a, b) => {
             if (a.snapshot_date > b.snapshot_date) return -1;
             if (a.snapshot_date < b.snapshot_date) return 1;
             return a.exchange.localeCompare(b.exchange);
         });
 
-        // Build and append a row for each snapshot.
         sortedSnapshots.forEach(snap => {
             const row = tableBody.insertRow();
             row.innerHTML = `

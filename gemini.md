@@ -1,51 +1,51 @@
 # **Gemini Context File for Portfolio Tracker V3**
 
-**Last Updated:** 2025-10-14
+**Last Updated:** 2025-10-16
 
 This document provides a comprehensive summary of the "Portfolio Tracker V3" project and its strategic roadmap to assist AI prompts.
 
-## **1\. Project Summary**
+## **1. Project Summary**
 
 Portfolio Tracker V3 is a self-hosted web application for active retail traders to track investment performance and strategy across multiple brokerage accounts. It is built with a Node.js/Express backend, a vanilla JavaScript frontend, and uses SQLite for data storage. The project has a modular architecture and a comprehensive automated testing and deployment process.
 
 **GitHub Repository:** <https://github.com/JoeOster/stock_tracker_app_v2>
+**Active Branch:** `Phase0.1.1---Refactor-renderers`
 
-## **2\. Core Architecture**
+## **2. Architectural Principles & Standards**
 
-* **Backend (/routes, /services, server.js):** An Express.js server handles API requests. The logic is split into route files and services (e.g., cronJobs.js for scheduled tasks).
-* **Database (database.js, /migrations):** Uses SQLite3 with a built-in migration system that automatically applies .sql files on startup.
-* **Frontend (/public):**
-  * **app-main.js**: The main script managing state, loading templates, and initializing modules.
-  * **/templates**: Contains HTML partials for each page view.
-  * **/ui/renderers**: Modules responsible for rendering data into the DOM.
-  * **/event-handlers**: Modules for handling user interactions.
-* **Testing (/tests):** Uses Jest with separate configurations for API (`jest.config.api.js`) and UI (`jest.config.ui.js`) tests. The framework includes code coverage reporting and runs automatically as part of the deployment script.
+### **Coding Standards**
 
-## **3\. Strategic Roadmap**
+1. **JSDoc Comments:** All JavaScript code must be documented using JSDoc-style comments to describe the purpose, parameters, and return values of functions.
+2. **File Size:** To ensure maintainability and optimal processing, individual modules should be kept concise and focused. As a general guideline, files should not exceed **200 lines of code**.
 
-### **Completed: Intelligent CSV Importer**
+### **File Schema**
 
-A sophisticated, multi-step reconciliation workflow that treats the brokerage CSV as the definitive source of truth.
+* **`public/app-main.js`**: The primary application entry point. Responsible for initialization, template loading, and view switching.
+* **`public/state.js`**: Manages global client-side state.
+* **`public/api.js`**: Handles all `fetch` calls to the backend server.
+* **`public/event-handlers/_init.js`**: The central initializer that calls all other event handler initializers.
+* **`public/event-handlers/_*.js`**: Handles all user interaction logic for a single page.
+* **`public/ui/renderers/_*.js`**: Renders data into the DOM for a single page. Does not fetch data or handle events.
+* **`public/templates/_*.html`**: Contains the HTML structure for a single page or component.
 
-* **Brokerage Templates:** The importer uses presets for major brokerages (Fidelity, E-Trade, Robinhood) with robust filtering logic to handle real-world data, including extraneous header/footer rows and non-transactional activities.
-* **Conflict Resolution:** The backend API detects and flags conflicts between CSV data and existing manual entries, which are then presented to the user for resolution (Keep or Replace).
-* **Automated Testing:** The entire importer workflow is validated by an automated API test suite using sanitized, real-world CSV files.
+### **Interaction Rules**
 
-### **Next Phase: Strategy & Advice Journal**
+1. **Modules Own Their DOM:** A module should only ever interact with elements defined in its own corresponding template file.
+2. **No Direct Function Calls Between Peer Modules:** Modules should communicate indirectly. For example, an event handler calls an API function, which returns data, and then the event handler passes that data to a renderer.
+3. **Strict Separation of Concerns:** Each module type has one job as defined in the File Schema.
 
-This feature will allow users to log, track, and analyze trading ideas from various sources.
+## **3. Strategic Roadmap**
 
-* **Database Schema:** New tables for `strategies`, `journal_entries`, `strategy_documents`, and `journal_entry_prices`.
-* **Direct Trade Linking:** The `transactions` table will be modified to allow a trade to be linked to a `journal_entry_id`.
-* **Intraday Price Tracking:** The cron job will be enhanced to fetch and store prices for open journal entries.
-* **Automated Alerts:** The system will create a notification when a paper trade's profit or stop-loss target is met.
-* **Journal Dashboard UI:** A new "Journal" page will feature performance analysis dashboards and charts.
+### **Current Task: Decouple Frontend Renderers**
 
-### **Future Enhancements & Ancillary Features**
+**Objective:** To refactor the frontend rendering architecture by eliminating the central `renderers.js` hub file. This will make each renderer a standalone, independent module, resolving cascading import/export errors and improving maintainability.
 
-* **Test Results Tracking:** A system to automatically capture the output of `npm test` and store it in the database to visualize the project's code health over time.
-* **Notification Center/Event Log:** Add a sub-tab to the "Alerts" page to provide a persistent history of all toast messages and system notifications.
-* **Import Reminder System:** A client-side, exchange-specific reminder system to notify the user if they haven't imported a file for a specific exchange recently.
-* **Technical Improvements:**
-  * The `deploy.bat` script will be updated to back up the new `uploads/` directory.
-  * A database index will be added to the `journal_entry_prices` table for performance.
+**Strategy & Naming Schema:**
+
+1. **Standardize Function Names:** All main page rendering functions will be named using the `render[PageName]Page` convention (e.g., `renderLedgerPage`, `renderAlertsPage`).
+2. **Modify `public/app-main.js`:** Update the main application file to import each renderer function directly from its source file (e.g., from `_alerts.js`, `_charts.js`, etc.), using the new standardized names.
+3. **Delete the Hub:** Once all direct imports are in place, the `public/ui/renderers.js` hub file will be safely deleted.
+
+### **Next Phase: Rebuild "New Orders" Page**
+
+Once the renderer decoupling is complete, the "New Orders" page will be rebuilt from a clean slate to restore its functionality on a stable foundation.

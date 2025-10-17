@@ -1,24 +1,23 @@
-// public/ui/renderers.js
+// /public/ui/renderers.js
+/**
+ * @file This file acts as a central hub for importing and exporting all the renderer modules.
+ */
 
-// --- Central Export File for All Rendering Logic ---
-
-// Import functions from the individual renderer modules.
-import { renderTabs } from './renderers/_tabs.js';
+import { renderAlerts } from './renderers/_alerts.js';
+import { renderPortfolioCharts } from './renderers/_charts.js';
 import { renderDailyReport } from './renderers/_dailyReport.js';
-import { renderChartsPage, renderPortfolioOverview } from './renderers/_charts.js';
-import { renderLedger } from './renderers/_ledger.js';
-import { renderOrdersPage } from './renderers/_orders.js';
-import { renderAlertsPage } from './renderers/_alerts.js';
-import { renderSnapshotsPage } from './renderers/_snapshots.js';
+import { renderTransactionLedger } from './renderers/_ledger.js';
+import { renderOpenOrders } from './renderers/_orders.js';
+import { renderSnapshots } from './renderers/_snapshots.js';
+import { renderTabs, styleActiveTab } from './renderers/_tabs.js';
 
-// Export the functions explicitly by name.
 export {
-    renderTabs,
+    renderAlerts,
+    renderPortfolioCharts,
     renderDailyReport,
-    renderChartsPage,
-    renderPortfolioOverview,
-    renderLedger,
-    renderOrdersPage,
-    renderAlertsPage,
-    renderSnapshotsPage
+    renderTransactionLedger,
+    renderOpenOrders,
+    renderSnapshots,
+    renderTabs,
+    styleActiveTab,
 };

@@ -1,79 +1,78 @@
-// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Portfolio-Manager-Phase-0/server.js
-// server.js (Refactored)
+// /server.js
+/**
+ * @file Main server entry point for the Portfolio Tracker application.
+ * @module server
+ */
+
+// --- Environment Setup ---
+require('dotenv').config();
 const express = require('express');
 const fileUpload = require('express-fileupload');
-require('dotenv').config();
-const fs = require('fs');
 const path = require('path');
-const setupDatabase = require('./database');
-const { initializeAllCronJobs, captureEodPrices, runOrderWatcher } = require('./services/cronJobs');
+const { setupCronJobs, captureEodPrices } = require('./services/cronJobs.js');
+const { initializeDatabase } = require('./database.js');
 
-// Import all the new route files
-const transactionRoutes = require('./routes/transactions');
-const accountRoutes = require('./routes/accounts');
-const reportingRoutes = require('./routes/reporting');
-const orderRoutes = require('./routes/orders');
-const utilityRoutes = require('./routes/utility');
-const importerRoutes = require('./routes/importer');
+// --- Global Variables & App Initialization ---
+const app = express();
+const PORT = process.env.PORT || 3003;
+const importSessions = new Map();
 
-// --- Logger Setup ---
-const logDirectory = path.join(__dirname, 'logs');
-const logFile = path.join(logDirectory, 'log.log');
+// A simple logger
+const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
 
-if (!fs.existsSync(logDirectory)) {
-    fs.mkdirSync(logDirectory);
-}
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(fileUpload());
 
-function log(message) {
-    const timestamp = new Date().toISOString();
-    fs.appendFileSync(logFile, `${timestamp} - ${message}\n`);
-}
-
+/**
+ * Main function to set up and start the application.
+ */
 async function setupApp() {
-    const app = express();
-    app.use(express.json());
-    app.use(fileUpload());
-    app.use(express.static('public'));
+    const db = await initializeDatabase();
+    setupCronJobs(db);
 
-    app.use('/api', (req, res, next) => {
-        log(`[REQUEST] ${req.method} ${req.originalUrl}`);
-        next();
+    // --- API Routes ---
+    const apiRouter = express.Router();
+    apiRouter.use('/transactions', require('./routes/transactions.js')(db, log, captureEodPrices, importSessions));
+    apiRouter.use('/orders', require('./routes/orders.js')(db, log));
+    apiRouter.use('/reporting', require('./routes/reporting.js')(db, log));
+    apiRouter.use('/accounts', require('./routes/accounts.js')(db, log));
+    apiRouter.use('/utility', require('./routes/utility.js')(db, log));
+    apiRouter.use('/importer', require('./routes/importer.js')(db, log, importSessions));
+    apiRouter.use('/watchlist', require('./routes/watchlist.js')(db, log));
+
+    app.use('/api', apiRouter);
+
+    // --- Frontend Catch-all for SPA ---
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
     });
 
-    let db;
-    try {
-        db = await setupDatabase();
-    } catch (error) {
-        console.error("CRITICAL: Failed to connect to the database.", error);
-        log(`CRITICAL: Failed to connect to the database. ${error.message}`);
-        process.exit(1);
-    }
 
-    if (process.env.NODE_ENV !== 'test') {
-        initializeAllCronJobs(db);
-    }
-    
-    const importSessions = new Map(); 
-
-    // --- Register All API Routes ---
-    app.use('/api/transactions', transactionRoutes(db, log, captureEodPrices, importSessions));
-    app.use('/api/accounts', accountRoutes(db, log));
-    app.use('/api/reporting', reportingRoutes(db, log));
-    app.use('/api/orders', orderRoutes(db, log));
-    app.use('/api/utility', utilityRoutes(db, log, { captureEodPrices }));
-    app.use('/api/importer', importerRoutes(db, log, importSessions));
-    
-    return { app, db };
+    return { app, db, log, importSessions };
 }
 
+/**
+ * Starts the server.
+ * @param {express.Application} appInstance - The Express application instance.
+ */
+function startServer(appInstance) {
+    if (process.env.NODE_ENV !== 'test') {
+        appInstance.listen(PORT, () => {
+            log(`Server is running! Open your browser and go to http://localhost:${PORT}`);
+        });
+    }
+}
+
+// --- Application Start ---
 if (require.main === module) {
     setupApp().then(({ app }) => {
-        const PORT = process.env.PORT || 3003;
-        app.listen(PORT, () => {
-            console.log(`Server is running! Open your browser and go to http://localhost:${PORT}`);
-            log(`Server started on port ${PORT}`);
-        });
+        startServer(app);
+    }).catch(err => {
+        log(`[FATAL] Failed to start application: ${err.message}`);
+        process.exit(1);
     });
 }
 
-module.exports = { setupApp, runOrderWatcher };
+// Export for testing
+module.exports = { setupApp, log };

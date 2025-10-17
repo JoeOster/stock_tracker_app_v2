@@ -1,11 +1,13 @@
-// database.js - v3.0 - 2025-10-04 (With Migration System)
-
+// /database.js
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const path = require('path');
 const fs = require('fs').promises;
 
-// --- MIGRATION RUNNER ---
+/**
+ * Runs all pending database migrations.
+ * @param {import('sqlite').Database} db - The database instance.
+ */
 async function runMigrations(db) {
     console.log("Checking for migrations...");
     await db.exec(`
@@ -50,9 +52,11 @@ async function runMigrations(db) {
     }
 }
 
-
-async function setup() {
-    // Dynamically choose the database file based on the environment
+/**
+ * Initializes the database connection and runs migrations.
+ * @returns {Promise<import('sqlite').Database>} The initialized database instance.
+ */
+async function initializeDatabase() {
     let dbPath;
     if (process.env.DATABASE_PATH) {
         dbPath = process.env.DATABASE_PATH;
@@ -61,7 +65,6 @@ async function setup() {
     } else if (process.env.NODE_ENV === 'test') {
         dbPath = './test.db';
     } else {
-        // Default to development
         dbPath = './development.db';
     }
 
@@ -70,51 +73,9 @@ async function setup() {
         driver: sqlite3.Database
     });
 
-    // This is now the minimal base schema. All other columns will be added by migrations.
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticker TEXT NOT NULL,
-            exchange TEXT NOT NULL,
-            transaction_type TEXT NOT NULL,
-            quantity REAL NOT NULL,
-            price REAL NOT NULL,
-            transaction_date TEXT NOT NULL,
-            original_quantity REAL
-        )
-    `);
-
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS account_snapshots (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            exchange TEXT NOT NULL,
-            snapshot_date TEXT NOT NULL,
-            value REAL NOT NULL,
-            UNIQUE(exchange, snapshot_date)
-        )
-    `);
-    
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS exchanges (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE
-        )
-    `);
-
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS historical_prices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticker TEXT NOT NULL,
-            date TEXT NOT NULL,
-            close_price REAL NOT NULL,
-            UNIQUE(ticker, date)
-        )
-    `);
-
     await runMigrations(db);
 
     return db;
 }
 
-
-module.exports = setup;
+module.exports = { initializeDatabase };
