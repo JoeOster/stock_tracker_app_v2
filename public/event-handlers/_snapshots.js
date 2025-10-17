@@ -1,5 +1,5 @@
 // /public/event-handlers/_snapshots.js
-// Version 0.1.17
+// Version 0.1.19
 /**
  * @file Initializes all event handlers for the Snapshots page.
  * @module event-handlers/_snapshots

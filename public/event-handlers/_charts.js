@@ -1,5 +1,5 @@
 // /public/event-handlers/_charts.js
-// Version 0.1.17
+// Version 0.1.19
 /**
  * @file Initializes all event handlers for the Charts page.
  * @module event-handlers/_charts
@@ -10,7 +10,7 @@ import { renderChartsPage } from '../ui/renderers/_charts.js';
  * Loads and renders all components for the charts page.
  */
 export async function loadChartsPage() {
-    // This function just triggers the main renderer, which now handles its own data fetching.
+    // This function just triggers the main renderer.
     await renderChartsPage();
 }
 

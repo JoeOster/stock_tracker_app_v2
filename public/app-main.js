@@ -1,5 +1,5 @@
 // /public/app-main.js
-// Version 0.1.17
+// Version 0.1.19
 /**
  * @file Main application entry point. Handles initialization, state management,
  * and view switching.
@@ -10,10 +10,10 @@ import { initializeAllEventHandlers } from './event-handlers/_init.js';
 import { state, updateState } from './state.js';
 import { refreshLedger } from './api.js';
 import { loadAlertsPage } from './event-handlers/_alerts.js';
-import { loadChartsPage } from './event-handlers/_charts.js'; // <-- Correct import
+import { loadChartsPage } from './event-handlers/_charts.js';
 import { loadDailyReportPage } from './event-handlers/_dailyReport.js';
 import { loadOrdersPage } from './event-handlers/_orders.js';
-import { loadSnapshotsPage } from './event-handlers/_snapshots.js'; // <-- Correct import
+import { loadSnapshotsPage } from './event-handlers/_snapshots.js';
 import { renderTabs, styleActiveTab } from './ui/renderers/_tabs.js';
 import { showToast } from './ui/helpers.js';
 
@@ -36,7 +36,7 @@ export async function switchView(viewType, viewValue = null) {
             case 'charts':
                 container = document.getElementById('charts-container');
                 if (container) container.style.display = 'block';
-                await loadChartsPage(); // <-- Use the new dedicated loader
+                await loadChartsPage();
                 break;
             case 'ledger':
                 container = document.getElementById('ledger-page-container');
@@ -56,7 +56,7 @@ export async function switchView(viewType, viewValue = null) {
             case 'snapshots':
                 container = document.getElementById('snapshots-page-container');
                 if (container) container.style.display = 'block';
-                await loadSnapshotsPage(); // <-- Use the new dedicated loader
+                await loadSnapshotsPage();
                 break;
             case 'imports':
                 container = document.getElementById('imports-page-container');
@@ -74,4 +74,3 @@ export async function switchView(viewType, viewValue = null) {
     }
 }
 
-// ... (initializeApp and event listener remain unchanged)
