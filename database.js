@@ -19,36 +19,55 @@ async function runMigrations(db) {
     `);
 
     const migrationsDir = path.join(__dirname, 'migrations');
-    const migrationFiles = await fs.readdir(migrationsDir);
-    const appliedMigrations = await db.all('SELECT name FROM migrations');
-    const appliedMigrationNames = appliedMigrations.map(m => m.name);
+    console.log(`Searching for migration files in: ${migrationsDir}`);
 
-    const pendingMigrations = migrationFiles
-        .filter(file => file.endsWith('.sql') && !appliedMigrationNames.includes(file))
-        .sort();
+    try {
+        const dirEntries = await fs.readdir(migrationsDir, { withFileTypes: true });
+        const migrationFiles = dirEntries
+            .filter(dirent => dirent.isFile() && dirent.name.endsWith('.sql'))
+            .map(dirent => dirent.name)
+            .sort();
 
-    if (pendingMigrations.length === 0) {
-        console.log("Database is up to date.");
-        return;
-    }
+        const appliedMigrations = await db.all('SELECT name FROM migrations');
+        const appliedMigrationNames = appliedMigrations.map(m => m.name);
 
-    for (const migrationFile of pendingMigrations) {
-        try {
-            console.log(`Applying migration: ${migrationFile}...`);
-            const filePath = path.join(migrationsDir, migrationFile);
-            const sql = await fs.readFile(filePath, 'utf8');
-            
-            await db.exec('BEGIN TRANSACTION');
-            await db.exec(sql);
-            await db.run('INSERT INTO migrations (name) VALUES (?)', migrationFile);
-            await db.exec('COMMIT');
-            
-            console.log(`Successfully applied migration: ${migrationFile}`);
-        } catch (error) {
-            await db.exec('ROLLBACK');
-            console.error(`Failed to apply migration ${migrationFile}:`, error);
-            throw error;
+        console.log(`Found disk files: [${migrationFiles.join(', ')}]`);
+        console.log(`Found DB migrations: [${appliedMigrationNames.join(', ')}]`);
+
+        const pendingMigrations = migrationFiles.filter(file => !appliedMigrationNames.includes(file));
+
+        if (pendingMigrations.length === 0) {
+            if (migrationFiles.length > 0 && migrationFiles.every(f => appliedMigrationNames.includes(f))) {
+                 console.log("Database is up to date. All migration files have been applied.");
+            } else {
+                 console.log("No new migrations to apply.");
+            }
+            return;
         }
+
+        console.log(`Pending migrations to run: [${pendingMigrations.join(', ')}]`);
+
+        for (const migrationFile of pendingMigrations) {
+            try {
+                console.log(`Applying migration: ${migrationFile}...`);
+                const filePath = path.join(migrationsDir, migrationFile);
+                const sql = await fs.readFile(filePath, 'utf8');
+                
+                await db.exec('BEGIN TRANSACTION');
+                await db.exec(sql);
+                await db.run('INSERT INTO migrations (name) VALUES (?)', migrationFile);
+                await db.exec('COMMIT');
+                
+                console.log(`Successfully applied migration: ${migrationFile}`);
+            } catch (error) {
+                await db.exec('ROLLBACK');
+                console.error(`Failed to apply migration ${migrationFile}:`, error);
+                throw error;
+            }
+        }
+    } catch (error) {
+        console.error(`Could not read migrations directory: ${migrationsDir}`, error);
+        throw error;
     }
 }
 

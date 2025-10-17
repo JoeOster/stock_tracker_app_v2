@@ -130,6 +130,7 @@ export function populatePricesFromCache(activityMap, priceCache) {
         const row = document.querySelector(`[data-key="${key}"]`);
         if (!row) return;
 
+        // FIX: Access the 'price' property from the priceCache object.
         const priceData = priceCache.get(lot.ticker);
         const priceToUse = priceData ? priceData.price : null;
 

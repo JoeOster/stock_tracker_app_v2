@@ -14,11 +14,14 @@ Portfolio Tracker V3 is a self-hosted web application for active retail traders 
 ## **2. Architectural Principles & Standards**
 
 ### **Coding Standards**
-1.  **JSDoc Comments:** All JavaScript code must be documented using JSDoc-style comments to describe the purpose, parameters, and return values of functions.
-2.  **File Size:** To ensure maintainability, individual modules should be kept concise. As a general guideline, files should not exceed **200 lines of code**.
-3.  **Comment Validity:** After significant refactoring or feature changes, all related in-code comments must be reviewed and updated to ensure they accurately reflect the current state of the code.
+
+1. **JSDoc as the Source of Truth:** All JavaScript functions must be documented using JSDoc-style comments. These comments are the definitive source of truth for data structures, and the code must adhere to the types they specify.
+2. **Unit Test All Non-Trivial Logic:** All new business logic, helper functions, and data transformations must be accompanied by unit tests to ensure correctness and prevent regressions.
+3. **File Size:** To ensure maintainability, individual modules should be kept concise. As a general guideline, files should not exceed **200 lines of code**.
+4. **Comment Validity:** After significant refactoring or feature changes, all related in-code comments must be reviewed and updated to ensure they accurately reflect the current state of the code.
 
 ### **File Schema**
+
 * **`public/app-main.js`**: The primary application entry point. Responsible for initialization, template loading, and view switching.
 * **`public/state.js`**: Manages global client-side state.
 * **`public/api.js`**: Handles all `fetch` calls to the backend server.
@@ -27,10 +30,12 @@ Portfolio Tracker V3 is a self-hosted web application for active retail traders 
 * **`public/ui/renderers/_*.js`**: Renders data into the DOM for a single page. Does not fetch data or handle events.
 * **`public/templates/_*.html`**: Contains the HTML structure for a single page or component.
 
-### **Interaction Rules**
-1.  **Modules Own Their DOM:** A module should only ever interact with elements defined in its own corresponding template file.
-2.  **No Direct Function Calls Between Peer Modules:** Modules should communicate indirectly.
-3.  **Strict Separation of Concerns:** Each module type has one job as defined in the File Schema.
+### **Interaction & Refactoring Rules**
+
+1. **Modules Own Their DOM:** A module should only ever interact with elements defined in its own corresponding template file.
+2. **No Direct Function Calls Between Peer Modules:** Modules should communicate indirectly.
+3. **Strict Separation of Concerns:** Each module type has one job as defined in the File Schema.
+4. **Refactoring Requires a Global Review:** When a file is moved, renamed, or deleted, a global search must be performed to update all related imports and references throughout the project.
 
 ## **3. Strategic Roadmap**
 
