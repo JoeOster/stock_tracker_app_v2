@@ -1,4 +1,5 @@
 ﻿// /public/ui/renderers.js
+// Version 0.1.8
 /**
  * @file This file acts as a central hub for importing and exporting all the renderer modules.
  */
@@ -9,7 +10,6 @@ import { renderDailyReport } from './renderers/_dailyReport.js';
 import { renderTransactionLedger } from './renderers/_ledger.js';
 import { renderOpenOrders } from './renderers/_orders.js';
 import { renderSnapshots } from './renderers/_snapshots.js';
-import { renderTabs, styleActiveTab } from './renderers/_tabs.js';
 
 export {
     renderAlerts,
@@ -18,6 +18,4 @@ export {
     renderTransactionLedger,
     renderOpenOrders,
     renderSnapshots,
-    renderTabs,
-    styleActiveTab,
 };

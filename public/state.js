@@ -1,68 +1,59 @@
-// Portfolio Tracker V3.03
-// public/state.js
-
-/* global Chart */
-
+// /public/state.js
+// Version 0.1.9
 /**
- * @typedef {object} AppSettings
- * @property {number} takeProfitPercent - Default take profit percentage.
- * @property {number} stopLossPercent - Default stop loss percentage.
- * @property {number} marketHoursInterval - Price refresh interval during market hours (minutes).
- * @property {number} afterHoursInterval - Price refresh interval after hours (minutes).
- * @property {string} theme - The current color theme.
- * @property {string} font - The current font.
- * @property {string|null} defaultAccountHolderId - The default account holder to load on startup.
- * @property {number} notificationCooldown - Cooldown for price alerts in minutes.
- * @property {string} familyName - Custom name for the app title.
+ * @file Manages the application's global state.
+ * @module state
  */
 
 /**
  * @typedef {object} AppState
- * @property {AppSettings} settings - Application settings.
- * @property {{type: string|null, value: string|null}} currentView - The current active view (e.g., { type: 'date', value: '2025-10-12' }).
- * @property {Map<string, object>} activityMap - A map of open positions for the current view, keyed by lot ID (e.g., 'lot-123').
- * @property {Map<string, number|string>} priceCache - A cache of recently fetched stock prices, keyed by ticker.
- * @property {any[]} allTransactions - All transactions for the selected account holder.
- * @property {any[]} allSnapshots - All account snapshots for the selected account holder.
- * @property {any[]} pendingOrders - All pending orders for the selected account holder.
- * @property {any[]} activeAlerts - All active alerts for the selected account holder.
- * @property {string} selectedAccountHolderId - The ID of the currently selected account holder.
- * @property {{column: string, direction: string}} ledgerSort - The current sorting for the ledger table.
- * @property {Chart|null} allTimeChart - Chart.js instance for the all-time chart.
- * @property {Chart|null} fiveDayChart - Chart.js instance for the five-day chart.
- * @property {Chart|null} dateRangeChart - Chart.js instance for the date-range chart.
- * @property {Chart|null} zoomedChart - Chart.js instance for the zoomed modal chart.
- * @property {any[]} allExchanges - All available exchanges from the database.
- * @property {any[]} allAccountHolders - All available account holders from the database.
+ * @property {Array<object>} transactions - All transactions for the selected account.
+ * @property {Array<object>} openOrders - All open orders (buy transactions with remaining quantity).
+ * @property {Array<object>} allSnapshots - All historical portfolio snapshots.
+ * @property {Array<object>} activeAlerts - All unread notifications.
+ * @property {Array<object>} allAccountHolders - All account holders in the system.
+ * @property {Array<object>} allExchanges - All exchanges in the system.
+ * @property {string|number} selectedAccountHolderId - The ID of the currently selected account holder.
+ * @property {{type: string, value: string|null}} currentView - The current active view.
+ * @property {Map<string, {price: number|string, timestamp: number}>} priceCache - A cache for recently fetched stock prices.
+ * @property {import('chart.js').Chart | null} allTimeChart - The instance of the 'All Time' chart.
+ * @property {import('chart.js').Chart | null} fiveDayChart - The instance of the 'Five Day' chart.
+ * @property {import('chart.js').Chart | null} dateRangeChart - The instance of the 'Date Range' chart.
+ * @property {import('chart.js').Chart | null} zoomedChart - The instance of the zoomed-in chart.
+ * @property {Map<string, object>} activityMap - A map of open positions for the current daily view.
+ * @property {object} ledgerSort - The current sort state for the transaction ledger.
+ * @property {any[]} pendingOrders - All active pending orders.
+ * @property {object} settings - The user's application settings.
  */
 
 /**
- * The main state object for the application.
- * It is exported to be used as a singleton across all modules.
+ * The application's global state object.
  * @type {AppState}
  */
-export const state = {
-    settings: {
-        takeProfitPercent: 8,
-        stopLossPercent: 8,
-        marketHoursInterval: 2,
-        afterHoursInterval: 15,
-        theme: 'light',
-        font: 'Inter',
-        defaultAccountHolderId: null,
-        notificationCooldown: 16,
-        familyName: ''
-    },
-    currentView: { type: null, value: null },
-    activityMap: new Map(),
-    priceCache: new Map(),
-    allTransactions: [],
+export let state = {
+    transactions: [],
+    openOrders: [],
     allSnapshots: [],
-    pendingOrders: [],
     activeAlerts: [],
-    selectedAccountHolderId: 'all',
-    ledgerSort: { column: 'transaction_date', direction: 'desc' },
-    allTimeChart: null, fiveDayChart: null, dateRangeChart: null, zoomedChart: null,
-    allExchanges: [],
     allAccountHolders: [],
+    allExchanges: [],
+    selectedAccountHolderId: 1,
+    currentView: { type: 'charts', value: null },
+    priceCache: new Map(),
+    allTimeChart: null,
+    fiveDayChart: null,
+    dateRangeChart: null,
+    zoomedChart: null,
+    activityMap: new Map(),
+    ledgerSort: { column: 'transaction_date', direction: 'desc' },
+    pendingOrders: [],
+    settings: {},
 };
+
+/**
+ * Updates the global state by merging in a partial state object.
+ * @param {Partial<AppState>} newState - An object containing the state properties to update.
+ */
+export function updateState(newState) {
+    state = { ...state, ...newState };
+}

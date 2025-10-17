@@ -1,5 +1,5 @@
 // /public/event-handlers/_snapshots.js
-// Version 0.1.7
+// Version 0.1.10
 /**
  * @file Initializes all event handlers for the Snapshots page.
  * @module event-handlers/_snapshots
@@ -7,8 +7,8 @@
 import { state } from '../state.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { fetchSnapshots } from '../api.js';
-import { renderSnapshots } from '../ui/renderers/_snapshots.js'; // Correct, direct import
-import { renderPortfolioCharts } from '../ui/renderers/_charts.js'; // <-- FIX: Add this missing import
+import { renderSnapshots } from '../ui/renderers/_snapshots.js';
+import { renderPortfolioCharts } from '../ui/renderers/_charts.js';
 import { switchView } from './_navigation.js';
 
 /**
@@ -22,7 +22,8 @@ export async function loadChartsAndSnapshotsPage(viewType) {
     }
     
     try {
-        const snapshots = await fetchSnapshots(state.selectedAccountHolderId);
+        // FIX: Ensure the account holder ID is always a string before passing to the API.
+        const snapshots = await fetchSnapshots(String(state.selectedAccountHolderId));
         state.allSnapshots = snapshots; // Ensure state is updated before rendering
 
         if (viewType === 'charts') {

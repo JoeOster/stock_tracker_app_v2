@@ -1,28 +1,32 @@
-// public/event-handlers/_init.js
-import { initializeNavigationHandlers } from './_navigation.js';
-import { initializeDailyReportHandlers } from './_dailyReport.js';
-import { initializeLedgerHandlers } from './_ledger.js';
-import { initializeOrdersHandlers } from './_orders.js';
-import { initializeSnapshotsHandlers } from './_snapshots.js';
-import { initializeModalHandlers } from './_modals.js';
-import { initializeSettingsHandlers } from './_settings.js';
+// /public/event-handlers/_init.js
+// Version 0.1.9
+/**
+ * @file Initializes all event handlers for the application.
+ * @module event-handlers/_init
+ */
+
 import { initializeAlertsHandlers } from './_alerts.js';
-import { initializeImportHandlers } from './_imports.js'; // Use the correct file
+import { initializeDailyReportHandlers } from './_dailyReport.js';
+import { initializeImportHandlers } from './_imports.js';
+import { initializeLedgerHandlers } from './_ledger.js';
+import { initializeModalHandlers } from './_modals.js';
+import { initializeNavigationHandlers } from './_navigation.js';
+import { initializeOrdersHandlers } from './_orders.js';
+import { initializeSettingsHandlers } from './_settings.js';
+import { initializeSnapshotsHandlers } from './_snapshots.js';
+
 
 /**
- * Initializes all event listeners for the entire application by calling
- * the initializer function from each specific event handler module.
- * This function is called once when the application starts.
- * @returns {void}
+ * Initializes all event handlers for the application.
  */
-export function initializeAllEventListeners() {
+export function initializeAllEventHandlers() {
     initializeNavigationHandlers();
-    initializeDailyReportHandlers();
-    initializeLedgerHandlers();
-    initializeOrdersHandlers();
-    initializeSnapshotsHandlers();
     initializeModalHandlers();
-    initializeSettingsHandlers();
+    initializeOrdersHandlers();
+    initializeLedgerHandlers();
+    initializeSnapshotsHandlers();
     initializeAlertsHandlers();
-    initializeImportHandlers(); // Use the correct handler
+    initializeDailyReportHandlers();
+    initializeSettingsHandlers();
+    initializeImportHandlers();
 }
