@@ -9,7 +9,6 @@ REM It must be "Run as administrator".
 
 echo Script has started. Running as Administrator is required.
 echo.
-
 REM --- Configuration ---
 set "SOURCE_DIR=%~dp0"
 set "PROD_DIR=C:\portfolio_managerV3"
@@ -62,6 +61,9 @@ xcopy /E /I /Y "%SOURCE_DIR%services" "%PROD_DIR%\services" > nul
 call :check_error
 echo Copying migrations...
 xcopy /E /I /Y "%SOURCE_DIR%migrations" "%PROD_DIR%\migrations" > nul
+call :check_error
+echo Copying user-settings...
+xcopy /E /I /Y "%SOURCE_DIR%user-settings" "%PROD_DIR%\user-settings" > nul
 call :check_error
 echo Copying server files...
 xcopy /Y "%SOURCE_DIR%*.js" "%PROD_DIR%\" > nul
