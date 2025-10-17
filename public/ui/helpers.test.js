@@ -2,7 +2,10 @@
  * @jest-environment jsdom
  */
 
-import { formatAccounting, getTradingDays, populatePricesFromCache } from './helpers.js';
+// FIX: Import functions from their new, correct locations.
+import { populatePricesFromCache } from './helpers.js';
+import { formatAccounting, formatQuantity } from './formatters.js';
+import { getTradingDays } from './datetime.js';
 
 describe('formatAccounting', () => {
     it('should format positive currency values correctly', () => {
@@ -20,6 +23,25 @@ describe('formatAccounting', () => {
     it('should return an empty string for null or undefined input', () => {
         expect(formatAccounting(null)).toBe('');
         expect(formatAccounting(undefined)).toBe('');
+    });
+});
+
+describe('formatQuantity', () => {
+    it('should format whole numbers without decimal points', () => {
+        expect(formatQuantity(100)).toBe('100');
+    });
+
+    it('should format fractional numbers with decimal points', () => {
+        expect(formatQuantity(123.456)).toBe('123.456');
+    });
+
+    it('should handle zero correctly', () => {
+        expect(formatQuantity(0)).toBe('0');
+    });
+
+    it('should return an empty string for null or undefined input', () => {
+        expect(formatQuantity(null)).toBe('');
+        expect(formatQuantity(undefined)).toBe('');
     });
 });
 
@@ -59,13 +81,12 @@ describe('populatePricesFromCache', () => {
 
     it('should correctly calculate and render unrealized P/L', () => {
         const activityMap = new Map([['lot-1', { ticker: 'AAPL', quantity_remaining: 10, cost_basis: 100 }]]);
-        const priceCache = new Map([['AAPL', 115]]);
+        const priceCache = new Map([['AAPL', { price: 115, timestamp: Date.now() }]]);
 
         populatePricesFromCache(activityMap, priceCache);
 
         const plCell = document.querySelector('.unrealized-pl-combined');
         
-        // FIX: Expect the new combined string format
         expect(plCell.textContent).toBe('$150.00 | 15.00%'); 
         expect(plCell.classList.contains('positive')).toBe(true);
 

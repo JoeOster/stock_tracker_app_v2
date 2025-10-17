@@ -5,8 +5,9 @@
  * @module api
  */
 import { state } from './state.js';
-import { populatePricesFromCache, getCurrentESTDateString } from './ui/helpers.js';
+import { populatePricesFromCache } from './ui/helpers.js';
 import { renderLedgerPage } from './ui/renderers/_ledger.js';
+import { getCurrentESTDateString } from './ui/datetime.js';
 
 /**
  * A helper function to handle fetch responses, throwing an error with a server message if not ok.

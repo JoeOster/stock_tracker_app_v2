@@ -9,7 +9,6 @@ const fs = require('fs').promises;
  * @param {import('sqlite').Database} db - The database instance.
  */
 async function runMigrations(db) {
-    console.log("Checking for migrations...");
     await db.exec(`
         CREATE TABLE IF NOT EXISTS migrations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,7 +18,6 @@ async function runMigrations(db) {
     `);
 
     const migrationsDir = path.join(__dirname, 'migrations');
-    console.log(`Searching for migration files in: ${migrationsDir}`);
 
     try {
         const dirEntries = await fs.readdir(migrationsDir, { withFileTypes: true });
@@ -30,26 +28,14 @@ async function runMigrations(db) {
 
         const appliedMigrations = await db.all('SELECT name FROM migrations');
         const appliedMigrationNames = appliedMigrations.map(m => m.name);
-
-        console.log(`Found disk files: [${migrationFiles.join(', ')}]`);
-        console.log(`Found DB migrations: [${appliedMigrationNames.join(', ')}]`);
-
         const pendingMigrations = migrationFiles.filter(file => !appliedMigrationNames.includes(file));
 
         if (pendingMigrations.length === 0) {
-            if (migrationFiles.length > 0 && migrationFiles.every(f => appliedMigrationNames.includes(f))) {
-                 console.log("Database is up to date. All migration files have been applied.");
-            } else {
-                 console.log("No new migrations to apply.");
-            }
             return;
         }
 
-        console.log(`Pending migrations to run: [${pendingMigrations.join(', ')}]`);
-
         for (const migrationFile of pendingMigrations) {
             try {
-                console.log(`Applying migration: ${migrationFile}...`);
                 const filePath = path.join(migrationsDir, migrationFile);
                 const sql = await fs.readFile(filePath, 'utf8');
                 
@@ -57,8 +43,6 @@ async function runMigrations(db) {
                 await db.exec(sql);
                 await db.run('INSERT INTO migrations (name) VALUES (?)', migrationFile);
                 await db.exec('COMMIT');
-                
-                console.log(`Successfully applied migration: ${migrationFile}`);
             } catch (error) {
                 await db.exec('ROLLBACK');
                 console.error(`Failed to apply migration ${migrationFile}:`, error);

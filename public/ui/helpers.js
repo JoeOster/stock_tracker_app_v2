@@ -1,15 +1,18 @@
 // in public/ui/helpers.js
-// Version 0.1.20
+// Version 0.1.21
 /**
  * @file Contains general UI helper functions for DOM manipulation and notifications.
  * @module ui/helpers
  */
 
+// FIX: Import the 'formatAccounting' function from its new location.
+import { formatAccounting } from './formatters.js';
+
 /**
  * Displays a toast notification message.
  * @param {string} message - The message to display.
  * @param {'info' | 'success' | 'error'} [type='info'] - The type of toast.
- * @param {number} [duration=10000] - The duration in milliseconds to show the toast.
+ * @param {number} [duration=15000] - The duration in milliseconds to show the toast.
  * @returns {void}
  */
 export function showToast(message, type = 'info', duration = 15000) {
@@ -30,10 +33,17 @@ export function showToast(message, type = 'info', duration = 15000) {
  */
 export function showConfirmationModal(title, body, onConfirm) {
     const confirmModal = document.getElementById('confirm-modal');
-    document.getElementById('confirm-modal-title').textContent = title;
-    document.getElementById('confirm-modal-body').textContent = body;
+    if (!confirmModal) return;
+    
+    const titleEl = document.getElementById('confirm-modal-title');
+    const bodyEl = document.getElementById('confirm-modal-body');
     const confirmBtn = document.getElementById('confirm-modal-confirm-btn');
     const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+
+    if (titleEl) titleEl.textContent = title;
+    if (bodyEl) bodyEl.textContent = body;
+
+    if (!confirmBtn || !cancelBtn) return;
 
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);

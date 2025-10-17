@@ -7,7 +7,7 @@
 
 // FIX: Correct all relative import paths.
 import { state } from '../../state.js';
-import { formatQuantity, formatAccounting } from '../helpers.js';
+import { formatQuantity, formatAccounting } from '../formatters.js';
 
 /**
  * Renders the pending orders table from a given array of order data.

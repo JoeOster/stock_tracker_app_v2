@@ -5,7 +5,7 @@
  * @module renderers/_snapshots
  */
 import { state } from '../../state.js';
-import { formatAccounting } from '../helpers.js';
+import { formatAccounting } from '../formatters.js';
 
 /**
  * Renders the content of the Snapshots page from a given array of snapshot data.

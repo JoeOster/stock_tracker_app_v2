@@ -5,7 +5,7 @@
  * @module renderers/_dailyReport
  */
 import { state } from '../../state.js';
-import { formatAccounting, formatQuantity } from '../helpers.js';
+import { formatAccounting, formatQuantity } from '../formatters.js';
 
 /**
  * Renders the daily transaction report into the table.

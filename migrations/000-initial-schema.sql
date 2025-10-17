@@ -2,7 +2,7 @@
 -- This single file creates the complete, consolidated schema for the application.
 
 -- Create the central transactions table
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ticker TEXT NOT NULL,
     exchange TEXT NOT NULL,
@@ -23,13 +23,13 @@ CREATE TABLE transactions (
 );
 
 -- Create the account_holders table
-CREATE TABLE account_holders (
+CREATE TABLE IF NOT EXISTS account_holders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE
 );
 
 -- Create the pending_orders table
-CREATE TABLE pending_orders (
+CREATE TABLE IF NOT EXISTS pending_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     account_holder_id INTEGER NOT NULL,
     ticker TEXT NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE pending_orders (
 );
 
 -- Create the notifications table
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     account_holder_id INTEGER NOT NULL,
     pending_order_id INTEGER,
@@ -58,7 +58,7 @@ CREATE TABLE notifications (
 );
 
 -- Create supporting tables
-CREATE TABLE account_snapshots (
+CREATE TABLE IF NOT EXISTS account_snapshots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     exchange TEXT NOT NULL,
     snapshot_date TEXT NOT NULL,
@@ -66,12 +66,12 @@ CREATE TABLE account_snapshots (
     account_holder_id INTEGER REFERENCES account_holders(id)
 );
 
-CREATE TABLE exchanges (
+CREATE TABLE IF NOT EXISTS exchanges (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE
 );
 
-CREATE TABLE historical_prices (
+CREATE TABLE IF NOT EXISTS historical_prices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ticker TEXT NOT NULL,
     date TEXT NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE historical_prices (
 );
 
 -- Create the watchlist table
-CREATE TABLE watchlist (
+CREATE TABLE IF NOT EXISTS watchlist (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     account_holder_id INTEGER NOT NULL,
     ticker TEXT NOT NULL,

@@ -4,8 +4,7 @@
  * @file Renderer for the transaction ledger.
  * @module renderers/_ledger
  */
-import { formatAccounting, formatQuantity } from '../helpers.js';
-
+import { formatAccounting, formatQuantity } from '../formatters.js';
 /**
  * Renders the transaction ledger into the table.
  * @param {Array<object>} transactions - The transactions to render.

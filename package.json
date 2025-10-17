@@ -29,8 +29,8 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node server.js",
     "dev": "cross-env NODE_ENV=development nodemon server.js",
-    "test": "cross-env NODE_ENV=test jest --runInBand --config jest.config.api.js --coverage && jest --runInBand --config jest.config.ui.js --testTimeout=10000 --coverage",
+    "test": "cross-env NODE_ENV=test jest --runInBand",
     "seed-dev": "cross-env NODE_ENV=development node seed-dev-db.js",
-    "backup:dev": "mkdir c:\\portfolio_manager_bu\\v3\\dev 2>NUL & xcopy .\\development.db c:\\portfolio_manager_bu\\v3\\dev\\ /Y"
+    "backup:dev": "mkdir c:\\\\portfolio_manager_bu\\\\v3\\\\dev 2>NUL & xcopy .\\\\development.db c:\\\\portfolio_manager_bu\\\\v3\\\\dev\\\\ /Y"
   }
 }
