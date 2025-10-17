@@ -1,6 +1,13 @@
-// public/ui/settings.js - Contains all settings-related UI functions.
+// public/ui/settings.js
+// Version 0.1.1
+/**
+ * @file Contains all UI functions related to the settings modal.
+ * @module ui/settings
+ */
+// FIX: Correct all relative import paths.
 import { state } from '../state.js';
 import { switchView } from '../event-handlers/_navigation.js';
+
 /**
  * Saves the current settings from the UI to localStorage and applies them.
  * @returns {void}

@@ -1,12 +1,11 @@
 // public/event-handlers/_navigation.js
-// Version 0.1.20
+// Version 0.1.21
 /**
  * @file Manages the primary navigation and view switching for the application.
  * @module event-handlers/_navigation
  */
 import { state } from '../state.js';
 import { updateAllPrices, refreshLedger } from '../api.js';
-// FIX: Import directly from the specific renderer module.
 import { renderTabs } from '../ui/renderers/_tabs.js';
 import { loadDailyReportPage } from './_dailyReport.js';
 import { loadSnapshotsPage } from './_snapshots.js';
@@ -39,7 +38,8 @@ export function autosizeAccountSelector(selectElement) {
 export async function switchView(viewType, viewValue = null) {
     state.currentView = { type: viewType, value: viewValue };
     renderTabs(state.currentView);
-    (/** @type {HTMLSelectElement} */(document.getElementById('global-account-holder-filter'))).value = state.selectedAccountHolderId;
+    // FIX: Convert the selectedAccountHolderId to a string to satisfy the HTMLSelectElement.value type.
+    (/** @type {HTMLSelectElement} */(document.getElementById('global-account-holder-filter'))).value = String(state.selectedAccountHolderId);
 
     document.querySelectorAll('.page-container').forEach(c => (/** @type {HTMLElement} */(c)).style.display = 'none');
 

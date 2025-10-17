@@ -1,4 +1,9 @@
 // in public/ui/helpers.js
+// Version 0.1.19
+/**
+ * @file Contains UI helper functions for formatting, notifications, and DOM manipulation.
+ * @module ui/helpers
+ */
 
 /**
  * Formats a number for display as a quantity, removing trailing zeros for whole numbers.
@@ -114,8 +119,7 @@ export function showConfirmationModal(title, body, onConfirm) {
 /**
  * Populates the current prices and calculates unrealized P/L for rows in the daily report.
  * @param {Map<string, object>} activityMap - A map of open positions for the current view.
- * @param {Map<string, number|string>} priceCache - A cache of recently fetched stock prices.
- * @returns {void}
+ * @param {Map<string, {price: number|string, timestamp: number}>} priceCache - A cache of recently fetched stock prices.
  */
 export function populatePricesFromCache(activityMap, priceCache) {
     const totalValueSummarySpan = document.querySelector('#total-value-summary span');
@@ -126,7 +130,9 @@ export function populatePricesFromCache(activityMap, priceCache) {
         const row = document.querySelector(`[data-key="${key}"]`);
         if (!row) return;
 
-        const priceToUse = priceCache.get(lot.ticker);
+        const priceData = priceCache.get(lot.ticker);
+        const priceToUse = priceData ? priceData.price : null;
+
         const priceCell = row.querySelector('.current-price');
         const plCombinedCell = row.querySelector('.unrealized-pl-combined');
 

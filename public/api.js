@@ -1,12 +1,11 @@
 // public/api.js
-// Version 0.1.20
+// Version 0.1.21
 /**
  * @file This file centralizes all client-side API (fetch) calls to the server.
  * @module api
  */
 import { state } from './state.js';
 import { populatePricesFromCache, getCurrentESTDateString } from './ui/helpers.js';
-// FIX: Import directly from the specific renderer module.
 import { renderLedgerPage } from './ui/renderers/_ledger.js';
 
 /**
@@ -33,7 +32,6 @@ export async function refreshLedger() {
         renderLedgerPage(state.transactions, state.ledgerSort);
     } catch (error) { 
         console.error("Failed to refresh ledger:", error); 
-        // Optionally, render an error state in the ledger
         renderLedgerPage([], state.ledgerSort);
     }
 }
@@ -46,11 +44,8 @@ export async function refreshLedger() {
  * @returns {Promise<void>}
  */
 export async function updatePricesForView(viewDate, tickersToUpdate) {
-    if (!tickersToUpdate || tickersToUpdate.length === 0) {
-        return; // Nothing to fetch
-    }
+    if (!tickersToUpdate || tickersToUpdate.length === 0) return;
 
-    // Show spinners for all relevant rows before fetching
     state.activityMap.forEach((lot, key) => {
         if (tickersToUpdate.includes(lot.ticker)) {
             const row = document.querySelector(`tr[data-key="${key}"]`);
@@ -63,20 +58,15 @@ export async function updatePricesForView(viewDate, tickersToUpdate) {
 
     try {
         const isToday = viewDate === getCurrentESTDateString();
-        
         const response = await fetch('/api/utility/prices/batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tickers: tickersToUpdate, date: viewDate, allowLive: isToday })
         });
-
         const prices = await handleResponse(response);
-
-        // Update the cache with the batch-fetched prices
         for (const ticker in prices) {
             state.priceCache.set(ticker, prices[ticker]);
         }
-
     } catch (error) {
         console.error("An error occurred during batch price update:", error);
     }

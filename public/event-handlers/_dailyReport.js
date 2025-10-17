@@ -1,12 +1,11 @@
 // public/event-handlers/_dailyReport.js
-// Version 0.1.20
+// Version 0.1.21
 /**
  * @file Loads data for and initializes event handlers for the Daily Report page.
  * @module event-handlers/_dailyReport
  */
 import { state } from '../state.js';
 import { formatAccounting, getCurrentESTDateString, showToast, sortTableByColumn, populatePricesFromCache } from '../ui/helpers.js';
-// FIX: Import directly from the specific renderer module and use the correct function name.
 import { renderDailyReportPage } from '../ui/renderers/_dailyReport.js';
 import { fetchPositions, fetchDailyPerformance, updatePricesForView } from '../api.js';
 
@@ -23,30 +22,24 @@ export async function loadDailyReportPage(viewValue) {
     if(summaryBody) summaryBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
     
     try {
-        // First, get the positions and the previous day's total value.
         const [positionData, perfData] = await Promise.all([
-            fetchPositions(viewValue, state.selectedAccountHolderId),
-            fetchDailyPerformance(viewValue, state.selectedAccountHolderId)
+            fetchPositions(viewValue, String(state.selectedAccountHolderId)),
+            fetchDailyPerformance(viewValue, String(state.selectedAccountHolderId))
         ]);
 
-        // Render the main table structure with the data we have so far.
         renderDailyReportPage(viewValue, state.activityMap, null, positionData);
         
-        // Now, gather all the unique tickers from the open positions for a single price fetch.
         const tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
         
-        // Fetch the live prices for today's open positions.
         await updatePricesForView(viewValue, tickersToUpdate);
         
-        // Populate the price cells with the freshly fetched data.
         populatePricesFromCache(state.activityMap, state.priceCache);
 
-        // Now that we have live prices, calculate the current portfolio value on the client-side.
         let currentValue = 0;
         state.activityMap.forEach(lot => {
-            const priceToUse = state.priceCache.get(lot.ticker);
-            const finalPrice = (typeof priceToUse === 'number') ? priceToUse : lot.cost_basis;
-            currentValue += (finalPrice * lot.quantity_remaining);
+            const priceData = state.priceCache.get(lot.ticker);
+            const priceToUse = (priceData && typeof priceData.price === 'number') ? priceData.price : lot.cost_basis;
+            currentValue += (priceToUse * lot.quantity_remaining);
         });
 
         const { previousValue } = perfData;
@@ -71,8 +64,6 @@ export async function loadDailyReportPage(viewValue) {
 
 /**
  * Initializes all event listeners for the Daily Report page.
- * This includes table sorting, and click handlers for opening various modals
- * (Advice, Sell, Edit Limits, Edit Buy).
  * @returns {void}
  */
 export function initializeDailyReportHandlers() {
@@ -84,18 +75,15 @@ export function initializeDailyReportHandlers() {
 		dailyReportContainer.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
 
-            // --- Table Sorting Handler ---
 			const th = /** @type {HTMLTableCellElement} */ (target.closest('th[data-sort]'));
 			if (th) {
 				const thead = th.closest('thead');
 				let tbody = thead.nextElementSibling;
-				// Find the next TBODY element to sort
 				while (tbody && tbody.tagName !== 'TBODY') { tbody = tbody.nextElementSibling; }
 				if (tbody) { sortTableByColumn(th, /** @type {HTMLTableSectionElement} */ (tbody)); }
 				return;
 			}
 
-            // --- Advice Modal Handler ---
 			const row = target.closest('#positions-summary-body tr');
 			if (row && !target.closest('button')) {
 				const lotKey = (/** @type {HTMLElement} */ (row)).dataset.key;
@@ -110,7 +98,7 @@ export function initializeDailyReportHandlers() {
 				const suggestedLoss = costBasis * (1 - stopLossPercent / 100);
 				document.getElementById('advice-modal-title').textContent = `${lotData.ticker} Advice`;
 				document.getElementById('advice-cost-basis').textContent = formatAccounting(costBasis);
-				document.getElementById('advice-current-price').textContent = (typeof priceData === 'number') ? formatAccounting(priceData) : 'N/A';
+				document.getElementById('advice-current-price').textContent = (priceData && typeof priceData.price === 'number') ? formatAccounting(priceData.price) : 'N/A';
 				document.getElementById('advice-suggested-profit').textContent = formatAccounting(suggestedProfit);
 				document.getElementById('advice-suggested-loss').textContent = formatAccounting(suggestedLoss);
 				document.getElementById('advice-profit-percent').textContent = String(takeProfitPercent);
@@ -123,7 +111,6 @@ export function initializeDailyReportHandlers() {
 				return;
 			}
 
-            // --- Sell From Lot Modal Handler ---
 			const sellBtn = /** @type {HTMLElement} */ (target.closest('.sell-from-lot-btn'));
 			if (sellBtn) {
 				const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
@@ -141,14 +128,12 @@ export function initializeDailyReportHandlers() {
 				return;
 			}
 
-            // --- Edit Limit or Edit Buy Modal Handler ---
 			const setLimitBtn = /** @type {HTMLElement} */ (target.closest('.set-limit-btn'));
 			const editBuyBtn = /** @type {HTMLElement} */ (target.closest('.edit-buy-btn'));
 			if (setLimitBtn || editBuyBtn) {
 				const id = (setLimitBtn || editBuyBtn).dataset.id;
 				const lotData = state.activityMap.get(`lot-${id}`);
 				if (lotData) {
-					// Populate the shared edit modal with data from the selected lot.
 					(/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value = String(lotData.id);
 					(/** @type {HTMLSelectElement} */(document.getElementById('edit-account-holder'))).value = String(lotData.account_holder_id);
 					(/** @type {HTMLInputElement} */(document.getElementById('edit-date'))).value = lotData.purchase_date;
@@ -166,7 +151,6 @@ export function initializeDailyReportHandlers() {
 					const limitFields = /** @type {HTMLElement} */ (document.getElementById('edit-limit-fields'));
 					const modalTitle = document.getElementById('edit-modal-title');
 
-					// Toggle field visibility based on which button was clicked.
 					if (setLimitBtn) {
 						modalTitle.textContent = `Set Limits for ${lotData.ticker}`;
 						coreFields.style.display = 'none';

@@ -3,7 +3,7 @@ import { state } from '../state.js';
 import { refreshLedger } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { saveSettings, renderExchangeManagementList, renderAccountHolderManagementList, applyAppearanceSettings } from '../ui/settings.js';
-//import { switchView } from '../event-handlers/_navigation.js';
+
 /**
  * Populates all exchange dropdowns on the page with the latest data from the state.
  * @returns {void}
@@ -105,7 +105,6 @@ export function initializeSettingsHandlers() {
     // --- Settings Modal Opening/Saving ---
     if (settingsBtn) {
         settingsBtn.addEventListener('click', () => {
-            // Re-render management lists each time the modal is opened to ensure data is fresh.
             renderExchangeManagementList();
             renderAccountHolderManagementList();
             settingsModal.classList.add('visible');
@@ -140,12 +139,8 @@ export function initializeSettingsHandlers() {
             const target = /** @type {HTMLElement} */ (e.target);
             if (target.classList.contains('settings-tab')) {
                 const tabName = target.dataset.tab;
-
-                // Update active tab styles
                 document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
                 target.classList.add('active');
-
-                // Show the corresponding content panel
                 document.querySelectorAll('.settings-panel').forEach(panel => panel.classList.remove('active'));
                 document.getElementById(`${tabName}-settings-panel`).classList.add('active');
             }
@@ -173,7 +168,6 @@ export function initializeSettingsHandlers() {
             const li = /** @type {HTMLElement} */ (e.target).closest('li');
             if (!li) return;
 
-            // Get all interactive elements within the list item
             const nameSpan = /** @type {HTMLElement} */ (li.querySelector('.exchange-name'));
             const nameInput = /** @type {HTMLInputElement} */ (li.querySelector('.edit-exchange-input'));
             const editBtn = /** @type {HTMLElement} */ (li.querySelector('.edit-exchange-btn'));
@@ -182,7 +176,6 @@ export function initializeSettingsHandlers() {
             const deleteBtn = /** @type {HTMLElement} */ (li.querySelector('.delete-exchange-btn'));
 
             if (e.target === editBtn) {
-                // Switch to edit mode
                 nameSpan.style.display = 'none';
                 editBtn.style.display = 'none';
                 deleteBtn.style.display = 'none';
@@ -192,7 +185,6 @@ export function initializeSettingsHandlers() {
                 nameInput.focus();
             }
             else if (e.target === cancelBtn) {
-                // Cancel edit mode
                 nameInput.style.display = 'none';
                 saveBtn.style.display = 'none';
                 cancelBtn.style.display = 'none';
@@ -202,21 +194,19 @@ export function initializeSettingsHandlers() {
                 nameInput.value = nameSpan.textContent;
             }
             else if (e.target === saveBtn) {
-                // Save the updated exchange name
                 const id = li.dataset.id;
                 const newName = nameInput.value.trim();
                 if (!newName) return showToast('Exchange name cannot be empty.', 'error');
                 try {
                     const res = await fetch(`/api/accounts/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                    await fetchAndRenderExchanges(); // Refresh dropdowns app-wide
-                    await refreshLedger(); // Refresh ledger to show new name
-                    renderExchangeManagementList(); // Re-render the settings list
+                    await fetchAndRenderExchanges();
+                    await refreshLedger();
+                    renderExchangeManagementList();
                     showToast('Exchange updated!', 'success');
                 } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
             }
             else if (e.target === deleteBtn) {
-                // Delete the exchange
                 const id = li.dataset.id;
                 showConfirmationModal('Delete Exchange?', 'This cannot be undone.', async () => {
                     try {
@@ -259,7 +249,6 @@ export function initializeSettingsHandlers() {
             const cancelBtn = /** @type {HTMLElement} */ (li.querySelector('.cancel-holder-btn'));
 
             if ((/** @type {Element} */(e.target)).matches('.edit-holder-btn')) {
-                // Switch to edit mode
                 nameSpan.style.display = 'none';
                 editBtn.style.display = 'none';
                 nameInput.style.display = 'inline-block';
@@ -267,7 +256,6 @@ export function initializeSettingsHandlers() {
                 cancelBtn.style.display = 'inline-block';
                 nameInput.focus();
             } else if ((/** @type {Element} */(e.target)).matches('.cancel-holder-btn')) {
-                // Cancel edit mode
                 nameInput.style.display = 'none';
                 saveBtn.style.display = 'none';
                 cancelBtn.style.display = 'none';
@@ -275,19 +263,17 @@ export function initializeSettingsHandlers() {
                 editBtn.style.display = 'inline-block';
                 nameInput.value = nameSpan.textContent;
             } else if ((/** @type {Element} */(e.target)).matches('.save-holder-btn')) {
-                // Save the updated holder name
                 const id = li.dataset.id;
                 const newName = nameInput.value.trim();
                 if (!newName) return showToast('Name cannot be empty.', 'error');
                 try {
                     const res = await fetch(`/api/accounts/holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                     if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
-                    await fetchAndPopulateAccountHolders(); // Refresh dropdowns app-wide
-                    renderAccountHolderManagementList(); // Re-render the settings list
+                    await fetchAndPopulateAccountHolders();
+                    renderAccountHolderManagementList();
                     showToast('Account holder updated!', 'success');
                 } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
             } else if ((/** @type {Element} */(e.target)).matches('.delete-holder-btn')) {
-                // Delete the account holder
                 const id = li.dataset.id;
                 showConfirmationModal('Delete Account Holder?', 'This cannot be undone.', async () => {
                     try {

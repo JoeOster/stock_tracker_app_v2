@@ -1,9 +1,16 @@
-// Portfolio Tracker V3.0.5
 // public/event-handlers/_modals.js
+// Version 0.1.6
+/**
+ * @file Initializes all event listeners related to modal dialogs.
+ * @module event-handlers/_modals
+ */
+
+// FIX: Correct all relative import paths.
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { state } from '../state.js'; 
-import { refreshLedger } from '../api.js'; // FIX: Corrected import path
-import { switchView } from './_navigation.js'; // This will be fixed in the next step
+import { refreshLedger } from '../api.js';
+import { switchView } from './_navigation.js';
+
 /**
  * Initializes all event listeners related to modal dialogs.
  * This includes generic closing behavior and specific form submission handlers
@@ -16,14 +23,12 @@ export function initializeModalHandlers() {
     const sellFromPositionForm = /** @type {HTMLFormElement} */ (document.getElementById('sell-from-position-form'));
 
     // --- Generic Modal Closing Listeners ---
-    // Adds a click listener to all close buttons ('x') within modals.
     document.querySelectorAll('.modal .close-button').forEach(btn =>
         btn.addEventListener('click', e =>
             (/** @type {HTMLElement} */ (e.target)).closest('.modal').classList.remove('visible')
         )
     );
 
-    // Adds a click listener to the window to close a modal when clicking on the background overlay.
     window.addEventListener('click', e => {
         if ((/** @type {HTMLElement} */ (e.target)).classList.contains('modal')) {
             (/** @type {HTMLElement} */ (e.target)).classList.remove('visible');
@@ -65,7 +70,6 @@ export function initializeModalHandlers() {
 
     // --- Edit Transaction Modal ---
     if(editForm) {
-        // Handles the submission of changes to an existing transaction.
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = (/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value;
@@ -106,7 +110,6 @@ export function initializeModalHandlers() {
                 editModal.classList.remove('visible');
                 showToast('Transaction updated!', 'success');
 
-                // Refresh the appropriate view after the update.
                 if (state.currentView.type === 'ledger') {
                     await refreshLedger();
                 } else if (state.currentView.type === 'date') {
@@ -126,7 +129,6 @@ export function initializeModalHandlers() {
             });
         }
         
-        // Handles the delete button within the edit modal.
         const deleteEditBtn = document.getElementById('edit-modal-delete-btn');
         if (deleteEditBtn) {
             deleteEditBtn.addEventListener('click', async () => {
@@ -135,17 +137,13 @@ export function initializeModalHandlers() {
                 showConfirmationModal('Delete Transaction?', 'This is permanent.', async () => {
                     try {
                         const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-
                         if (!res.ok) {
-                            // Reads the specific error message from the server response.
                             const errorData = await res.json();
                             throw new Error(errorData.message || 'Server error during deletion.');
                         }
-
                         editModal.classList.remove('visible');
                         showToast('Transaction deleted.', 'success');
                         await refreshLedger();
-
                     } catch (err) {
                         showToast(`Failed to delete: ${err.message}`, 'error');
                     }
@@ -154,7 +152,6 @@ export function initializeModalHandlers() {
         }
     }
 
-    // --- Clear Limit Buttons in Edit Modal ---
     if(editModal) {
         editModal.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */(e.target);

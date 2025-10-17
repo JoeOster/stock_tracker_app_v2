@@ -61,11 +61,7 @@ async function setupApp() {
     apiRouter.use('/watchlist', require('./routes/watchlist.js')(db, log));
 
     app.use('/api', apiRouter);
-    
     console.log("Server.js - Step 19: API routes configured.");
-
-    // FIX: The catch-all route is moved outside of this setup function
-    // to ensure it is the last route handler added to the app.
 
     return { app, db, log, importSessions };
 }
@@ -86,15 +82,14 @@ function startServer(appInstance) {
 console.log("Server.js - Step 20: Beginning application startup process.");
 if (require.main === module) {
     setupApp().then(({ app: configuredApp }) => {
-        
+
         // --- Frontend Catch-all for SPA ---
         // This MUST be the last route handler.
-        configuredApp.get('*', (req, res) => {
-            // This ensures that any request that is not for an API endpoint
-            // or an existing static file will be served the index.html file.
-            if (!req.path.startsWith('/api/')) {
-                res.sendFile(path.join(__dirname, 'public', 'index.html'));
-            }
+        // DO NOT MESS WITH THIS: Using a simple '*' wildcard breaks the Express router.
+        // This specific regex is required to correctly handle all non-API routes and
+        // serve the index.html file, allowing the client-side router to take over.
+        configuredApp.get(/^(?!\/api).*/, (req, res) => {
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
         });
         
         startServer(configuredApp);

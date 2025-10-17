@@ -1,5 +1,5 @@
 ﻿// /public/event-handlers/_orders.js
-// Version 0.1.3
+// Version 0.1.6
 /**
  * @file Initializes all event handlers for the Orders page.
  * @module event-handlers/_orders
@@ -9,7 +9,7 @@ import { state } from '../state.js';
 import { refreshLedger, fetchPendingOrders } from '../api.js';
 import { switchView } from './_navigation.js';
 import { formatAccounting, getCurrentESTDateString, showConfirmationModal, showToast } from '../ui/helpers.js';
-import { renderOpenOrders } from '../ui/renderers.js';
+import { renderOpenOrders } from '../ui/renderers/_orders.js';
 
 /**
  * Loads data for the orders page and triggers rendering.
@@ -18,7 +18,8 @@ export async function loadOrdersPage() {
     const tableBody = document.querySelector('#pending-orders-table tbody');
     if (tableBody) tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
     try {
-        const orders = await fetchPendingOrders(state.selectedAccountHolderId);
+        // FIX: Explicitly convert the account holder ID to a string to match the function's parameter type.
+        const orders = await fetchPendingOrders(String(state.selectedAccountHolderId));
         renderOpenOrders(orders);
     } catch (error) {
         console.error("Failed to load orders page:", error);

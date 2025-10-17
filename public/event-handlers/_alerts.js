@@ -1,5 +1,5 @@
 // /public/event-handlers/_alerts.js
-// Version 0.1.5
+// Version 0.1.7
 /**
  * @file Initializes all event handlers for the Alerts page.
  * @module event-handlers/_alerts
@@ -8,7 +8,7 @@ import { state } from '../state.js';
 import { switchView } from './_navigation.js';
 import { showToast } from '../ui/helpers.js';
 import { fetchAlerts } from '../api.js';
-import { renderAlerts } from '../ui/renderers.js';
+import { renderAlerts } from '../ui/renderers/_alerts.js';
 
 /**
  * Loads data for the alerts page and triggers rendering.
@@ -17,7 +17,8 @@ export async function loadAlertsPage() {
     const tableBody = document.querySelector('#alerts-table tbody');
     if (tableBody) tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
     try {
-        const alerts = await fetchAlerts(state.selectedAccountHolderId);
+        // FIX: Explicitly convert the account holder ID to a string to match the function's parameter type.
+        const alerts = await fetchAlerts(String(state.selectedAccountHolderId));
         renderAlerts(alerts);
     } catch (error) {
         console.error("Failed to load alerts page:", error);
