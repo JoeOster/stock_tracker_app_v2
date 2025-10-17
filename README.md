@@ -13,31 +13,14 @@ The Portfolio Tracker is a personal journal and analytical tool that allows user
 The application is in a stable, feature-rich state with a comprehensive automated testing suite to protect core functionality.
 
 * **Multi-Account Integration:** Track transactions and portfolio performance for multiple account holders.
-* **Intelligent CSV Importer:** A sophisticated, multi-step reconciliation workflow that treats brokerage CSVs as the source of truth. It includes templates for major brokerages (Fidelity, E-Trade, Robinhood) and robust logic to handle real-world file formats, including header/footer rows and non-transactional data.
+* **Intelligent CSV Importer:** A sophisticated, multi-step reconciliation workflow that treats brokerage CSVs as the source of truth. It includes templates for major brokerages (Fidelity, E-Trade, Robinhood) and robust logic to handle real-world file formats.
 * **Transaction Management:** Full CRUD functionality for all buy and sell transactions, with sales logged against specific buy lots for precise profit/loss calculation.
-* **Automated Order Execution & Alerts:** A backend "Order Watcher" service runs during market hours, creating alerts for price targets and automatically executing limit orders on open positions.
+* **Pending Order Management & Alerts:** A backend "Order Watcher" service runs during market hours, creating alerts for price targets. Users can then mark these orders as filled, which logs the transaction.
+* **Configurable Watchlist:** A dedicated page to monitor tickers you are interested in but do not yet own, with live price updates.
 * **Live Price Updates:** Open positions are updated with current market prices via an auto-refresh scheduler.
-* **Automated Testing Suite:** The project includes an integrated testing framework using Jest for both backend API and frontend UI tests. The suite includes code coverage reporting to ensure code quality and stability.
+* **Automated Testing Suite:** The project includes an integrated testing framework using Jest for both backend API and frontend UI tests.
 * **Modern Theming System:** Includes Light (Default), Dark, Sepia, and High Contrast themes, plus font selection.
 * **Environment-Specific Databases & Deployment:** The project uses separate databases for development, testing, and production.
-
-## **Development Roadmap: Upcoming Features**
-
-### **Phase 2: Strategy & Advice Journal**
-
-This feature allows users to log, "paper trade," and analyze trading ideas from various sources to get a true ROI on their methods.
-
-* **Strategy Management:** Users can define and manage their strategies/sources, storing metadata and associated research documents.
-* **Paper Trading:** Users can log specific trade ideas ("journal entries") with entry prices, profit targets, and stop losses.
-* **Intraday Price Tracking:** A 5-minute cron job will fetch and store the price history for all open journal entries, enabling detailed performance analysis.
-* **Automated Alerts:** The system will create a notification when a paper trade's profit or stop-loss target is met.
-* **Performance Dashboard:** A new "Journal" page will feature a dashboard to compare the theoretical performance of the advice against the user's actual, personal ROI on trades executed from that strategy.
-
-### **Future Enhancements**
-
-* **Test & Coverage Tracking:** Implement a system to automatically record the results of each test run (pass/fail counts, coverage percentages) into the database to enable historical tracking of the project's code quality.
-* **Notification Center/Event Log:** Add a dedicated view within the "Alerts" tab to review a history of all toast messages and system notifications, ensuring important information is not missed.
-* **Authentication:** Secure the application with a user login system to protect sensitive financial data.
 
 ## **Technology Stack**
 
