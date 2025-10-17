@@ -1,4 +1,4 @@
-/* public/css/components/_tables.css */
+/* joeoster/stock_tracker_app_v2/stock_tracker_app_v2-PortfolioManagerTake3/public/css/components/_tables.css */
 /* Contains all general and sticky styles for tables, using a separate border model. */
 
 table {
@@ -49,7 +49,7 @@ tbody tr:nth-child(even) {
 .numeric { text-align: right; }
 .positive { color: var(--positive-color); font-weight: 600; }
 .negative { color: var(--negative-color); font-weight: 600; }
-.actions-cell { text-align: right; }
+.actions-cell { text-align: center; }
 .center-align { text-align: center; }
 
 
@@ -121,4 +121,44 @@ tbody tr:nth-child(even) {
 #snapshots-table tbody tr:nth-child(even) td:first-child,
 #snapshots-table tbody tr:nth-child(even) td:last-child {
     background-color: var(--table-row-even-bg);
+}
+/* joeoster/stock_tracker_app_v2/stock_tracker_app_v2-PortfolioManagerTake3/public/css/components/_ledger.css */
+/* Contains styles specific to the Ledger page. */
+
+#ledger-summary-container { 
+    display: flex; 
+    justify-content: space-around; 
+    padding: 15px; 
+    margin-bottom: 2rem; 
+    background-color: var(--info-panel-bg); 
+    border: 1px solid var(--container-border); 
+    border-radius: 8px; 
+    text-align: center; 
+}
+
+.ledger-filters { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 1rem; 
+    align-items: center; 
+    margin-bottom: 1.5rem; 
+    padding: 1rem; 
+    background-color: var(--info-panel-bg); 
+    border-radius: 8px; 
+    border: 1px solid var(--container-border); 
+}
+
+.ledger-filters input { 
+    width: auto; 
+    flex-grow: 1; 
+}
+
+/* Style to visually group ledger rows by date */
+.new-date-group td { 
+    border-top: 2px solid var(--primary-color) !important; 
+}
+
+/* Center the content of the 'Actions' column in the ledger table body */
+#ledger-table tbody td:last-child {
+    text-align: center;
 }

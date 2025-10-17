@@ -1,15 +1,69 @@
-<div id="ledger-page-container" class="page-container" style="display: none;">
-    <h2>Transaction Ledger</h2>
-    <p class="subtitle">Filter and review your complete transaction history below.</p>
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-PortfolioManagerTake3/public/ui/renderers/_ledger.js
+/**
+ * @file Renderer for the transaction ledger.
+ * @module renderers/_ledger
+ */
 
-    <div class="ledger-filters">
-        <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
-        <label for="ledger-filter-start">From:</label><input type="date" id="ledger-filter-start">
-        <label for="ledger-filter-end">To:</label><input type="date" id="ledger-filter-end">
-        <button id="ledger-clear-filters-btn">Clear Filters</button>
-    </div>
-    <table id="ledger-table">
-        <thead><tr><th data-sort="transaction_date">Date</th><th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type" class="center-align">Type</th><th class="numeric" data-sort="quantity">Quantity</th><th class="numeric" data-sort="price">Price</th><th class="center-align">Actions</th></tr></thead>
-        <tbody></tbody>
-    </table>
-</div>
+import { state } from '../../state.js';
+import { formatAccounting, formatQuantity } from '../helpers.js';
+
+/**
+ * Renders the transaction ledger into the table.
+ * @param {Array<object>} transactions - The transactions to render.
+ * @param {object} sort - The sort order.
+ */
+export function renderTransactionLedger(transactions, sort) {
+    const ledgerBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#ledger-table tbody'));
+    if (!ledgerBody) return;
+
+    const ledgerFilterTicker = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-ticker'));
+    const ledgerFilterStart = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-start'));
+    const ledgerFilterEnd = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-end'));
+
+    const tickerFilter = ledgerFilterTicker ? ledgerFilterTicker.value.toUpperCase() : '';
+    const startDate = ledgerFilterStart ? ledgerFilterStart.value : '';
+    const endDate = ledgerFilterEnd ? ledgerFilterEnd.value : '';
+
+    const filtered = transactions.filter(tx => {
+        const tickerMatch = !tickerFilter || tx.ticker.toUpperCase().includes(tickerFilter);
+        const startDateMatch = !startDate || tx.transaction_date >= startDate;
+        const endDateMatch = !endDate || tx.transaction_date <= endDate;
+        return tickerMatch && startDateMatch && endDateMatch;
+    });
+
+    if (sort && sort.column) {
+        filtered.sort((a, b) => {
+            let valA = a[sort.column];
+            let valB = b[sort.column];
+            if (typeof valA === 'string') {
+                valA = valA.toUpperCase();
+                valB = valB.toUpperCase();
+            }
+            if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    ledgerBody.innerHTML = '';
+    let lastDate = null;
+    filtered.forEach(tx => {
+        const row = ledgerBody.insertRow();
+        if (tx.transaction_date !== lastDate) {
+            row.classList.add('new-date-group');
+            lastDate = tx.transaction_date;
+        }
+        row.innerHTML = `
+            <td>${tx.transaction_date}</td>
+            <td>${tx.ticker}</td>
+            <td>${tx.exchange}</td>
+            <td class="center-align">${tx.transaction_type}</td>
+            <td class="numeric">${formatQuantity(tx.quantity)}</td>
+            <td class="numeric">${formatAccounting(tx.price)}</td>
+            <td class="center-align">
+                <button class="modify-btn" data-id="${tx.id}">Edit</button>
+                <button class="delete-btn" data-id="${tx.id}">Delete</button>
+            </td>
+        `;
+    });
+}

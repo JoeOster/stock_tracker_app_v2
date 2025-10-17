@@ -3,22 +3,33 @@
     <div id="daily-performance-summary"></div>
     <table id="stock-table">
         <thead>
-            <tr><th colspan="12" class="table-section-header">Daily Transaction Log</th></tr>
+            <tr><th colspan="10" class="table-section-header">Daily Transaction Log</th></tr>
             <tr>
-                <th id="confirmation-header" class="center-align">✔</th>
-                <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type" class="center-align">Action</th><th class="numeric" data-sort="quantity" data-type="numeric">Qty</th><th class="numeric" data-sort="price" data-type="numeric">Price</th><th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
-                <th class="numeric">Suggest Profit</th><th class="numeric">Suggest Loss</th><th class="numeric">My Limit Up</th><th class="numeric">My Limit Down</th>
-                <th></th>
+                <th data-sort="ticker">Ticker</th>
+                <th data-sort="exchange">Exchange</th>
+                <th data-sort="transaction_type" class="center-align">Action</th>
+                <th class="numeric" data-sort="quantity" data-type="numeric">Qty</th>
+                <th class="numeric" data-sort="price" data-type="numeric">Price</th>
+                <th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
+                <th></th> <th class="numeric">My Limit <i class="fas fa-arrow-up" style="color: #10b981;"></i></th>
+                <th class="numeric">My Limit <i class="fas fa-arrow-down" style="color: #ef4444;"></i></th>
+                <th class="center-align">Actions</th>
             </tr>
         </thead>
         <tbody id="log-body"></tbody>
         <thead>
             <tr><th colspan="10" class="table-section-header" id="positions-summary-title">Open Lots</th></tr>
             <tr>
-                <th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="purchase_date">Purchase Date</th><th class="numeric" data-sort="cost_basis" data-type="numeric">Cost Basis</th>
-                <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Rem. Qty</th><th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
+                <th data-sort="ticker">Ticker</th>
+                <th data-sort="exchange">Exchange</th>
+                <th data-sort="purchase_date">Purchase Date</th>
+                <th class="numeric" data-sort="cost_basis" data-type="numeric">Basis</th>
+                <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Qty</th>
+                <th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
                 <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($ | %)</th>
-                <th class="numeric">Limit Up</th><th class="numeric">Limit Down</th><th class="center-align">Actions</th>
+                <th class="numeric">Limit <i class="fas fa-arrow-up" style="color: #10b981;"></i></th>
+                <th class="numeric">Limit <i class="fas fa-arrow-down" style="color: #ef4444;"></i></th>
+                <th class="center-align">Actions</th>
             </tr>
         </thead>
         <tbody id="positions-summary-body"></tbody>
