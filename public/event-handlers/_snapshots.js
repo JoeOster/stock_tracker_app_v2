@@ -1,9 +1,14 @@
-// Portfolio Tracker V3.0.6
-// public/event-handlers/_snapshots.js
+// /public/event-handlers/_snapshots.js
+// Version 0.1.7
+/**
+ * @file Initializes all event handlers for the Snapshots page.
+ * @module event-handlers/_snapshots
+ */
 import { state } from '../state.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { fetchSnapshots } from '../api.js';
-import { renderChartsPage, renderSnapshotsPage } from '../ui/renderers.js';
+import { renderSnapshots } from '../ui/renderers/_snapshots.js'; // Correct, direct import
+import { renderPortfolioCharts } from '../ui/renderers/_charts.js'; // <-- FIX: Add this missing import
 import { switchView } from './_navigation.js';
 
 /**
@@ -21,9 +26,9 @@ export async function loadChartsAndSnapshotsPage(viewType) {
         state.allSnapshots = snapshots; // Ensure state is updated before rendering
 
         if (viewType === 'charts') {
-            await renderChartsPage();
+            await renderPortfolioCharts();
         } else {
-            renderSnapshotsPage(snapshots);
+            renderSnapshots(snapshots);
         }
     } catch (error) {
         console.error(`Failed to load ${viewType} page:`, error);
@@ -36,9 +41,6 @@ export async function loadChartsAndSnapshotsPage(viewType) {
 
 /**
  * Initializes all event listeners for the Snapshots page.
- * This includes handling the form for adding new snapshots and the
- * click listener for deleting existing snapshots from the table.
- * @returns {void}
  */
 export function initializeSnapshotsHandlers() {
     const addSnapshotForm = /** @type {HTMLFormElement} */ (document.getElementById('add-snapshot-form'));
@@ -54,7 +56,6 @@ export function initializeSnapshotsHandlers() {
                 value: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('snapshot-value'))).value)
             };
             try {
-                // Add a specific check for the account holder before fetching
                 if (!snapshot.account_holder_id) {
                     throw new Error("Please select an account holder.");
                 }
