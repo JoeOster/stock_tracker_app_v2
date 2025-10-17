@@ -4,7 +4,7 @@
  * @file Renderer for the main navigation tabs.
  * @module renderers/_tabs
  */
-import { getTradingDays, getActivePersistentDates } from '../helpers.js';
+import { getTradingDays, getActivePersistentDates } from '../datetime.js';
 
 export const staticTabs = [
     { viewType: 'charts', textContent: 'Charts' },
