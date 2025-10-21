@@ -1,0 +1,32 @@
+/* public/css/components/_importer.css */
+#conflicts-table th, #conflicts-table td {
+    padding: 8px 10px;
+}
+
+#conflicts-table th[colspan="5"],
+#conflicts-table th[colspan="4"] {
+    text-align: center;
+    background-color: var(--info-panel-bg);
+}
+
+#conflicts-table td:nth-child(6) { /* The "vs." column */
+    font-weight: bold;
+    text-align: center;
+    background-color: var(--container-bg);
+    border-right: 2px solid var(--primary-color);
+}
+
+#import-summary-container {
+    display: flex;
+    justify-content: space-around;
+    padding: 15px;
+    margin-bottom: 2rem;
+    background-color: var(--info-panel-bg);
+    border: 1px solid var(--container-border);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.summary-item {
+    flex: 1;
+}

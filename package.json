@@ -1,13 +1,18 @@
 {
+  "type": "commonjs",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "bottleneck": "^2.19.5",
+    "chart.js": "^4.5.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-fileupload": "^1.5.2",
     "node-cron": "^4.2.1",
     "node-fetch": "^2.7.0",
+    "papaparse": "^5.5.3",
     "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
@@ -24,7 +29,8 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node server.js",
     "dev": "cross-env NODE_ENV=development nodemon server.js",
-    "test": "cross-env NODE_ENV=test jest --testTimeout=10000",
-    "seed-dev": "cross-env NODE_ENV=development node seed-dev-db.js"
+    "test": "cross-env NODE_ENV=test jest --runInBand --silent",
+    "seed-dev": "cross-env NODE_ENV=development node seed-dev-db.js",
+    "backup:dev": "mkdir c:\\\\portfolio_manager_bu\\\\v3\\\\dev 2>NUL & xcopy .\\\\development.db c:\\\\portfolio_manager_bu\\\\v3\\\\dev\\\\ /Y"
   }
 }

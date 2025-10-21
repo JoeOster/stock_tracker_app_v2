@@ -1,102 +1,118 @@
 // in public/ui/helpers.js
-export function formatQuantity(number) {
-    if (number === null || number === undefined || isNaN(number)) { return ''; }
-    const options = { maximumFractionDigits: 5 };
-    if (number % 1 === 0) { options.maximumFractionDigits = 0; }
-    return number.toLocaleString('en-US', options);
-}
+// Version Updated (Fix total value calc for invalid prices AGAIN)
+/**
+ * @file Contains general UI helper functions for DOM manipulation and notifications.
+ * @module ui/helpers
+ */
 
-export function formatAccounting(number, isCurrency = true) {
-    if (number === null || number === undefined || isNaN(number)) { return ''; }
-    if (Math.abs(number) < 0.001 && isCurrency) { return isCurrency ? '$&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-' : '-'; }
-    if (Math.abs(number) < 0.001 && !isCurrency) { return '-'; }
-    const isNegative = number < 0;
-    const absoluteValue = Math.abs(number);
-    let options = { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true };
-    if (!isCurrency) { options.maximumFractionDigits = 5; }
-    let formattedNumber = absoluteValue.toLocaleString('en-US', options);
-    if (isCurrency) { formattedNumber = '$' + formattedNumber; }
-    return isNegative ? `(${formattedNumber})` : formattedNumber;
-}
+import { formatAccounting } from './formatters.js';
 
-export function showToast(message, type = 'info', duration = 10000) {
+/**
+ * Displays a toast notification message.
+ * @param {string} message - The message to display.
+ * @param {'info' | 'success' | 'error'} [type='info'] - The type of toast.
+ * @param {number} [duration=15000] - The duration in milliseconds to show the toast.
+ * @returns {void}
+ */
+export function showToast(message, type = 'info', duration = 15000) {
     const container = document.getElementById('toast-container');
+    if (!container) return; // Add null check for container
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    if(container) container.appendChild(toast);
-    setTimeout(() => { toast.remove(); }, duration);
+    container.appendChild(toast);
+    // Automatically remove the toast after the duration
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.5s forwards';
+        setTimeout(() => toast.remove(), 500);
+     }, duration - 500);
 }
 
-export function getCurrentESTDateString() {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-}
-
-export function getTradingDays(c) {
-    let d = [];
-    let cd = new Date(getCurrentESTDateString() + 'T12:00:00Z');
-    while (d.length < c) {
-        const dow = cd.getUTCDay();
-        if (dow > 0 && dow < 6) { d.push(cd.toISOString().split('T')[0]); }
-        cd.setUTCDate(cd.getUTCDate() - 1);
-    }
-    return d.reverse();
-}
-
-export function getActivePersistentDates() {
-    let persistentDates = JSON.parse(localStorage.getItem('persistentDates')) || [];
-    const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
-    const activeDates = persistentDates.filter(d => d.added > twentyFourHoursAgo);
-    if (activeDates.length < persistentDates.length) { localStorage.setItem('persistentDates', JSON.stringify(activeDates)); }
-    return activeDates.map(d => d.date);
-}
-
+/**
+ * Displays a confirmation modal dialog.
+ * @param {string} title - The title of the modal.
+ * @param {string} body - The body text of the modal.
+ * @param {function(): void} onConfirm - The callback function to execute when the user confirms.
+ * @returns {void}
+ */
 export function showConfirmationModal(title, body, onConfirm) {
     const confirmModal = document.getElementById('confirm-modal');
-    document.getElementById('confirm-modal-title').textContent = title;
-    document.getElementById('confirm-modal-body').textContent = body;
+    if (!confirmModal) return;
+
+    const titleEl = document.getElementById('confirm-modal-title');
+    const bodyEl = document.getElementById('confirm-modal-body');
     const confirmBtn = document.getElementById('confirm-modal-confirm-btn');
     const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
-    
-    const newConfirmBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    
+
+    if (titleEl) titleEl.textContent = title;
+    if (bodyEl) bodyEl.textContent = body;
+
+    if (!confirmBtn || !cancelBtn) return;
+
+    const newConfirmBtn = /** @type {HTMLButtonElement} */ (confirmBtn.cloneNode(true)); // Cast for type safety
+    confirmBtn.parentNode?.replaceChild(newConfirmBtn, confirmBtn);
+
     const closeModal = () => confirmModal.classList.remove('visible');
-    
+
     newConfirmBtn.addEventListener('click', () => {
         onConfirm();
         closeModal();
     });
-    
-    cancelBtn.addEventListener('click', closeModal);
+
+    cancelBtn.removeEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal, { once: true });
+
     confirmModal.classList.add('visible');
 }
 
-export function populatePricesFromCache(activityMap, priceCache) {
+
+/**
+ * Populates the current prices and calculates unrealized P/L for rows in the daily report or dashboard table.
+ * @param {Map<string, object>} dataMap - A map of open positions ('lot-id' -> lotData).
+ * @param {Map<string, {price: number|string|null, timestamp: number}>} priceCache - A cache of recently fetched stock prices.
+ */
+export function populatePricesFromCache(dataMap, priceCache) {
     const totalValueSummarySpan = document.querySelector('#total-value-summary span');
+    const dashboardTotalValueSpan = document.querySelector('#dashboard-total-value span');
     let totalPortfolioValue = 0;
     let totalUnrealizedPL = 0;
 
-    activityMap.forEach((lot, key) => {
-        const row = document.querySelector(`[data-key="${key}"]`);
+    dataMap.forEach((lot, key) => {
+        const row = document.querySelector(`tr[data-key="${key}"]`);
         if (!row) return;
 
-        const priceToUse = priceCache.get(lot.ticker);
+        const priceData = priceCache.get(lot.ticker);
+        const priceToUse = priceData ? priceData.price : null;
+
         const priceCell = row.querySelector('.current-price');
         const plCombinedCell = row.querySelector('.unrealized-pl-combined');
 
-        if (priceToUse === 'invalid') {
-            if (priceCell) priceCell.innerHTML = `<span class="negative">Invalid</span>`;
+        let currentValue = 0;
+        let costOfRemaining = 0; // Initialize here
+        let unrealizedPL = 0;
+        let unrealizedPercent = 0;
+
+        // --- FIX: Ensure costOfRemaining is calculated regardless of price validity ---
+        costOfRemaining = lot.quantity_remaining * lot.cost_basis;
+        // --- END FIX ---
+
+
+        if (priceToUse === 'invalid' || priceToUse === 'error' || priceToUse === null || priceToUse === undefined) {
+            if (priceCell) priceCell.innerHTML = `<span class="negative">${priceToUse === null || priceToUse === undefined ? '--' : (priceToUse === 'invalid' ? 'Invalid' : 'Error')}</span>`;
             if (plCombinedCell) plCombinedCell.innerHTML = '--';
-        } else if (priceToUse !== undefined && priceToUse !== null) {
-            const currentValue = lot.quantity_remaining * priceToUse;
-            const costOfRemaining = lot.quantity_remaining * lot.cost_basis;
-            const unrealizedPL = currentValue - costOfRemaining;
-            const unrealizedPercent = (costOfRemaining !== 0) ? (unrealizedPL / costOfRemaining) * 100 : 0;
-            
-            totalPortfolioValue += currentValue;
-            totalUnrealizedPL += unrealizedPL;
-            
+
+            // Use cost basis as the current value when price is unavailable
+            currentValue = costOfRemaining; // Use calculated costOfRemaining
+            unrealizedPL = 0;
+            unrealizedPercent = 0;
+
+        } else if (typeof priceToUse === 'number') {
+            // Valid price found
+            currentValue = lot.quantity_remaining * priceToUse;
+            // costOfRemaining already calculated above
+            unrealizedPL = currentValue - costOfRemaining;
+            unrealizedPercent = (costOfRemaining !== 0) ? (unrealizedPL / costOfRemaining) * 100 : 0;
+
             if (priceCell) priceCell.innerHTML = formatAccounting(priceToUse);
 
             if (plCombinedCell) {
@@ -105,62 +121,74 @@ export function populatePricesFromCache(activityMap, priceCache) {
                 plCombinedCell.innerHTML = `${plDollarHTML} | ${plPercentHTML}`;
                 plCombinedCell.className = `numeric unrealized-pl-combined ${unrealizedPL >= 0 ? 'positive' : 'negative'}`;
             }
-        } else {
-            if (priceCell) priceCell.innerHTML = '--';
-            if (plCombinedCell) plCombinedCell.innerHTML = '--';
         }
+        // Always add the calculated current value (or cost basis fallback)
+        totalPortfolioValue += currentValue;
+        totalUnrealizedPL += unrealizedPL;
     });
 
     if (totalValueSummarySpan) { totalValueSummarySpan.innerHTML = `<strong>${formatAccounting(totalPortfolioValue)}</strong>`; }
+    if (dashboardTotalValueSpan) { dashboardTotalValueSpan.innerHTML = `<strong>${formatAccounting(totalPortfolioValue)}</strong>`; }
 
-    const totalPlCell = document.getElementById('unrealized-pl-total');
-    if (totalPlCell) {
-        totalPlCell.innerHTML = `<strong>${formatAccounting(totalUnrealizedPL)}</strong>`;
-        totalPlCell.className = `numeric ${totalUnrealizedPL >= 0 ? 'positive' : 'negative'}`;
+    const dailyReportTotalPlCell = document.getElementById('unrealized-pl-total');
+    const dashboardTotalPlCell = document.getElementById('dashboard-unrealized-pl-total');
+
+    if (dailyReportTotalPlCell) {
+        dailyReportTotalPlCell.innerHTML = `<strong>${formatAccounting(totalUnrealizedPL)}</strong>`;
+        dailyReportTotalPlCell.className = `numeric ${totalUnrealizedPL >= 0 ? 'positive' : 'negative'}`;
+    }
+     if (dashboardTotalPlCell) {
+        dashboardTotalPlCell.innerHTML = `<strong>${formatAccounting(totalUnrealizedPL)}</strong>`;
+        dashboardTotalPlCell.className = `numeric ${totalUnrealizedPL >= 0 ? 'positive' : 'negative'}`;
     }
 }
 
-/**
- * Gets the current status of the US stock market.
- * @returns {string} 'Pre-Market', 'Regular Hours', 'After-Hours', or 'Closed'
- */
-export function getUSMarketStatus() {
-    const now = new Date();
-    const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const dayOfWeek = estTime.getDay();
-    const hour = estTime.getHours();
-    const minute = estTime.getMinutes();
-
-    const isWeekday = dayOfWeek > 0 && dayOfWeek < 6;
-    if (!isWeekday) {
-        return 'Closed';
-    }
-
-    if (hour < 4) return 'Closed';
-    if (hour < 9 || (hour === 9 && minute < 30)) return 'Pre-Market';
-    if (hour < 16) return 'Regular Hours';
-    if (hour < 20) return 'After-Hours';
-
-    return 'Closed';
-}
 
 /**
- * Gets the date string for the most recent trading day (Mon-Fri).
- * @returns {string} The date string in YYYY-MM-DD format.
+ * Sorts a table by a specific column.
+ * @param {HTMLTableCellElement} th - The table header element that was clicked.
+ * @param {HTMLTableSectionElement} tbody - The tbody element of the table to sort.
+ * @returns {void}
  */
-export function getMostRecentTradingDay() {
-    let checkDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    let dayOfWeek = checkDate.getDay();
+export function sortTableByColumn(th, tbody) {
+    if (!th || !tbody) return;
 
-    // If it's Sunday (0), subtract 2 days to get to Friday.
-    if (dayOfWeek === 0) {
-        checkDate.setDate(checkDate.getDate() - 2);
-    } 
-    // If it's Saturday (6), subtract 1 day to get to Friday.
-    else if (dayOfWeek === 6) {
-        checkDate.setDate(checkDate.getDate() - 1);
-    }
-    // It's a weekday, so we can use it as is.
+    const column = th.cellIndex;
+    const dataType = th.dataset.type || 'string';
+    let currentDirection = '';
+    if (th.classList.contains('sorted-asc')) currentDirection = 'asc';
+    else if (th.classList.contains('sorted-desc')) currentDirection = 'desc';
+    const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
 
-    return checkDate.toLocaleDateString('en-CA');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const dataRows = rows.filter(row => !row.id.endsWith('-no-results'));
+
+    dataRows.sort((a, b) => {
+        const cellA = a.cells[column];
+        const cellB = b.cells[column];
+        const valA = cellA?.textContent?.trim() ?? '';
+        const valB = cellB?.textContent?.trim() ?? '';
+
+        if (dataType === 'numeric') {
+            const numA = parseFloat(valA.replace(/[$,()\s]/g, '')) || 0;
+            const numB = parseFloat(valB.replace(/[$,()\s]/g, '')) || 0;
+            return newDirection === 'asc' ? numA - numB : numB - numA;
+        } else if (dataType === 'date') {
+             const dateA = new Date(valA);
+             const dateB = new Date(valB);
+             if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+             return newDirection === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+        }
+        else {
+            return newDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+    });
+
+    const allHeaders = th.closest('thead')?.querySelectorAll('th[data-sort]') ?? [];
+    allHeaders.forEach(header => {
+        header.classList.remove('sorted-asc', 'sorted-desc');
+    });
+
+    th.classList.add(newDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    tbody.append(...dataRows);
 }

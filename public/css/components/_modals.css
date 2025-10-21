@@ -121,3 +121,78 @@
 .management-list li:nth-child(even) { 
     background-color: var(--info-panel-bg); 
 }
+
+/* Sub-navigation within Data Management */
+.sub-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--container-border);
+    margin-bottom: 1.5rem;
+}
+
+.sub-tab {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text-muted-color);
+    border-bottom: 2px solid transparent;
+}
+
+.sub-tab.active, .sub-tab:hover {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.sub-tab-panel {
+    display: none;
+}
+
+.sub-tab-panel.active {
+    display: block;
+}
+
+/* Grid layout for the Add Advice Source form */
+.add-item-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px;
+    margin-top: 1rem;
+}
+
+.add-item-form-grid .form-group {
+    margin-bottom: 0; /* Remove default margin */
+}
+
+.add-item-form-grid .form-group-span-2 {
+    grid-column: span 2;
+}
+
+/* public/css/components/_modals.css */
+
+/* ... existing modal styles ... */
+
+/* Styles for standardized modal button layouts */
+.modal-actions {
+    margin-top: 1.5rem; /* Add some space above the buttons */
+    display: flex;
+    justify-content: space-between; /* Pushes delete to left, others to right */
+    align-items: center;
+}
+
+.modal-actions-right {
+    display: flex;
+    gap: 10px; /* Space between Cancel and Confirm/Save */
+}
+
+/* Optional: Style for a less prominent cancel button */
+.cancel-btn {
+    background-color: transparent;
+    border-color: var(--container-border);
+    color: var(--text-muted-color);
+}
+
+.cancel-btn:hover {
+    background-color: var(--info-panel-bg);
+    border-color: var(--container-border);
+    color: var(--text-color);
+}

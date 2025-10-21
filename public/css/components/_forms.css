@@ -138,3 +138,27 @@ button:hover {
     flex-direction: column;
     gap: 15px;
 }
+/* ... at the end of public/css/components/_forms.css ... */
+
+/* --- Importer Reconciliation Table Statuses --- */
+.status-duplicate {
+    color: var(--negative-color);
+    font-weight: 600;
+}
+
+.status-resolved {
+    color: var(--positive-color);
+    font-weight: 600;
+}
+
+.status-ignored {
+    color: var(--text-muted-color);
+    text-decoration: line-through;
+}
+
+.status-invalid {
+    color: var(--negative-color);
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: help;
+}

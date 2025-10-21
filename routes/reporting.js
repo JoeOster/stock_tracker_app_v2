@@ -1,79 +1,78 @@
 // routes/reporting.js
 const express = require('express');
 const router = express.Router();
-const fetch = require('node-fetch');
+const { getPrices } = require('../services/priceService'); // Use the new centralized price service
 
-// This module will be passed the database connection (db) from server.js
-module.exports = (db) => {
+/**
+ * Creates and returns an Express router for handling complex reporting and data aggregation endpoints.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @param {function(string): void} log - The logging function.
+ * @returns {express.Router} The configured Express router.
+ */
+module.exports = (db, log) => {
 
+    /**
+     * GET /daily_performance/:date
+     * Calculates the portfolio's value at the end of the day PRIOR to the selected date.
+     */
     router.get('/daily_performance/:date', async (req, res) => {
         const selectedDate = req.params.date;
         const holderId = req.query.holder;
 
-        let holderFilter = '';
-        const params = [selectedDate];
-        if (holderId && holderId !== 'all') {
-            holderFilter = 'AND account_holder_id = ?';
-            // @ts-ignore
-            params.push(holderId);
-        }
+        try {
+            let prevDate = new Date(selectedDate + 'T12:00:00Z');
+            prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+            const previousDay = prevDate.toISOString().split('T')[0];
 
-        let prevDate = new Date(selectedDate + 'T12:00:00Z');
-        prevDate.setUTCDate(prevDate.getUTCDate() - 1);
-        const previousDay = prevDate.toISOString().split('T')[0];
+            let holderFilter = '';
+            const params = [previousDay];
+            if (holderId && holderId !== 'all') {
+                holderFilter = 'AND account_holder_id = ?';
+                params.push(holderId);
+            }
 
-        const calculateTotalValue = async (date) => {
-            const query = `
+            const openLotsQuery = `
                 SELECT ticker, price as cost_basis, COALESCE(quantity_remaining, 0) as quantity_remaining
                 FROM transactions
                 WHERE transaction_type = 'BUY' AND date(transaction_date) <= date(?) AND COALESCE(quantity_remaining, 0) > 0.00001
                 ${holderFilter}
             `;
-            const openLots = await db.all(query, params.map(p => p === selectedDate ? date : p));
+            const openLots = await db.all(openLotsQuery, params);
 
-            let totalValue = 0;
+            const uniqueTickers = [...new Set(openLots.map(lot => lot.ticker))];
+            // Pass a high priority (e.g., 4) for these reporting requests
+            const priceMap = await getPrices(uniqueTickers, 4);
+
+            let previousValue = 0;
             for (const lot of openLots) {
-                let price = null;
-                const cachedPrice = await db.get('SELECT close_price FROM historical_prices WHERE ticker = ? AND date = ?', [lot.ticker, date]);
-                if (cachedPrice) { price = cachedPrice.close_price; } 
-                else {
-                    try {
-                        const apiKey = process.env.FINNHUB_API_KEY;
-                        const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${lot.ticker}&token=${apiKey}`);
-                        if(apiRes.ok) {
-                            const data = await apiRes.json();
-                            if(data && data.c > 0) price = data.c;
-                        }
-                    } catch (e) { /* ignore */ }
-                }
-                totalValue += ((price || lot.cost_basis) * lot.quantity_remaining);
+                // Unwrap the price from the service's cache object
+                const priceToUse = priceMap[lot.ticker]?.price;
+                const finalPrice = (typeof priceToUse === 'number') ? priceToUse : lot.cost_basis;
+                previousValue += (finalPrice * lot.quantity_remaining);
             }
-            return totalValue;
-        };
-        try {
-            const currentValue = await calculateTotalValue(selectedDate);
-            const previousValue = await calculateTotalValue(previousDay);
-            const dailyChange = currentValue - previousValue;
-            res.json({ currentValue, previousValue, dailyChange });
+
+            res.json({ previousValue });
+
         } catch (error) {
-            console.error("Failed to calculate daily performance:", error);
+            log(`[ERROR] Failed to calculate previous day value for daily performance: ${error.message}`);
             res.status(500).json({ message: "Error calculating daily performance" });
         }
     });
 
+    /**
+     * GET /positions/:date
+     * Fetches all transactions for a specific day and all open positions at the end of that day.
+     */
     router.get('/positions/:date', async (req, res) => {
         try {
             const selectedDate = req.params.date;
             const holderId = req.query.holder;
-
             let holderFilter = '';
             const params = [selectedDate];
             if (holderId && holderId !== 'all') {
                 holderFilter = 'AND account_holder_id = ?';
-                // @ts-ignore
                 params.push(holderId);
             }
-
             const dailyTransactionsQuery = `
                 SELECT daily_tx.*, parent_tx.price as parent_buy_price
                 FROM transactions AS daily_tx
@@ -99,11 +98,15 @@ module.exports = (db) => {
             const endOfDayPositions = await db.all(endOfDayPositionsQuery, params);
             res.json({ dailyTransactions, endOfDayPositions });
         } catch (error) {
-            console.error("CRITICAL ERROR in /api/positions/:date:", error);
+            log(`[ERROR] CRITICAL ERROR in /api/positions/:date: ${error.message}`);
             res.status(500).json({ message: "Internal Server Error" });
         }
     });
 
+    /**
+     * GET /realized_pl/summary
+     * Calculates the total lifetime realized profit/loss, grouped by exchange.
+     */
     router.get('/realized_pl/summary', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -123,11 +126,15 @@ module.exports = (db) => {
             const total = byExchange.reduce((sum, row) => sum + row.total_pl, 0);
             res.json({ byExchange, total });
         } catch (error) {
-            console.error("Failed to get realized P&L summary:", error);
+            log(`[ERROR] Failed to get realized P&L summary: ${error.message}`);
             res.status(500).json({ message: "Error fetching realized P&L summary." });
         }
     });
 
+    /**
+     * POST /realized_pl/summary
+     * Calculates the realized profit/loss within a specific date range, grouped by exchange.
+     */
     router.post('/realized_pl/summary', async (req, res) => {
         try {
             const { startDate, endDate, accountHolderId } = req.body;
@@ -154,11 +161,16 @@ module.exports = (db) => {
             const total = byExchange.reduce((sum, row) => sum + row.total_pl, 0);
             res.json({ byExchange, total });
         } catch (error) {
-            console.error("Failed to get ranged realized P&L summary:", error);
+            log(`[ERROR] Failed to get ranged realized P&L summary: ${error.message}`);
             res.status(500).json({ message: "Error fetching ranged realized P&L summary." });
         }
     });
 
+    /**
+     * GET /portfolio/overview
+     * Fetches a summarized overview of all current open positions, grouped by ticker.
+     * Calculates total quantity and weighted average cost for each ticker.
+     */
     router.get('/portfolio/overview', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -190,7 +202,7 @@ module.exports = (db) => {
             }
             res.json(overview);
         } catch (error) {
-            console.error("Failed to get portfolio overview:", error);
+            log(`[ERROR] Failed to get portfolio overview: ${error.message}`);
             res.status(500).json({ message: "Error fetching portfolio overview." });
         }
     });

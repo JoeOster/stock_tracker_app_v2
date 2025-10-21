@@ -1,128 +1,227 @@
-// in public/ui/renderers/_dailyReport.js
-import { state } from '../../app-main.js';
-import { formatQuantity, formatAccounting, getCurrentESTDateString, getTradingDays} from '../helpers.js';
+// /public/ui/renderers/_dailyReport.js
+// Version Updated (Conditional Columns for Historical Dates)
+/**
+ * @file Renderer for the daily report page.
+ * @module renderers/_dailyReport
+ */
+import { state } from '../../state.js';
+import { formatAccounting, formatQuantity } from '../formatters.js';
+import { getCurrentESTDateString } from '../datetime.js';
 
-export async function renderDailyReport(date, activityMap) {
+/**
+ * Renders the daily transaction report into the table.
+ * @param {string} date - The date for the report (YYYY-MM-DD).
+ * @param {Map<string, object>} activityMap - A map to store activity data.
+ * @param {object | null} perfData - Performance data.
+ * @param {object | null} positionData - Position data ({dailyTransactions: [], endOfDayPositions: []}).
+ */
+export function renderDailyReportPage(date, activityMap, perfData, positionData) {
     const tableTitle = document.getElementById('table-title');
-    const performanceSummary = document.getElementById('daily-performance-summary');
-    const logBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('log-body'));
-    const summaryBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('positions-summary-body'));
-    let dailyRealizedPL = 0;
-
-    const confirmationHeader = document.getElementById('confirmation-header');
-    const lastTradingDay = getTradingDays(1)[0];
-    const isCurrentTradingDay = (date === lastTradingDay);
-
-    if (confirmationHeader) {
-        confirmationHeader.style.display = isCurrentTradingDay ? '' : 'none';
-    }
-
     if (tableTitle) {
-        let titleText = `Activity Report for ${new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
-        let holderName = 'All Accounts';
-        if(state.selectedAccountHolderId !== 'all') {
-            const holder = state.allAccountHolders.find(h => h.id == state.selectedAccountHolderId);
-            if(holder) holderName = holder.name;
-        }
-        titleText += ` (${holderName})`;
-        tableTitle.textContent = titleText;
+        tableTitle.textContent = `Daily Report for ${date}`;
     }
 
-    if(performanceSummary) { performanceSummary.innerHTML = `<h3>Daily Performance: <span>...</span></h3><h3 id="realized-gains-summary">Realized: <span>--</span></h3><h3 id="total-value-summary">Total Open Value: <span>--</span></h3>`; }
+    const logHeaderRow = /** @type {HTMLTableRowElement | null} */ (document.querySelector('#stock-table thead:nth-of-type(1) tr:nth-of-type(2)'));
+    const logBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('log-body'));
+    const summaryHeaderRow = /** @type {HTMLTableRowElement | null} */ (document.querySelector('#stock-table thead:nth-of-type(2) tr:nth-of-type(2)'));
+    const summaryBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('positions-summary-body'));
+    const summaryFooterRow = /** @type {HTMLTableRowElement | null} */ (document.querySelector('#stock-table tfoot tr:first-child'));
 
-    try {
-        const perfResponse = await fetch(`/api/reporting/daily_performance/${date}?holder=${state.selectedAccountHolderId}`);
-        if(perfResponse.ok) {
-            const perfData = await perfResponse.json();
-            const performanceSpan = performanceSummary.querySelector('h3:first-child span');
-            if (performanceSpan && perfData) {
-                const change = perfData.dailyChange;
-                const percentage = (perfData.previousValue !== 0) ? (change / perfData.previousValue * 100).toFixed(2) : 0;
-                const colorClass = change >= 0 ? 'positive' : 'negative';
-                performanceSpan.className = colorClass;
-                performanceSpan.innerHTML = `${formatAccounting(change)} (${percentage}%)`;
+
+    if (!logHeaderRow || !logBody || !summaryHeaderRow || !summaryBody || !summaryFooterRow) {
+        console.error("Daily Report: Could not find all necessary table elements.");
+        return;
+    }
+
+    const isCurrentDay = (date === getCurrentESTDateString());
+    // UPDATED Colspan based on conditional columns
+    // Base: Ticker + Exch + Action/Date + Basis/Qty + Qty/Price + Current/Realized + Unrealized/Placeholder + Limits = 8
+    // Add 1 for Checkbox if current day
+    // Add 1 for Actions if current day
+    const logTableColspan = isCurrentDay ? 9 : 7; // Base 7 + Checkbox + Actions
+    const summaryTableColspan = isCurrentDay ? 10 : 8; // Base 8 + Checkbox + Actions
+
+    // --- Daily Transaction Log Header ---
+    logHeaderRow.innerHTML = ''; // Clear previous headers
+    let logHeaderHTML = '';
+    if (isCurrentDay) {
+        logHeaderHTML += `<th class="reconciliation-checkbox-header sticky-col-checkbox"></th>`; // Checkbox
+    }
+    logHeaderHTML += `
+        <th data-sort="ticker" class="sticky-col-ticker">Ticker</th>
+        <th data-sort="exchange">Exchange</th>
+        <th data-sort="transaction_type" class="center-align">Action</th>
+        <th class="numeric" data-sort="quantity" data-type="numeric">Qty</th>
+        <th class="numeric" data-sort="price" data-type="numeric">Price</th>
+        <th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
+        `;
+    if (isCurrentDay) {
+        logHeaderHTML += `<th class="center-align sticky-col-actions">Actions</th>`; // Actions
+    }
+    logHeaderRow.innerHTML = logHeaderHTML;
+    // Update colspan for the section header row above
+    const logSectionHeader = /** @type {HTMLTableCellElement | null} */ (logHeaderRow.parentElement?.previousElementSibling?.querySelector('th[colspan]'));
+    if (logSectionHeader) logSectionHeader.colSpan = logTableColspan; // Use calculated colspan
+
+    // --- Daily Transaction Log Body ---
+    activityMap.clear(); // Clear old activity map data
+    logBody.innerHTML = ''; // Clear previous body
+
+    if (!positionData || !positionData.dailyTransactions || positionData.dailyTransactions.length === 0) {
+        logBody.innerHTML = `<tr><td colspan="${logTableColspan}">No transactions logged for this day.</td></tr>`;
+    } else {
+        positionData.dailyTransactions.forEach(tx => {
+            const row = logBody.insertRow();
+            let rowHTML = '';
+            if (isCurrentDay) {
+                rowHTML += `<td class="reconciliation-checkbox-cell center-align sticky-col-checkbox"><input type="checkbox" class="reconciliation-checkbox"></td>`;
+            }
+             rowHTML += `
+                <td class="sticky-col-ticker">${tx.ticker}</td>
+                <td>${tx.exchange}</td>
+                <td class="center-align">${tx.transaction_type}</td>
+                <td class="numeric">${formatQuantity(tx.quantity)}</td>
+                <td class="numeric">${formatAccounting(tx.price)}</td>
+                <td class="numeric ${tx.realizedPL >= 0 ? 'positive' : 'negative'}">${tx.realizedPL ? formatAccounting(tx.realizedPL) : '--'}</td>
+                `;
+             if (isCurrentDay) {
+                 // Actions empty for log rows, but cell needs to exist for column count
+                 rowHTML += `<td class="center-align actions-cell sticky-col-actions"></td>`;
+             }
+             row.innerHTML = rowHTML;
+        });
+    }
+
+    // --- Open Lots Table Header ---
+    summaryHeaderRow.innerHTML = ''; // Clear previous headers
+    let summaryHeaderHTML = '';
+    if (isCurrentDay) {
+        summaryHeaderHTML += `<th class="reconciliation-checkbox-header sticky-col-checkbox"></th>`; // Checkbox
+    }
+    summaryHeaderHTML += `
+        <th data-sort="ticker" class="sticky-col-ticker">Ticker</th>
+        <th data-sort="exchange">Exchange</th>
+        <th data-sort="purchase_date">Purchase Date</th>
+        <th class="numeric" data-sort="cost_basis" data-type="numeric">Basis</th>
+        <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Qty</th>
+        <th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
+        <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($ | %)</th>
+        <th class="numeric">Limits (Up/Down)</th>
+    `;
+    if (isCurrentDay) {
+        summaryHeaderHTML += `<th class="center-align sticky-col-actions">Actions</th>`; // Actions
+    }
+    summaryHeaderRow.innerHTML = summaryHeaderHTML;
+     // Update colspan for the section header row above
+     const summarySectionHeader = /** @type {HTMLTableCellElement | null} */ (summaryHeaderRow.parentElement?.previousElementSibling?.querySelector('th[colspan]'));
+     if (summarySectionHeader) summarySectionHeader.colSpan = summaryTableColspan; // Use calculated colspan
+
+    // --- Filter Bar (remains the same) ---
+    const oldFilterBar = document.getElementById('daily-report-filter-bar');
+    if (oldFilterBar) oldFilterBar.remove();
+    const filterBar = document.createElement('div');
+    filterBar.className = 'filter-bar';
+    filterBar.id = 'daily-report-filter-bar';
+    filterBar.innerHTML = `<input type="text" id="daily-ticker-filter" placeholder="Filter by Ticker...">`;
+    const summaryThead = summaryHeaderRow.parentElement;
+    if (summaryThead && summaryThead.parentElement) {
+        summaryThead.parentElement.insertBefore(filterBar, summaryThead);
+    }
+
+
+    // --- Open Lots Table Body ---
+    summaryBody.innerHTML = ''; // Clear previous body
+    if (!positionData || !positionData.endOfDayPositions || positionData.endOfDayPositions.length === 0) {
+        summaryBody.innerHTML = `<tr><td colspan="${summaryTableColspan}">No open positions at the end of this day.</td></tr>`;
+    } else {
+        positionData.endOfDayPositions.forEach(pos => {
+            const lotKey = `lot-${pos.id}`;
+            if (isCurrentDay) { // Only populate activityMap for the current day view
+                activityMap.set(lotKey, pos);
+            }
+            const row = summaryBody.insertRow();
+            row.dataset.key = lotKey; // Still add key for potential click events (like advice modal)
+
+            let rowHTML = '';
+            if (isCurrentDay) {
+                 rowHTML += `<td class="reconciliation-checkbox-cell center-align sticky-col-checkbox"><input type="checkbox" class="reconciliation-checkbox"></td>`;
+            }
+             // Format combined limits
+             const limitUpText = pos.limit_price_up ? formatAccounting(pos.limit_price_up, false) : '--';
+             const limitDownText = pos.limit_price_down ? formatAccounting(pos.limit_price_down, false) : '--';
+             const limitsCombinedText = `${limitUpText} / ${limitDownText}`;
+
+             rowHTML += `
+                <td class="sticky-col-ticker">${pos.ticker}</td>
+                <td>${pos.exchange}</td>
+                <td>${pos.purchase_date}</td>
+                <td class="numeric">${formatAccounting(pos.cost_basis)}</td>
+                <td class="numeric">${formatQuantity(pos.quantity_remaining)}</td>
+                <td class="numeric current-price">--</td> <td class="numeric unrealized-pl-combined">--</td> <td class="numeric">${limitsCombinedText}</td>
+            `;
+             if (isCurrentDay) {
+                 rowHTML += `
+                 <td class="center-align actions-cell sticky-col-actions">
+                    <button class="sell-from-lot-btn" data-buy-id="${pos.id}" data-ticker="${pos.ticker}" data-exchange="${pos.exchange}" data-quantity="${pos.quantity_remaining}">Sell</button>
+                    <button class="set-limit-btn" data-id="${pos.id}">Limits</button>
+                    <button class="edit-buy-btn" data-id="${pos.id}">Edit</button>
+                </td>`;
+             }
+             row.innerHTML = rowHTML;
+        });
+    }
+
+    // --- Footer Update ---
+    const labelCell = summaryFooterRow.querySelector('td:first-child');
+    // Footer Colspan Calculation: Total Columns - P/L Cell (1) - Remaining Right Cells (1: Actions if present, 0 otherwise)
+    const footerRightCells = isCurrentDay ? 1 : 0;
+    const footerLabelColspan = summaryTableColspan - 1 - footerRightCells;
+    if (labelCell) (/** @type {HTMLTableCellElement} */ (labelCell)).colSpan = footerLabelColspan;
+
+    // Ensure the last footer cell (if it exists beyond the label and P/L) has the correct colspan
+    const plCellIndex = footerLabelColspan; // Index of the P/L cell
+    const lastFooterCell = /** @type {HTMLTableCellElement | null} */(summaryFooterRow.cells[plCellIndex + 1]);
+    if(lastFooterCell) {
+        lastFooterCell.colSpan = footerRightCells; // Set to 1 if actions exist, 0 otherwise (effectively hiding if 0?)
+        lastFooterCell.style.display = footerRightCells > 0 ? '' : 'none'; // Explicitly hide if colspan is 0
+    }
+
+
+    // --- Filter Input Event Listener ---
+    const filterInput = /** @type {HTMLInputElement} */ (document.getElementById('daily-ticker-filter'));
+    if (filterInput) {
+        // Ensure only one listener is attached
+        filterInput.removeEventListener('input', filterRows);
+        filterInput.addEventListener('input', filterRows);
+    }
+
+    // Define filterRows function within the scope
+    function filterRows() {
+        if (!filterInput || !summaryBody) return; // Guard clause
+        const filterValue = filterInput.value.toUpperCase();
+        const rows = summaryBody.getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            // Ticker is ALWAYS the second cell if checkbox exists, first if not.
+            const tickerCellIndex = isCurrentDay ? 1 : 0; // Adjust index based on checkbox presence
+            const tickerCell = rows[i].getElementsByTagName('td')[tickerCellIndex];
+            if (tickerCell) {
+                const ticker = tickerCell.textContent?.toUpperCase() ?? '';
+                const isMatch = ticker.includes(filterValue);
+                rows[i].style.display = isMatch ? '' : 'none';
             }
         }
-    } catch (e) { console.error("Could not fetch daily performance", e); }
+    }
 
-    try {
-        const response = await fetch(`/api/reporting/positions/${date}?holder=${state.selectedAccountHolderId}`);
-        if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-        const data = await response.json();
-        if (!data || !data.dailyTransactions || !data.endOfDayPositions) { throw new Error("Invalid data structure received."); }
-
-        if (logBody) {
-            if (data.dailyTransactions.length === 0) {
-                logBody.innerHTML = '<tr><td colspan="12">No transactions logged for this day.</td></tr>';
-            } else {
-                // --- OPTIMIZATION: Build HTML string array ---
-                const rowsHTML = data.dailyTransactions.map(tx => {
-                    dailyRealizedPL += tx.realizedPL || 0;
-                    
-                    const confirmationCellHTML = isCurrentTradingDay 
-                        ? '<td><input type="checkbox" class="confirmation-check"></td>' 
-                        : '<td style="display: none;"></td>';
-
-                    return `
-                        <tr>
-                            ${confirmationCellHTML}
-                            <td>${tx.ticker}</td>
-                            <td>${tx.exchange}</td>
-                            <td>${tx.transaction_type}</td>
-                            <td class="numeric">${formatQuantity(tx.quantity)}</td>
-                            <td class="numeric">${formatAccounting(tx.price)}</td>
-                            <td class="numeric">${formatAccounting(tx.realizedPL)}</td>
-                            <td></td>
-                            <td></td>
-                            <td class="numeric">${formatAccounting(tx.limit_price_up)}</td>
-                            <td class="numeric">${formatAccounting(tx.limit_price_down)}</td>
-                            <td></td>
-                        </tr>`;
-                });
-                // Set innerHTML in a single operation for performance
-                logBody.innerHTML = rowsHTML.join('');
-                // --- END OPTIMIZATION ---
-            }
-            
-            const realizedGainsSummarySpan = document.querySelector('#realized-gains-summary span');
-             if (realizedGainsSummarySpan) {
-                 realizedGainsSummarySpan.innerHTML = `<strong>${formatAccounting(dailyRealizedPL)}</strong>`;
-            }
-        }
-
-        if (summaryBody) {
-            summaryBody.innerHTML = '';
-            activityMap.clear();
-            if (data.endOfDayPositions.length === 0) {
-                summaryBody.innerHTML = '<tr><td colspan="10">No open positions at the end of this day.</td></tr>';
-            } else {
-                const rowsHTML = data.endOfDayPositions.map(p => {
-                    const key = `lot-${p.id}`;
-                    activityMap.set(key, { ...p });
-                    return `
-                        <tr data-key="${key}">
-                            <td>${p.ticker}</td>
-                            <td>${p.exchange}</td>
-                            <td>${p.purchase_date}</td>
-                            <td class="numeric">${formatAccounting(p.cost_basis)}</td>
-                            <td class="numeric">${formatQuantity(p.quantity_remaining)}</td>
-                            <td class="numeric current-price"><div class="loader"></div></td>
-                            <td class="numeric unrealized-pl-combined">--</td>
-                            <td class="numeric">${p.limit_price_up ? formatAccounting(p.limit_price_up) : '--'}</td>
-                            <td class="numeric">${p.limit_price_down ? formatAccounting(p.limit_price_down) : '--'}</td>
-                            <td class="actions-cell">
-                                <button class="edit-buy-btn modify-btn" data-id="${p.id}" title="Edit Original Buy Transaction">Edit</button>
-                                <button class="set-limit-btn modify-btn" data-id="${p.id}" title="Set/Edit Limit Order">Limits</button>
-                                <button class="sell-from-lot-btn" data-buy-id="${p.id}" data-ticker="${p.ticker}" data-exchange="${p.exchange}" data-quantity="${p.quantity_remaining}">Sell</button>
-                            </td>
-                        </tr>`;
-                });
-                summaryBody.innerHTML = rowsHTML.join('');
-            }
-        }
-    } catch (error) {
-        console.error("Failed to render daily report:", error);
-        if (logBody) logBody.innerHTML = `<tr><td colspan="12">Error loading transaction data.</td></tr>`;
-        if (summaryBody) summaryBody.innerHTML = '<tr><td colspan="10">Error loading position data.</td></tr>';
+    // --- Price Population (Only for current day) ---
+    if (isCurrentDay) {
+        // Prices are fetched and populated by loadDailyReportPage in _dailyReport.js event handler
+    } else {
+        // For historical dates, attempt to populate prices statically if needed,
+        // otherwise they remain '--'
+        // This might require fetching historical EOD prices if not already available
+        // in positionData (which it currently isn't designed for).
+        // For now, historical prices will just show '--'.
+        summaryBody.querySelectorAll('.current-price').forEach(cell => cell.textContent = '--');
+        summaryBody.querySelectorAll('.unrealized-pl-combined').forEach(cell => cell.textContent = '--');
     }
 }

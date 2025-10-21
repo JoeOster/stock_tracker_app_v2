@@ -1,9 +1,22 @@
-// public/ui/renderers/_snapshots.js
-import { state } from '../../app-main.js';
-import { formatAccounting } from '../helpers.js';
+﻿// /public/ui/renderers/_snapshots.js
+// Version 0.1.6
+/**
+ * @file Renderer for the snapshots page.
+ * @module renderers/_snapshots
+ */
+import { state } from '../../state.js';
+import { formatAccounting } from '../formatters.js';
 
-export function renderSnapshotsPage() {
+/**
+ * Renders the content of the Snapshots page from a given array of snapshot data.
+ * @param {any[]} snapshots - An array of snapshot objects to render.
+ * @returns {void}
+ */
+export function renderSnapshots(snapshots) {
     const exchangeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('snapshot-exchange'));
+    
+    state.allSnapshots = snapshots;
+
     if (exchangeSelect) {
         const currentVal = exchangeSelect.value;
         exchangeSelect.innerHTML = '<option value="" disabled selected>Select Exchange</option>';
@@ -19,12 +32,12 @@ export function renderSnapshotsPage() {
     const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#snapshots-table tbody'));
     if (tableBody) {
         tableBody.innerHTML = '';
-        if (state.allSnapshots.length === 0) {
+        if (snapshots.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4">No snapshots have been logged yet for this account holder.</td></tr>';
             return;
         }
         
-        const sortedSnapshots = [...state.allSnapshots].sort((a, b) => {
+        const sortedSnapshots = [...snapshots].sort((a, b) => {
             if (a.snapshot_date > b.snapshot_date) return -1;
             if (a.snapshot_date < b.snapshot_date) return 1;
             return a.exchange.localeCompare(b.exchange);

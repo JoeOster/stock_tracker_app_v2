@@ -1,17 +1,80 @@
 <div id="imports-page-container" class="page-container" style="display: none;">
-    <h2>Import Transactions</h2>
-    <p class="subtitle">Bulk import historical BUY transactions from a CSV file.</p>
+    <h2>Intelligent CSV Importer</h2>
+    <p class="subtitle">Upload your transaction history from a brokerage to reconcile with your manual entries.</p>
+
     <div class="import-section">
-        <h3>Import from CSV</h3>
+        <h3>Step 1: Upload File</h3>
         <div class="form-group">
             <label for="import-account-holder">Import Into Account:</label>
             <select id="import-account-holder" class="account-holder-select" required></select>
         </div>
-         <div class="form-group">
+        <div class="form-group">
+            <label for="brokerage-template-select">Brokerage Template:</label>
+            <select id="brokerage-template-select" required>
+                <option value="" disabled selected>Select Brokerage</option>
+                <option value="fidelity">Fidelity</option>
+                <option value="robinhood">Robinhood</option>
+                <option value="etrade">E-Trade</option>
+            </select>
+        </div>
+        <div class="form-group">
             <label for="csv-file-input">Select a .csv file:</label>
             <input type="file" id="csv-file-input" accept=".csv">
         </div>
-        <button id="import-csv-btn">Import CSV</button>
-        <small>Format: date,ticker,exchange,type,quantity,price</small>
+        <button id="import-csv-btn">Review & Reconcile</button>
+    </div>
+
+    <hr style="margin: 2rem 0;">
+
+    <div id="reconciliation-section" style="display: none;">
+        <h3>Step 2: Review and Resolve</h3>
+        
+        <div id="import-summary-container"></div>
+
+        <h4 style="margin-top: 1.5rem;">New Transactions to be Imported</h4>
+        <table id="new-transactions-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Ticker</th>
+                    <th>Type</th>
+                    <th class="numeric">Quantity</th>
+                    <th class="numeric">Price</th>
+                </tr>
+            </thead>
+            <tbody id="new-transactions-body"></tbody>
+        </table>
+
+        <h4 style="margin-top: 2rem;">Conflicts Detected</h4>
+        <p class="subtitle" style="text-align: left; margin: 0 0 10px 0;">The following transactions from your CSV appear to be duplicates of existing manual entries.</p>
+        <table id="conflicts-table">
+            <thead>
+                <tr>
+                    <th colspan="5">From CSV File</th>
+                    <th></th>
+                    <th colspan="4">Existing Manual Entry</th>
+                    <th>Action</th>
+                </tr>
+                <tr>
+                    <th>Date</th>
+                    <th>Ticker</th>
+                    <th>Type</th>
+                    <th class="numeric">Qty</th>
+                    <th class="numeric">Price</th>
+                    <th>vs.</th>
+                    <th>Date</th>
+                    <th>Ticker</th>
+                    <th class="numeric">Qty</th>
+                    <th class="numeric">Price</th>
+                    <th>Resolution</th>
+                </tr>
+            </thead>
+            <tbody id="conflicts-body"></tbody>
+        </table>
+
+        <div style="text-align: right; margin-top: 2rem; display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="cancel-import-btn" class="delete-btn">Cancel</button>
+            <button id="commit-import-btn">Commit Changes</button>
+        </div>
     </div>
 </div>

@@ -1,93 +1,70 @@
-# Implementation Guide: V3.0 Roadmap
+# **Portfolio Manager V3: Comprehensive Implementation Guide**
 
-This document breaks down the V3.0 project plan into actionable development tasks, starting with foundational code improvements.
+**Last Updated:** 2025-10-20
 
-## **Phase 0: Foundational Refactoring & Cleanup**
+## **Phase 0: Foundational Refactoring & Cleanup (Completed)**
 
-**Objective:** Pay down technical debt and create a robust, maintainable foundation before building new features.
+* [x] Code & Documentation Organization
+* [x] Application Refactoring
+* [x] Configuration & Deployment Updates
+* [x] Enhance Testing Strategy (Separate API/UI configs)
 
-### **Task 0.1: Identify and Remove Unused Files**
+---
 
-* [ ] Audit the project repository for any scripts, old documentation, or code files that are no longer being used.
-* [ ] Safely delete obsolete files, such as the `refactor-event-listeners.bat` script, which has already served its purpose.
+## **Phase 0.5: Application Hardening (In Progress)**
 
-### **Task 0.2: Create and Organize Project Documentation**
+* [x] Task 0.5.1: Enhance Frontend Error Handling (API `handleResponse`, event handler `catch` blocks)
+* [x] Task 0.5.2: Improve Data Validation (Client-side validation for Orders, Journal, Snapshots, Settings forms)
+* [ ] Task 0.5.3: Verify and Fix Test Suite (Address remaining failures in UI tests)
+  * **Known Issue (2025-10-20):** The UI test suite `public/event-handlers/_settings.ui.test.js` (specifically the "Exchange Management" `describe` block) is currently disabled (`describe.skip`). It fails due to difficulties mocking the `_settings.js` module while preserving the original `initializeSettingsHandlers` function, leading to issues verifying calls to mocked asynchronous functions within the event handler in the JSDOM environment. Standard Jest async/mocking patterns did not resolve this scope/hoisting issue. This test should be revisited later, possibly after refactoring.
 
-* [ ] Create a new `/docs` directory in the project root.
-* [ ] Move all existing Markdown files (`README.md`, `gemini.md`, `Portfolio Manager Implementation Guide.md`, etc.) into the `/docs` directory.
-* [ ] Create a new `database_schema.md` file in the `/docs` directory that consolidates the final schema from all existing migration files.
+---
 
-### **Task 0.3: Improve Code Organization and Commenting**
+## **Phase 1: Intelligent CSV Importer (Completed)**
 
-* [ ] Review all major JavaScript files and add JSDoc comments to functions, explaining their purpose, parameters, and return values.
-* [ ] Reorganize the code within each file by grouping related functions together.
+* [x] Overhaul UI, templates, conflict resolution, backend endpoint, tests.
 
-### **Task 0.4: Refactor Large Frontend Modules**
+---
 
-* [ ] **`app-main.js`**: Split the file into smaller, single-responsibility modules (e.g., `state.js`, `settings.js`, `data-service.js`).
-* [ ] **`_charts.js`**: Extract the generic chart-building logic into a new, dedicated module.
+## **Phase 1.5: Importer Hardening (Completed)**
 
-### **Task 0.5: Decouple Frontend Renderers from Data Fetching**
+* [x] Task 1.5.1: Improve Handling of Import Edge Cases (Invalid Price, Missing BUYs, Insufficient Shares, Frontend Feedback)
 
-* [ ] Create new functions in `/public/api.js` for each distinct API call.
-* [ ] Modify the renderer functions in `/public/ui/renderers/` to accept data as arguments.
-* [ ] Update `app-main.js` to orchestrate the API calls and pass data to the renderers.
+---
 
-### **Task 0.6: Consolidate Backend Services & Implement Rate Limiting**
+## **Phase 2: Strategy & Advice Journal / Dashboard Implementation (Completed)**
 
-* [ ] Create a new service file, e.g., `/services/priceFetcher.js`, to centralize all Finnhub API call logic.
-* [ ] Implement a queue or rate-limiting library to manage outgoing API requests robustly.
-* [ ] Refactor the reporting routes and cron jobs to use this new, rate-limited service.
+* [x] Task 2.1: Database Migrations (Journal tables)
+* [x] Task 2.2: Advice Source Management UI
+* [x] Task 2.3: Journal Page Development (Basic UI & Functionality)
+* [x] Task 2.4: Backend Enhancements (Migration `009`, Cron job `runWatcher` logic)
+* [x] Task 2.5: Simplify Date Tabs
+* [x] Task 2.6: Implement New "Dashboard" Tab (Card/Table Views, Sorting, Filtering, Actions)
+* [ ] Task 2.7 (Deferred): Add Spark Charts to Card View
+* [ ] Task 2.8 (Deferred): Refactor Historical Data Access & Daily Report View
 
-### **Task 0.7: Fix and Refactor Automated Deployment Script**
+---
 
-* [ ] Investigate and resolve the silent exit issue in `deploy.bat`.
-* [ ] Refactor the script's error-handling logic using a more robust method.
-* [ ] Verify that the `robocopy` command is reliable and correctly copies all necessary files.
+## **Phase X: UI Refinements & Fixes (Ongoing)**
 
-### **Task 0.8: Enhance Testing Strategy**
+* [ ] Task X.1: Standardize Modal Button Layouts
+* [ ] Task X.3 (Deferred): Add UI Settings (Batch Update for Default View & Number of Date Tabs)
 
-* [ ] Create separate Jest configurations for API and UI tests (e.g., `jest.config.api.js`, `jest.config.ui.js`).
-* [ ] Update the `scripts` in `package.json` to allow for running these test suites independently (e.g., `test:api`, `test:ui`).
-* [ ] Consider adding a simple end-to-end (E2E) test to validate a full user workflow.
-
-## **Phase 0.5: Application Hardening**
-
-**Objective:** Improve the application's robustness and user experience based on the stable Phase 0 foundation.
-
-### **Task 0.5.1: Enhance Frontend Error Handling**
-
-* [ ] Audit all `fetch` calls in the frontend event handlers and API modules.
-* [ ] Ensure that the `catch` block for each call reads the JSON body of a failed response.
-* [ ] Update `showToast` calls to display the specific `error.message` from the server.
-
-### **Task 0.5.2: Improve Data Validation**
-
-* [ ] Add client-side validation checks to input forms to provide immediate feedback to the user.
-* [ ] Prevent form submission if validation fails (e.g., a sell date is before a buy date).
-
-## **Phase 1: Intelligent CSV Importer**
-
-**Objective:** Replace the basic import function with a sophisticated, multi-step reconciliation workflow.
-
-* [ ] Overhaul the `_imports.html` template to support the new multi-step workflow.
-* [ ] Add a client-side CSV parsing library.
-* [ ] Implement the "Brokerage Template" selection logic.
-* [ ] Build the unified "Review and Reconcile" interface, including logic for handling SELL transaction reconciliation.
-* [ ] Create a new backend endpoint to handle the complex import, deletion, and move operations atomically.
-
-## **Phase 2: Strategy & Advice Journal**
-
-**Objective:** Build a comprehensive tool for "paper trading," tracking advice from various sources, and analyzing performance.
-
-* [ ] Implement the necessary database migrations for strategies, journal entries, and documents.
-* [ ] Build the UI for strategy management in the Settings modal.
-* [ ] Develop the new "Journal" page with its dashboard, tables, and charting modal.
-* [ ] Enhance the backend cron jobs to include intraday price tracking for open journal entries.
+---
 
 ## **Phase 3: Authentication**
 
 **Objective:** Secure the application with a user login system.
 
-* [ ] Implement a user authentication and session management system on the backend.
-* [ ] Create a login page and integrate the authentication flow into the frontend.
+* [ ] Implement user authentication and session management.
+* [ ] Create a login page and integrate the flow.
+* [ ] **Refine Account Holder Management** (Delete primary, default reassignment, two-step delete w/ data removal).
+
+---
+
+## **Phase 4: Future Architectural Improvements**
+
+* [ ] **Task 4.1: Adopt Unit Testing:** Supplement integration tests with unit tests. **(Revisit disabled `_settings.ui.test.js`)**
+* [ ] **Task 4.2: Implement Robust Backend Validation:** Add stricter data validation on API inputs.
+* [ ] **Task 4.3: Centralize Server-Side Error Handling:** Create middleware for consistent API error responses.
+* [ ] **Task 4.4: Centralize Application

@@ -1,13 +1,16 @@
-// database.js - v3.0 - 2025-10-04 (With Migration System)
-
+// /database.js
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const path = require('path');
 const fs = require('fs').promises;
 
-// --- MIGRATION RUNNER ---
-async function runMigrations(db) {
-    console.log("Checking for migrations...");
+/**
+ * Runs all pending database migrations.
+ * @param {import('sqlite').Database} db - The database instance.
+ * @param {function(...any): void} log - The logging function to use.
+ */
+async function runMigrations(db, log) {
+    log("[Migrations] Starting migration check...");
     await db.exec(`
         CREATE TABLE IF NOT EXISTS migrations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,101 +20,88 @@ async function runMigrations(db) {
     `);
 
     const migrationsDir = path.join(__dirname, 'migrations');
-    const migrationFiles = await fs.readdir(migrationsDir);
-    const appliedMigrations = await db.all('SELECT name FROM migrations');
-    const appliedMigrationNames = appliedMigrations.map(m => m.name);
 
-    const pendingMigrations = migrationFiles
-        .filter(file => file.endsWith('.sql') && !appliedMigrationNames.includes(file))
-        .sort();
+    try {
+        const dirEntries = await fs.readdir(migrationsDir, { withFileTypes: true });
+        const migrationFiles = dirEntries
+            .filter(dirent => dirent.isFile() && dirent.name.endsWith('.sql'))
+            .map(dirent => dirent.name)
+            .sort();
 
-    if (pendingMigrations.length === 0) {
-        console.log("Database is up to date.");
-        return;
-    }
+        log(`[Migrations] Found migration files: ${migrationFiles.join(', ') || 'None'}`);
 
-    for (const migrationFile of pendingMigrations) {
-        try {
-            console.log(`Applying migration: ${migrationFile}...`);
-            const filePath = path.join(migrationsDir, migrationFile);
-            const sql = await fs.readFile(filePath, 'utf8');
-            
-            await db.exec('BEGIN TRANSACTION');
-            await db.exec(sql);
-            await db.run('INSERT INTO migrations (name) VALUES (?)', migrationFile);
-            await db.exec('COMMIT');
-            
-            console.log(`Successfully applied migration: ${migrationFile}`);
-        } catch (error) {
-            await db.exec('ROLLBACK');
-            console.error(`Failed to apply migration ${migrationFile}:`, error);
-            throw error;
+        const appliedMigrations = await db.all('SELECT name FROM migrations');
+        const appliedMigrationNames = appliedMigrations.map(m => m.name);
+        const pendingMigrations = migrationFiles.filter(file => !appliedMigrationNames.includes(file));
+
+        if (pendingMigrations.length === 0) {
+            log("[Migrations] No pending migrations found. Database schema is up-to-date.");
+            return;
         }
+
+        log(`[Migrations] Pending migrations to apply: ${pendingMigrations.join(', ')}`);
+
+        for (const migrationFile of pendingMigrations) {
+            try {
+                const filePath = path.join(migrationsDir, migrationFile);
+                const sql = await fs.readFile(filePath, 'utf8');
+
+                log(`[Migrations] Applying migration: ${migrationFile}...`);
+
+                await db.exec('BEGIN TRANSACTION');
+                await db.exec(sql);
+                await db.run('INSERT INTO migrations (name) VALUES (?)', migrationFile);
+                await db.exec('COMMIT');
+
+                log(`[Migrations] Successfully applied ${migrationFile}.`);
+            } catch (error) {
+                await db.exec('ROLLBACK');
+                console.error(`[Migrations] Failed to apply migration ${migrationFile}:`, error);
+                throw error; // Re-throw error to stop startup if a migration fails
+            }
+        }
+        log("[Migrations] All pending migrations applied successfully.");
+    } catch (error) {
+        console.error(`[Migrations] Could not read migrations directory or apply migrations: ${migrationsDir}`, error);
+        throw error; // Re-throw error to potentially stop server startup
     }
 }
 
+/**
+ * Initializes the database connection and runs migrations.
+ * @returns {Promise<import('sqlite').Database>} The initialized database instance.
+ */
+async function initializeDatabase() {
+    // --- MODIFICATION: Conditional Logger ---
+    // This logger will only print messages if the environment is NOT 'test'.
+    const log = process.env.NODE_ENV !== 'test' ? console.log : () => {};
+    // --- END MODIFICATION ---
 
-async function setup() {
-    // Dynamically choose the database file based on the environment
-let dbPath;
-if (process.env.NODE_ENV === 'production') {
-    dbPath = './production.db';
-} else if (process.env.NODE_ENV === 'test') {
-    dbPath = './test.db';
-} else {
-    // Default to development
-    dbPath = './development.db';
-}
+    let dbPath;
+    if (process.env.DATABASE_PATH) {
+        dbPath = process.env.DATABASE_PATH;
+    } else if (process.env.NODE_ENV === 'production') {
+        dbPath = './production.db';
+    } else if (process.env.NODE_ENV === 'test') {
+        dbPath = './test.db'; // Used by tests
+    } else {
+        // Default to development.db if not specified and not production/test
+        dbPath = './development.db';
+    }
+
+    log(`[Database] Connecting to database at: ${path.resolve(dbPath)}`);
+
     const db = await open({
         filename: dbPath,
         driver: sqlite3.Database
     });
 
-    // This is now the minimal base schema. All other columns will be added by migrations.
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticker TEXT NOT NULL,
-            exchange TEXT NOT NULL,
-            transaction_type TEXT NOT NULL,
-            quantity REAL NOT NULL,
-            price REAL NOT NULL,
-            transaction_date TEXT NOT NULL,
-            original_quantity REAL
-        )
-    `);
+    log("[Database] Connection successful. Running migrations...");
 
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS account_snapshots (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            exchange TEXT NOT NULL,
-            snapshot_date TEXT NOT NULL,
-            value REAL NOT NULL,
-            UNIQUE(exchange, snapshot_date)
-        )
-    `);
-    
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS exchanges (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE
-        )
-    `);
+    await runMigrations(db, log); // Run migrations after connection, passing the conditional logger
 
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS historical_prices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticker TEXT NOT NULL,
-            date TEXT NOT NULL,
-            close_price REAL NOT NULL,
-            UNIQUE(ticker, date)
-        )
-    `);
-
-    await runMigrations(db);
-
+    log("[Database] Initialization complete.");
     return db;
 }
 
-
-module.exports = setup;
+module.exports = { initializeDatabase };

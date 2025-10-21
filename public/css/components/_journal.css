@@ -1,0 +1,108 @@
+/* public/css/components/_journal.css */
+/* Contains styles specific to the Journal page. */
+
+#journal-summary-container {
+    background-color: var(--info-panel-bg);
+    display: flex; /* Added for alignment if not already present */
+    justify-content: space-around; /* Added for alignment if not already present */
+    padding: 15px; /* Added for alignment if not already present */
+    margin-bottom: 2rem; /* Added for alignment if not already present */
+    border: 1px solid var(--container-border); /* Added for alignment if not already present */
+    border-radius: 8px; /* Added for alignment if not already present */
+    text-align: center; /* Added for alignment if not already present */
+}
+
+.journal-table th, .journal-table td {
+    padding: 10px 12px;
+}
+
+#add-journal-entry-container {
+     background-color: var(--info-panel-bg);
+     padding: 20px; /* Added based on template */
+     border: 1px solid var(--container-border); /* Added based on template */
+     border-radius: 8px; /* Added based on template */
+}
+
+#journal-notes {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 50px;
+    font-family: inherit;
+    padding: 8px;
+    border: 1px solid var(--container-border);
+    border-radius: 8px;
+    background-color: var(--container-bg);
+    color: var(--text-color);
+}
+
+/* Styles for filter bars above tables */
+.filter-bar {
+     display: flex;
+     gap: 1rem;
+     align-items: center;
+     margin-bottom: 1rem;
+     padding: 0.5rem; /* Reduced padding slightly */
+}
+
+.filter-bar input, .filter-bar select {
+    width: auto;
+    flex-grow: 1;
+    max-width: 250px;
+    padding: 8px; /* Adjusted padding */
+}
+.filter-bar label {
+     white-space: nowrap;
+     margin-bottom: 0; /* Override default form-group label margin if needed */
+}
+
+
+/* Sub-Tab Styles for Journal Page */
+.journal-sub-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--container-border);
+    margin-bottom: 1.5rem;
+}
+
+/* Using general .sub-tab and .sub-tab-panel styles (assuming defined elsewhere, e.g., _modals.css) */
+/* If they are NOT defined globally, uncomment and use these: */
+
+.sub-tab {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text-muted-color);
+    border-bottom: 2px solid transparent;
+    font-size: 1em; /* Ensure consistent font size*/
+}
+
+.sub-tab.active, .sub-tab:hover {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.sub-tab-panel {
+    display: none;
+}
+
+.sub-tab-panel.active {
+    display: block;
+}
+
+
+/* Styles for the add-item-form-grid specifically */
+.add-item-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px; /* row-gap column-gap */
+    margin-top: 1rem;
+}
+
+.add-item-form-grid .form-group {
+    margin-bottom: 0; /* Override default margin inside the grid */
+}
+
+.add-item-form-grid .form-group-span-2 {
+    grid-column: span 2;
+}

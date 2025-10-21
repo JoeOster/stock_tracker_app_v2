@@ -1,43 +1,151 @@
 /* public/css/components/_daily-report.css */
-/* Contains styles specific to the Daily Report page. */
 
-#daily-performance-summary { 
-    display: flex; 
-    justify-content: space-around; 
-    align-items: center; 
-    background-color: var(--info-panel-bg); 
-    padding: 15px; 
-    border-radius: 8px; 
-    margin-bottom: 2rem; 
-    border: 1px solid var(--container-border); 
+#daily-performance-summary {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: var(--info-panel-bg);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border: 1px solid var(--container-border);
 }
 
-/* Style for clickable advice rows on the Open Lots table */
 #positions-summary-body tr {
     cursor: pointer;
 }
 
-#positions-summary-body tr:hover {
+/* --- Redesigned Table Layout & Sticky Columns --- */
+
+#stock-table {
+    table-layout: fixed; /* Keep fixed layout for predictable widths */
+    width: 100%;
+    min-width: 1200px; /* Slightly reduced min-width */
+    border-collapse: separate; /* Use separate for potential border styling */
+    border-spacing: 0;
+    overflow-x: auto; /* Ensure table itself can scroll if needed */
+}
+
+/* Base sticky styling */
+.sticky-col {
+    position: sticky;
+    z-index: 2;
+    background-color: var(--container-bg); /* Default background */
+}
+#stock-table thead .sticky-col {
+    z-index: 3; /* Header above body */
+    background-color: var(--table-header-bg);
+}
+#stock-table tbody tr:nth-child(even) .sticky-col {
+    background-color: var(--table-row-even-bg);
+}
+/* Apply hover style to ALL sticky cells in the hovered row */
+#positions-summary-body tr:hover, /* Hover state on the row */
+#positions-summary-body tr:hover .sticky-col /* Apply to sticky cells in that row */
+{
     background-color: var(--primary-color) !important;
-    color: #fff;
-}
-/* In public/css/components/_daily-report.css */
-
-/* FIX: Ensure sticky columns change background color on row hover */
-#positions-summary-body tr:hover td:first-child,
-#positions-summary-body tr:hover td:last-child {
-    background-color: var(--primary-color) !important;
+    color: #fff; /* Ensure text remains visible */
 }
 
-#daily-performance-summary { 
-    /* ... existing styles ... */
+
+/* --- Column Width Definitions (Assuming Checkbox IS present) --- */
+/* If checkbox isn't present, these widths will apply starting from Ticker */
+
+/* Checkbox Column */
+#stock-table th.reconciliation-checkbox-header,
+#stock-table td.reconciliation-checkbox-cell {
+    width: 30px; /* MODIFIED: Further reduced */
+    min-width: 30px; /* MODIFIED: Further reduced */
+    padding-left: 5px; /* Adjust padding */
+    padding-right: 5px;
 }
 
-/* Style for clickable advice rows on the Open Lots table */
-#positions-summary-body tr {
-    /* ... existing styles ... */
+/* Ticker Column */
+#stock-table th:nth-child(2), #stock-table td:nth-child(2) { width: 8%; }
+
+/* Exchange Column */
+#stock-table th:nth-child(3), #stock-table td:nth-child(3) { width: 10%; }
+
+/* Action / Purchase Date Column */
+#stock-table th:nth-child(4), #stock-table td:nth-child(4) { width: 10%; }
+
+/* Qty(Log) / Basis(Lots) Column */
+#stock-table th:nth-child(5), #stock-table td:nth-child(5) {
+    width: 6%; /* MODIFIED: Reduced */
+    min-width: 60px; /* MODIFIED: Reduced */
 }
 
-#positions-summary-body tr:hover {
-    /* ... existing styles ... */
+/* Price(Log) / Qty(Lots) Column */
+#stock-table th:nth-child(6), #stock-table td:nth-child(6) {
+    width: 6%; /* MODIFIED: Reduced */
+    min-width: 60px; /* MODIFIED: Reduced */
+}
+
+/* Realized(Log) / Current(Lots) Column */
+#stock-table th:nth-child(7), #stock-table td:nth-child(7) { width: 10%; }
+
+/* Unrealized P/L (Lots) / Empty(Log) Column */
+#stock-table th:nth-child(8), #stock-table td:nth-child(8) { width: 15%; }
+
+/* Combined Limits Column */
+#stock-table th:nth-child(9), #stock-table td:nth-child(9) { width: 12%; }
+
+/* Actions Column */
+#stock-table th:nth-child(10), #stock-table td:nth-child(10) {
+    width: 13%; /* MODIFIED: Slightly reduced */
+    min-width: 170px; /* MODIFIED: Slightly reduced */
+}
+
+
+/* --- Sticky Column Assignments --- */
+
+/* Checkbox Column */
+#stock-table th.reconciliation-checkbox-header,
+#stock-table td.reconciliation-checkbox-cell {
+    left: 0;
+    z-index: 4; /* Checkbox header highest */
+}
+#stock-table td.reconciliation-checkbox-cell {
+    z-index: 3; /* Checkbox body cells above ticker */
+}
+
+/* Ticker Column (Conditional Stickiness based on checkbox) */
+/* Targets the first TH/TD if no checkbox, second if checkbox is present */
+#stock-table th:first-of-type:not(.reconciliation-checkbox-header),
+#stock-table td:first-of-type:not(.reconciliation-checkbox-cell) {
+    left: 0; /* Sticky Ticker when no checkbox */
+}
+#stock-table th:nth-child(2):not(:first-child),
+#stock-table td:nth-child(2):not(:first-child) {
+    left: 30px; /* Offset Ticker when checkbox IS present (matches checkbox width) */
+}
+
+/* Actions Column (Always last) */
+#stock-table th:last-child,
+#stock-table td:last-child {
+    right: 0;
+}
+
+
+/* --- Other Styles --- */
+#stock-table #log-body td:nth-child(4), /* Center Action column */
+#stock-table th:last-child, #stock-table td:last-child, /* Center Actions Header/Cell */
+#stock-table th.reconciliation-checkbox-header, #stock-table td.reconciliation-checkbox-cell /* Center Checkbox */
+{
+    text-align: center;
+}
+
+/* Ensure numeric alignment persists */
+#stock-table .numeric {
+    text-align: right;
+}
+
+/* Ensure P/L colors persist */
+#stock-table .positive { color: var(--positive-color); font-weight: 600; }
+#stock-table .negative { color: var(--negative-color); font-weight: 600; }
+
+/* Ensure hover text color is readable */
+#positions-summary-body tr:hover .positive,
+#positions-summary-body tr:hover .negative {
+    color: #fff; /* Override P/L colors on hover */
 }

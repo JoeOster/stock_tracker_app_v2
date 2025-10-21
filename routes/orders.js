@@ -2,12 +2,21 @@
 const express = require('express');
 const router = express.Router();
 
-// This module will be passed the database connection (db) from server.js
-module.exports = (db) => {
+/**
+ * Creates and returns an Express router for handling pending orders and notifications.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @param {function(string): void} log - The logging function.
+ * @returns {express.Router} The configured Express router.
+ */
+module.exports = (db, log) => {
 
     // --- PENDING ORDERS ENDPOINTS ---
     // Base path: /api/orders/pending
 
+    /**
+     * GET /pending
+     * Fetches all 'ACTIVE' pending orders, optionally filtered by an account holder.
+     */
     router.get('/pending', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -21,11 +30,15 @@ module.exports = (db) => {
             const orders = await db.all(query, params);
             res.json(orders);
         } catch (error) {
-            console.error("Failed to fetch pending orders:", error);
+            log(`[ERROR] Failed to fetch pending orders: ${error.message}`);
             res.status(500).json({ message: 'Error fetching pending orders.' });
         }
     });
 
+    /**
+     * POST /pending
+     * Creates a new pending order (e.g., a BUY_LIMIT order).
+     */
     router.post('/pending', async (req, res) => {
         try {
             const { account_holder_id, ticker, exchange, order_type, limit_price, quantity, created_date, expiration_date, notes, advice_source_id } = req.body;
@@ -45,11 +58,15 @@ module.exports = (db) => {
             ]);
             res.status(201).json({ message: 'Pending order created successfully.' });
         } catch (error) {
-            console.error('Failed to create pending order:', error);
+            log(`[ERROR] Failed to create pending order: ${error.message}`);
             res.status(500).json({ message: 'Server Error' });
         }
     });
 
+    /**
+     * PUT /pending/:id
+     * Updates the status of a pending order (e.g., to 'FILLED' or 'CANCELLED').
+     */
     router.put('/pending/:id', async (req, res) => {
         try {
             const { status } = req.body;
@@ -62,7 +79,7 @@ module.exports = (db) => {
             await db.run('UPDATE pending_orders SET status = ? WHERE id = ?', [status, id]);
             res.json({ message: 'Pending order status updated.' });
         } catch (error) {
-            console.error('Failed to update pending order:', error);
+            log(`[ERROR] Failed to update pending order with ID ${req.params.id}: ${error.message}`);
             res.status(500).json({ message: 'Error updating pending order.' });
         }
     });
@@ -71,6 +88,10 @@ module.exports = (db) => {
     // --- NOTIFICATIONS ENDPOINTS ---
     // Base path: /api/orders/notifications
 
+    /**
+     * GET /notifications
+     * Fetches all 'UNREAD' notifications, optionally filtered by an account holder.
+     */
     router.get('/notifications', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -84,11 +105,15 @@ module.exports = (db) => {
             const notifications = await db.all(query, params);
             res.json(notifications);
         } catch (error) {
-            console.error("Failed to fetch notifications:", error);
+            log(`[ERROR] Failed to fetch notifications: ${error.message}`);
             res.status(500).json({ message: 'Error fetching notifications.' });
         }
     });
 
+    /**
+     * PUT /notifications/:id
+     * Updates the status of a notification (e.g., to 'PENDING' or 'DISMISSED').
+     */
     router.put('/notifications/:id', async (req, res) => {
         try {
             const { status } = req.body;
@@ -101,7 +126,7 @@ module.exports = (db) => {
             await db.run('UPDATE notifications SET status = ? WHERE id = ?', [status, id]);
             res.json({ message: 'Notification status updated.' });
         } catch (error) {
-            console.error('Failed to update notification:', error);
+            log(`[ERROR] Failed to update notification with ID ${req.params.id}: ${error.message}`);
             res.status(500).json({ message: 'Error updating notification.' });
         }
     });

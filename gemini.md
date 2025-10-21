@@ -1,63 +1,28 @@
-# **Gemini Context File for Portfolio Tracker V2**
+## 3. Strategic Roadmap
 
-**Last Updated:** 2025-10-11
+### Completed: Phase 0 & Phase 1
 
-This document provides a comprehensive summary of the "Portfolio Tracker V2" project and its strategic roadmap to assist AI prompts.
+* **Foundational Refactoring & Cleanup**
+* **Intelligent CSV Importer**
 
-## **1\. Project Summary**
+### In Progress: Phase 2 - Strategy & Advice Journal
 
-Portfolio Tracker V2 is a self-hosted web application for active retail traders to track investment performance and strategy across multiple brokerage accounts. It is built with a Node.js/Express backend, a vanilla JavaScript frontend, and uses SQLite for data storage. The project has a modular architecture and an automated testing and deployment process.
+**Objective:** Build a comprehensive tool for "paper trading," tracking advice from various sources, and analyzing performance.
 
-**GitHub Repository:** https://github.com/JoeOster/stock\_tracker\_app\_v2
+* **Task 2.1: Database Migrations:** Completed (Tables `advice_sources`, `journal_entries`, `documents` created; `transactions` updated).
+* **Task 2.2: Advice Source Management UI:** Completed (UI in Settings modal, backend routes, frontend logic).
+* **Task 2.3: Journal Page Development (Basic UI):** Completed (HTML template, basic renderer, basic event handlers, API routes, page integration).
+* **Task 2.4: Backend Enhancements:** **NEXT STEP** (Implement cron job for price tracking and alert generation for open journal entries).
+    * Requires adding `journal_entry_id` column to `notifications` table via migration.
+* **(Future UI Refinements for Task 2.3):** Implement Edit functionality, refine tables/summary, add sparklines.
 
-## **2\. Core Architecture**
+### Future Phases:
 
-* **Backend (/routes, /services, server.js):** An Express.js server handles API requests. The logic is split into route files and services (e.g., cronJobs.js for scheduled tasks).  
-* **Database (database.js, /migrations):** Uses SQLite3 with a built-in migration system that automatically applies .sql files on startup.  
-* **Frontend (/public):**  
-  * **app-main.js**: The main script managing state, loading templates, and initializing modules.  
-  * **/templates**: Contains HTML partials for each page view.  
-  * **/ui/renderers**: Modules responsible for rendering data into the DOM.  
-  * **/event-handlers**: Modules for handling user interactions.
-
-## **3\. Strategic Roadmap: Upcoming Features**
-
-The following major features are planned for development.
-
-### **3.1. Intelligent CSV Importer**
-
-This feature will replace the basic importer with a sophisticated, multi-step reconciliation workflow, treating the CSV as the definitive source of truth.
-
-* **Database Prerequisite:** A source column will be added to the transactions table to distinguish 'MANUAL' from 'CSV\_IMPORT' entries.  
-* **Brokerage Templates:** The user will select a template (e.g., "Fidelity," "E-Trade") to pre-configure parsing and mapping logic, with an option to save new custom templates.  
-* **Unified Reconciliation UI:** A single review screen will handle all key actions:  
-  * **Filtering:** Automatically identify and ignore non-trade activities (e.g., deposits).  
-  * **Conflict Resolution:** Detect and flag conflicts between CSV data and existing manual entries, including "Direct Matches" (potential typos) and "Cross-Exchange Matches" (trades logged in the wrong account). The user will be prompted to Replace, Keep, Move & Replace, or Import as New.  
-  * **Orphaned Data:** Flag manual entries that exist in the database but not in the CSV for a given date range, prompting the user to keep or delete them.  
-  * **SELL Lot Assignment:** Require the user to manually assign all imported SELL transactions to specific BUY lots, with a FIFO suggestion as a default.
-
-### **3.2. Strategy & Advice Journal**
-
-This feature will allow users to log, track, and analyze trading ideas from various sources.
-
-* **Database Schema:** New tables will be added:  
-  * strategies: To store metadata about sources (name, contact, platform).  
-  * journal\_entries: To log specific trade ideas ("paper trades") with entry/exit targets and a user-defined confidence score.  
-  * strategy\_documents: To link uploaded files (PDF, Markdown) to strategies and/or specific journal entries.  
-  * journal\_entry\_prices: To store time-series price data for open journal entries.  
-* **Direct Trade Linking:** The transactions table will be modified to allow a user's actual trade to be linked directly to a journal\_entry\_id, enabling direct performance comparison.  
-* **Intraday Price Tracking:**  
-  * **Data Collection:** The existing 5-minute cron job will be enhanced to fetch and store prices for all OPEN journal entries.  
-  * **Automated Alerts:** Instead of auto-closing trades, the system will create a notification in the "Alerts" tab when a profit\_target or stop\_loss is met, keeping the user in control.  
-  * **Data Gap Detection:** The system will detect interruptions in data collection (e.g., due to server reboots) and flag these gaps.  
-* **Journal Dashboard UI:** A new "Journal" page will feature:  
-  * A dashboard to analyze the performance of a strategy's "paper trades" and the user's personal ROI on trades taken from that strategy.  
-  * A modal chart to visualize the 5-minute intraday price history for a journal entry, with any data gaps clearly indicated.  
-  * A document management interface to view attached research.
-
-### **3.3. Ancillary Features & Improvements**
-
-* **Import Reminder System:** A client-side, exchange-specific reminder system using localStorage to notify the user if they haven't imported a file for a specific exchange within a set period.  
-* **Technical Improvements:**  
-  * The deploy.bat script will be updated to back up the new uploads/ directory.  
-  * A database index will be added to the journal\_entry\_prices table for performance.
+* **Phase 3: Authentication & Enhanced Account Management**
+    * Implement user authentication and session management.
+    * **Refine Account Holder Deletion:**
+        * Allow deletion of the "Primary" account if others exist.
+        * Implement automatic default account reassignment upon deletion.
+        * **(Deferred) Implement Two-Step Deletion w/ Data Removal:** Add a confirmation step via Alerts for deleting holders with associated data, leading to permanent data removal.
+* **Phase 4: Future Architectural Improvements** (Unit testing, backend validation, config centralization).
+* **(Potential) Phase 5: Finalization & Documentation Review**.

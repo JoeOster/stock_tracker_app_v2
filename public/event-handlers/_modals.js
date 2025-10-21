@@ -1,20 +1,35 @@
 // public/event-handlers/_modals.js
-import { showToast, showConfirmationModal } from '../ui/helpers.js';
-import { refreshLedger, state, switchView } from '../app-main.js';
+// Version 0.1.6
+/**
+ * @file Initializes all event listeners related to modal dialogs.
+ * @module event-handlers/_modals
+ */
 
+// FIX: Correct all relative import paths.
+import { showToast, showConfirmationModal } from '../ui/helpers.js';
+import { state } from '../state.js'; 
+import { refreshLedger } from '../api.js';
+import { switchView } from './_navigation.js';
+
+/**
+ * Initializes all event listeners related to modal dialogs.
+ * This includes generic closing behavior and specific form submission handlers
+ * for the Edit Transaction, Sell From Position, and Confirm Fill modals.
+ * @returns {void}
+ */
 export function initializeModalHandlers() {
     const editModal = document.getElementById('edit-modal');
     const editForm = /** @type {HTMLFormElement} */ (document.getElementById('edit-transaction-form'));
     const sellFromPositionForm = /** @type {HTMLFormElement} */ (document.getElementById('sell-from-position-form'));
 
     // --- Generic Modal Closing Listeners ---
-    document.querySelectorAll('.modal .close-button').forEach(btn => 
-        btn.addEventListener('click', e => 
+    document.querySelectorAll('.modal .close-button').forEach(btn =>
+        btn.addEventListener('click', e =>
             (/** @type {HTMLElement} */ (e.target)).closest('.modal').classList.remove('visible')
         )
     );
 
-    window.addEventListener('click', e => { 
+    window.addEventListener('click', e => {
         if ((/** @type {HTMLElement} */ (e.target)).classList.contains('modal')) {
             (/** @type {HTMLElement} */ (e.target)).classList.remove('visible');
         }
@@ -122,20 +137,15 @@ export function initializeModalHandlers() {
                 showConfirmationModal('Delete Transaction?', 'This is permanent.', async () => {
                     try {
                         const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-
                         if (!res.ok) {
-                            // This part is new: it reads the specific error from the server
                             const errorData = await res.json();
                             throw new Error(errorData.message || 'Server error during deletion.');
                         }
-
                         editModal.classList.remove('visible');
                         showToast('Transaction deleted.', 'success');
                         await refreshLedger();
-
-                    } catch (err) { 
-                        // This 'catch' block will now display the specific error message
-                        showToast(`Failed to delete: ${err.message}`, 'error'); 
+                    } catch (err) {
+                        showToast(`Failed to delete: ${err.message}`, 'error');
                     }
                 });
             });
