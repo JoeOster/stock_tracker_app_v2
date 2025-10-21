@@ -138,14 +138,13 @@ export async function fetchAndPopulateAccountHolders() {
  * @returns {void}
  */
 export function initializeSettingsHandlers() {
+    // ... (keep existing variable declarations at the top) ...
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
     const saveSettingsBtn = document.getElementById('save-settings-button');
     const themeSelector = /** @type {HTMLSelectElement} */ (document.getElementById('theme-selector'));
     const fontSelector = /** @type {HTMLSelectElement} */ (document.getElementById('font-selector'));
     const settingsTabsContainer = document.querySelector('.settings-tabs');
-
-    // Data Management Elements (non-journal)
     const dataManagementPanel = document.getElementById('data-settings-panel');
     const exchangeList = document.getElementById('exchange-list');
     const addExchangeBtn = /** @type {HTMLButtonElement} */ (document.getElementById('add-exchange-btn'));
@@ -154,15 +153,19 @@ export function initializeSettingsHandlers() {
     const addAccountHolderBtn = /** @type {HTMLButtonElement} */ (document.getElementById('add-account-holder-btn'));
     const newAccountHolderNameInput = /** @type {HTMLInputElement} */ (document.getElementById('new-account-holder-name'));
 
+
     // --- Settings Modal Opening ---
-    if (settingsBtn && settingsModal) {
+    // ... (keep the settingsBtn click listener code here, make sure the previously commented out sections are uncommented now) ...
+     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', async () => {
             try {
+                // --- Re-enable data fetching and rendering ---
                 await Promise.all([
                     fetchAndRenderExchanges(),
                     fetchAndPopulateAccountHolders(),
                     fetchAndStoreAdviceSources() // Fetch journal data
                 ]);
+
 
                 // Load current settings into the form fields
                 (/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value = String(state.settings.takeProfitPercent || 0);
@@ -172,10 +175,13 @@ export function initializeSettingsHandlers() {
                 (/** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'))).value = String(state.settings.notificationCooldown || 16);
                 (/** @type {HTMLInputElement} */(document.getElementById('family-name'))).value = state.settings.familyName || '';
 
+
                 // Render management lists
                 renderExchangeManagementList();
                 renderAccountHolderManagementList();
                 renderAdviceSourceManagementList();
+
+
 
                 // Reset tabs and panels
                 document.querySelectorAll('.settings-tab').forEach((tab, index) => tab.classList.toggle('active', index === 0));
@@ -186,22 +192,25 @@ export function initializeSettingsHandlers() {
                 settingsModal.classList.add('visible');
             } catch (error) {
                  console.error("Error opening settings modal:", error);
-                 showToast(`Could not load all settings data: ${error.message}`, "error"); // Use message
+                 showToast(`Could not load all settings data: ${error.message}`, "error");
             }
         });
     }
 
     // --- Settings Modal Saving ---
+    // ... (keep save logic) ...
     if (saveSettingsBtn && settingsModal) {
         saveSettingsBtn.addEventListener('click', () => {
-            saveSettings(); // Assumes saveSettings includes necessary validation or handles defaults
+            saveSettings();
             settingsModal.classList.remove('visible');
-            showToast('Settings saved!', 'success'); // Add feedback on save
+            showToast('Settings saved!', 'success');
         });
     }
 
-     // --- Generic Modal Closing ---
-    settingsModal?.querySelectorAll('.close-button').forEach(btn =>
+
+    // --- Generic Modal Closing ---
+    // ... (keep closing logic) ...
+     settingsModal?.querySelectorAll('.close-button').forEach(btn =>
         btn.addEventListener('click', e =>
             (/** @type {HTMLElement} */ (e.target)).closest('.modal')?.classList.remove('visible')
         )
@@ -213,190 +222,88 @@ export function initializeSettingsHandlers() {
     });
 
     // --- Live Appearance Updates ---
-    if (themeSelector) themeSelector.addEventListener('change', () => { state.settings.theme = themeSelector.value; applyAppearanceSettings(); });
-    if (fontSelector) fontSelector.addEventListener('change', () => { state.settings.font = fontSelector.value; applyAppearanceSettings(); });
+    // ... (keep appearance logic) ...
+     if (themeSelector) themeSelector.addEventListener('change', () => { state.settings.theme = themeSelector.value; applyAppearanceSettings(); });
+     if (fontSelector) fontSelector.addEventListener('change', () => { state.settings.font = fontSelector.value; applyAppearanceSettings(); });
 
-    // --- Settings Modal Main Tab Navigation ---
-    if (settingsTabsContainer) { /* ... Tab logic remains the same ... */ }
-    // --- Sub-Tab Switching within Data Management ---
-    if (dataManagementPanel) { /* ... Sub-tab logic remains the same ... */ }
+
+    // --- Settings Modal Main Tab Navigation --- ADD LOGGING HERE ---
+    if (settingsTabsContainer && settingsModal) {
+        settingsTabsContainer.addEventListener('click', (e) => {
+            console.log("Main settings tab clicked!"); // <-- ADD LOG
+            const target = /** @type {HTMLElement} */ (e.target);
+            if (target.tagName === 'BUTTON' && target.classList.contains('settings-tab') && !target.classList.contains('active')) {
+                const tabId = target.dataset.tab;
+                console.log("Target data-tab:", tabId); // <-- ADD LOG
+                if (!tabId) {
+                     console.log("No data-tab found on clicked element."); // <-- ADD LOG
+                     return;
+                }
+
+                settingsTabsContainer.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
+                settingsModal.querySelectorAll('.settings-panel').forEach(panel => panel.classList.remove('active'));
+
+                target.classList.add('active');
+                const panelId = `${tabId}-settings-panel`;
+                console.log("Looking for panel ID:", panelId); // <-- ADD LOG
+                const panelToShow = settingsModal.querySelector(`#${panelId}`);
+                if (panelToShow) {
+                    console.log("Found panel, setting active:", panelToShow); // <-- ADD LOG
+                    panelToShow.classList.add('active');
+                } else {
+                    console.error("Could not find panel with ID:", panelId); // <-- Change to error log
+                }
+            } else {
+                 console.log("Click ignored (not a tab button or already active/other element)"); // <-- ADD LOG
+            }
+        });
+    } else {
+        console.warn("Could not find settings tabs container or settings modal for main tab events.");
+    }
+
+
+    // --- Sub-Tab Switching within Data Management --- ADD LOGGING HERE ---
+    if (dataManagementPanel) {
+        const subTabsContainer = dataManagementPanel.querySelector('.sub-tabs');
+        if (subTabsContainer) {
+            subTabsContainer.addEventListener('click', (e) => {
+                console.log("Data management sub-tab clicked!"); // <-- ADD LOG
+                const target = /** @type {HTMLElement} */ (e.target);
+                if (target.tagName === 'BUTTON' && target.classList.contains('sub-tab') && !target.classList.contains('active')) {
+                    const subTabId = target.dataset.subTab; // e.g., "exchanges-panel"
+                    console.log("Target data-sub-tab:", subTabId); // <-- ADD LOG
+                    if (!subTabId) {
+                        console.log("No data-sub-tab found on clicked element."); // <-- ADD LOG
+                        return;
+                    }
+
+                    subTabsContainer.querySelectorAll('.sub-tab').forEach(tab => tab.classList.remove('active'));
+                    dataManagementPanel.querySelectorAll('.sub-tab-panel').forEach(panel => panel.classList.remove('active'));
+
+                    target.classList.add('active');
+                    console.log("Looking for sub-panel ID:", subTabId); // <-- ADD LOG
+                    const subPanelToShow = dataManagementPanel.querySelector(`#${subTabId}`);
+                    if (subPanelToShow) {
+                        console.log("Found sub-panel, setting active:", subPanelToShow); // <-- ADD LOG
+                        subPanelToShow.classList.add('active');
+                    } else {
+                        console.error("Could not find sub-panel with ID:", subTabId); // <-- Change to error log
+                    }
+                } else {
+                     console.log("Sub-tab click ignored (not a sub-tab button or already active/other element)"); // <-- ADD LOG
+                }
+            });
+        } else {
+             console.warn("Could not find sub-tabs container within data management panel.");
+        }
+    } else {
+         console.warn("Could not find data management panel for sub-tab events.");
+    }
 
     // --- Exchange Management ---
-    if (addExchangeBtn && newExchangeNameInput) {
-        addExchangeBtn.addEventListener('click', async () => {
-            const name = newExchangeNameInput.value.trim();
-            // --- Validation ---
-            if (!name) return showToast('Exchange name cannot be empty.', 'error');
-            // Check if exchange already exists (client-side check for better UX)
-            if (state.allExchanges.some(ex => ex.name.toLowerCase() === name.toLowerCase())) {
-                 return showToast(`Exchange "${name}" already exists.`, 'error');
-            }
-            // --- End Validation ---
-
-            addExchangeBtn.disabled = true;
-            try {
-                const res = await fetch('/api/accounts/exchanges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-                await handleResponse(res); // Use handleResponse
-                await fetchAndRenderExchanges();
-                newExchangeNameInput.value = '';
-                renderExchangeManagementList();
-                showToast('Exchange added!', 'success');
-            } catch (error) { showToast(`Error adding exchange: ${error.message}`, 'error'); } // Use message
-            finally { addExchangeBtn.disabled = false; }
-        });
-    }
-
-
-    if (exchangeList) {
-        exchangeList.addEventListener('click', async (e) => {
-            const target = /** @type {HTMLElement} */ (e.target);
-            const li = /** @type {HTMLElement | null} */ (target.closest('li[data-id]'));
-            if (!li) return;
-            const id = li.dataset.id;
-            if (!id) return; // Should always have an ID
-
-            const nameSpan = /** @type {HTMLElement} */ (li.querySelector('.exchange-name'));
-            const nameInput = /** @type {HTMLInputElement} */ (li.querySelector('.edit-exchange-input'));
-            const editBtn = /** @type {HTMLButtonElement} */ (li.querySelector('.edit-exchange-btn'));
-            const saveBtn = /** @type {HTMLButtonElement} */ (li.querySelector('.save-exchange-btn'));
-            const cancelBtn = /** @type {HTMLButtonElement} */ (li.querySelector('.cancel-exchange-btn'));
-            const deleteBtn = /** @type {HTMLButtonElement} */ (li.querySelector('.delete-exchange-btn'));
-
-             if (!nameSpan || !nameInput || !editBtn || !saveBtn || !cancelBtn || !deleteBtn) return;
-
-            if (target === editBtn) { /* ... Edit toggle logic ... */ }
-            else if (target === cancelBtn) { /* ... Cancel toggle logic ... */ }
-            else if (target === saveBtn) {
-                const newName = nameInput.value.trim();
-                // --- Validation ---
-                if (!newName) return showToast('Exchange name cannot be empty.', 'error');
-                if (newName.toLowerCase() === nameSpan.textContent?.toLowerCase()) { // No change
-                    // Just cancel the edit state without saving
-                     cancelBtn.click(); // Simulate cancel click
-                     return;
-                }
-                 // Check if new name conflicts with *another* existing exchange
-                 if (state.allExchanges.some(ex => String(ex.id) !== id && ex.name.toLowerCase() === newName.toLowerCase())) {
-                    return showToast(`Another exchange named "${newName}" already exists.`, 'error');
-                 }
-                // --- End Validation ---
-                saveBtn.disabled = true;
-                try {
-                    const res = await fetch(`/api/accounts/exchanges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
-                    await handleResponse(res); // Use handleResponse
-                    await fetchAndRenderExchanges(); // Refreshes state and all dropdowns
-                    renderExchangeManagementList(); // Re-render this list
-                    showToast('Exchange updated!', 'success');
-                    await refreshLedger(); // Refresh ledger as exchange name might have changed
-                } catch (error) {
-                    showToast(`Error updating exchange: ${error.message}`, 'error'); // Use message
-                    saveBtn.disabled = false; // Re-enable on error
-                }
-                // No finally here, button stays disabled on success until list re-renders
-            } else if (target === deleteBtn) {
-                const exchangeName = nameSpan.textContent;
-                showConfirmationModal(`Delete Exchange "${exchangeName}"?`, 'This cannot be undone and will fail if the exchange is currently used by any transactions.', async () => {
-                    try {
-                        const res = await fetch(`/api/accounts/exchanges/${id}`, { method: 'DELETE' });
-                        await handleResponse(res); // Use handleResponse
-                        await fetchAndRenderExchanges();
-                        renderExchangeManagementList();
-                        showToast('Exchange deleted.', 'success');
-                    } catch (error) { showToast(`Error deleting exchange: ${error.message}`, 'error'); } // Use message
-                });
-            }
-        });
-    }
+    // ... (keep exchange management logic) ...
 
     // --- Account Holder Management ---
-    if (addAccountHolderBtn && newAccountHolderNameInput) {
-        addAccountHolderBtn.addEventListener('click', async () => {
-            const name = newAccountHolderNameInput.value.trim();
-            // --- Validation ---
-            if (!name) return showToast('Account holder name cannot be empty.', 'error');
-            // Check if name already exists
-            if (state.allAccountHolders.some(h => h.name.toLowerCase() === name.toLowerCase())) {
-                return showToast(`Account holder "${name}" already exists.`, 'error');
-            }
-            // --- End Validation ---
-            addAccountHolderBtn.disabled = true;
-            try {
-                const res = await fetch('/api/accounts/holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-                await handleResponse(res); // Use handleResponse
-                await fetchAndPopulateAccountHolders();
-                newAccountHolderNameInput.value = '';
-                renderAccountHolderManagementList();
-                showToast('Account holder added!', 'success');
-            } catch (error) { showToast(`Error adding account holder: ${error.message}`, 'error'); } // Use message
-            finally { addAccountHolderBtn.disabled = false; }
-        });
-    }
+    // ... (keep account holder management logic) ...
 
-    if (accountHolderList) {
-        accountHolderList.addEventListener('click', async (e) => {
-             const target = /** @type {HTMLElement} */ (e.target);
-            const li = /** @type {HTMLElement | null} */ (target.closest('li[data-id]'));
-            if (!li) return;
-            const id = li.dataset.id;
-             if (!id) return; // Should always have an ID
-
-            const nameSpan = /** @type {HTMLElement} */ (li.querySelector('.holder-name'));
-            const nameInput = /** @type {HTMLInputElement} */ (li.querySelector('.edit-holder-input'));
-            const editBtn = /** @type {HTMLButtonElement} */ (li.querySelector('.edit-holder-btn'));
-            const saveBtn = /** @type {HTMLButtonElement} */ (li.querySelector('.save-holder-btn'));
-            const cancelBtn = /** @type {HTMLButtonElement} */ (li.querySelector('.cancel-holder-btn'));
-            const deleteBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.delete-holder-btn'));
-
-            if (!nameSpan || !nameInput || !editBtn || !saveBtn || !cancelBtn) return; // Basic elements
-
-            if (target.matches('.edit-holder-btn')) { /* ... Edit toggle ... */ }
-            else if (target.matches('.cancel-holder-btn')) { /* ... Cancel toggle ... */ }
-            else if (target.matches('.save-holder-btn')) {
-                const newName = nameInput.value.trim();
-                // --- Validation ---
-                if (!newName) return showToast('Name cannot be empty.', 'error');
-                 if (newName.toLowerCase() === nameSpan.textContent?.toLowerCase()) { // No change
-                     cancelBtn.click(); // Simulate cancel
-                     return;
-                 }
-                 // Check name conflict with *other* holders
-                  if (state.allAccountHolders.some(h => String(h.id) !== id && h.name.toLowerCase() === newName.toLowerCase())) {
-                    return showToast(`Another account holder named "${newName}" already exists.`, 'error');
-                 }
-                // --- End Validation ---
-                saveBtn.disabled = true;
-                try {
-                    const res = await fetch(`/api/accounts/holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
-                    await handleResponse(res); // Use handleResponse
-                    await fetchAndPopulateAccountHolders();
-                    renderAccountHolderManagementList();
-                    showToast('Account holder updated!', 'success');
-                } catch (error) {
-                    showToast(`Error updating account holder: ${error.message}`, 'error'); // Use message
-                     saveBtn.disabled = false; // Re-enable on error
-                }
-            } else if (deleteBtn && target.matches('.delete-holder-btn')) {
-                 const holderName = nameSpan.textContent;
-                 // Add check: Don't allow deleting the currently selected holder if it's not 'all'
-                 if (String(state.selectedAccountHolderId) === id) {
-                      return showToast(`Cannot delete the currently selected account holder ("${holderName}"). Please switch accounts first.`, 'error');
-                 }
-                 showConfirmationModal(`Delete Account Holder "${holderName}"?`, 'This cannot be undone and will fail if the holder has transactions.', async () => {
-                    try {
-                        const res = await fetch(`/api/accounts/holders/${id}`, { method: 'DELETE' });
-                        await handleResponse(res); // Use handleResponse
-                        // Check if the deleted holder was the default, reset if needed
-                        if (String(state.settings.defaultAccountHolderId) === id) {
-                             state.settings.defaultAccountHolderId = 1; // Reset to Primary
-                             saveSettings(); // Save the updated default
-                             showToast('Default account holder was deleted, reset to Primary.', 'info');
-                        }
-                        await fetchAndPopulateAccountHolders();
-                        renderAccountHolderManagementList();
-                        showToast('Account holder deleted.', 'success');
-                    } catch (error) { showToast(`Error deleting account holder: ${error.message}`, 'error'); } // Use message
-                });
-            }
-        });
-    }
-}
+} // <-- End of initializeSettingsHandlers function

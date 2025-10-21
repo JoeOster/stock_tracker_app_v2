@@ -13,6 +13,17 @@ input, select {
     box-sizing: border-box;
 }
 
+/* Add custom arrow for select dropdowns */
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); /* Simple dropdown arrow */
+    background-position: right 10px center;
+    background-repeat: no-repeat;
+    background-size: 1em;
+    padding-right: 2.5em; /* Make space for the arrow */
+}
+
+
 button {
     padding: 10px 15px;
     border: 1px solid var(--primary-color);
@@ -30,34 +41,66 @@ button:hover {
     border-color: var(--primary-hover);
 }
 
+button:disabled {
+    background-color: var(--text-muted-color);
+    border-color: var(--text-muted-color);
+    cursor: not-allowed;
+}
+
+
 .delete-btn {
     background-color: var(--negative-color);
     border-color: var(--negative-color);
 }
 
+.delete-btn:hover {
+    background-color: #d73737; /* Slightly darker red on hover */
+    border-color: #d73737;
+}
+
+.cancel-btn {
+    background-color: transparent;
+    border-color: var(--container-border);
+    color: var(--text-muted-color);
+}
+
+.cancel-btn:hover {
+    background-color: var(--info-panel-bg);
+    border-color: var(--container-border);
+    color: var(--text-color);
+}
+
 
 /* --- Form Group & Layout Styles --- */
-.form-group { 
-    text-align: left; 
-    margin-bottom: 15px; 
+.form-group {
+    text-align: left;
+    margin-bottom: 15px;
+    display: flex; /* Use flexbox for alignment */
+    flex-direction: column; /* Stack label above input/select */
+    gap: 5px; /* Space between label and input/select */
 }
 
-.form-group label { 
-    display: block; 
-    margin-bottom: 5px; 
-    font-weight: 500; 
-    font-size: 0.9em; 
+.form-group label {
+    display: block;
+    margin-bottom: 0; /* Remove default margin if previously set */
+    font-weight: 500;
+    font-size: 0.9em;
+    color: var(--text-muted-color); /* Slightly muted label color */
 }
 
-.form-group-with-button { 
-    display: flex; 
-    align-items: flex-end; 
-    gap: 5px; 
+.form-group-with-button {
+    display: flex;
+    align-items: flex-end; /* Align input and button baseline */
+    gap: 5px;
 }
 
-.form-group-with-button input { 
-    flex-grow: 1; 
+.form-group-with-button input {
+    flex-grow: 1;
 }
+.form-group-with-button button {
+    flex-shrink: 0;
+}
+
 
 .form-group-with-checkbox {
     display: flex;
@@ -78,18 +121,20 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    align-items: center;
+    align-items: flex-end; /* Align baselines */
     justify-content: center;
     margin-bottom: 2rem;
 }
 
 #add-transaction-form input, #add-transaction-form select,
 #add-pending-order-form input, #add-pending-order-form select {
-    flex: 1 1 150px;
+    flex: 1 1 150px; /* Allow shrinking but base width 150px */
+    min-width: 120px; /* Prevent becoming too small */
 }
 
 #add-transaction-form button, #add-pending-order-form button {
     flex-grow: 0;
+    flex-shrink: 0;
 }
 
 /* Limit Order Group (within #add-transaction-form) */
@@ -104,32 +149,39 @@ button:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 1 1 400px;
+    flex: 1 1 400px; /* Adjust basis/grow as needed */
 }
 
 .limit-order-group label {
     flex-shrink: 0;
+    font-size: 0.9em; /* Match general form label */
+    color: var(--text-muted-color);
 }
 
 .limit-order-group input[type="checkbox"] {
     width: auto;
     flex-shrink: 0;
+    margin: 0; /* Remove default margins */
 }
 
 .limit-order-group input[type="number"],
 .limit-order-group input[type="date"] {
-    width: 100%;
+    width: 100%; /* Take remaining space */
 }
 
-/* Settings Modal "Add" Form */
-.add-item-form { 
-    display: flex; 
-    gap: 10px; 
-    margin-top: 1rem; 
+/* Settings Modal "Add" Form (used for Exchange/Holder) */
+.add-item-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem;
+    align-items: center; /* Align input and button */
 }
 
-.add-item-form input { 
-    flex-grow: 1; 
+.add-item-form input {
+    flex-grow: 1;
+}
+.add-item-form button {
+    flex-shrink: 0;
 }
 
 /* Snapshot Page Form */
@@ -138,9 +190,8 @@ button:hover {
     flex-direction: column;
     gap: 15px;
 }
-/* ... at the end of public/css/components/_forms.css ... */
 
-/* --- Importer Reconciliation Table Statuses --- */
+/* Importer Reconciliation Table Statuses */
 .status-duplicate {
     color: var(--negative-color);
     font-weight: 600;
@@ -161,4 +212,29 @@ button:hover {
     font-weight: 600;
     text-decoration: underline;
     cursor: help;
+}
+
+/* Filter Bar Styles (Consolidated) */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 1rem;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: var(--info-panel-bg);
+    border-radius: 8px;
+    border: 1px solid var(--container-border);
+    margin-bottom: 1.5rem;
+}
+.filter-bar input,
+.filter-bar select {
+    flex: 1 1 auto; /* Allow elements to grow and shrink */
+    max-width: 250px; /* Limit max width */
+    margin-bottom: 0; /* Override form-group margin if needed */
+}
+.filter-bar label {
+    margin-bottom: 0; /* Align label better */
+}
+.filter-bar button {
+    flex-shrink: 0; /* Prevent button from shrinking */
 }

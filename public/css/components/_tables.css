@@ -1,164 +1,148 @@
-/* joeoster/stock_tracker_app_v2/stock_tracker_app_v2-PortfolioManagerTake3/public/css/components/_tables.css */
+/* public/css/components/_tables.css */
 /* Contains all general and sticky styles for tables, using a separate border model. */
 
 table {
     width: 100%;
-    border-collapse: separate;
+    border-collapse: separate; /* Use separate for styling sticky borders */
     border-spacing: 0;
-    min-width: 1200px;
+    min-width: 900px; /* Adjusted minimum width, specific tables might override */
     border: 1px solid var(--container-border);
     border-radius: 8px;
+    margin-bottom: 1rem; /* Add some space below tables */
+    font-size: 0.95em; /* Slightly smaller font for dense tables */
 }
 
 th, td {
-    border: none;
-    border-bottom: 1px solid var(--container-border);
-    border-right: 1px solid var(--container-border);
-    padding: 12px 15px;
+    border-style: solid;
+    border-color: var(--container-border);
+    border-width: 0 1px 1px 0; /* Bottom and right borders */
+    padding: 10px 12px; /* Adjusted padding */
     text-align: left;
     white-space: nowrap;
+    vertical-align: middle; /* Align cell content vertically */
 }
 
+/* Remove right border on last cell of each row */
 th:last-child, td:last-child {
-    border-right: none;
+    border-right-width: 0;
 }
+/* Remove bottom border on last row of tbody/tfoot */
+tbody tr:last-child td,
+tfoot tr:last-child td {
+    border-bottom-width: 0;
+}
+/* Add left border back to first cell */
+th:first-child, td:first-child {
+    border-left-width: 1px;
+}
+/* Add top border to header row cells */
+thead tr:first-child th {
+     border-top-width: 1px;
+}
+/* Round corners on table */
+thead tr:first-child th:first-child { border-top-left-radius: 8px; }
+thead tr:first-child th:last-child { border-top-right-radius: 8px; }
+tbody tr:last-child td:first-child,
+tfoot tr:last-child td:first-child { border-bottom-left-radius: 8px; }
+tbody tr:last-child td:last-child,
+tfoot tr:last-child td:last-child { border-bottom-right-radius: 8px; }
+
 
 th {
     background-color: var(--table-header-bg);
     font-weight: 600;
     color: var(--heading-color);
-    border-top: 1px solid var(--container-border);
-    border-bottom: 2px solid var(--primary-color);
+    border-bottom-width: 2px; /* Thicker bottom border for header */
+    border-bottom-color: var(--primary-color);
 }
 
-thead th {
-    position: -webkit-sticky;
+thead th { /* Make header sticky */
     position: sticky;
     top: 0;
     z-index: 3;
 }
 
-tbody tr:last-child td {
-    border-bottom: none;
+tbody tr:nth-child(even) {
+    background-color: var(--table-row-even-bg);
+}
+tbody tr:hover { /* Subtle hover effect */
+    background-color: var(--info-panel-bg);
 }
 
-tbody tr:nth-child(even) { 
-    background-color: var(--table-row-even-bg); 
+tfoot td { /* Style footer cells */
+    font-weight: 600;
+    background-color: var(--table-header-bg);
+    border-top: 2px solid var(--container-border); /* Separator for footer */
 }
 
+
+/* --- Utility Classes --- */
 .numeric { text-align: right; }
 .positive { color: var(--positive-color); font-weight: 600; }
 .negative { color: var(--negative-color); font-weight: 600; }
 .actions-cell { text-align: center; }
 .center-align { text-align: center; }
 
-
-/* --- FINAL FIX for Section Header Centering --- */
-/* Target any 'th' inside the stock table that has a colspan attribute */
+/* Table Section Headers (like in Daily Report) */
+.table-section-header {
+    text-align: center !important; /* Force centering */
+    font-size: 1.1rem; /* Slightly larger */
+    font-weight: 600;
+    background-color: var(--info-panel-bg); /* Different background */
+    color: var(--heading-color);
+    border-bottom: 1px solid var(--container-border); /* Regular bottom border */
+}
+/* Specific targeting for Daily Report headers if needed */
 #stock-table th[colspan] {
-    text-align: center !important;
-    font-size: 1.2rem;
+    background-color: var(--info-panel-bg);
 }
 
-.table-section-header { 
-    text-align: center !important; /* Force centering */
-    font-size: 1.2rem; /* Make font larger */
-    background-color: var(--table-header-bg); /* FIX: Use theme variable */
-}
-#positions-summary-title { 
-    text-align: center !important; /* Force centering */
-    font-size: 1.2rem; /* Make font larger */
-    background-color: var(--table-header-bg); /* FIX: Use theme variable */
-}
-/* --- END OF FINAL FIX --- */
-
-
-/* --- Sticky Column Styles --- */
-#stock-table th:first-child, #stock-table td:first-child,
-#portfolio-overview-table th:first-child, #portfolio-overview-table td:first-child,
-#ledger-table th:first-child, #ledger-table td:first-child,
-#pending-orders-table th:first-child, #snapshots-table th:first-child {
-    position: -webkit-sticky;
+/* --- Sticky Column Base Styles --- */
+/* Apply .sticky-col class in renderers for cells needing stickiness */
+.sticky-col {
     position: sticky;
-    left: 0;
     z-index: 2;
-    border-left: 1px solid var(--container-border);
+    background-color: var(--container-bg); /* Default background matches row */
 }
-
-#stock-table th:last-child, #stock-table td:last-child,
-#ledger-table th:last-child, #ledger-table td:last-child,
-#pending-orders-table th:last-child, #snapshots-table th:last-child {
-    position: -webkit-sticky;
-    position: sticky;
-    right: 0;
-    z-index: 2;
-    border-right: 1px solid var(--container-border);
-}
-
-#stock-table th:first-child, #stock-table th:last-child,
-#portfolio-overview-table th:first-child,
-#ledger-table th:first-child, #ledger-table th:last-child,
-#pending-orders-table th:first-child, #pending-orders-table th:last-child,
-#snapshots-table th:first-child, #snapshots-table th:last-child {
+/* Ensure header sticky cells have correct background */
+thead .sticky-col {
+    z-index: 3; /* Header above body */
     background-color: var(--table-header-bg);
 }
-
-#stock-table td:first-child, #stock-table td:last-child,
-#portfolio-overview-table td:first-child,
-#ledger-table td:first-child, #ledger-table td:last-child,
-#pending-orders-table td:first-child, #pending-orders-table td:last-child,
-#snapshots-table td:first-child, #snapshots-table td:last-child {
-    background-color: var(--container-bg);
-}
-
-#stock-table tbody tr:nth-child(even) td:first-child, 
-#stock-table tbody tr:nth-child(even) td:last-child,
-#portfolio-overview-table tbody tr:nth-child(even) td:first-child,
-#ledger-table tbody tr:nth-child(even) td:first-child, 
-#ledger-table tbody tr:nth-child(even) td:last-child,
-#pending-orders-table tbody tr:nth-child(even) td:first-child,
-#pending-orders-table tbody tr:nth-child(even) td:last-child,
-#snapshots-table tbody tr:nth-child(even) td:first-child,
-#snapshots-table tbody tr:nth-child(even) td:last-child {
+/* Ensure even row sticky cells have correct background */
+tbody tr:nth-child(even) .sticky-col {
     background-color: var(--table-row-even-bg);
 }
-/* joeoster/stock_tracker_app_v2/stock_tracker_app_v2-PortfolioManagerTake3/public/css/components/_ledger.css */
-/* Contains styles specific to the Ledger page. */
-
-#ledger-summary-container { 
-    display: flex; 
-    justify-content: space-around; 
-    padding: 15px; 
-    margin-bottom: 2rem; 
-    background-color: var(--info-panel-bg); 
-    border: 1px solid var(--container-border); 
-    border-radius: 8px; 
-    text-align: center; 
+/* Ensure footer sticky cells have correct background */
+tfoot .sticky-col {
+     z-index: 3; /* Footer above body */
+     background-color: var(--table-header-bg);
 }
 
-.ledger-filters { 
-    display: flex; 
-    flex-wrap: wrap; 
-    gap: 1rem; 
-    align-items: center; 
-    margin-bottom: 1.5rem; 
-    padding: 1rem; 
-    background-color: var(--info-panel-bg); 
-    border-radius: 8px; 
-    border: 1px solid var(--container-border); 
+/* Ensure hover applies correctly to sticky cells */
+tbody tr:hover .sticky-col {
+     background-color: var(--info-panel-bg); /* Match row hover background */
 }
 
-.ledger-filters input { 
-    width: auto; 
-    flex-grow: 1; 
+/* Example Sticky assignments (add specific offsets in component CSS) */
+/* .sticky-col-left-0 { left: 0; } */
+/* .sticky-col-left-1 { left: 50px; } Adjust based on previous column width */
+/* .sticky-col-right-0 { right: 0; } */
+
+/* Specific Table Overrides (Move relevant rules from component CSS here if desired) */
+
+/* Example: Small logos in tables */
+.exchange-logo-small {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin-right: 5px; /* Add some space */
+    object-fit: contain;
 }
 
-/* Style to visually group ledger rows by date */
-.new-date-group td { 
-    border-top: 2px solid var(--primary-color) !important; 
-}
-
-/* Center the content of the 'Actions' column in the ledger table body */
-#ledger-table tbody td:last-child {
-    text-align: center;
+/* Table Actions Button size */
+.actions-cell button {
+    padding: 5px 8px; /* Smaller buttons in tables */
+    font-size: 0.9em;
+    margin: 0 2px; /* Add small horizontal margin */
 }

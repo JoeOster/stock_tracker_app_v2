@@ -1,92 +1,156 @@
 <div id="settings-modal" class="modal">
-    </div>
+    <div class="modal-content modal-large">
+        <span class="close-button">&times;</span>
+        <div class="settings-layout">
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="general">General</button>
+                <button class="settings-tab" data-tab="appearance">Appearance</button>
+                <button class="settings-tab" data-tab="data">Data Management</button>
+            </div>
 
+            <div class="settings-content">
+
+                <div id="general-settings-panel" class="settings-panel active">
+                    <h2>General Settings</h2>
+                    <div class="form-group">
+                        <label for="take-profit-percent">Suggested Take Profit %</label>
+                        <input type="number" id="take-profit-percent" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="stop-loss-percent">Suggested Stop Loss %</label>
+                        <input type="number" id="stop-loss-percent" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="notification-cooldown">Price Alert Cooldown (minutes)</label>
+                        <input type="number" id="notification-cooldown" step="1" min="1">
+                    </div>
+                    </div>
+
+                <div id="appearance-settings-panel" class="settings-panel">
+                    <h2>Appearance</h2>
+                     <div class="form-group">
+                         <label for="theme-selector">Theme</label>
+                         <select id="theme-selector">
+                             <option value="light">Light</option>
+                             <option value="dark">Dark</option>
+                             <option value="sepia">Sepia</option>
+                             <option value="contrast">High Contrast</option>
+                         </select>
+                     </div>
+                    <div class="form-group">
+                        <label for="font-selector">Font</label>
+                        <select id="font-selector">
+                            <option value="Inter">Inter</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Lato">Lato</option>
+                            <option value="Open Sans">Open Sans</option>
+                            <option value="System">System Default</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="family-name">Family Name (App Title)</label>
+                        <input type="text" id="family-name" placeholder="e.g., Smith Family">
+                    </div>
+                     </div>
+
+                <div id="data-settings-panel" class="settings-panel">
+                    <h2>Data Management</h2>
+
+                    <div class="sub-tabs" style="margin-bottom: 1.5rem;">
+                        <button class="sub-tab active" data-sub-tab="exchanges-panel">Exchanges</button>
+                        <button class="sub-tab" data-sub-tab="holders-panel">Account Holders</button>
+                        <button class="sub-tab" data-sub-tab="sources-panel">Advice Sources</button>
+                    </div>
+
+                    <div class="sub-tab-content">
+
+                        <div id="exchanges-panel" class="sub-tab-panel active">
+                            <h3>Manage Exchanges</h3>
+                            <ul id="exchange-list" class="management-list">
+                                </ul>
+                            <div class="add-item-form">
+                                <input type="text" id="new-exchange-name" placeholder="New Exchange Name">
+                                <button id="add-exchange-btn">Add Exchange</button>
+                            </div>
+                        </div>
+
+                        <div id="holders-panel" class="sub-tab-panel">
+                            <h3>Manage Account Holders</h3>
+                            <p class="subtitle" style="text-align: left; margin: 0 0 10px 0;">Select a default account holder to load on startup.</p>
+                            <ul id="account-holder-list" class="management-list">
+                                </ul>
+                             <div class="add-item-form">
+                                <input type="text" id="new-account-holder-name" placeholder="New Account Holder Name">
+                                <button id="add-account-holder-btn">Add Holder</button>
+                            </div>
+                        </div>
+
+                        <div id="sources-panel" class="sub-tab-panel">
+                             <h3>Manage Advice Sources</h3>
+                             <p class="subtitle" style="text-align: left; margin: 0 0 10px 0;">Define sources of trading ideas (people, books, websites, etc.) to link to journal entries.</p>
+                             <ul id="advice-source-list" class="management-list">
+                                 </ul>
+                             <hr style="margin: 1.5rem 0;">
+                             <h4>Add New Advice Source</h4>
+                             <form id="add-advice-source-form" class="add-item-form-grid">
+                                <div class="form-group">
+                                    <label for="new-source-name">Name*</label>
+                                    <input type="text" id="new-source-name" placeholder="e.g., John Doe, Investopedia" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-type">Type*</label>
+                                    <select id="new-source-type" required>
+                                        <option value="" disabled selected>Select Type</option>
+                                        <option value="Person">Person</option>
+                                        <option value="Book">Book</option>
+                                        <option value="Website">Website</option>
+                                        <option value="Group">Group</option>
+                                        <option value="Service">Service</option>
+                                        <option value="Class">Class</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group form-group-span-2">
+                                    <label for="new-source-description">Description</label>
+                                    <input type="text" id="new-source-description" placeholder="Optional notes (e.g., Analyst at XYZ)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-url">URL</label>
+                                    <input type="url" id="new-source-url" placeholder="Optional link (http://...)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-contact-person">Contact Person</label>
+                                    <input type="text" id="new-source-contact-person" placeholder="Optional specific contact">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-contact-email">Contact Email</label>
+                                    <input type="email" id="new-source-contact-email" placeholder="Optional email">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-contact-phone">Contact Phone</label>
+                                    <input type="tel" id="new-source-contact-phone" placeholder="Optional phone">
+                                </div>
+                                <div class="form-group form-group-span-2">
+                                    <label for="new-source-contact-app">Contact App/Handle</label>
+                                    <input type="text" id="new-source-contact-app" placeholder="e.g., Discord#1234, @twitter">
+                                </div>
+                                <div class="form-group form-group-span-2" style="text-align: right;">
+                                    <button type="submit" id="add-advice-source-btn">Add Source</button>
+                                </div>
+                            </form>
+                        </div> </div> </div> </div> </div> <div class="settings-footer">
+             <button id="save-settings-button">Save & Close</button>
+        </div>
+    </div> </div>
 <div id="edit-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <h2 id="edit-modal-title">Edit Transaction</h2>
-        <form id="edit-transaction-form">
-            <input type="hidden" id="edit-id">
-            <div id="edit-core-fields">
-                <div class="form-group"><label for="edit-date">Date</label><input type="date" id="edit-date" required></div>
-                 <div class="form-group"><label for="edit-ticker">Ticker</label><input type="text" id="edit-ticker" required></div>
-                 <div class="form-group"><label for="edit-exchange">Exchange</label><select id="edit-exchange" required></select></div>
-                 <div class="form-group"><label for="edit-type">Type</label><select id="edit-type" required><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
-                 <div class="form-group"><label for="edit-quantity">Quantity</label><input type="number" id="edit-quantity" step="any" required></div>
-                 <div class="form-group"><label for="edit-price">Price</label><input type="number" id="edit-price" step="any" required></div>
-                 <div class="form-group"><label for="edit-account-holder">Account Holder</label><select id="edit-account-holder" class="account-holder-select" required></select></div>
-            </div>
-            <div id="edit-limit-fields" style="display: none;">
-                <div class="form-group form-group-with-button"><label for="edit-limit-price-up">Take Profit Price</label><input type="number" id="edit-limit-price-up" step="any"><button type="button" class="clear-limit-btn" data-target="up" style="flex-shrink: 0;">Clear</button></div>
-                 <div class="form-group"><label for="edit-limit-up-expiration">Take Profit Expiration</label><input type="date" id="edit-limit-up-expiration"></div>
-                 <div class="form-group form-group-with-button"><label for="edit-limit-price-down">Stop Loss Price</label><input type="number" id="edit-limit-price-down" step="any"><button type="button" class="clear-limit-btn" data-target="down" style="flex-shrink: 0;">Clear</button></div>
-                 <div class="form-group"><label for="edit-limit-down-expiration">Stop Loss Expiration</label><input type="date" id="edit-limit-down-expiration"></div>
-            </div>
-            <div class="modal-actions">
-                <button type="button" id="edit-modal-delete-btn" class="delete-btn">Delete</button>
-                <div class="modal-actions-right">
-                    <button type="button" id="edit-modal-cancel-btn" class="cancel-btn">Cancel</button> <button type="submit">Save Changes</button>
-                </div>
-            </div>
-        </form>
     </div>
-</div>
-
 <div id="chart-zoom-modal" class="modal">
-    <div class="modal-content modal-large"><span class="close-button">&times;</span><h2>Zoomed Chart</h2><div class="chart-wrapper" style="height: 70vh;"><canvas id="zoomed-chart"></canvas></div></div>
-</div>
-
-<div id="confirm-modal" class="modal">
-    <div class="modal-content" style="max-width: 400px;">
-        <span class="close-button">&times;</span>
-        <h2 id="confirm-modal-title">Confirmation</h2>
-        <p id="confirm-modal-body">Are you sure?</p>
-        <div class="modal-actions modal-actions-right"> <button id="confirm-modal-cancel-btn" class="cancel-btn">Cancel</button> <button id="confirm-modal-confirm-btn">Confirm</button> </div>
-    </div>
-</div>
-
-<div id="sell-from-position-modal" class="modal">
-    <div class="modal-content">
-         <span class="close-button">&times;</span>
-        <h2>Log Sale From Position</h2>
-        <form id="sell-from-position-form">
-            <input type="hidden" id="sell-parent-buy-id">
-            <input type="hidden" id="sell-account-holder-id">
-             <div style="margin-bottom: 1rem;">
-                <p style="margin: 5px 0;">Ticker: <strong id="sell-ticker-display">--</strong></p>
-                <p style="margin: 5px 0;">Exchange: <strong id="sell-exchange-display">--</strong></p>
-             </div>
-            <div class="form-group"><label for="sell-quantity">Quantity to Sell</label><input type="number" id="sell-quantity" step="any" min="0.00001" required></div>
-            <div class="form-group"><label for="sell-price">Sale Price Per Share</label><input type="number" id="sell-price" step="any" min="0.01" required></div>
-            <div class="form-group"><label for="sell-date">Sale Date</label><input type="date" id="sell-date" required></div>
-            <div class="modal-actions modal-actions-right"> <button type="button" class="cancel-btn close-button">Cancel</button> <button type="submit">Log Sale</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="advice-modal" class="modal">
-    <div class="modal-content" style="max-width: 450px;"><span class="close-button">&times;</span><h2 id="advice-modal-title">Advice for --</h2><div style="line-height: 1.6;"><p>Cost Basis: <strong id="advice-cost-basis">--</strong></p><p>Current Price: <strong id="advice-current-price">--</strong></p><hr style="margin: 1rem 0;"><p>Suggested Take Profit (<span id="advice-profit-percent">--</span>%): <strong id="advice-suggested-profit">--</strong></p><p>Suggested Stop Loss (<span id="advice-loss-percent">--</span>%): <strong id="advice-suggested-loss">--</strong></p><hr style="margin: 1rem 0;"><p>Current Take Profit Limit: <span id="advice-current-limit-up">Not set</span></p><p>Current Stop Loss Limit: <span id="advice-current-limit-down">Not set</span></p></div></div>
-</div>
-
-<div id="confirm-fill-modal" class="modal">
-   <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <h2>Confirm Order Fill</h2>
-        <form id="confirm-fill-form">
-            <input type="hidden" id="fill-pending-order-id">
-            <input type="hidden" id="fill-account-holder-id">
-            <input type="hidden" id="fill-ticker">
-            <input type="hidden" id="fill-exchange">
-            <input type="hidden" id="fill-quantity">
-             <div style="margin-bottom: 1rem;">
-                <p style="margin: 5px 0;">Fill order for <strong id="fill-ticker-display">--</strong>?</p>
-                <p style="margin: 5px 0;">Original Limit Price: <strong id="fill-limit-price-display">--</strong></p>
-             </div>
-            <div class="form-group"><label for="fill-execution-price">Actual Execution Price</label><input type="number" id="fill-execution-price" step="any" min="0.01" required></div>
-             <div class="form-group"><label for="fill-execution-date">Execution Date</label><input type="date" id="fill-execution-date" required></div>
-            <div class="modal-actions modal-actions-right"> <button type="button" class="cancel-btn close-button">Cancel</button> <button type="submit">Confirm Fill & Log Buy</button>
-            </div>
-        </form>
    </div>
-</div>
+<div id="confirm-modal" class="modal">
+    </div>
+<div id="sell-from-position-modal" class="modal">
+    </div>
+<div id="advice-modal" class="modal">
+    </div>
+<div id="confirm-fill-modal" class="modal">
+   </div>
