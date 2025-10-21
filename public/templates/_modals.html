@@ -24,7 +24,7 @@
                         <label for="notification-cooldown">Price Alert Cooldown (minutes)</label>
                         <input type="number" id="notification-cooldown" step="1" min="1">
                     </div>
-                    </div>
+                     </div>
 
                 <div id="appearance-settings-panel" class="settings-panel">
                     <h2>Appearance</h2>
@@ -143,14 +143,171 @@
         </div>
     </div> </div>
 <div id="edit-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2 id="edit-modal-title">Edit Transaction</h2>
+        <form id="edit-transaction-form">
+            <input type="hidden" id="edit-id">
+            <div id="edit-core-fields">
+                <div class="form-group">
+                    <label for="edit-date">Date</label>
+                    <input type="date" id="edit-date" required>
+                </div>
+                 <div class="form-group">
+                     <label for="edit-ticker">Ticker</label>
+                     <input type="text" id="edit-ticker" required>
+                 </div>
+                 <div class="form-group">
+                     <label for="edit-exchange">Exchange</label>
+                     <select id="edit-exchange" required></select>
+                 </div>
+                 <div class="form-group">
+                     <label for="edit-type">Type</label>
+                     <select id="edit-type" required>
+                         <option value="BUY">BUY</option>
+                         <option value="SELL">SELL</option>
+                     </select>
+                 </div>
+                 <div class="form-group">
+                     <label for="edit-quantity">Quantity</label>
+                     <input type="number" id="edit-quantity" step="any" required>
+                 </div>
+                 <div class="form-group">
+                     <label for="edit-price">Price</label>
+                     <input type="number" id="edit-price" step="any" required>
+                 </div>
+                 <div class="form-group">
+                     <label for="edit-account-holder">Account Holder</label>
+                     <select id="edit-account-holder" class="account-holder-select" required></select>
+                 </div>
+            </div>
+            <div id="edit-limit-fields" style="display: none;">
+                <div class="form-group form-group-with-button">
+                    <label for="edit-limit-price-up">Take Profit Price</label>
+                    <input type="number" id="edit-limit-price-up" step="any">
+                    <button type="button" class="clear-limit-btn cancel-btn" data-target="up" style="flex-shrink: 0;">Clear</button>
+                 </div>
+                 <div class="form-group">
+                     <label for="edit-limit-up-expiration">Take Profit Expiration</label>
+                     <input type="date" id="edit-limit-up-expiration">
+                 </div>
+                 <div class="form-group form-group-with-button">
+                     <label for="edit-limit-price-down">Stop Loss Price</label>
+                     <input type="number" id="edit-limit-price-down" step="any">
+                     <button type="button" class="clear-limit-btn cancel-btn" data-target="down" style="flex-shrink: 0;">Clear</button>
+                 </div>
+                 <div class="form-group">
+                     <label for="edit-limit-down-expiration">Stop Loss Expiration</label>
+                     <input type="date" id="edit-limit-down-expiration">
+                 </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="edit-modal-delete-btn" class="delete-btn">Delete</button>
+                <div class="modal-actions-right">
+                    <button type="button" id="edit-modal-cancel-btn" class="cancel-btn">Cancel</button>
+                    <button type="submit">Save Changes</button>
+                </div>
+            </div>
+        </form>
     </div>
+</div>
+
 <div id="chart-zoom-modal" class="modal">
-   </div>
+    <div class="modal-content modal-large">
+        <span class="close-button">&times;</span>
+        <h2>Zoomed Chart</h2>
+        <div class="chart-wrapper" style="height: 70vh;">
+            <canvas id="zoomed-chart"></canvas>
+        </div>
+    </div>
+</div>
+
 <div id="confirm-modal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <span class="close-button">&times;</span>
+        <h2 id="confirm-modal-title">Confirmation</h2>
+        <p id="confirm-modal-body">Are you sure?</p>
+        <div class="modal-actions modal-actions-right">
+            <button id="confirm-modal-cancel-btn" class="cancel-btn">Cancel</button>
+            <button id="confirm-modal-confirm-btn">Confirm</button>
+        </div>
     </div>
+</div>
+
 <div id="sell-from-position-modal" class="modal">
+    <div class="modal-content">
+         <span class="close-button">&times;</span>
+        <h2>Log Sale From Position</h2>
+        <form id="sell-from-position-form">
+            <input type="hidden" id="sell-parent-buy-id">
+            <input type="hidden" id="sell-account-holder-id">
+             <div style="margin-bottom: 1rem;">
+                <p style="margin: 5px 0;">Ticker: <strong id="sell-ticker-display">--</strong></p>
+                <p style="margin: 5px 0;">Exchange: <strong id="sell-exchange-display">--</strong></p>
+             </div>
+            <div class="form-group">
+                <label for="sell-quantity">Quantity to Sell</label>
+                <input type="number" id="sell-quantity" step="any" min="0.00001" required>
+            </div>
+            <div class="form-group">
+                <label for="sell-price">Sale Price Per Share</label>
+                <input type="number" id="sell-price" step="any" min="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="sell-date">Sale Date</label>
+                <input type="date" id="sell-date" required>
+            </div>
+            <div class="modal-actions modal-actions-right">
+                 <button type="button" class="cancel-btn close-button">Cancel</button>
+                 <button type="submit">Log Sale</button>
+            </div>
+        </form>
     </div>
+</div>
+
 <div id="advice-modal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <span class="close-button">&times;</span>
+        <h2 id="advice-modal-title">Advice for --</h2>
+        <div style="line-height: 1.6;">
+            <p>Cost Basis: <strong id="advice-cost-basis">--</strong></p>
+            <p>Current Price: <strong id="advice-current-price">--</strong></p>
+            <hr style="margin: 1rem 0;">
+            <p>Suggested Take Profit (<span id="advice-profit-percent">--</span>%): <strong id="advice-suggested-profit">--</strong></p>
+            <p>Suggested Stop Loss (<span id="advice-loss-percent">--</span>%): <strong id="advice-suggested-loss">--</strong></p>
+            <hr style="margin: 1rem 0;">
+            <p>Current Take Profit Limit: <span id="advice-current-limit-up">Not set</span></p>
+            <p>Current Stop Loss Limit: <span id="advice-current-limit-down">Not set</span></p>
+        </div>
     </div>
+</div>
+
 <div id="confirm-fill-modal" class="modal">
+   <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Confirm Order Fill</h2>
+        <form id="confirm-fill-form">
+            <input type="hidden" id="fill-pending-order-id">
+            <input type="hidden" id="fill-account-holder-id">
+            <input type="hidden" id="fill-ticker">
+            <input type="hidden" id="fill-exchange">
+            <input type="hidden" id="fill-quantity">
+             <div style="margin-bottom: 1rem;">
+                <p style="margin: 5px 0;">Fill order for <strong id="fill-ticker-display">--</strong>?</p>
+                <p style="margin: 5px 0;">Original Limit Price: <strong id="fill-limit-price-display">--</strong></p>
+             </div>
+            <div class="form-group">
+                <label for="fill-execution-price">Actual Execution Price</label>
+                <input type="number" id="fill-execution-price" step="any" min="0.01" required>
+            </div>
+             <div class="form-group">
+                 <label for="fill-execution-date">Execution Date</label>
+                 <input type="date" id="fill-execution-date" required>
+             </div>
+            <div class="modal-actions modal-actions-right">
+                 <button type="button" class="cancel-btn close-button">Cancel</button>
+                 <button type="submit">Confirm Fill & Log Buy</button>
+            </div>
+        </form>
    </div>
+</div>

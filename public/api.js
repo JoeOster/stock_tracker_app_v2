@@ -1,15 +1,14 @@
 // public/api.js
-// Version 0.1.23
+// Version Updated (Includes previousPrice logic in updatePricesForView)
 /**
  * @file This file centralizes all client-side API (fetch) calls to the server.
  * @module api
  */
-import { state, updateState } from './state.js'; // Added updateState import
-import { populatePricesFromCache, showToast } from './ui/helpers.js'; // Added showToast
+import { state, updateState } from './state.js';
+import { populatePricesFromCache, showToast } from './ui/helpers.js';
 import { renderLedgerPage } from './ui/renderers/_ledger.js';
 import { getCurrentESTDateString } from './ui/datetime.js';
-// Import journal renderer if needed for price updates, or handle in journal event handler
-// import { populateJournalPrices } from './ui/renderers/_journal.js';
+// import { populateJournalPrices } from './ui/renderers/_journal.js'; // Import if created
 
 /**
  * A helper function to handle fetch responses, throwing an error with a server message if not ok.
@@ -56,17 +55,14 @@ export async function refreshLedger() {
  * @param {string[]} tickersToUpdate - The specific list of tickers to fetch.
  * @returns {Promise<void>}
  */
-// public/api.js
-// ... (other imports and functions) ...
-
 export async function updatePricesForView(viewDate, tickersToUpdate) {
-    console.log("updatePricesForView called with:", { viewDate, tickersToUpdate }); // <-- ADD THIS LINE
+    console.log("updatePricesForView called with:", { viewDate, tickersToUpdate });
     if (!tickersToUpdate || tickersToUpdate.length === 0) {
-        console.log("updatePricesForView: Exiting early - no tickers to update."); // <-- ADD/MODIFY THIS LINE
+        console.log("updatePricesForView: Exiting early - no tickers to update.");
         return;
-    }if (!tickersToUpdate || tickersToUpdate.length === 0) return;
+    }
 
-    // ... (loading indicators remain the same) ...
+    // You might want loading indicators here if desired
 
     try {
         const isToday = viewDate === getCurrentESTDateString();
@@ -76,48 +72,49 @@ export async function updatePricesForView(viewDate, tickersToUpdate) {
             body: JSON.stringify({ tickers: tickersToUpdate, date: viewDate, allowLive: isToday })
         });
         const pricesData = await handleResponse(response);
-
-        // --- ADD LOGS HERE ---
-        console.log("updatePricesForView: Received pricesData:", pricesData); // Log 1: What did the backend send?
+        console.log("updatePricesForView: Received pricesData:", pricesData);
 
         const now = Date.now();
         let pricesUpdated = false;
         for (const ticker in pricesData) {
-            console.log("updatePricesForView: Processing ticker:", ticker, pricesData[ticker]); // Log 2: Are we entering the loop? What's the data for this ticker?
+            console.log("updatePricesForView: Processing ticker:", ticker, pricesData[ticker]);
 
-            // --- Check the structure right before creating newPriceData ---
-             console.log("updatePricesForView: Type of pricesData[ticker]:", typeof pricesData[ticker], "Value:", pricesData[ticker]); // Log 3: Check data structure
+            // --- Store previous price ---
+            const currentCached = state.priceCache.get(ticker);
+            const previousPrice = (currentCached && typeof currentCached.price === 'number') ? currentCached.price : null;
+            // --- End store previous price ---
+
+            // Determine the new price, defaulting to 'invalid'
+            const newPriceValue = pricesData[ticker];
+            const newPrice = (typeof newPriceValue === 'number' && newPriceValue > 0) ? newPriceValue : 'invalid';
 
             const newPriceData = {
-                // Original logic had 'invalid' if price wasn't a number. Let's see what pricesData[ticker] actually is.
-                // It seems the backend route /api/utility/prices/batch directly returns the price number or 'invalid', not an object like { price: ..., timestamp: ...}
-                // Adjusting based on that backend route's likely output:
-                price: (typeof pricesData[ticker] === 'number' && pricesData[ticker] > 0) ? pricesData[ticker] : 'invalid',
-                timestamp: now // We don't get a timestamp from this specific backend route currently
+                price: newPrice,
+                // Keep the old 'previousPrice' if the new price is invalid, otherwise use the 'previousPrice' we just captured
+                previousPrice: newPrice === 'invalid' ? currentCached?.previousPrice : previousPrice,
+                timestamp: now
             };
-
-            // --- Log the data we're about to cache ---
-             console.log("updatePricesForView: Caching data:", newPriceData); // Log 4: What are we actually putting in the cache?
+            console.log("updatePricesForView: Caching data:", newPriceData);
 
             state.priceCache.set(ticker, newPriceData);
             pricesUpdated = true;
-            console.log("updatePricesForView: Cache updated for", ticker, state.priceCache.get(ticker)); // Log 5: Confirm cache update
+            console.log("updatePricesForView: Cache updated for", ticker, state.priceCache.get(ticker));
         }
         if (!pricesUpdated) {
-            console.log("updatePricesForView: No valid price data found in response to process."); // Adjusted log message
+            console.log("updatePricesForView: No valid price data found in response to process.");
         }
 
     } catch (error) {
-        console.error("Error inside updatePricesForView:", error); // Log 6: Catch any errors during the process
+        console.error("Error inside updatePricesForView:", error);
         showToast(`Price update failed: ${error.message}`, 'error');
         // Mark prices as error in cache
         tickersToUpdate.forEach(ticker => {
-             state.priceCache.set(ticker, { price: 'error', timestamp: Date.now() });
+             // Preserve previous price on error if possible
+             const existingPrevious = state.priceCache.get(ticker)?.previousPrice;
+             state.priceCache.set(ticker, { price: 'error', previousPrice: existingPrevious ?? null, timestamp: Date.now() });
         });
     }
 }
-
-// ... (rest of api.js) ...
 
 
 /**
@@ -126,14 +123,18 @@ export async function updatePricesForView(viewDate, tickersToUpdate) {
  */
 export async function updateAllPrices() {
     let tickersToUpdate = [];
-    let dateForUpdate = state.currentView.value; // Typically the date tab value
+    let dateForUpdate = state.currentView.value;
 
-     if (state.currentView.type === 'date' && state.activityMap.size > 0) {
+     if (state.currentView.type === 'dashboard' && state.dashboardOpenLots.length > 0) { // Check dashboard state
+        tickersToUpdate = [...new Set(state.dashboardOpenLots.map(lot => lot.ticker))];
+        dateForUpdate = getCurrentESTDateString(); // Dashboard always uses current prices
+    }
+    else if (state.currentView.type === 'date' && state.activityMap.size > 0) {
         tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
-    } else if (state.currentView.type === 'journal' && state.journalEntries?.openEntries) { // Safely access state
+        // dateForUpdate is already set to state.currentView.value for 'date' type
+    } else if (state.currentView.type === 'journal' && state.journalEntries?.openEntries) {
         tickersToUpdate = [...new Set(state.journalEntries.openEntries.map(entry => entry.ticker))];
-        // Journal might operate on 'today's' prices regardless of a date tab concept
-        dateForUpdate = getCurrentESTDateString(); // Assume journal always uses current prices
+        dateForUpdate = getCurrentESTDateString(); // Journal uses current prices
     }
     // Add other views like watchlist if they need price updates
 
@@ -142,17 +143,18 @@ export async function updateAllPrices() {
         await updatePricesForView(dateForUpdate, tickersToUpdate); // Use the determined date
 
         // Decide which UI update function to call based on the view
-         if (state.currentView.type === 'date') {
+         if (state.currentView.type === 'dashboard') {
+             // Dashboard re-renders fully on refresh click, which includes price population
+             const { renderDashboardPage } = await import('./ui/renderers/_dashboard.js');
+             await renderDashboardPage();
+         }
+         else if (state.currentView.type === 'date') {
             populatePricesFromCache(state.activityMap, state.priceCache);
         } else if (state.currentView.type === 'journal') {
-            // Need a similar function for the journal page, e.g., populateJournalPrices()
-            // It should be implemented in the journal renderer or helper
-            // populateJournalPrices(state.journalEntries.openEntries, state.priceCache); // Example call
-            console.log("TODO: Implement price population/update logic for Journal view");
-             // TEMP: Reload journal page data which includes price fetching
              const { loadJournalPage } = await import('./event-handlers/_journal.js');
-             await loadJournalPage();
+             await loadJournalPage(); // Reload journal page data which includes price fetching/rendering
         }
+        // Add other views if necessary
     } else {
          console.log("No tickers to update or required date context missing.");
          showToast('No prices to refresh for the current view.', 'info');
@@ -225,10 +227,8 @@ export async function fetchSnapshots(holderId) {
  * @returns {Promise<any[]>} A promise that resolves to an array of advice source objects.
  */
 export async function fetchAdviceSources(holderId) {
-    if (!holderId || holderId === 'all') { // Cannot fetch for 'all'
-        // console.warn("A specific account holder ID is required to fetch advice sources.");
-        return []; // Return empty array if 'all' or no holder selected
-        // throw new Error("Account holder ID is required to fetch advice sources.");
+    if (!holderId || holderId === 'all') {
+        return [];
     }
     const response = await fetch(`/api/advice-sources?holder=${holderId}`);
     return handleResponse(response);
@@ -280,20 +280,18 @@ export async function deleteAdviceSource(id) {
 /**
  * Fetches journal entries for a given account holder, optionally filtering by status.
  * @param {string} holderId - The ID of the account holder ('all' not recommended here).
- * @param {'OPEN' | 'CLOSED' | 'EXECUTED' | 'CANCELLED' | null} [status=null] - Optional status to filter by. If null, fetches 'OPEN' by default based on backend logic.
+ * @param {'OPEN' | 'CLOSED' | 'EXECUTED' | 'CANCELLED' | null} [status=null] - Optional status to filter by.
  * @returns {Promise<any[]>} A promise that resolves to an array of journal entry objects.
  */
 export async function fetchJournalEntries(holderId, status = null) {
     if (!holderId || holderId === 'all') {
-        // Decide whether to throw error or return empty
         console.warn("A specific account holder ID is required to fetch journal entries.");
-        return []; // Return empty array if no specific holder
-        // throw new Error("A specific account holder ID is required to fetch journal entries.");
+        return [];
     }
     let url = `/api/journal?holder=${holderId}`;
     if (status) {
         url += `&status=${status}`;
-    } // If status is null, backend defaults to OPEN
+    }
     const response = await fetch(url);
     return handleResponse(response);
 }
@@ -334,7 +332,7 @@ export async function updateJournalEntry(id, updateData) {
  * @param {string} executionData.execution_date - The actual date the trade was executed (YYYY-MM-DD).
  * @param {number} executionData.execution_price - The actual price the trade was executed at.
  * @param {string|number} executionData.account_holder_id - The account holder performing the execution.
- * @returns {Promise<any>} A promise that resolves to the server's response (including the new transaction ID). */ // <-- Fixed JSDoc closing tag
+ * @returns {Promise<any>} A promise that resolves to the server's response (including the new transaction ID). */
 export async function executeJournalEntry(id, executionData) {
      const response = await fetch(`/api/journal/${id}/execute`, {
         method: 'PUT',

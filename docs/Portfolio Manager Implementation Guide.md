@@ -49,11 +49,11 @@
 
 * [ ] Task X.1: Standardize Modal Button Layouts
 * **[NEW]** Task X.2: Consolidate and Refactor CSS
-    * Centralize redundant styles for table action cells.
-    * Create a dedicated `_sub-tabs.css` and import it, removing duplicate styles from modals, journal, and dashboard CSS.
-    * Define common `.filter-bar` styles and apply consistently.
-    * Create a generic `.summary-container` style for info panels with multiple items.
-    * Review all modals to ensure consistent use of `.modal-actions`, `.modal-actions-right`, and `.cancel-btn` classes.
+  * Centralize redundant styles for table action cells.
+  * Create a dedicated `_sub-tabs.css` and import it, removing duplicate styles from modals, journal, and dashboard CSS.
+  * Define common `.filter-bar` styles and apply consistently.
+  * Create a generic `.summary-container` style for info panels with multiple items.
+  * Review all modals to ensure consistent use of `.modal-actions`, `.modal-actions-right`, and `.cancel-btn` classes.
 * [ ] Task X.3 (Deferred): Add UI Settings (Batch Update for Default View & Number of Date Tabs)
 
 ---

@@ -1,5 +1,5 @@
 // /public/state.js
-// Version Updated (Default view changed to Dashboard, added dashboardOpenLots)
+// Version Updated (Default view changed to Dashboard, added dashboardOpenLots, updated priceCache typedef)
 /**
  * @file Manages the application's global state.
  * @module state
@@ -21,7 +21,7 @@
  * @property {Array<object>} allExchanges - All exchanges in the system.
  * @property {string|number} selectedAccountHolderId - The ID of the currently selected account holder ('all' or number).
  * @property {{type: string, value: string|null}} currentView - The current active view.
- * @property {Map<string, {price: number|string|null, timestamp: number}>} priceCache - A cache for recently fetched stock prices.
+ * @property {Map<string, {price: number|string|null, previousPrice: number|null, timestamp: number}>} priceCache - A cache for recently fetched stock prices, including previous price.
  * @property {import('chart.js').Chart | null} allTimeChart - The instance of the 'All Time' chart.
  * @property {import('chart.js').Chart | null} fiveDayChart - The instance of the 'Five Day' chart.
  * @property {import('chart.js').Chart | null} dateRangeChart - The instance of the 'Date Range' chart.
@@ -61,7 +61,7 @@ export let state = {
     allExchanges: [],
     selectedAccountHolderId: 1,
     currentView: { type: 'dashboard', value: null }, // Default view changed
-    priceCache: new Map(),
+    priceCache: new Map(), // Updated typedef comment above reflects {price, previousPrice, timestamp} structure
     allTimeChart: null,
     fiveDayChart: null,
     dateRangeChart: null,
@@ -71,7 +71,7 @@ export let state = {
     pendingOrders: [],
     allAdviceSources: [],
     journalEntries: null,
-    dashboardOpenLots: [], // <-- Added this line
+    dashboardOpenLots: [],
     settings: {
         takeProfitPercent: 10,
         stopLossPercent: 5,
@@ -82,8 +82,8 @@ export let state = {
         defaultAccountHolderId: 1,
         marketHoursInterval: 2,
         afterHoursInterval: 15,
-        defaultView: 'dashboard', // Default view setting changed
-        numberOfDateTabs: 1, // Initialize the new setting
+        defaultView: 'dashboard',
+        numberOfDateTabs: 1,
     },
 };
 
