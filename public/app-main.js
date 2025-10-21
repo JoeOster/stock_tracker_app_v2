@@ -9,7 +9,8 @@
 import { initializeAllEventHandlers } from './event-handlers/_init.js';
 import { showToast } from './ui/helpers.js';
 import { switchView, autosizeAccountSelector } from './event-handlers/_navigation.js';
-import { fetchAndRenderExchanges, fetchAndPopulateAccountHolders } from './event-handlers/_settings.js';
+import { fetchAndPopulateAccountHolders } from './event-handlers/_settings_holders.js';
+import { fetchAndRenderExchanges,  } from './event-handlers/_settings_exchanges.js';
 import { applyAppearanceSettings } from './ui/settings.js';
 import { state } from './state.js';
 import { initializeScheduler } from './scheduler.js';
