@@ -6,7 +6,8 @@
 
 /* --- COMPONENT STYLES --- */
 @import url('./css/components/_header.css');
-@import url('./css/components/_tabs.css');
+@import url('./css/components/_tabs.css'); /* Main tabs */
+@import url('./css/components/_sub-tabs.css'); /* ADDED: Sub-tabs */
 @import url('./css/components/_forms.css');
 @import url('./css/components/_tables.css');
 @import url('./css/components/_modals.css');
@@ -17,9 +18,8 @@
 @import url('./css/components/_daily-report.css');
 @import url('./css/components/_importers.css');
 @import url('./css/components/_journal.css');
-@import url('./css/components/_dashboard.css'); /* <-- Add this line */
+@import url('./css/components/_dashboard.css');
 
 
 /* --- UTILITIES --- */
 @import url('./css/base/_utilities.css');
-

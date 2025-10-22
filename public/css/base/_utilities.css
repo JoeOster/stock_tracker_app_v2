@@ -1,14 +1,14 @@
 /* public/css/base/_utilities.css */
 /* Contains miscellaneous helper classes and animations. */
 
-.loader { 
-    display: inline-block; 
-    width: 16px; 
-    height: 16px; 
-    border: 2px solid rgba(128,128,128,.2); 
-    border-top-color: var(--text-color); 
-    border-radius: 50%; 
-    animation: spin .6s linear infinite; 
+.loader {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(128,128,128,.2);
+    border-top-color: var(--text-color);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
 }
 
 @keyframes spin {
@@ -17,37 +17,37 @@
     }
 }
 
-#toast-container { 
-    position: fixed; 
-    top: 20px; 
-    right: 20px; 
-    z-index: 2000; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px; 
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.toast { 
-    padding: 15px 20px; 
-    border-radius: 8px; 
-    color: #fff; 
-    font-size: 1em; 
-    box-shadow: 0 4px 12px rgba(0,0,0,.15); 
-    opacity: 0; 
-    transform: translateX(100%); 
-    animation: slideIn .3s forwards, fadeOut .5s 2.7s forwards; 
+.toast {
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1em;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    opacity: 0;
+    transform: translateX(100%);
+    animation: slideIn .3s forwards, fadeOut .5s 2.7s forwards;
 }
 
-.toast.toast-info { 
-    background-color: var(--primary-color); 
+.toast.toast-info {
+    background-color: var(--primary-color);
 }
 
-.toast.toast-success { 
-    background-color: var(--positive-color); 
+.toast.toast-success {
+    background-color: var(--positive-color);
 }
 
-.toast.toast-error { 
-    background-color: var(--negative-color); 
+.toast.toast-error {
+    background-color: var(--negative-color);
 }
 
 @keyframes slideIn {
@@ -56,7 +56,7 @@
         transform: translateX(0);
     }
 }
-    
+
 @keyframes fadeOut {
     to {
         opacity: 0;
@@ -71,3 +71,38 @@
 .is-draggable.is-dragging {
     cursor: grabbing;
 }
+
+/* --- ADDED: Generic Summary Container Styles --- */
+.summary-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center; /* Vertically center items if they have different heights */
+    padding: 15px;
+    margin-bottom: 2rem;
+    background-color: var(--info-panel-bg);
+    border: 1px solid var(--container-border);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.summary-item {
+    flex: 1; /* Allow items to share space equally */
+    padding: 0 10px; /* Add some horizontal padding between items */
+}
+
+/* Optional: Style headings and paragraphs within summary items if needed */
+.summary-item h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 0.9em; /* Smaller heading */
+    color: var(--text-muted-color);
+    font-weight: 500;
+}
+
+.summary-item p {
+    margin: 0;
+    font-size: 1.1em; /* Slightly larger text for value */
+    font-weight: 600;
+    color: var(--heading-color);
+}
+/* --- END ADDED --- */

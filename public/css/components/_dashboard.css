@@ -17,25 +17,7 @@
 }
 
 /* --- Filter/Sort Bar --- */
-.filter-sort-bar {
-    display: flex;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    gap: 1rem;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background-color: var(--info-panel-bg);
-    border-radius: 8px;
-    border: 1px solid var(--container-border);
-    margin-bottom: 1.5rem;
-}
-.filter-sort-bar input,
-.filter-sort-bar select {
-    flex: 1 1 auto; /* Allow elements to grow and shrink */
-    max-width: 250px; /* Limit max width */
-}
-.filter-sort-bar button {
-    flex-shrink: 0; /* Prevent button from shrinking */
-}
+/* .filter-sort-bar { ... } REMOVED - Using generic .filter-bar from _forms.css */
 
 
 /* --- Card View --- */
@@ -83,6 +65,7 @@
     justify-content: space-between;
     padding: 15px;
     gap: 15px;
+    flex-direction: row; /* ADDED THIS LINE to ensure horizontal layout */
 }
 
 .card-stats, .card-performance {
@@ -263,3 +246,12 @@
 /* Also apply directly if not nested */
 .positive { color: var(--positive-color); }
 .negative { color: var(--negative-color); }
+
+#open-positions-table .actions-cell {
+    text-align: center; /* Keep horizontal centering */
+    vertical-align: middle; /* Ensure vertical alignment with other cells */
+    display: flex; /* Use flexbox for button alignment */
+    justify-content: center; /* Center buttons horizontally within the cell */
+    align-items: center; /* Center buttons vertically within the cell */
+    gap: 4px; /* Optional: Add a small gap between buttons */
+}

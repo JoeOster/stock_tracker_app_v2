@@ -62,7 +62,7 @@
     line-height: 1.5; /* Ensure alignment with inputs */
 }
 
-h2 { /* Style modal titles */
+.modal h2 { /* Style modal titles */
     margin-top: 0;
     margin-bottom: 1.5rem;
     font-size: 1.5rem;
@@ -84,7 +84,7 @@ h2 { /* Style modal titles */
     padding-right: 1.5rem; /* Space between tabs and content */
 }
 
-.settings-tab {
+.settings-tab { /* Styles specific to the main settings tabs */
     background: none;
     border: 1px solid transparent;
     color: var(--text-muted-color);
@@ -195,10 +195,10 @@ h2 { /* Style modal titles */
 }
 
 
-/* Sub-navigation within Data Management - Moved to _sub-tabs.css if created */
-/* .sub-tabs { ... } */
-/* .sub-tab { ... } */
-/* .sub-tab-panel { ... } */
+/* Sub-navigation within Data Management - Styles moved to _sub-tabs.css */
+/* .sub-tabs { ... } REMOVED */
+/* .sub-tab { ... } REMOVED */
+/* .sub-tab-panel { ... } REMOVED */
 
 
 /* Grid layout for the Add Advice Source form */

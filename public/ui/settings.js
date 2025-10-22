@@ -89,12 +89,8 @@ export function renderExchangeManagementList() {
             <div>
                 <button class="edit-exchange-btn" data-id="${exchange.id}">Edit</button>
                 <button class="save-exchange-btn" data-id="${exchange.id}" style="display: none;">Save</button>
-                {/* *** START MODIFICATION: Add .cancel-btn class *** */}
                 <button class="cancel-exchange-btn cancel-btn" data-id="${exchange.id}" style="display: none;">Cancel</button>
-                {/* *** END MODIFICATION *** */}
-                {/* *** START MODIFICATION: Add .delete-btn class *** */}
                 <button class="delete-exchange-btn delete-btn" data-id="${exchange.id}">Delete</button>
-                {/* *** END MODIFICATION *** */}
             </div>
         `;
         list.appendChild(li);
@@ -134,9 +130,7 @@ export function renderAccountHolderManagementList() {
                 <input type="text" class="edit-holder-input" value="${escapedName}" style="display: none; width: 100%;"> </div>
             <div style="flex-shrink: 0;"> <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
                 <button class="save-holder-btn" data-id="${holder.id}" style="display: none;">Save</button>
-                {/* *** START MODIFICATION: Add .cancel-btn class *** */}
-                <button class="cancel-holder-btn cancel-btn" data-id="${holder.id}" style="display: none;">Cancel</button>
-                {/* *** END MODIFICATION *** */}
+                <button class="cancel-holder-btn cancel-btn" data-id="${holder.id}" style="display: none;">Cancel</button>                
                 ${deleteButton}
             </div>
         `;

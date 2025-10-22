@@ -80,7 +80,10 @@ tfoot td { /* Style footer cells */
 .numeric { text-align: right; }
 .positive { color: var(--positive-color); font-weight: 600; }
 .negative { color: var(--negative-color); font-weight: 600; }
-.actions-cell { text-align: center; }
+.actions-cell {
+    text-align: center; /* MODIFIED: Added text-align */
+    vertical-align: middle; /* MODIFIED: Added vertical-align */
+}
 .center-align { text-align: center; }
 
 /* Table Section Headers (like in Daily Report) */

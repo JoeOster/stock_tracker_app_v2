@@ -47,7 +47,7 @@
 
 ## **Phase X: UI Refinements & Fixes (Ongoing / Next Steps)**
 
-* [ ] Task X.1: Standardize Modal Button Layouts
+* [x] Task X.1: Standardize Modal Button Layouts
 * [ ] Task X.2: Consolidate and Refactor CSS
   * Centralize redundant styles for table action cells.
   * Create a dedicated `_sub-tabs.css` and import it, removing duplicate styles from modals, journal, and dashboard CSS.
@@ -62,7 +62,7 @@
   * **Backend Adjustment (Potential):** The backend SELL transaction endpoint (`POST /api/transactions`) might need adjustment if a single UI action needs to generate multiple SELL transaction records (one for each parent buy lot involved in the sale). Currently, it expects a single `parent_buy_id`. Alternatively, the frontend could make multiple separate API calls.
 * [ ] Task X.6: Dashboard Table - P/L Tooltip: Add a descriptive `title` attribute to the proximity icons (🔥❄️) in the "Unrealized P/L ($ | %)" column to explain their meaning (e.g., "Nearing Take Profit Limit"). Requires careful modification of `createTableRowHTML` in `_dashboard.js`.
 * [ ] Task X.7: Dashboard Table - Column Alignment: Center-align the 'Qty' column header and cells. Review if 'Basis' and 'Current Price' should also be centered or remain right-aligned. Requires careful CSS updates in `_dashboard.css`, potentially overriding general `.numeric` styles specifically for this table.
-* [ ] Task X.8: Dashboard Table - Action Button Centering: Fix the alignment of action buttons within the `.actions-cell`. Ensure they are vertically and horizontally centered and do not overflow the cell boundaries. Requires careful CSS updates in `_dashboard.css`, likely using flexbox.
+* [x] Task X.8: Dashboard Table - Action Button Centering: Fix the alignment of action buttons within the `.actions-cell`. Ensure they are vertically and horizontally centered and do not overflow the cell boundaries. Requires careful CSS updates in `_dashboard.css`, likely using flexbox.
 * [ ] **Task X.9:** Dashboard Table - Shorten Header: Change the header "Unrealized P/L ($ | %)" to "Unr. P/L ($ | %)" in `_dashboard.html`.
 * [ ] **Task X.10:** Dashboard Table - Remove Extraneous Comments: Remove leftover HTML comment tags (`{/* ... */}`) from the `<tfoot>` section in `_dashboard.html`.
 * [ ] **Task X.11:** Dashboard Table - Implement Header Sorting: Ensure clicking on column headers with `data-sort` attributes in the `#open-positions-table` correctly sorts the table rows. Add or fix the necessary event listener in `_dashboard.js` (potentially leveraging the `sortTableByColumn` helper).

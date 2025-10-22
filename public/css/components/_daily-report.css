@@ -1,15 +1,6 @@
 /* public/css/components/_daily-report.css */
 
-#daily-performance-summary {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    background-color: var(--info-panel-bg);
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 2rem;
-    border: 1px solid var(--container-border);
-}
+/* #daily-performance-summary { ... } REMOVED - Using generic .summary-container */
 
 #positions-summary-body tr {
     cursor: pointer;
@@ -129,7 +120,6 @@
 
 /* --- Other Styles --- */
 #stock-table #log-body td:nth-child(4), /* Center Action column */
-#stock-table th:last-child, #stock-table td:last-child, /* Center Actions Header/Cell */
 #stock-table th.reconciliation-checkbox-header, #stock-table td.reconciliation-checkbox-cell /* Center Checkbox */
 {
     text-align: center;

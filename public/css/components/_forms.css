@@ -214,27 +214,34 @@ button:disabled {
     cursor: help;
 }
 
-/* Filter Bar Styles (Consolidated) */
+/* Filter Bar Styles (Consolidated Base) */
 .filter-bar {
     display: flex;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    gap: 1rem;
+    flex-wrap: wrap; /* Allow wrapping */
+    gap: 1rem; /* Consistent gap */
     align-items: center;
-    padding: 0.75rem 1rem;
-    background-color: var(--info-panel-bg);
-    border-radius: 8px;
-    border: 1px solid var(--container-border);
-    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem; /* Consistent padding */
+    background-color: var(--info-panel-bg); /* Consistent background */
+    border-radius: 8px; /* Consistent border radius */
+    border: 1px solid var(--container-border); /* Consistent border */
+    margin-bottom: 1.5rem; /* Consistent margin */
 }
+/* Input/Select styling within the bar */
 .filter-bar input,
 .filter-bar select {
     flex: 1 1 auto; /* Allow elements to grow and shrink */
-    max-width: 250px; /* Limit max width */
+    max-width: 250px; /* Sensible max width */
     margin-bottom: 0; /* Override form-group margin if needed */
+    padding: 8px; /* Slightly smaller padding */
+    width: auto; /* Override default width: 100% */
 }
+/* Label styling */
 .filter-bar label {
     margin-bottom: 0; /* Align label better */
+    white-space: nowrap; /* Prevent label wrapping */
 }
+/* Button styling */
 .filter-bar button {
     flex-shrink: 0; /* Prevent button from shrinking */
+    padding: 8px 12px; /* Match input padding height */
 }
