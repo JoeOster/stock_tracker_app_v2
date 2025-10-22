@@ -4,25 +4,33 @@
 // --- Import the REAL functions under test ---
 // We removed the jest.mock('./_settings.js') for initializeSettingsHandlers earlier
 // Now import both initializeSettingsHandlers AND setActiveTab
-const { initializeSettingsHandlers, setActiveTab } = require('./_settings');
+const { initializeSettingsHandlers,  } = require('./_settings');
+const { setActiveTab } = require('./_settings_modal.js');
 
 // --- MOCK the functions CALLED BY initializeSettingsHandlers ---
 // Keep this mock, but it no longer needs to mock initializeSettingsHandlers itself
-jest.mock('./_settings.js', () => {
-    const original = jest.requireActual('./_settings.js');
+/**
+ * @jest-environment jsdom
+ */
+
+// ... (keep all existing mocks and setup from the previous version) ...
+
+// --- Import the REAL functions under test ---
+
+// --- MOCK the functions CALLED BY initializeSettingsHandlers ---
+jest.mock('./_settings_modal.js', () => {
+    const original = jest.requireActual('./_settings_modal.js');
     return {
-        ...original, // Keep original initializeSettingsHandlers, setActiveTab etc.
-        // Mock the specific functions called internally during modal open
+        ...original,
         fetchAndRenderExchanges: jest.fn().mockResolvedValue(undefined),
         fetchAndPopulateAccountHolders: jest.fn().mockResolvedValue(undefined),
+        fetchAndStoreAdviceSources: jest.fn().mockResolvedValue(undefined),
     };
 });
 
-
 // --- Re-import helpers after mocks ---
 const { showToast, showConfirmationModal } = require('../ui/helpers.js');
-const { state } = require('../state.js'); // Import state if needed
-
+const { state } = require('../state.js');
 
 // --- Helper to provide Settings Modal HTML (Keep as before) ---
 // const getSettingsModalHTML = () => { ... };
@@ -62,18 +70,19 @@ describe('setActiveTab Helper Function', () => {
                 </div>
             </div>`;
 
-        const tabsContainer = document.querySelector('.settings-tabs');
+        const tabsContainer = /** @type {HTMLElement} */ (document.querySelector('.settings-tabs')); // Cast container
         const scopeElement = document.getElementById('settings-modal');
-        const targetTab = document.querySelector('button[data-tab="appearance"]');
+        const targetTab = /** @type {HTMLElement} */ (document.querySelector('button[data-tab="appearance"]')); // Cast target tab
 
+        // FIX: Cast targetTab to HTMLElement
         setActiveTab(
             tabsContainer,
-            targetTab,
+            /** @type {HTMLElement} */ (targetTab), // <-- Cast here (Line 72)
             scopeElement,
-            '.settings-panel',     // panelSelector
-            'data-tab',            // tabAttribute
-            '#',                   // panelIdPrefix
-            '-settings-panel'      // panelIdSuffix
+            '.settings-panel',
+            'data-tab',
+            '#',
+            '-settings-panel'
         );
 
         // Assertions
@@ -96,18 +105,18 @@ describe('setActiveTab Helper Function', () => {
                </div>
            </div>`;
 
-        const subTabsContainer = document.querySelector('.sub-tabs');
+        const subTabsContainer = /** @type {HTMLElement} */ (document.querySelector('.sub-tabs')); // Cast container
         const scopeElement = document.getElementById('data-settings-panel');
-        const targetTab = document.querySelector('button[data-sub-tab="holders-panel"]');
+        const targetTab = /** @type {HTMLElement} */ (document.querySelector('button[data-sub-tab="holders-panel"]')); // Cast target tab
 
+        // FIX: Cast targetTab to HTMLElement
         setActiveTab(
             subTabsContainer,
-            targetTab,
+            /** @type {HTMLElement} */ (targetTab), // <-- Cast here (Line 106)
             scopeElement,
-            '.sub-tab-panel',   // panelSelector
-            'data-sub-tab',     // tabAttribute
-            '#'                 // panelIdPrefix (panel IDs match data-sub-tab directly)
-            // No panelIdSuffix needed here
+            '.sub-tab-panel',
+            'data-sub-tab',
+            '#'
         );
 
         // Assertions
@@ -125,11 +134,12 @@ describe('setActiveTab Helper Function', () => {
                 </div>
             </div>`;
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(); // Suppress console noise
-        const tabsContainer = document.querySelector('.settings-tabs');
+        const tabsContainer = /** @type {HTMLElement} */ (document.querySelector('.settings-tabs')); // Cast container
         const scopeElement = document.getElementById('settings-modal');
-        const targetTab = document.querySelector('button.settings-tab');
+        const targetTab = /** @type {HTMLElement} */ (document.querySelector('button.settings-tab')); // Cast target tab
 
-        setActiveTab(tabsContainer, targetTab, scopeElement, '.settings-panel', 'data-tab', '#', '-settings-panel');
+        // FIX: Cast targetTab to HTMLElement
+        setActiveTab(tabsContainer, /** @type {HTMLElement} */ (targetTab), scopeElement, '.settings-panel', 'data-tab', '#', '-settings-panel'); // <-- Cast here (Line 133)
 
         expect(consoleErrorSpy).toHaveBeenCalledWith("setActiveTab: Clicked tab is missing the required data attribute:", "data-tab");
         consoleErrorSpy.mockRestore();
@@ -143,11 +153,12 @@ describe('setActiveTab Helper Function', () => {
                 </div>
             </div>`;
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-        const tabsContainer = document.querySelector('.settings-tabs');
+        const tabsContainer = /** @type {HTMLElement} */ (document.querySelector('.settings-tabs')); // Cast container
         const scopeElement = document.getElementById('settings-modal');
-        const targetTab = document.querySelector('button[data-tab="nonexistent"]');
+        const targetTab = /** @type {HTMLElement} */ (document.querySelector('button[data-tab="nonexistent"]')); // Cast target tab
 
-        setActiveTab(tabsContainer, targetTab, scopeElement, '.settings-panel', 'data-tab', '#', '-settings-panel');
+        // FIX: Cast targetTab to HTMLElement
+        setActiveTab(tabsContainer, /** @type {HTMLElement} */ (targetTab), scopeElement, '.settings-panel', 'data-tab', '#', '-settings-panel'); // <-- Cast here (Line 151)
 
         expect(consoleErrorSpy).toHaveBeenCalledWith("setActiveTab: Could not find panel with selector:", "#nonexistent-settings-panel");
         consoleErrorSpy.mockRestore();
