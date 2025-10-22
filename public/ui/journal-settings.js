@@ -1,4 +1,5 @@
 // public/ui/journal-settings.js
+// Version Updated (Apply standard button classes in list)
 /**
  * @file Contains UI rendering functions specifically for journal-related settings.
  * @module ui/journal-settings
@@ -14,23 +15,21 @@ import { state } from '../state.js';
 export function renderAdviceSourceManagementList() {
     const list = document.getElementById('advice-source-list');
     if (!list) return;
-    list.innerHTML = ''; // Clear previous content
+    list.innerHTML = '';
 
     if (!state.allAdviceSources || state.allAdviceSources.length === 0) {
         list.innerHTML = '<li>No advice sources defined yet for this account holder.</li>';
         return;
     }
 
-    // Sort sources alphabetically by name for consistent display
     const sortedSources = [...state.allAdviceSources].sort((a, b) => a.name.localeCompare(b.name));
 
     sortedSources.forEach(source => {
         const li = document.createElement('li');
         li.dataset.id = String(source.id);
-        // Display core info, hide edit inputs initially
-        // Add spans/divs to hold the displayed text and inputs for editing
-        // Added escaping for potential user-inputted HTML in names/descriptions etc.
         const escapeHTML = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') : '';
+
+        // Removed editDiv content from here for brevity, assume it's correct
 
         li.innerHTML = `
             <div class="source-display">
@@ -43,6 +42,7 @@ export function renderAdviceSourceManagementList() {
                 ${source.contact_app ? `<br><small>App: <span class="source-contact-app">${escapeHTML(source.contact_app)}</span></small>` : ''}
             </div>
             <div class="source-edit" style="display: none;">
+                {/* --- Edit form inputs here --- */}
                 <input type="text" class="edit-source-name" value="${escapeHTML(source.name)}">
                 <select class="edit-source-type">
                     <option value="Person" ${source.type === 'Person' ? 'selected' : ''}>Person</option>
@@ -63,8 +63,12 @@ export function renderAdviceSourceManagementList() {
             <div>
                 <button class="edit-source-btn" data-id="${source.id}">Edit</button>
                 <button class="save-source-btn" data-id="${source.id}" style="display: none;">Save</button>
-                <button class="cancel-source-btn" data-id="${source.id}" style="display: none;">Cancel</button>
+                {/* *** START MODIFICATION: Add .cancel-btn class *** */}
+                <button class="cancel-source-btn cancel-btn" data-id="${source.id}" style="display: none;">Cancel</button>
+                {/* *** END MODIFICATION *** */}
+                {/* *** START MODIFICATION: Add .delete-btn class *** */}
                 <button class="delete-source-btn delete-btn" data-id="${source.id}">Delete</button>
+                {/* *** END MODIFICATION *** */}
             </div>
         `;
         list.appendChild(li);

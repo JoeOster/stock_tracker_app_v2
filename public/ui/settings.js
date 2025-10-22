@@ -1,5 +1,5 @@
 // public/ui/settings.js
-// Version Updated
+// Version Updated (Apply standard button classes in lists)
 /**
  * @file Contains general UI functions related to the settings modal (non-journal specific).
  * @module ui/settings
@@ -12,6 +12,7 @@ import { switchView } from '../event-handlers/_navigation.js';
  * @returns {void}
  */
 export function saveSettings() {
+    // ... (saveSettings function remains the same) ...
     const oldTheme = state.settings.theme;
     state.settings.takeProfitPercent = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value) || 0;
     state.settings.stopLossPercent = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'))).value) || 0;
@@ -24,15 +25,12 @@ export function saveSettings() {
     if (selectedDefaultHolder) {
         state.settings.defaultAccountHolderId = selectedDefaultHolder.value;
     } else {
-         // Keep the existing default if none is selected (shouldn't happen with radios?)
-         // Or default to 1 if necessary:
          state.settings.defaultAccountHolderId = state.settings.defaultAccountHolderId || 1;
     }
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
 
     applyAppearanceSettings();
 
-    // Reload chart view if theme changed
     if (state.settings.theme !== oldTheme && state.currentView.type === 'charts') {
         switchView('charts', null);
     }
@@ -43,8 +41,9 @@ export function saveSettings() {
  * @returns {void}
  */
 export function applyAppearanceSettings() {
+    // ... (applyAppearanceSettings function remains the same) ...
     document.body.dataset.theme = state.settings.theme;
-    const fontToUse = state.settings.font || 'Inter'; // Default to Inter if setting is missing
+    const fontToUse = state.settings.font || 'Inter';
     const fontVar = fontToUse === 'System' ? 'var(--font-system)' : `var(--font-${fontToUse.toLowerCase().replace(' ', '-')})`;
     document.body.style.setProperty('--font-family-base', fontVar);
 
@@ -69,7 +68,7 @@ export function applyAppearanceSettings() {
 export function renderExchangeManagementList() {
     const list = document.getElementById('exchange-list');
     if (!list) return;
-    list.innerHTML = ''; // Clear previous content
+    list.innerHTML = '';
 
     if (!state.allExchanges || state.allExchanges.length === 0) {
          list.innerHTML = '<li>No exchanges defined yet.</li>';
@@ -81,7 +80,6 @@ export function renderExchangeManagementList() {
     sortedExchanges.forEach(exchange => {
         const li = document.createElement('li');
         li.dataset.id = String(exchange.id);
-        // Added escaping for potential user-inputted HTML in names
         const escapeHTML = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') : '';
         const escapedName = escapeHTML(exchange.name);
 
@@ -91,8 +89,12 @@ export function renderExchangeManagementList() {
             <div>
                 <button class="edit-exchange-btn" data-id="${exchange.id}">Edit</button>
                 <button class="save-exchange-btn" data-id="${exchange.id}" style="display: none;">Save</button>
-                <button class="cancel-exchange-btn" data-id="${exchange.id}" style="display: none;">Cancel</button>
+                {/* *** START MODIFICATION: Add .cancel-btn class *** */}
+                <button class="cancel-exchange-btn cancel-btn" data-id="${exchange.id}" style="display: none;">Cancel</button>
+                {/* *** END MODIFICATION *** */}
+                {/* *** START MODIFICATION: Add .delete-btn class *** */}
                 <button class="delete-exchange-btn delete-btn" data-id="${exchange.id}">Delete</button>
+                {/* *** END MODIFICATION *** */}
             </div>
         `;
         list.appendChild(li);
@@ -106,7 +108,7 @@ export function renderExchangeManagementList() {
 export function renderAccountHolderManagementList() {
     const list = document.getElementById('account-holder-list');
     if (!list) return;
-    list.innerHTML = ''; // Clear previous content
+    list.innerHTML = '';
 
      if (!state.allAccountHolders || state.allAccountHolders.length === 0) {
          list.innerHTML = '<li>No account holders found (this should not happen - Primary should exist).</li>';
@@ -116,12 +118,11 @@ export function renderAccountHolderManagementList() {
     const sortedHolders = [...state.allAccountHolders].sort((a, b) => a.name.localeCompare(b.name));
 
     sortedHolders.forEach(holder => {
-        // Use == for comparison as defaultAccountHolderId might be string or number
         const isDefault = state.settings.defaultAccountHolderId == holder.id;
-        const isProtected = holder.id == 1; // Primary account (ID 1) is protected
+        const isProtected = holder.id == 1;
+        // *** START MODIFICATION: Add .delete-btn class ***
         const deleteButton = isProtected ? '' : `<button class="delete-holder-btn delete-btn" data-id="${holder.id}">Delete</button>`;
-
-        // Added escaping for potential user-inputted HTML in names
+        // *** END MODIFICATION ***
         const escapeHTML = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') : '';
         const escapedName = escapeHTML(holder.name);
 
@@ -133,15 +134,16 @@ export function renderAccountHolderManagementList() {
                 <input type="text" class="edit-holder-input" value="${escapedName}" style="display: none; width: 100%;"> </div>
             <div style="flex-shrink: 0;"> <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
                 <button class="save-holder-btn" data-id="${holder.id}" style="display: none;">Save</button>
-                <button class="cancel-holder-btn" data-id="${holder.id}" style="display: none;">Cancel</button>
+                {/* *** START MODIFICATION: Add .cancel-btn class *** */}
+                <button class="cancel-holder-btn cancel-btn" data-id="${holder.id}" style="display: none;">Cancel</button>
+                {/* *** END MODIFICATION *** */}
                 ${deleteButton}
             </div>
         `;
-        // Apply flex styles directly to li for better control
         li.style.display = 'flex';
         li.style.alignItems = 'center';
         li.style.justifyContent = 'space-between';
-        li.style.gap = '10px'; // Add gap between name/input group and buttons
+        li.style.gap = '10px';
 
         list.appendChild(li);
     });
