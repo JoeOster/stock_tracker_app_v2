@@ -1,0 +1,29 @@
+<div id="confirm-fill-modal" class="modal">
+   <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Confirm Order Fill</h2>
+        <form id="confirm-fill-form">
+            <input type="hidden" id="fill-pending-order-id">
+            <input type="hidden" id="fill-account-holder-id">
+            <input type="hidden" id="fill-ticker">
+            <input type="hidden" id="fill-exchange">
+            <input type="hidden" id="fill-quantity">
+             <div style="margin-bottom: 1rem;">
+                <p style="margin: 5px 0;">Fill order for <strong id="fill-ticker-display">--</strong>?</p>
+                <p style="margin: 5px 0;">Original Limit Price: <strong id="fill-limit-price-display">--</strong></p>
+             </div>
+            <div class="form-group">
+                <label for="fill-execution-price">Actual Execution Price</label>
+                <input type="number" id="fill-execution-price" step="any" min="0.01" required>
+            </div>
+             <div class="form-group">
+                 <label for="fill-execution-date">Execution Date</label>
+                 <input type="date" id="fill-execution-date" required>
+             </div>
+            <div class="modal-actions">
+                 <div class="modal-actions-right"> <button type="button" class="cancel-btn close-button">Cancel</button> <button type="submit">Confirm Fill & Log Buy</button>
+                 </div>
+            </div>
+            </form>
+   </div>
+</div>

@@ -5,7 +5,6 @@
  * and view switching.
  * @module app-main
  */
-
 import { initializeAllEventHandlers } from './event-handlers/_init.js';
 import { showToast } from './ui/helpers.js';
 import { switchView, autosizeAccountSelector } from './event-handlers/_navigation.js';
@@ -15,29 +14,26 @@ import { applyAppearanceSettings } from './ui/settings.js';
 import { state } from './state.js';
 import { initializeScheduler } from './scheduler.js';
 
-
 /**
  * Initializes the application after the DOM is fully loaded.
  */
 async function initialize() {
-    // Load settings from localStorage first
+    // Load settings from localStorage first (code remains the same)
     try {
         const storedSettings = JSON.parse(localStorage.getItem('stockTrackerSettings')) || {};
-        // Merge defaults with stored settings
         state.settings = {
             theme: 'light', font: 'Inter', takeProfitPercent: 10, stopLossPercent: 5, notificationCooldown: 15,
             defaultAccountHolderId: 1, familyName: '', marketHoursInterval: 2, afterHoursInterval: 15,
-            defaultView: 'dashboard', numberOfDateTabs: 1, // <-- Updated defaultView, added numberOfDateTabs
-            ...storedSettings // Overwrite defaults with stored values
+            defaultView: 'dashboard', numberOfDateTabs: 1,
+            ...storedSettings
         };
         applyAppearanceSettings();
     } catch (e) {
         console.error("[App Main] Error loading or applying settings:", e);
-        // Reset to full defaults on error
         state.settings = {
             theme: 'light', font: 'Inter', takeProfitPercent: 10, stopLossPercent: 5, notificationCooldown: 15,
             defaultAccountHolderId: 1, familyName: '', marketHoursInterval: 2, afterHoursInterval: 15,
-            defaultView: 'dashboard', numberOfDateTabs: 1 // <-- Updated defaultView, added numberOfDateTabs
+            defaultView: 'dashboard', numberOfDateTabs: 1
         };
         applyAppearanceSettings();
     }
@@ -50,24 +46,46 @@ async function initialize() {
     }
 
     try {
+        // *** START MODIFICATION: Add modal variables to destructuring ***
         const [
-            alerts, charts, dailyReport, imports, ledger, modals, orders, snapshots, watchlist, journal, dashboard // <-- Added dashboard
+            alerts, charts, dailyReport, imports, ledger, orders, snapshots, watchlist, journal, dashboard, // Page templates
+            modal_advice, modal_settings, modal_edit_transaction, modal_confirm, // Modal templates start here
+            modal_sell_from_position, modal_confirm_fill, modal_chart_zoom
         ] = await Promise.all([
+            // Page fetches remain the same
             fetch('./templates/_alerts.html').then(res => res.text()),
             fetch('./templates/_charts.html').then(res => res.text()),
             fetch('./templates/_dailyReport.html').then(res => res.text()),
             fetch('./templates/_imports.html').then(res => res.text()),
             fetch('./templates/_ledger.html').then(res => res.text()),
-            fetch('./templates/_modals.html').then(res => res.text()),
             fetch('./templates/_orders.html').then(res => res.text()),
             fetch('./templates/_snapshots.html').then(res => res.text()),
             fetch('./templates/_watchlist.html').then(res => res.text()),
             fetch('./templates/_journal.html').then(res => res.text()),
-            fetch('./templates/_dashboard.html').then(res => res.text()), // <-- Fetch dashboard template
-        ]);
+            fetch('./templates/_dashboard.html').then(res => res.text()),
+            // Modal fetches remain the same
+            fetch('./templates/_modal_advice.html').then(res => res.text()),
+            fetch('./templates/_modal_settings.html').then(res => res.text()),
+            fetch('./templates/_modal_edit_transaction.html').then(res => res.text()),
+            fetch('./templates/_modal_confirm.html').then(res => res.text()),
+            fetch('./templates/_modal_sell_from_position.html').then(res => res.text()),
+            fetch('./templates/_modal_confirm_fill.html').then(res => res.text()),
+            fetch('./templates/_modal_chart_zoom.html').then(res => res.text()),
+       ]);
+       // *** END MODIFICATION ***
 
-        mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + snapshots + watchlist + journal; // <-- Added dashboard
-        modalContainer.innerHTML = modals;
+        // Inject page templates
+        mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + snapshots + watchlist + journal;
+
+        // Inject concatenated modal templates (This part is now correct as variables are declared)
+        modalContainer.innerHTML =
+            modal_settings +
+            modal_edit_transaction +
+            modal_confirm +
+            modal_sell_from_position +
+            modal_advice +
+            modal_confirm_fill +
+            modal_chart_zoom;
 
     } catch (error) {
         console.error("[App Main] Failed to load or inject one or more templates:", error);
@@ -75,6 +93,7 @@ async function initialize() {
         return;
     }
 
+    // ... (rest of the initialize function remains the same) ...
     try {
         initializeAllEventHandlers();
     } catch(error) {
@@ -82,8 +101,8 @@ async function initialize() {
         showToast('Error setting up page interactions. Please refresh.', 'error');
         return;
     }
-
-    try {
+    // ... fetch initial data, set default holder, initialize scheduler, switch to default view ...
+     try {
         await Promise.all([
             fetchAndRenderExchanges(),
             fetchAndPopulateAccountHolders()
@@ -119,13 +138,21 @@ async function initialize() {
         console.error("[App Main] Error initializing scheduler:", e);
     }
 
-    const defaultViewType = state.settings.defaultView || 'dashboard'; // <-- Use dashboard as fallback
+    const defaultViewType = state.settings.defaultView || 'dashboard';
     try {
         await switchView(defaultViewType);
     } catch (error) {
         console.error(`[App Main] Error switching to default view (${defaultViewType}):`, error);
         showToast(`Failed to load default view (${defaultViewType}). Please try selecting a tab manually.`, 'error');
     }
+
+}
+
+// --- Application Entry Point ---
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
 }
 
 // --- Application Entry Point ---

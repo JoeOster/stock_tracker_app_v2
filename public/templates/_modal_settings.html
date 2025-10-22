@@ -1,0 +1,141 @@
+<div id="settings-modal" class="modal">
+    <div class="modal-content modal-large">
+        <span class="close-button">&times;</span>
+        <div class="settings-layout">
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="general">General</button>
+                <button class="settings-tab" data-tab="appearance">Appearance</button>
+                <button class="settings-tab" data-tab="data">Data Management</button>
+            </div>
+
+            <div class="settings-content">
+                <div id="general-settings-panel" class="settings-panel active">
+                    <h2>General Settings</h2>
+                    <div class="form-group">
+                        <label for="take-profit-percent">Suggested Take Profit %</label>
+                        <input type="number" id="take-profit-percent" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="stop-loss-percent">Suggested Stop Loss %</label>
+                        <input type="number" id="stop-loss-percent" step="any" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="notification-cooldown">Price Alert Cooldown (minutes)</label>
+                        <input type="number" id="notification-cooldown" step="1" min="1">
+                    </div>
+                 </div>
+
+                <div id="appearance-settings-panel" class="settings-panel">
+                    <h2>Appearance</h2>
+                     <div class="form-group">
+                         <label for="theme-selector">Theme</label>
+                         <select id="theme-selector">
+                             <option value="light">Light</option>
+                             <option value="dark">Dark</option>
+                             <option value="sepia">Sepia</option>
+                             <option value="contrast">High Contrast</option>
+                         </select>
+                     </div>
+                    <div class="form-group">
+                        <label for="font-selector">Font</label>
+                        <select id="font-selector">
+                            <option value="Inter">Inter</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Lato">Lato</option>
+                            <option value="Open Sans">Open Sans</option>
+                            <option value="System">System Default</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="family-name">Family Name (App Title)</label>
+                        <input type="text" id="family-name" placeholder="e.g., Smith Family">
+                    </div>
+                 </div>
+
+                <div id="data-settings-panel" class="settings-panel">
+                    <h2>Data Management</h2>
+                    <div class="sub-tabs" style="margin-bottom: 1.5rem;">
+                        <button class="sub-tab active" data-sub-tab="exchanges-panel">Exchanges</button>
+                        <button class="sub-tab" data-sub-tab="holders-panel">Account Holders</button>
+                        <button class="sub-tab" data-sub-tab="sources-panel">Advice Sources</button>
+                    </div>
+                    <div class="sub-tab-content">
+                        <div id="exchanges-panel" class="sub-tab-panel active">
+                            <h3>Manage Exchanges</h3>
+                            <ul id="exchange-list" class="management-list"></ul>
+                            <div class="add-item-form">
+                                <input type="text" id="new-exchange-name" placeholder="New Exchange Name">
+                                <button id="add-exchange-btn">Add Exchange</button>
+                            </div>
+                        </div>
+                        <div id="holders-panel" class="sub-tab-panel">
+                            <h3>Manage Account Holders</h3>
+                            <p class="subtitle" style="text-align: left; margin: 0 0 10px 0;">Select a default account holder to load on startup.</p>
+                            <ul id="account-holder-list" class="management-list"></ul>
+                             <div class="add-item-form">
+                                <input type="text" id="new-account-holder-name" placeholder="New Account Holder Name">
+                                <button id="add-account-holder-btn">Add Holder</button>
+                            </div>
+                        </div>
+                        <div id="sources-panel" class="sub-tab-panel">
+                             <h3>Manage Advice Sources</h3>
+                             <p class="subtitle" style="text-align: left; margin: 0 0 10px 0;">Define sources of trading ideas (people, books, websites, etc.) to link to journal entries.</p>
+                             <ul id="advice-source-list" class="management-list"></ul>
+                             <hr style="margin: 1.5rem 0;">
+                             <h4>Add New Advice Source</h4>
+                             <form id="add-advice-source-form" class="add-item-form-grid">
+                                <div class="form-group">
+                                    <label for="new-source-name">Name*</label>
+                                    <input type="text" id="new-source-name" placeholder="e.g., John Doe, Investopedia" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-type">Type*</label>
+                                    <select id="new-source-type" required>
+                                        <option value="" disabled selected>Select Type</option>
+                                        <option value="Person">Person</option>
+                                        <option value="Book">Book</option>
+                                        <option value="Website">Website</option>
+                                        <option value="Group">Group</option>
+                                        <option value="Service">Service</option>
+                                        <option value="Class">Class</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group form-group-span-2">
+                                    <label for="new-source-description">Description</label>
+                                    <input type="text" id="new-source-description" placeholder="Optional notes (e.g., Analyst at XYZ)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-url">URL</label>
+                                    <input type="url" id="new-source-url" placeholder="Optional link (http://...)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-contact-person">Contact Person</label>
+                                    <input type="text" id="new-source-contact-person" placeholder="Optional specific contact">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-contact-email">Contact Email</label>
+                                    <input type="email" id="new-source-contact-email" placeholder="Optional email">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-source-contact-phone">Contact Phone</label>
+                                    <input type="tel" id="new-source-contact-phone" placeholder="Optional phone">
+                                </div>
+                                <div class="form-group form-group-span-2">
+                                    <label for="new-source-contact-app">Contact App/Handle</label>
+                                    <input type="text" id="new-source-contact-app" placeholder="e.g., Discord#1234, @twitter">
+                                </div>
+                                <div class="form-group form-group-span-2" style="text-align: right;">
+                                    <button type="submit" id="add-advice-source-btn">Add Source</button>
+                                </div>
+                             </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions"> <div class="modal-actions-right"> <button id="save-settings-button">Save & Close</button>
+            </div>
+        </div>
+        </div>
+</div>
