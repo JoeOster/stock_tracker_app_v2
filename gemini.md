@@ -1,28 +1,29 @@
-## 3. Strategic Roadmap
+# Strategic Roadmap
 
-### Completed: Phase 0 & Phase 1
+## Completed: Phases 0, 0.5, 1, 1.5, 2
 
 * **Foundational Refactoring & Cleanup**
-* **Intelligent CSV Importer**
+* **Application Hardening**
+* **Intelligent CSV Importer & Hardening**
+* **Strategy & Advice Journal / Dashboard Implementation**
 
-### In Progress: Phase 2 - Strategy & Advice Journal
+### Future Phases
 
-**Objective:** Build a comprehensive tool for "paper trading," tracking advice from various sources, and analyzing performance.
-
-* **Task 2.1: Database Migrations:** Completed (Tables `advice_sources`, `journal_entries`, `documents` created; `transactions` updated).
-* **Task 2.2: Advice Source Management UI:** Completed (UI in Settings modal, backend routes, frontend logic).
-* **Task 2.3: Journal Page Development (Basic UI):** Completed (HTML template, basic renderer, basic event handlers, API routes, page integration).
-* **Task 2.4: Backend Enhancements:** **NEXT STEP** (Implement cron job for price tracking and alert generation for open journal entries).
-    * Requires adding `journal_entry_id` column to `notifications` table via migration.
-* **(Future UI Refinements for Task 2.3):** Implement Edit functionality, refine tables/summary, add sparklines.
-
-### Future Phases:
-
+* **Phase X: UI Refinements & Fixes (Ongoing)**
+  * Address various UI bugs and minor enhancements identified through usage (see Implementation Guide).
 * **Phase 3: Authentication & Enhanced Account Management**
-    * Implement user authentication and session management.
-    * **Refine Account Holder Deletion:**
-        * Allow deletion of the "Primary" account if others exist.
-        * Implement automatic default account reassignment upon deletion.
-        * **(Deferred) Implement Two-Step Deletion w/ Data Removal:** Add a confirmation step via Alerts for deleting holders with associated data, leading to permanent data removal.
-* **Phase 4: Future Architectural Improvements** (Unit testing, backend validation, config centralization).
-* **(Potential) Phase 5: Finalization & Documentation Review**.
+  * Implement user authentication and session management.
+  * Refine Account Holder deletion logic.
+* **Phase 4: Future Architectural Improvements**
+  * Adopt Unit Testing (revisit skipped tests).
+  * Implement Robust Backend Validation.
+  * Centralize Server-Side Error Handling.
+  * Centralize Application Configuration.
+  * Enhance Historical Price Tracking.
+* **Phase 5: Source-Centric Management**
+  * Introduce a new top-level "Sources" tab.
+  * Dynamically generate sub-tabs based on defined Advice Sources.
+  * Display source-specific details: contact info, notes, linked documents, related watchlist items.
+  * Potentially refactor/relocate paper trading (current Journal functionality) under the Watchlist tab.
+  * Requires DB schema changes (advice\_sources, watchlist, documents), new API endpoints, and significant UI work.
+* **(Potential) Phase 6: Finalization & Documentation Review**.
