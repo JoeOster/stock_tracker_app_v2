@@ -347,5 +347,63 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
     }
 
 
+module.exports = (db, log, captureEodPrices, importSessions) => {
+    // ... (existing routes: /import, GET /, POST /, PUT /:id, DELETE /:id) ...
+
+    /**
+     * GET /sales/:buyId
+     * Fetches all SELL transactions linked to a specific parent BUY transaction ID.
+     */
+    router.get('/sales/:buyId', async (req, res) => {
+        const { buyId } = req.params;
+        const accountHolderId = req.query.holder; // Get holder ID from query
+
+        if (!buyId) {
+            return res.status(400).json({ message: 'Parent Buy ID is required.' });
+        }
+        // Although not strictly necessary for this query, filtering by holder adds a layer of security/scoping
+        if (!accountHolderId || accountHolderId === 'all') {
+             return res.status(400).json({ message: 'Account Holder ID is required.' });
+        }
+
+        try {
+            // Fetch the parent buy to calculate P/L later
+            const parentBuy = await db.get(
+                'SELECT price as cost_basis FROM transactions WHERE id = ? AND account_holder_id = ? AND transaction_type = \'BUY\'',
+                [buyId, accountHolderId]
+            );
+
+            if (!parentBuy) {
+                // If the parent buy doesn't exist or doesn't belong to the holder, return empty
+                // Or you could return a 404, but empty is probably fine
+                log(`[INFO] Parent BUY lot ID ${buyId} not found for holder ${accountHolderId} when fetching sales.`);
+                return res.json([]);
+            }
+
+            const sales = await db.all(
+                'SELECT id, transaction_date, quantity, price FROM transactions WHERE parent_buy_id = ? AND account_holder_id = ? AND transaction_type = \'SELL\' ORDER BY transaction_date ASC, id ASC',
+                [buyId, accountHolderId]
+            );
+
+            // Calculate realized P/L for each sale relative to the parent cost basis
+            const salesWithPL = sales.map(sale => ({
+                ...sale,
+                realizedPL: (sale.price - parentBuy.cost_basis) * sale.quantity
+            }));
+
+            res.json(salesWithPL);
+        } catch (error) {
+            log(`[ERROR] Failed to fetch sales for buyId ${buyId}: ${error.message}\n${error.stack}`);
+            res.status(500).json({ message: 'Server error fetching sales history.' });
+        }
+    });
+
+
+    // Helper function for formatting quantity (add locally if not imported)
+    function formatQuantity(number) {
+        // ... (keep existing helper function) ...
+    }};
+
+
     return router;
 };

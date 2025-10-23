@@ -354,3 +354,20 @@ export async function deleteJournalEntry(id) {
     });
     return handleResponse(response);
 }
+// ... (other imports and functions) ...
+
+/**
+ * Fetches the sales history for a specific parent BUY lot ID.
+ * @param {string|number} buyId - The ID of the parent BUY transaction.
+ * @param {string|number} holderId - The ID of the account holder.
+ * @returns {Promise<any[]>} A promise resolving to an array of sales transaction objects with calculated P/L.
+ */
+export async function fetchSalesForLot(buyId, holderId) {
+    if (!buyId || !holderId || holderId === 'all') {
+        throw new Error("Buy ID and a specific Account Holder ID are required to fetch sales.");
+    }
+    const response = await fetch(`/api/transactions/sales/${buyId}?holder=${holderId}`);
+    return handleResponse(response);
+}
+
+// ... (rest of the file) ...

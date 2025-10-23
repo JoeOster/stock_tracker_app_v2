@@ -129,7 +129,7 @@ function createCardHTML(lot) {
                 <span class="limits-text" title="${limitsCombinedText}">${limitsCombinedText}</span>
                 <div class="action-buttons">
                     <button class="sell-from-lot-btn" data-buy-id="${lot.id}" data-ticker="${lot.ticker}" data-exchange="${lot.exchange}" data-quantity="${lot.quantity_remaining}">Sell</button>
-                    <button class="set-limit-btn" data-id="${lot.id}">Limits</button>
+                    <button class="sales-history-btn" data-buy-id="${lot.id}" title="View Sales History">History</button> <button class="set-limit-btn" data-id="${lot.id}">Limits</button>
                     <button class="edit-buy-btn" data-id="${lot.id}">Edit</button>
                 </div>
             </div>

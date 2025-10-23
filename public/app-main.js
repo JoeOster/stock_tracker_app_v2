@@ -50,7 +50,8 @@ async function initialize() {
         const [
             alerts, charts, dailyReport, imports, ledger, orders, snapshots, watchlist, journal, dashboard, // Page templates
             modal_advice, modal_settings, modal_edit_transaction, modal_confirm, // Modal templates start here
-            modal_sell_from_position, modal_confirm_fill, modal_chart_zoom
+            modal_sell_from_position, modal_confirm_fill, modal_chart_zoom,
+            modal_sales_history // <<< ADDED VARIABLE
         ] = await Promise.all([
             // Page fetches remain the same
             fetch('./templates/_alerts.html').then(res => res.text()),
@@ -63,7 +64,7 @@ async function initialize() {
             fetch('./templates/_watchlist.html').then(res => res.text()),
             fetch('./templates/_journal.html').then(res => res.text()),
             fetch('./templates/_dashboard.html').then(res => res.text()),
-            // Modal fetches remain the same
+            // Modal fetches
             fetch('./templates/_modal_advice.html').then(res => res.text()),
             fetch('./templates/_modal_settings.html').then(res => res.text()),
             fetch('./templates/_modal_edit_transaction.html').then(res => res.text()),
@@ -71,13 +72,14 @@ async function initialize() {
             fetch('./templates/_modal_sell_from_position.html').then(res => res.text()),
             fetch('./templates/_modal_confirm_fill.html').then(res => res.text()),
             fetch('./templates/_modal_chart_zoom.html').then(res => res.text()),
+            fetch('./templates/_modal_sales_history.html').then(res => res.text()) // <<< ADDED FETCH
        ]);
        // *** END MODIFICATION ***
 
         // Inject page templates
         mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + snapshots + watchlist + journal;
 
-        // Inject concatenated modal templates (This part is now correct as variables are declared)
+        // Inject concatenated modal templates
         modalContainer.innerHTML =
             modal_settings +
             modal_edit_transaction +
@@ -85,7 +87,8 @@ async function initialize() {
             modal_sell_from_position +
             modal_advice +
             modal_confirm_fill +
-            modal_chart_zoom;
+            modal_chart_zoom +
+            modal_sales_history; // <<< ADDED VARIABLE TO INJECTION
 
     } catch (error) {
         console.error("[App Main] Failed to load or inject one or more templates:", error);
@@ -146,13 +149,6 @@ async function initialize() {
         showToast(`Failed to load default view (${defaultViewType}). Please try selecting a tab manually.`, 'error');
     }
 
-}
-
-// --- Application Entry Point ---
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
-} else {
-    initialize();
 }
 
 // --- Application Entry Point ---

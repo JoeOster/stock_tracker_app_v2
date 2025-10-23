@@ -8,9 +8,11 @@ import { state } from '../state.js';
 import { renderDashboardPage } from '../ui/renderers/_dashboard.js';
 // ADDED: Import sortTableByColumn
 import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
-import { updateAllPrices } from '../api.js'; // Use the generic price update function
 import { getCurrentESTDateString } from '../ui/datetime.js'; // Needed for Sell/Edit modals
-
+// Add fetchSalesForLot to existing api import
+import { fetchSalesForLot, updateAllPrices } from '../api.js';
+// Add formatQuantity to existing formatters import
+import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 /**
  * Helper function to populate the Edit/Limits modal with data from a specific lot.
  * @param {object | undefined} lotData - The data object for the selected open lot.
@@ -133,24 +135,110 @@ export function initializeDashboardHandlers() {
     });
 
     // --- Action Buttons (Event Delegation on Card Grid and Table Body) ---
-    const handleActionClick = (e) => {
+const handleActionClick = async (e) => { // <<< Make async
         const target = /** @type {HTMLElement} */ (e.target);
 
         // Find the relevant button using closest()
         const sellBtn = target.closest('.sell-from-lot-btn');
         const limitBtn = target.closest('.set-limit-btn');
         const editBtn = target.closest('.edit-buy-btn');
+        const historyBtn = target.closest('.sales-history-btn'); // <<< ADDED
 
         // Modals
         const sellModal = document.getElementById('sell-from-position-modal');
         const editModal = document.getElementById('edit-modal');
+        const salesHistoryModal = document.getElementById('sales-history-modal'); // <<< ADDED
 
         // --- Sell Button Logic ---
-        if (sellBtn && sellModal) { /* ... (sell logic remains the same) ... */ }
+        if (sellBtn && sellModal) {
+            const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
+            // Find lot data directly from state.dashboardOpenLots
+            const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
+            if (!lotData) { return showToast('Error: Could not find original lot data.', 'error'); }
+
+            const sellParentBuyIdInput = /** @type {HTMLInputElement} */(document.getElementById('sell-parent-buy-id'));
+            const sellAccountHolderIdInput = /** @type {HTMLInputElement} */(document.getElementById('sell-account-holder-id'));
+            const sellTickerDisplay = document.getElementById('sell-ticker-display');
+            const sellExchangeDisplay = document.getElementById('sell-exchange-display');
+            const sellQuantityInput = /** @type {HTMLInputElement} */ (document.getElementById('sell-quantity'));
+            const sellDateInput = /** @type {HTMLInputElement} */(document.getElementById('sell-date'));
+
+             if (!sellParentBuyIdInput || !sellAccountHolderIdInput || !sellTickerDisplay || !sellExchangeDisplay || !sellQuantityInput || !sellDateInput) {
+               console.error("[Dashboard Event] One or more elements missing inside sell modal.");
+               showToast("UI Error: Cannot display sell details.", "error");
+               return;
+             }
+
+            sellParentBuyIdInput.value = buyId;
+            sellAccountHolderIdInput.value = String(lotData.account_holder_id);
+            sellTickerDisplay.textContent = ticker;
+            sellExchangeDisplay.textContent = exchange;
+            sellQuantityInput.value = quantity; // Use remaining quantity from button dataset
+            sellQuantityInput.max = quantity;
+            sellDateInput.value = getCurrentESTDateString();
+
+            sellModal.classList.add('visible');
+        }
         // --- Limits Button Logic ---
-        else if (limitBtn && editModal) { /* ... (limits logic remains the same) ... */ }
+        else if (limitBtn && editModal) {
+            const lotId = limitBtn.dataset.id;
+            const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
+            populateEditModal(lotData, true); // True for limitsOnly
+        }
         // --- Edit Button Logic ---
-        else if (editBtn && editModal) { /* ... (edit logic remains the same) ... */ }
+        else if (editBtn && editModal) {
+            const lotId = editBtn.dataset.id;
+            const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
+            populateEditModal(lotData, false); // False for full edit
+        }
+        // --- Sales History Button Logic --- <<< ADDED BLOCK
+        else if (historyBtn && salesHistoryModal) {
+            const buyId = historyBtn.dataset.id; // <<< Make sure button has data-id="${lot.id}"
+            if (!buyId) return;
+
+            // Find the original BUY lot data from the state
+            const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
+            if (!lotData) {
+                showToast('Could not find original purchase details.', 'error');
+                return;
+            }
+             if (state.selectedAccountHolderId === 'all') {
+                showToast('Please select a specific account holder to view history.', 'error');
+                return;
+            }
+
+            // Populate static lot details in the modal
+            document.getElementById('sales-history-title').textContent = `Sales History for ${lotData.ticker} Lot`;
+            document.getElementById('sales-history-ticker').textContent = lotData.ticker;
+            document.getElementById('sales-history-buy-date').textContent = lotData.purchase_date;
+            document.getElementById('sales-history-buy-qty').textContent = formatQuantity(lotData.original_quantity ?? lotData.quantity); // Use original if available
+            document.getElementById('sales-history-buy-price').textContent = formatAccounting(lotData.cost_basis);
+
+            const salesBody = document.getElementById('sales-history-body');
+            salesBody.innerHTML = '<tr><td colspan="4">Loading sales history...</td></tr>';
+            salesHistoryModal.classList.add('visible');
+
+            try {
+                // Fetch the sales data
+                const sales = await fetchSalesForLot(buyId, state.selectedAccountHolderId);
+
+                if (sales.length === 0) {
+                    salesBody.innerHTML = '<tr><td colspan="4">No sales recorded for this lot.</td></tr>';
+                } else {
+                    salesBody.innerHTML = sales.map(sale => `
+                        <tr>
+                            <td>${sale.transaction_date}</td>
+                            <td class="numeric">${formatQuantity(sale.quantity)}</td>
+                            <td class="numeric">${formatAccounting(sale.price)}</td>
+                            <td class="numeric ${sale.realizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(sale.realizedPL)}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                showToast(`Error fetching sales history: ${error.message}`, 'error');
+                salesBody.innerHTML = '<tr><td colspan="4">Error loading sales history.</td></tr>';
+            }
+        }
     };
 
     // Attach listener to both potential containers
