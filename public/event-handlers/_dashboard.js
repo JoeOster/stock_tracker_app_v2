@@ -1,5 +1,5 @@
 // public/event-handlers/_dashboard.js
-// Version Updated (Added Selective Sell Modal Trigger - Task X.5)
+// Version Updated (Added Selective Sell Modal Trigger + Manage Lots redirect)
 /**
  * @file Initializes event handlers for the Dashboard page.
  * @module event-handlers/_dashboard
@@ -8,9 +8,11 @@
 import { state } from '../state.js';
 import { renderDashboardPage } from '../ui/renderers/_dashboard.js';
 import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
-import { fetchSalesForLot, updateAllPrices } from '../api.js';
+import { fetchSalesForLot, updateAllPrices } from '../api.js'; // Ensure fetchSalesForLot is imported
 import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
+// Import switchView if needed for navigation actions (like the Manage Lots redirect)
+import { switchView } from './_navigation.js';
 
 
 /**
@@ -132,25 +134,28 @@ export function initializeDashboardHandlers() {
     });
 
     // --- Action Buttons (Event Delegation on Card Grid and Table Body) ---
+    // This is the complete function with the added logic for .view-lots-management-btn
     const handleActionClick = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
 
         // Find the relevant button using closest()
-        const sellBtn = target.closest('.sell-from-lot-btn'); // Individual Lot Sell
+        const sellBtn = target.closest('.sell-from-lot-btn'); // Individual Lot Sell (Single Lot Card or Table Row)
         const selectiveSellBtn = target.closest('.selective-sell-btn'); // Aggregated Card Sell
-        const limitBtn = target.closest('.set-limit-btn');
-        const editBtn = target.closest('.edit-buy-btn');
-        const historyBtn = target.closest('.sales-history-btn');
+        const limitBtn = target.closest('.set-limit-btn'); // Single Lot Card or Table Row
+        const editBtn = target.closest('.edit-buy-btn'); // Single Lot Card or Table Row
+        const historyBtn = target.closest('.sales-history-btn'); // Single Lot Card or Table Row History
+        const manageLotsBtn = target.closest('.view-lots-management-btn'); // Aggregated Card Manage Lots/History
 
         // Modals
         const sellModal = document.getElementById('sell-from-position-modal');
-        const selectiveSellModal = document.getElementById('selective-sell-modal'); // <<< ADDED
+        const selectiveSellModal = document.getElementById('selective-sell-modal');
         const editModal = document.getElementById('edit-modal');
         const salesHistoryModal = document.getElementById('sales-history-modal');
 
         // --- Sell Button Logic (Individual Lot) ---
         if (sellBtn && sellModal) {
             const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
+            // Find lot data - could be from table row (state.dashboardOpenLots) or single lot card (state.dashboardOpenLots)
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
             if (!lotData) { return showToast('Error: Could not find original lot data.', 'error'); }
 
@@ -165,7 +170,7 @@ export function initializeDashboardHandlers() {
 
             sellModal.classList.add('visible');
         }
-        // --- Selective Sell Button Logic (Aggregated Card) --- <<< NEW BLOCK
+        // --- Selective Sell Button Logic (Aggregated Card) ---
         else if (selectiveSellBtn && selectiveSellModal) {
             const { ticker, exchange, totalQuantity, lots: encodedLots } = selectiveSellBtn.dataset;
             if (!ticker || !exchange || !totalQuantity || !encodedLots) {
@@ -255,28 +260,29 @@ export function initializeDashboardHandlers() {
             validateQuantities(); // Initial validation check
             selectiveSellModal.classList.add('visible');
         }
-        // --- Limits Button Logic ---
+        // --- Limits Button Logic (Single Lot Card or Table Row) ---
         else if (limitBtn && editModal) {
             const lotId = limitBtn.dataset.id;
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
             populateEditModal(lotData, true); // True for limitsOnly
         }
-        // --- Edit Button Logic ---
+        // --- Edit Button Logic (Single Lot Card or Table Row) ---
         else if (editBtn && editModal) {
             const lotId = editBtn.dataset.id;
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
             populateEditModal(lotData, false); // False for full edit
         }
-        // --- Sales History Button Logic ---
+        // --- Sales History Button Logic (Single Lot Card or Table Row) ---
         else if (historyBtn && salesHistoryModal) {
             const buyId = historyBtn.dataset.buyId; // Use data-buy-id
             if (!buyId) return;
+            // Find lot data - could be from table row or single lot card
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
             if (!lotData) { showToast('Could not find original purchase details.', 'error'); return; }
             if (state.selectedAccountHolderId === 'all') { showToast('Please select a specific account holder to view history.', 'error'); return; }
 
             // Populate static details
-            document.getElementById('sales-history-title').textContent = `Sales History for ${lotData.ticker} Lot`;
+            document.getElementById('sales-history-title').textContent = `Sales History for ${lotData.ticker} Lot`; // Specific Lot Title
             document.getElementById('sales-history-ticker').textContent = lotData.ticker;
             document.getElementById('sales-history-buy-date').textContent = lotData.purchase_date;
             document.getElementById('sales-history-buy-qty').textContent = formatQuantity(lotData.original_quantity ?? lotData.quantity);
@@ -287,6 +293,7 @@ export function initializeDashboardHandlers() {
             salesHistoryModal.classList.add('visible'); // Make visible BEFORE fetch
 
             try {
+                // Fetch sales history for this SPECIFIC lot
                 const sales = await fetchSalesForLot(buyId, state.selectedAccountHolderId);
                 if (sales.length === 0) {
                     salesBody.innerHTML = '<tr><td colspan="4">No sales recorded for this lot.</td></tr>';
@@ -305,7 +312,76 @@ export function initializeDashboardHandlers() {
                 salesBody.innerHTML = '<tr><td colspan="4">Error loading sales history.</td></tr>';
             }
         }
-    };
+        // --- MODIFIED: Manage Lots Button Logic (Aggregated Card) ---
+        else if (manageLotsBtn && salesHistoryModal) { // Reuse sales history modal for now
+            const button = manageLotsBtn; // Already have the button from closest()
+            const { ticker, exchange, lots: encodedLots } = button.dataset;
+            if (!ticker || !exchange || !encodedLots) {
+                showToast('Error: Missing data for lot management view.', 'error');
+                return;
+            }
+            if (state.selectedAccountHolderId === 'all') {
+                showToast('Please select a specific account holder to manage lots.', 'error');
+                return;
+            }
+
+            let underlyingLots = [];
+            try {
+                underlyingLots = JSON.parse(decodeURIComponent(encodedLots));
+                if (underlyingLots.length === 0) throw new Error("No underlying lot data found.");
+            } catch (err) {
+                console.error("Error decoding lots for management view:", err);
+                showToast('Error: Could not load lot details for management.', 'error');
+                return;
+            }
+
+            // --- Populate using the FIRST lot for header details ---
+            const firstLot = underlyingLots[0];
+            document.getElementById('sales-history-title').textContent = `Manage Lots for ${ticker} (${exchange})`; // Change title
+            document.getElementById('sales-history-ticker').textContent = ticker;
+            document.getElementById('sales-history-buy-date').textContent = firstLot.purchase_date; // Using first lot's date
+            document.getElementById('sales-history-buy-qty').textContent = formatQuantity(firstLot.original_quantity ?? firstLot.quantity); // Using first lot's original qty
+            document.getElementById('sales-history-buy-price').textContent = formatAccounting(firstLot.cost_basis); // Using first lot's basis
+
+            const salesBody = document.getElementById('sales-history-body');
+            salesBody.innerHTML = '<tr><td colspan="4">Loading combined sales history...</td></tr>'; // Indicate loading combined history
+            salesHistoryModal.classList.add('visible'); // Make visible BEFORE fetch
+
+            // --- Fetch COMBINED Sales History (Requires Backend Change Later) ---
+            try {
+                const allSales = [];
+                // Ideally, replace this loop with a single batch API call in the future
+                for (const lot of underlyingLots) {
+                    const sales = await fetchSalesForLot(lot.id, state.selectedAccountHolderId);
+                    allSales.push(...sales);
+                }
+                // Sort combined sales by date
+                allSales.sort((a, b) => a.transaction_date.localeCompare(b.transaction_date));
+
+                if (allSales.length === 0) {
+                    salesBody.innerHTML = '<tr><td colspan="4">No sales recorded for any of these lots.</td></tr>';
+                } else {
+                    salesBody.innerHTML = allSales.map(sale => `
+                        <tr>
+                            <td>${sale.transaction_date}</td>
+                            <td class="numeric">${formatQuantity(sale.quantity)}</td>
+                            <td class="numeric">${formatAccounting(sale.price)}</td>
+                            <td class="numeric ${sale.realizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(sale.realizedPL)}</td>
+                        </tr>
+                    `).join('');
+                     // Placeholder message indicating future enhancements
+                     salesBody.insertAdjacentHTML('beforebegin', '<tr><td colspan="4" style="font-weight:bold; background-color: var(--info-panel-bg);">Combined Sales History (Management options coming soon)</td></tr>');
+                }
+                 // TODO: Add sections/buttons here later for managing individual lots from underlyingLots
+                 // Example: Iterate underlyingLots and add rows/buttons to a separate section in the modal.
+
+            } catch (error) {
+                showToast(`Error fetching combined sales history: ${error.message}`, 'error');
+                salesBody.innerHTML = '<tr><td colspan="4">Error loading sales history.</td></tr>';
+            }
+        } // --- End of manageLotsBtn logic ---
+
+    }; // End of handleActionClick
 
     // Attach listener to both potential containers
     cardGrid?.addEventListener('click', handleActionClick);
@@ -335,4 +411,4 @@ export function initializeDashboardHandlers() {
             // Add reconciliation tracking logic here if needed
         }
     });
-}
+} // End of initializeDashboardHandlers

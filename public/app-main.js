@@ -48,7 +48,7 @@ async function initialize() {
     try {
         // Fetch all templates concurrently
         const [
-            alerts, charts, dailyReport, imports, ledger, orders, snapshots, watchlist, journal, dashboard, // Page templates
+            alerts, charts, dailyReport, imports, ledger, orders, watchlist, journal, dashboard, // Page templates
             modal_advice, modal_settings, modal_edit_transaction, modal_confirm, // Modal templates
             modal_sell_from_position, modal_confirm_fill, modal_chart_zoom,
             modal_sales_history,
@@ -61,7 +61,6 @@ async function initialize() {
             fetch('./templates/_imports.html').then(res => res.text()),
             fetch('./templates/_ledger.html').then(res => res.text()),
             fetch('./templates/_orders.html').then(res => res.text()),
-            fetch('./templates/_snapshots.html').then(res => res.text()),
             fetch('./templates/_watchlist.html').then(res => res.text()),
             fetch('./templates/_journal.html').then(res => res.text()),
             fetch('./templates/_dashboard.html').then(res => res.text()),
@@ -78,7 +77,7 @@ async function initialize() {
        ]);
 
         // Inject page templates
-        mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + snapshots + watchlist + journal;
+        mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + watchlist + journal;
 
         // Inject concatenated modal templates
         modalContainer.innerHTML =

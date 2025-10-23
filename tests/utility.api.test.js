@@ -57,40 +57,7 @@ describe('Utility API Endpoints', () => {
         });
     });
 
-    describe('Snapshots', () => {
-        it('should create a new snapshot successfully', async () => {
-            const res = await request(app)
-                .post('/api/utility/snapshots')
-                .send({ snapshot_date: '2025-10-10', exchange: 'Fidelity', value: 5000, account_holder_id: 1 });
-            expect(res.statusCode).toEqual(201);
-        });
 
-        it('should fail to create a snapshot with missing data', async () => {
-            const res = await request(app)
-                .post('/api/utility/snapshots')
-                .send({ snapshot_date: '2025-10-11', exchange: 'Fidelity' }); // Missing value and holder
-            expect(res.statusCode).toEqual(400);
-        });
-
-        it('should fetch all snapshots', async () => {
-            await db.run("INSERT INTO account_snapshots (snapshot_date, exchange, value, account_holder_id) VALUES ('2025-10-10', 'Fidelity', 5000, 1)");
-            const res = await request(app).get('/api/utility/snapshots?holder=1');
-            expect(res.statusCode).toEqual(200);
-            expect(res.body.length).toBe(1);
-            expect(res.body[0].value).toBe(5000);
-        });
-
-        it('should delete a snapshot', async () => {
-            const result = await db.run("INSERT INTO account_snapshots (snapshot_date, exchange, value, account_holder_id) VALUES ('2025-10-12', 'Fidelity', 6000, 1)");
-            const snapshotId = result.lastID;
-
-            const res = await request(app).delete(`/api/utility/snapshots/${snapshotId}`);
-            expect(res.statusCode).toEqual(200);
-
-            const deleted = await db.get('SELECT * FROM account_snapshots WHERE id = ?', snapshotId);
-            expect(deleted).toBeUndefined();
-        });
-    });
 
     describe('Importer Templates', () => {
         it('should return the brokerage templates', async () => {

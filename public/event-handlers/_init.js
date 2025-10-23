@@ -17,7 +17,6 @@ import { initializeSettingsModalHandlers } from './_settings_modal.js';
 import { initializeExchangeManagementHandlers } from './_settings_exchanges.js';
 import { initializeHolderManagementHandlers } from './_settings_holders.js';
 import { initializeJournalSettingsHandlers } from './_journal_settings.js';
-import { initializeSnapshotsHandlers } from './_snapshots.js';
 import { initializeJournalHandlers } from './_journal.js';
 import { initializeDashboardHandlers } from './_dashboard.js';
 
@@ -41,7 +40,6 @@ export function initializeAllEventHandlers() {
         // Initialize Page-Specific Handlers
         initializeOrdersHandlers();
         initializeLedgerHandlers();
-        initializeSnapshotsHandlers();
         initializeAlertsHandlers();
         initializeDailyReportHandlers();
         initializeImportHandlers();

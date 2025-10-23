@@ -9,7 +9,6 @@ import { updateAllPrices, refreshLedger } from '../api.js';
 import { renderTabs } from '../ui/renderers/_tabs.js';
 import { showToast } from '../ui/helpers.js';
 import { loadDailyReportPage } from './_dailyReport.js';
-import { loadSnapshotsPage } from './_snapshots.js';
 import { loadOrdersPage } from './_orders.js';
 import { loadAlertsPage } from './_alerts.js';
 import { loadChartsPage } from './_charts.js';
@@ -125,7 +124,6 @@ export async function switchView(viewType, viewValue = null) {
         'ledger': 'ledger-page-container',
         'orders': 'orders-page-container',
         'alerts': 'alerts-page-container',
-        'snapshots': 'snapshots-page-container',
         'imports': 'imports-page-container',
         'charts': 'charts-container',
         'date': 'daily-report-container',
@@ -154,9 +152,6 @@ export async function switchView(viewType, viewValue = null) {
             // ... (other cases remain the same) ...
             case 'charts':
                 await loadChartsPage();
-                break;
-            case 'snapshots':
-                await loadSnapshotsPage();
                 break;
             case 'ledger':
                 await refreshLedger();

@@ -1,10 +1,10 @@
 // routes/importer.js
 const express = require('express');
-const router = express.Router();
 const Papa = require('papaparse');
 const { v4: uuidv4 } = require('uuid');
-
 const { brokerageTemplates } = require('../user-settings/importer-templates.js');
+
+// --- Helper Functions (Moved outside module.exports) ---
 
 /**
  * Combines transactions for the same stock, on the same day, at the same price.
@@ -15,7 +15,10 @@ function combineFractionalShares(transactions) {
     const combined = new Map();
 
     transactions.forEach(tx => {
-        const key = `${tx.date}-${tx.ticker}-${tx.type}-${tx.price}`;
+        // Ensure price exists and handle potential null/undefined before creating key
+        const priceKey = (tx.price !== null && tx.price !== undefined) ? tx.price.toFixed(5) : 'null_price'; // Use fixed decimal places for key
+        const key = `${tx.date}-${tx.ticker}-${tx.type}-${priceKey}`;
+
         if (combined.has(key)) {
             const existing = combined.get(key);
             existing.quantity += tx.quantity;
@@ -28,25 +31,54 @@ function combineFractionalShares(transactions) {
     return Array.from(combined.values());
 }
 
-
+/**
+ * Finds a potential conflict between a parsed CSV row and existing transactions.
+ * @param {object} parsedRow - The processed data from a single CSV row.
+ * @param {Array<object>} existingTransactions - Array of transactions already in the database.
+ * @returns {{status: 'Potential Duplicate' | 'New', match: object | null}}
+ */
 function findConflict(parsedRow, existingTransactions) {
-    const TOLERANCE = 0.01; // 1% tolerance for price matching
+    // Price tolerance might need adjustment depending on brokerage rounding
+    const PRICE_TOLERANCE_PERCENT = 1; // 1% tolerance for price matching
+    const QTY_TOLERANCE_ABSOLUTE = 0.0001; // Small absolute tolerance for quantity floats
 
     for (const tx of existingTransactions) {
-        const dateMatch = new Date(parsedRow.date).toDateString() === new Date(tx.transaction_date).toDateString();
+        // Ensure both dates are valid before comparing
+        const parsedDate = new Date(parsedRow.date + 'T12:00:00Z'); // Add time to avoid timezone issues
+        const txDate = new Date(tx.transaction_date + 'T12:00:00Z');
+        if (isNaN(parsedDate.getTime()) || isNaN(txDate.getTime())) continue; // Skip if either date is invalid
+
+        const dateMatch = parsedDate.toDateString() === txDate.toDateString();
         const tickerMatch = parsedRow.ticker === tx.ticker;
-        const quantityMatch = Math.abs(parsedRow.quantity - tx.quantity) < 0.001;
-        const priceMatch = tx.price ? Math.abs(parsedRow.price - tx.price) / tx.price < TOLERANCE : parsedRow.price === null;
+        const typeMatch = parsedRow.type === tx.transaction_type; // Compare types too
+        const quantityMatch = Math.abs(parsedRow.quantity - tx.quantity) < QTY_TOLERANCE_ABSOLUTE;
+
+        // Price match: Check if both prices are valid numbers before comparing
+        let priceMatch = false;
+        if (typeof parsedRow.price === 'number' && typeof tx.price === 'number' && tx.price !== 0) {
+            priceMatch = (Math.abs(parsedRow.price - tx.price) / tx.price) * 100 < PRICE_TOLERANCE_PERCENT;
+        } else if (parsedRow.price === tx.price) { // Handle cases where both might be null or zero
+            priceMatch = true;
+        }
 
 
-        if (dateMatch && tickerMatch && quantityMatch && priceMatch) {
+        if (dateMatch && tickerMatch && typeMatch && quantityMatch && priceMatch) {
             return { status: 'Potential Duplicate', match: tx };
         }
     }
     return { status: 'New', match: null };
 }
 
-module.exports = (db, log, importSessions) => {
+// --- Router Definition ---
+/**
+ * Creates and returns an Express router for handling CSV import uploads.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @param {function(string): void} log - The logging function.
+ * @param {Map<string, any>} importSessions - Map storing active import sessions.
+ * @returns {express.Router} The configured Express router.
+ */
+const createImporterRouter = (db, log, importSessions) => {
+    const router = express.Router(); // Require express Router here
 
     router.post('/upload', async (req, res) => {
         if (!req.files || !req.files.csvfile) {
@@ -62,7 +94,7 @@ module.exports = (db, log, importSessions) => {
         if (!accountHolderId || !brokerageTemplate) {
             return res.status(400).json({ message: 'Account Holder and Brokerage Template are required.' });
         }
-        
+
         if (!brokerageTemplates) {
             log('[ERROR] Brokerage templates are not loaded.');
             return res.status(500).json({ message: 'Internal Server Error: Brokerage templates not found.' });
@@ -75,19 +107,19 @@ module.exports = (db, log, importSessions) => {
 
         try {
             let csvData = csvFile.data.toString('utf8');
-            
+
             if (template.dataStartRow > 1) {
                 const lines = csvData.split(/\r?\n/);
                 csvData = lines.slice(template.dataStartRow - 1).join('\n');
             }
-            
+
             const parseResult = Papa.parse(csvData, { header: true, skipEmptyLines: true });
-            
+
             const processedData = parseResult.data
                 .filter(row => template.filter(row))
                 .map(row => template.transform(row));
-            
-            // FIX: Combine fractional shares before further processing.
+
+            // Combine fractional shares before conflict detection.
             const combinedData = combineFractionalShares(processedData);
 
             log(`[IMPORTER DEBUG] Processed ${combinedData.length} rows from CSV after combining fractional shares.`);
@@ -108,6 +140,12 @@ module.exports = (db, log, importSessions) => {
             const importSessionData = [];
 
             combinedData.forEach((csvRow, csvRowIndex) => {
+                 // Basic validation before conflict check
+                 if (!csvRow || typeof csvRow.ticker !== 'string' || typeof csvRow.date !== 'string' || typeof csvRow.quantity !== 'number' || typeof csvRow.price !== 'number' || !csvRow.type ) {
+                     log(`[IMPORTER WARNING] Skipping invalid row at index ${csvRowIndex}: ${JSON.stringify(csvRow)}`);
+                     // Optionally add to a list of skipped rows to show user
+                     return;
+                 }
                 const { status, match } = findConflict(csvRow, existingTransactions);
                 const sessionRow = { ...csvRow, status, matchedTx: match, csvRowIndex };
 
@@ -121,7 +159,7 @@ module.exports = (db, log, importSessions) => {
 
             const importSessionId = uuidv4();
             importSessions.set(importSessionId, { data: importSessionData, accountHolderId });
-            
+
             if (process.env.NODE_ENV !== 'test') {
                 setTimeout(() => importSessions.delete(importSessionId), 3600 * 1000); // 1-hour expiry
             }
@@ -136,3 +174,12 @@ module.exports = (db, log, importSessions) => {
 
     return router;
 };
+
+// --- Exports ---
+module.exports = createImporterRouter; // Export the router factory function
+
+// Export helpers only when testing
+if (process.env.NODE_ENV === 'test') {
+    module.exports.combineFractionalShares = combineFractionalShares;
+    module.exports.findConflict = findConflict;
+}

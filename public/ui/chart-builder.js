@@ -12,7 +12,7 @@ import { state } from '../state.js';
  * @param {number} [l=60] - The lightness percentage.
  * @returns {string} The HSL color string.
  */
-function stringToHslColor(str, s = 75, l = 60) {
+export function stringToHslColor(str, s = 75, l = 60) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);

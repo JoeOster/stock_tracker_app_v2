@@ -13,7 +13,6 @@ export const staticTabs = [
     { viewType: 'ledger', textContent: 'Ledger' },
     { viewType: 'orders', textContent: 'Orders' }, // <-- Renamed
     { viewType: 'alerts', textContent: 'Alerts' },
-    { viewType: 'snapshots', textContent: 'Snapshots' },
     { viewType: 'imports', textContent: 'Imports' },
     { viewType: 'charts', textContent: 'Charts' },
 ];
