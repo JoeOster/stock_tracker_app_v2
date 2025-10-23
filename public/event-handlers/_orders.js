@@ -1,5 +1,5 @@
 ﻿// /public/event-handlers/_orders.js
-// Version Updated (Removed Add Pending Order Form handler, added sorting)
+// Version Updated (Removed Add Pending Order Form handler, added sorting, Persist Account/Exchange - Task X.12)
 /**
  * @file Initializes all event handlers for the Orders page.
  * @module event-handlers/_orders
@@ -39,8 +39,6 @@ export function initializeOrdersHandlers() {
     try {
         const pendingOrdersTable = document.getElementById('pending-orders-table');
         const transactionForm = /** @type {HTMLFormElement} */ (document.getElementById('add-transaction-form'));
-        // MODIFIED: Removed reference to addPendingOrderForm
-        // const addPendingOrderForm = /** @type {HTMLFormElement} */ (document.getElementById('add-pending-order-form'));
         const confirmFillForm = /** @type {HTMLFormElement} */ (document.getElementById('confirm-fill-form'));
 
         // --- Transaction Form Logic (Log Executed Trade) ---
@@ -116,7 +114,25 @@ export function initializeOrdersHandlers() {
                         throw new Error(errorData.message || 'Server responded with an error.');
                     }
                     showToast('Transaction logged successfully!', 'success');
-                    transactionForm.reset();
+
+                    // --- MODIFICATION START (Task X.12) ---
+                    /** @type {HTMLSelectElement} */
+                    const accountHolderSelect = (/** @type {HTMLSelectElement} */(document.getElementById('add-tx-account-holder')));
+                    /** @type {HTMLSelectElement} */
+                    const exchangeSelect = (/** @type {HTMLSelectElement} */(document.getElementById('exchange')));
+
+                    /** @type {string} */
+                    const savedAccountHolderValue = accountHolderSelect.value;
+                    /** @type {string} */
+                    const savedExchangeValue = exchangeSelect.value;
+
+                    transactionForm.reset(); // Reset the form first
+
+                    // Restore the saved values
+                    accountHolderSelect.value = savedAccountHolderValue;
+                    exchangeSelect.value = savedExchangeValue;
+                    // --- MODIFICATION END (Task X.12) ---
+
                     (/** @type {HTMLInputElement} */(document.getElementById('transaction-date'))).value = getCurrentESTDateString();
                     await refreshLedger();
                 } catch (error) {
@@ -128,10 +144,6 @@ export function initializeOrdersHandlers() {
         } else {
              console.warn("[Orders Init] Add transaction form not found.");
         }
-
-        // --- MODIFIED: Removed Pending Order Form Logic ---
-        // if (addPendingOrderForm) { ... }
-        // --- END MODIFICATION ---
 
         // --- Open Limit Orders Table Logic ---
         if (pendingOrdersTable) {

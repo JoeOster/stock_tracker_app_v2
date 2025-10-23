@@ -14,7 +14,8 @@ import {
     refreshLedger
 } from '../api.js';
 import { renderJournalPage } from '../ui/renderers/_journal.js';
-import { showToast, showConfirmationModal } from '../ui/helpers.js';
+// ADDED: Import sortTableByColumn
+import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 // Import initializers for tabs and filters
@@ -115,15 +116,18 @@ export function initializeJournalHandlers() {
     // --- Get remaining elements ---
     const journalPageContainer = document.getElementById('journal-page-container');
     const addJournalEntryForm = /** @type {HTMLFormElement | null} */ (document.getElementById('add-journal-entry-form'));
+    // ADDED: Get table elements for sorting listener
+    const openTable = document.getElementById('journal-open-table');
+    const closedTable = document.getElementById('journal-closed-table');
 
     // --- Add Entry Form Submission ---
     if (addJournalEntryForm) {
         addJournalEntryForm.addEventListener('submit', async (e) => {
+             // Form submission logic remains the same...
             e.preventDefault();
             const addButton = /** @type {HTMLButtonElement | null} */ (addJournalEntryForm.querySelector('#add-journal-entry-btn'));
             if (!addButton) return;
 
-            // --- Get Form Values ---
             const accountHolderId = state.selectedAccountHolderId === 'all' ? null : String(state.selectedAccountHolderId);
             const entryDate = (/** @type {HTMLInputElement} */(document.getElementById('journal-entry-date'))).value;
             const ticker = (/** @type {HTMLInputElement} */(document.getElementById('journal-ticker'))).value.toUpperCase().trim();
@@ -134,69 +138,40 @@ export function initializeJournalHandlers() {
             const targetPriceStr = (/** @type {HTMLInputElement} */(document.getElementById('journal-target-price'))).value;
             const stopLossPriceStr = (/** @type {HTMLInputElement} */(document.getElementById('journal-stop-loss-price'))).value;
 
-            // --- Client-Side Validation ---
             if (!accountHolderId) { return showToast('Please select a specific account holder.', 'error'); }
-            if (!entryDate || !ticker || !exchange || !direction) {
-                 return showToast('Please fill in all required fields (*).', 'error');
-            }
+            if (!entryDate || !ticker || !exchange || !direction) { return showToast('Please fill in all required fields (*).', 'error'); }
             const quantity = parseFloat(quantityStr);
             const entryPrice = parseFloat(entryPriceStr);
-            if (isNaN(quantity) || quantity <= 0) {
-                 return showToast('Quantity must be a valid positive number.', 'error');
-            }
-            if (isNaN(entryPrice) || entryPrice <= 0) {
-                 return showToast('Entry Price must be a valid positive number.', 'error');
-            }
+            if (isNaN(quantity) || quantity <= 0) { return showToast('Quantity must be a valid positive number.', 'error'); }
+            if (isNaN(entryPrice) || entryPrice <= 0) { return showToast('Entry Price must be a valid positive number.', 'error'); }
             const targetPrice = targetPriceStr ? parseFloat(targetPriceStr) : null;
-            if (targetPrice !== null && (isNaN(targetPrice) || targetPrice <= 0)) {
-                 return showToast('Target Price must be a valid positive number if entered.', 'error');
-            }
-            if (targetPrice !== null && targetPrice <= entryPrice && direction === 'BUY') {
-                 return showToast('Target Price must be greater than Entry Price for a BUY.', 'error');
-            }
-            // Add similar check for SELL direction if implemented
+            if (targetPrice !== null && (isNaN(targetPrice) || targetPrice <= 0)) { return showToast('Target Price must be a valid positive number if entered.', 'error'); }
+            if (targetPrice !== null && targetPrice <= entryPrice && direction === 'BUY') { return showToast('Target Price must be greater than Entry Price for a BUY.', 'error'); }
             const stopLossPrice = stopLossPriceStr ? parseFloat(stopLossPriceStr) : null;
-            if (stopLossPrice !== null && (isNaN(stopLossPrice) || stopLossPrice <= 0)) {
-                 return showToast('Stop Loss Price must be a valid positive number if entered.', 'error');
-            }
-            if (stopLossPrice !== null && stopLossPrice >= entryPrice && direction === 'BUY') {
-                 return showToast('Stop Loss Price must be less than Entry Price for a BUY.', 'error');
-            }
-            // Add similar check for SELL direction if implemented
-            // --- End Validation ---
+            if (stopLossPrice !== null && (isNaN(stopLossPrice) || stopLossPrice <= 0)) { return showToast('Stop Loss Price must be a valid positive number if entered.', 'error'); }
+            if (stopLossPrice !== null && stopLossPrice >= entryPrice && direction === 'BUY') { return showToast('Stop Loss Price must be less than Entry Price for a BUY.', 'error'); }
 
             const entryData = {
                 account_holder_id: accountHolderId,
-                entry_date: entryDate,
-                ticker: ticker,
-                exchange: exchange,
-                direction: direction,
-                quantity: quantity,
-                entry_price: entryPrice,
-                target_price: targetPrice,
-                stop_loss_price: stopLossPrice,
+                entry_date: entryDate, ticker: ticker, exchange: exchange, direction: direction, quantity: quantity, entry_price: entryPrice,
+                target_price: targetPrice, stop_loss_price: stopLossPrice,
                 advice_source_id: (/** @type {HTMLSelectElement} */(document.getElementById('journal-advice-source'))).value || null,
                 advice_source_details: (/** @type {HTMLInputElement} */(document.getElementById('journal-advice-details'))).value.trim() || null,
                 entry_reason: (/** @type {HTMLInputElement} */(document.getElementById('journal-entry-reason'))).value.trim() || null,
                 notes: (/** @type {HTMLTextAreaElement} */(document.getElementById('journal-notes'))).value.trim() || null,
-                // tags: // Add if implementing tags later
             };
-
 
             addButton.disabled = true;
             try {
                 await addJournalEntry(entryData);
                 showToast('Journal entry added!', 'success');
                 addJournalEntryForm.reset();
-                // Set date back to default after reset
                  const entryDateInput = /** @type {HTMLInputElement} */ (document.getElementById('journal-entry-date'));
-                 if (entryDateInput) entryDateInput.valueAsDate = new Date(); // Reset date
-                await loadJournalPage(); // Reload data
-                 // Switch to the 'Open Ideas' tab after adding
+                 if (entryDateInput) entryDateInput.valueAsDate = new Date();
+                await loadJournalPage();
                  const journalSubTabsContainer = journalPageContainer?.querySelector('.journal-sub-tabs');
                  const openTabButton = journalSubTabsContainer?.querySelector('[data-sub-tab="journal-open-panel"]');
                  if (openTabButton instanceof HTMLElement) openTabButton.click();
-
             } catch (error) {
                 showToast(`Error adding entry: ${error.message}`, 'error');
             } finally {
@@ -205,119 +180,76 @@ export function initializeJournalHandlers() {
         });
     }
 
+    // --- ADDED: Table Header Sorting Logic ---
+    const addSortListener = (tableElement) => {
+        if (!tableElement) return;
+        const thead = tableElement.querySelector('thead');
+        if (thead) {
+            thead.addEventListener('click', (e) => {
+                const target = /** @type {HTMLElement} */ (e.target);
+                const th = /** @type {HTMLTableCellElement} */ (target.closest('th[data-sort]'));
+                if (th) {
+                    const tbody = /** @type {HTMLTableSectionElement} */ (tableElement.querySelector('tbody'));
+                    if (tbody) {
+                        sortTableByColumn(th, tbody);
+                    }
+                }
+            });
+        }
+    };
+    addSortListener(openTable); // Add listener to the open table
+    addSortListener(closedTable); // Add listener to the closed table
+    // --- END ADDED ---
+
 
     // --- Table Actions (using event delegation on the parent container) ---
     if (journalPageContainer) {
         journalPageContainer.addEventListener('click', async (e) => {
+             // Action button logic (delete, edit, execute, close) remains the same...
              const target = /** @type {HTMLElement} */ (e.target);
              const button = /** @type {HTMLButtonElement | null} */ (target.closest('button[data-id]'));
              if (!button) return;
-
              const journalId = button.dataset.id;
              if (!journalId) return;
 
-             // --- Delete Button ---
              if (button.classList.contains('journal-delete-btn')) {
                 showConfirmationModal('Delete Journal Entry?', 'This cannot be undone.', async () => {
-                    try {
-                        await deleteJournalEntry(journalId);
-                        showToast('Journal entry deleted.', 'success');
-                        await loadJournalPage(); // Reload data
-                    } catch (error) {
-                        showToast(`Error deleting entry: ${error.message}`, 'error');
-                    }
+                    try { await deleteJournalEntry(journalId); showToast('Journal entry deleted.', 'success'); await loadJournalPage(); }
+                    catch (error) { showToast(`Error deleting entry: ${error.message}`, 'error'); }
                 });
              }
-
-             // --- Edit Button ---
-             else if (button.classList.contains('journal-edit-btn')) {
-                 // TODO: Implement Edit Modal Logic
-                 showToast(`Edit functionality for entry ID ${journalId} not yet implemented.`, 'info');
+             else if (button.classList.contains('journal-edit-btn')) { showToast(`Edit functionality for entry ID ${journalId} not yet implemented.`, 'info'); }
+             else if (button.classList.contains('journal-execute-btn')) {
+                 const entry = state.journalEntries?.openEntries.find(e => String(e.id) === journalId);
+                 if (!entry) { return showToast('Could not find journal entry data.', 'error'); }
+                 if (entry.direction !== 'BUY') { return showToast('Currently, only BUY ideas can be executed directly.', 'info'); }
+                 if (state.selectedAccountHolderId === 'all') { return showToast('Please select a specific account holder before executing.', 'error'); }
+                 showConfirmationModal(`Execute BUY for ${entry.ticker}?`, `This will create a real transaction record for ${formatQuantity(entry.quantity)} shares at the *current market price* (fetching now) and mark this journal entry as EXECUTED.`, async () => {
+                     try {
+                          await updatePricesForView(getCurrentESTDateString(), [entry.ticker]);
+                          const currentPriceData = state.priceCache.get(entry.ticker);
+                          const executionPrice = (currentPriceData && typeof currentPriceData.price === 'number') ? currentPriceData.price : null;
+                          if (executionPrice === null || isNaN(executionPrice) || executionPrice <= 0) { throw new Error(`Could not fetch a valid current price for ${entry.ticker} to execute.`); }
+                          const executionData = { execution_date: getCurrentESTDateString(), execution_price: executionPrice, account_holder_id: state.selectedAccountHolderId };
+                          const result = await executeJournalEntry(journalId, executionData);
+                          showToast(`Executed BUY for ${entry.ticker} at ${formatAccounting(executionPrice)}. Tx ID: ${result.transactionId}`, 'success', 10000);
+                          await loadJournalPage(); await refreshLedger();
+                     } catch (error) { showToast(`Error executing entry: ${error.message}`, 'error', 10000); }
+                 });
              }
-
-             // --- Execute Buy Button ---
-              else if (button.classList.contains('journal-execute-btn')) {
-                 // Find the entry in the state
-                 const entry = state.journalEntries?.openEntries.find(e => String(e.id) === journalId); // Use string comparison
-                 if (!entry) {
-                     return showToast('Could not find journal entry data.', 'error');
-                 }
-                 if (entry.direction !== 'BUY') {
-                      return showToast('Currently, only BUY ideas can be executed directly.', 'info');
-                 }
-                 if (state.selectedAccountHolderId === 'all') {
-                     return showToast('Please select a specific account holder before executing.', 'error');
-                 }
-
-                 showConfirmationModal(
-                     `Execute BUY for ${entry.ticker}?`,
-                     `This will create a real transaction record for ${formatQuantity(entry.quantity)} shares at the *current market price* (fetching now) and mark this journal entry as EXECUTED.`,
-                     async () => {
-                         try {
-                              // Fetch current price just before execution
-                              await updatePricesForView(getCurrentESTDateString(), [entry.ticker]);
-                              const currentPriceData = state.priceCache.get(entry.ticker);
-                              const executionPrice = (currentPriceData && typeof currentPriceData.price === 'number') ? currentPriceData.price : null;
-
-                              if (executionPrice === null || isNaN(executionPrice) || executionPrice <= 0) {
-                                   throw new Error(`Could not fetch a valid current price for ${entry.ticker} to execute.`);
-                              }
-
-                              const executionData = {
-                                  execution_date: getCurrentESTDateString(),
-                                  execution_price: executionPrice,
-                                  account_holder_id: state.selectedAccountHolderId // Use currently selected holder
-                              };
-
-                             const result = await executeJournalEntry(journalId, executionData);
-                             showToast(`Executed BUY for ${entry.ticker} at ${formatAccounting(executionPrice)}. Tx ID: ${result.transactionId}`, 'success', 10000);
-                             await loadJournalPage(); // Reload journal data
-                             await refreshLedger(); // Refresh ledger as well
-                         } catch (error) {
-                             showToast(`Error executing entry: ${error.message}`, 'error', 10000);
-                         }
-                     }
-                 );
-
-             }
-
-             // --- Close Trade Button (Manual Close) ---
              else if (button.classList.contains('journal-close-btn')) {
-                 const entry = state.journalEntries?.openEntries.find(e => String(e.id) === journalId); // Use string comparison
-                 if (!entry) {
-                     return showToast('Could not find journal entry data.', 'error');
-                 }
-
-                 // Simple prompt for exit price.
+                 const entry = state.journalEntries?.openEntries.find(e => String(e.id) === journalId);
+                 if (!entry) { return showToast('Could not find journal entry data.', 'error'); }
                  const currentPriceGuess = (state.priceCache.get(entry.ticker)?.price) || entry.entry_price;
                  const exitPriceStr = prompt(`Enter the exit price to manually close the ${entry.ticker} trade:`, String(currentPriceGuess));
                  const exitPrice = parseFloat(exitPriceStr);
-
-                 if (exitPriceStr === null) return; // User cancelled prompt
-
-                 if (isNaN(exitPrice) || exitPrice <= 0) {
-                     return showToast('Invalid exit price entered.', 'error');
-                 }
-
-                 showConfirmationModal(
-                     `Manually Close ${entry.ticker} Trade?`,
-                     `This will mark the trade as CLOSED with an exit price of ${formatAccounting(exitPrice)} on today's date.`,
-                     async () => {
-                         const updateData = {
-                             status: 'CLOSED',
-                             exit_date: getCurrentESTDateString(),
-                             exit_price: exitPrice,
-                             // exit_reason: // Add later if needed
-                         };
-                         try {
-                             await updateJournalEntry(journalId, updateData);
-                             showToast('Journal entry closed manually.', 'success');
-                             await loadJournalPage(); // Reload data
-                         } catch (error) {
-                             showToast(`Error closing entry: ${error.message}`, 'error');
-                         }
-                     }
-                 );
+                 if (exitPriceStr === null) return;
+                 if (isNaN(exitPrice) || exitPrice <= 0) { return showToast('Invalid exit price entered.', 'error'); }
+                 showConfirmationModal(`Manually Close ${entry.ticker} Trade?`, `This will mark the trade as CLOSED with an exit price of ${formatAccounting(exitPrice)} on today's date.`, async () => {
+                     const updateData = { status: 'CLOSED', exit_date: getCurrentESTDateString(), exit_price: exitPrice };
+                     try { await updateJournalEntry(journalId, updateData); showToast('Journal entry closed manually.', 'success'); await loadJournalPage(); }
+                     catch (error) { showToast(`Error closing entry: ${error.message}`, 'error'); }
+                 });
              }
         });
     }
