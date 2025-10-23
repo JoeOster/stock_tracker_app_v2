@@ -17,7 +17,7 @@
 }
 
 /* --- Filter/Sort Bar --- */
-/* .filter-sort-bar { ... } REMOVED - Using generic .filter-bar from _forms.css */
+/* Uses generic .filter-bar from _forms.css */
 
 
 /* --- Card View --- */
@@ -65,7 +65,7 @@
     justify-content: space-between;
     padding: 15px;
     gap: 15px;
-    flex-direction: row; /* ADDED THIS LINE to ensure horizontal layout */
+    flex-direction: row;
 }
 
 .card-stats, .card-performance {
@@ -142,8 +142,6 @@
     table-layout: fixed;
     width: 100%;
     min-width: 1100px;
-    /* Uses general table styles from _tables.css */
-    /* Sticky column styles defined below */
 }
 
 /* Table View Specific Column Widths */
@@ -160,98 +158,7 @@
 #open-positions-table th:nth-child(9), #open-positions-table td:nth-child(9) { width: 13%; } /* Combined Limits */
 #open-positions-table th:nth-child(10), #open-positions-table td:nth-child(10) { width: 10%; min-width: 150px; } /* Actions */
 
-
-/* Table View Sticky Column Assignments */
-/* Using generic .sticky-col class applied by the renderer */
-#open-positions-table .sticky-col {
-    position: sticky;
-    z-index: 2;
-    background-color: var(--container-bg);
-}
-#open-positions-table thead .sticky-col {
-    z-index: 3;
-    background-color: var(--table-header-bg);
-}
-#open-positions-table tbody tr:nth-child(even) .sticky-col {
-    background-color: var(--table-row-even-bg);
-}
-#open-positions-table tfoot .sticky-col { /* Add footer sticky background */
-    z-index: 3;
-    background-color: var(--table-header-bg);
-}
-
-
-/* Checkbox Column */
-#open-positions-table th.reconciliation-checkbox-header,
-#open-positions-table td.reconciliation-checkbox-cell {
-    left: 0;
-    z-index: 4; /* Checkbox header highest */
-}
-#open-positions-table td.reconciliation-checkbox-cell {
-    z-index: 3; /* Checkbox body cells above ticker */
-}
-
-/* Ticker Column */
-#open-positions-table th:nth-child(2),
-#open-positions-table td:nth-child(2) {
-    left: 30px; /* Offset Ticker (checkbox width) */
-}
-
-/* Actions Column (Last) */
-#open-positions-table th:last-child,
-#open-positions-table td:last-child {
-    right: 0;
-}
-
-/* Small logo in table */
-.exchange-logo-small {
-    width: 20px;
-    height: 20px;
-    vertical-align: middle;
-    margin-right: 5px;
-    object-fit: contain;
-}
-
-/* Trend Indicator Styles */
-.card-performance .trend-up,
-.card-performance .trend-down,
-.card-performance .trend-flat,
-.card-performance .trend-placeholder {
-    display: inline-block;
-    margin-left: 5px; /* Space after P/L value */
-    font-weight: bold;
-    width: 1em; /* Ensure consistent spacing */
-    text-align: center;
-}
-
-/* Specific styles for table trend indicators (add space before) */
-#open-positions-table .trend-up,
-#open-positions-table .trend-down,
-#open-positions-table .trend-flat,
-#open-positions-table .trend-placeholder {
-    display: inline-block; /* Ensure it takes space */
-    font-weight: bold;
-    width: 1em; /* Consistent spacing */
-    text-align: center;
-}
-
-
-.trend-placeholder, .trend-flat {
-    color: var(--text-muted-color);
-}
-
-/* Positive/Negative colors use the existing classes */
-.trend-up.positive { color: var(--positive-color); }
-.trend-down.negative { color: var(--negative-color); }
-/* Also apply directly if not nested */
-.positive { color: var(--positive-color); }
-.negative { color: var(--negative-color); }
-
-#open-positions-table .actions-cell {
-    text-align: center; /* Keep horizontal centering */
-    vertical-align: middle; /* Ensure vertical alignment with other cells */
-    display: flex; /* Use flexbox for button alignment */
-    justify-content: center; /* Center buttons horizontally within the cell */
-    align-items: center; /* Center buttons vertically within the cell */
-    gap: 4px; /* Optional: Add a small gap between buttons */
-}
+/* --- ADDED: Center Qty Column --- */
+#open-positions-table th:nth-child(6),
+#open-positions-table td:nth-child(6) {
+    text-align: center; /* Override numeric right-alignment
