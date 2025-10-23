@@ -1,16 +1,16 @@
 // public/event-handlers/_snapshots.js
-// Version Updated (Added Client-Side Validation)
+// Version Updated (Added Client-Side Validation & Sorting)
 /**
  * @file Initializes all event handlers for the Snapshots page.
  * @module event-handlers/_snapshots
  */
 import { state } from '../state.js';
-import { showToast, showConfirmationModal } from '../ui/helpers.js';
+// ADDED: Import sortTableByColumn
+import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
 import { fetchSnapshots } from '../api.js';
 import { renderSnapshots } from '../ui/renderers/_snapshots.js';
 import { switchView } from './_navigation.js';
-// Import handleResponse for consistency in catching specific errors
-import { handleResponse } from '../api.js'; // Assuming handleResponse is exported from api.js
+import { handleResponse } from '../api.js';
 
 /**
  * Loads data for the snapshots page and triggers the renderer.
@@ -23,11 +23,11 @@ export async function loadSnapshotsPage() {
 
     try {
         const snapshots = await fetchSnapshots(String(state.selectedAccountHolderId));
-        state.allSnapshots = snapshots; // Ensure state is updated before rendering
+        state.allSnapshots = snapshots;
         renderSnapshots(snapshots);
     } catch (error) {
         console.error(`Failed to load snapshots page:`, error);
-        showToast(`Error loading snapshots: ${error.message}`, 'error'); // Use error.message
+        showToast(`Error loading snapshots: ${error.message}`, 'error');
         if (tableBody) {
             tableBody.innerHTML = '<tr><td colspan="4">Error loading snapshots.</td></tr>';
         }
@@ -55,18 +55,10 @@ export function initializeSnapshotsHandlers() {
             const value = parseFloat(valueStr);
 
             // --- Client-Side Validation ---
-            if (!accountHolderId) {
-                return showToast('Please select an account holder.', 'error');
-            }
-             if (!snapshotDate) {
-                return showToast('Please select a snapshot date.', 'error');
-            }
-             if (!exchange) {
-                return showToast('Please select an exchange.', 'error');
-            }
-            if (isNaN(value) || value < 0) { // Allow zero value, but not negative or NaN
-                return showToast('Total Account Value must be a valid non-negative number.', 'error');
-            }
+            if (!accountHolderId) { return showToast('Please select an account holder.', 'error'); }
+             if (!snapshotDate) { return showToast('Please select a snapshot date.', 'error'); }
+             if (!exchange) { return showToast('Please select an exchange.', 'error'); }
+            if (isNaN(value) || value < 0) { return showToast('Total Account Value must be a valid non-negative number.', 'error'); }
             // --- End Validation ---
 
             const snapshot = {
@@ -76,40 +68,53 @@ export function initializeSnapshotsHandlers() {
                 value: value
             };
 
-            submitButton.disabled = true; // Disable button during submission
+            submitButton.disabled = true;
             try {
                 const res = await fetch('/api/utility/snapshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snapshot) });
-                await handleResponse(res); // Use handleResponse to catch server errors
+                await handleResponse(res);
                 addSnapshotForm.reset();
                 showToast('Snapshot saved!', 'success');
-                // Reload the snapshots view to show the new entry
                 await switchView('snapshots', null);
             } catch (error) {
-                // Display specific error from server or validation
                 showToast(`Error saving snapshot: ${error.message}`, 'error');
             } finally {
-                submitButton.disabled = false; // Re-enable button
+                submitButton.disabled = false;
             }
         });
     }
 
     if (snapshotsTable) {
+        // --- ADDED: Table Header Sorting ---
+        const thead = snapshotsTable.querySelector('thead');
+        if (thead) {
+            thead.addEventListener('click', (e) => {
+                const target = /** @type {HTMLElement} */ (e.target);
+                const th = /** @type {HTMLTableCellElement} */ (target.closest('th[data-sort]'));
+                if (th) {
+                    const tbody = /** @type {HTMLTableSectionElement} */ (snapshotsTable.querySelector('tbody'));
+                    if (tbody) {
+                        sortTableByColumn(th, tbody);
+                    }
+                }
+            });
+        }
+        // --- END ADDED ---
+
+        // --- Delete Button Clicks (Delegated to table) ---
         snapshotsTable.addEventListener('click', async (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             const deleteBtn = /** @type {HTMLElement} */ (target.closest('.delete-snapshot-btn'));
             if (deleteBtn) {
                 const id = deleteBtn.dataset.id;
-                if (!id) return; // Basic check
+                if (!id) return;
 
                 showConfirmationModal('Delete Snapshot?', 'This cannot be undone.', async () => {
                      try {
                         const res = await fetch(`/api/utility/snapshots/${id}`, { method: 'DELETE' });
-                        await handleResponse(res); // Use handleResponse
+                        await handleResponse(res);
                         showToast('Snapshot deleted.', 'success');
-                        // Reload the view after successful deletion
                         await switchView('snapshots', null);
                     } catch (error) {
-                        // Display specific error from server
                         showToast(`Error deleting snapshot: ${error.message}`, 'error');
                     }
                 });

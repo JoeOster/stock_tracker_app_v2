@@ -1,7 +1,6 @@
 ﻿<div id="orders-page-container" class="page-container" style="display: none;">
-    <h2>Data Entry</h2>
-    <p class="subtitle">Log executed trades or place new pending buy limit orders.</p>
-
+    <h2>Log Trade / View Orders</h2>
+    <p class="subtitle">Log executed trades and view your open limit orders.</p>
     <h3>Log Executed Trade</h3>
     <form id="add-transaction-form">
         <select id="add-tx-account-holder" class="account-holder-select" required></select>
@@ -10,7 +9,7 @@
         <select id="exchange" required></select>
         <select id="transaction-type">
             <option value="BUY">BUY</option>
-        </select>
+            </select>
         <input type="number" id="quantity" placeholder="Quantity" step="any" min="0.00001" required>
         <input type="number" id="price" placeholder="Price Per Share" step="any" min="0.01" required>
         <button type="submit">Log Transaction</button>
@@ -34,26 +33,16 @@
 
     <hr style="margin: 2rem 0;">
 
-    <h3>Pending Buy Limit Orders</h3>
-    <form id="add-pending-order-form">
-        <select id="pending-order-account-holder" class="account-holder-select" required></select>
-        <input type="text" id="pending-order-ticker" placeholder="Ticker" required>
-        <select id="pending-order-exchange" required></select>
-        <input type="number" id="pending-order-quantity" placeholder="Quantity" step="any" min="0.00001" required>
-        <input type="number" id="pending-order-limit-price" placeholder="Limit Price" step="any" min="0.01" required>
-        <input type="date" id="pending-order-expiration" title="Optional Expiration Date">
-        <button type="submit">Place Order</button>
-    </form>
-    
+    <h3>Open Limit Orders</h3>
     <table id="pending-orders-table" style="margin-top: 2rem;">
         <thead>
             <tr>
-                <th>Ticker</th>
-                <th>Exchange</th>
-                <th class="numeric">Quantity</th>
-                <th class="numeric">Limit Price</th>
-                <th>Expiration Date</th>
-                <th>Created Date</th>
+                <th data-sort="ticker">Ticker</th>
+                <th data-sort="exchange">Exchange</th>
+                <th class="numeric" data-sort="quantity" data-type="numeric">Quantity</th>
+                <th class="numeric" data-sort="limit_price" data-type="numeric">Limit Price</th>
+                <th data-sort="expiration_date" data-type="date">Expiration Date</th>
+                <th data-sort="created_date" data-type="date">Created Date</th>
                 <th class="center-align">Actions</th>
             </tr>
         </thead>

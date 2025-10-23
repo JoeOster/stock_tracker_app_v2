@@ -1,12 +1,13 @@
 // /public/event-handlers/_alerts.js
-// Version 0.1.7
+// Version 0.1.7 (Added Sorting)
 /**
  * @file Initializes all event handlers for the Alerts page.
  * @module event-handlers/_alerts
  */
 import { state } from '../state.js';
 import { switchView } from './_navigation.js';
-import { showToast } from '../ui/helpers.js';
+// ADDED: Import sortTableByColumn
+import { showToast, sortTableByColumn } from '../ui/helpers.js';
 import { fetchAlerts } from '../api.js';
 import { renderAlerts } from '../ui/renderers/_alerts.js';
 
@@ -17,7 +18,6 @@ export async function loadAlertsPage() {
     const tableBody = document.querySelector('#alerts-table tbody');
     if (tableBody) tableBody.innerHTML = '<tr><td colspan="3">Loading alerts...</td></tr>';
     try {
-        // FIX: Explicitly convert the account holder ID to a string to match the function's parameter type.
         const alerts = await fetchAlerts(String(state.selectedAccountHolderId));
         renderAlerts(alerts);
     } catch (error) {
@@ -35,6 +35,23 @@ export async function loadAlertsPage() {
 export function initializeAlertsHandlers() {
     const alertsTable = document.getElementById('alerts-table');
     if (alertsTable) {
+        // --- ADDED: Table Header Sorting ---
+        const thead = alertsTable.querySelector('thead');
+        if (thead) {
+            thead.addEventListener('click', (e) => {
+                const target = /** @type {HTMLElement} */ (e.target);
+                const th = /** @type {HTMLTableCellElement} */ (target.closest('th[data-sort]'));
+                if (th) {
+                    const tbody = /** @type {HTMLTableSectionElement} */ (alertsTable.querySelector('tbody'));
+                    if (tbody) {
+                        sortTableByColumn(th, tbody);
+                    }
+                }
+            });
+        }
+        // --- END ADDED ---
+
+        // --- Action Button Clicks (Delegated to table) ---
         alertsTable.addEventListener('click', async (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             const yesButton = /** @type {HTMLElement} */ (target.closest('.alert-yes-btn'));
@@ -48,7 +65,7 @@ export function initializeAlertsHandlers() {
                 } else {
                      showToast("Please go to the 'Orders' tab and click 'Mark as Filled' for this item.", 'info');
                 }
-            } 
+            }
             else if (noButton) {
                 const notificationId = noButton.dataset.notificationId;
                 try {

@@ -1,23 +1,23 @@
 // /public/ui/renderers/_tabs.js
-// Version Updated (Added Dashboard Tab)
+// Version Updated (Renamed Orders Tab)
 /**
  * @file Renderer for the main navigation tabs.
  * @module renderers/_tabs
  */
 import { getTradingDays, getActivePersistentDates } from '../datetime.js';
 
-// Add 'Dashboard' to the static tabs array and remove 'Charts' if Dashboard replaces its overview function
+// MODIFIED: Renamed 'New Orders' to 'Orders'
 export const staticTabs = [
-    { viewType: 'dashboard', textContent: 'Dashboard' }, // <-- Added Dashboard
+    { viewType: 'dashboard', textContent: 'Dashboard' },
     { viewType: 'journal', textContent: 'Journal' },
     { viewType: 'ledger', textContent: 'Ledger' },
-    { viewType: 'orders', textContent: 'New Orders' },
+    { viewType: 'orders', textContent: 'Orders' }, // <-- Renamed
     { viewType: 'alerts', textContent: 'Alerts' },
     { viewType: 'snapshots', textContent: 'Snapshots' },
     { viewType: 'imports', textContent: 'Imports' },
-    { viewType: 'charts', textContent: 'Charts' }, // <-- Keep Charts for now, maybe remove later if Dashboard fully replaces its overview
-    // { viewType: 'watchlist', textContent: 'Watchlist' } // Example if watchlist is added later
+    { viewType: 'charts', textContent: 'Charts' },
 ];
+// END MODIFICATION
 
 /**
  * Sets the 'active' class on the currently selected tab.
@@ -55,7 +55,7 @@ export function renderTabs(currentView) {
     tabsContainer.innerHTML = ''; // Clear existing tabs
 
     // --- Dynamic Date Tabs ---
-    const tradingDays = getTradingDays(); // Will now fetch only 1 day by default
+    const tradingDays = getTradingDays();
     const activePersistentDates = getActivePersistentDates();
     const allDates = [...new Set([...tradingDays, ...activePersistentDates])].sort();
 
@@ -74,7 +74,6 @@ export function renderTabs(currentView) {
         const tab = document.createElement('div');
         tab.className = 'tab master-tab';
         tab.dataset.viewType = tabInfo.viewType;
-        // data-view-value is intentionally left undefined for static tabs
         tab.textContent = tabInfo.textContent;
         tabsContainer.appendChild(tab);
     });
