@@ -1,5 +1,7 @@
 const request = require('supertest');
 const { setupApp } = require('../server');
+// Import formatter used in the route to match the error message
+const { formatQuantity } = require('../public/ui/formatters'); // Adjust path if needed
 
 let app;
 let db;
@@ -53,19 +55,23 @@ describe('Transaction API Endpoints', () => {
     it('should fail to create a SELL transaction for more shares than are available', async () => {
         const buyRes = await db.run('INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', ['SELL-TEST', 'TestEx', 'BUY', 100, 50, '2025-10-01', 100, 100, 2]);
         const buyId = buyRes.lastID;
+        const sellQuantityAttempt = 101;
+        const remainingQuantity = 100;
 
         const sellRes = await request(app)
             .post('/api/transactions')
             .send({
                 ticker: 'SELL-TEST', exchange: 'TestEx', transaction_type: 'SELL',
-                quantity: 101, // Attempt to sell more than owned
+                quantity: sellQuantityAttempt, // Attempt to sell more than owned
                 price: 60, transaction_date: '2025-10-02',
                 account_holder_id: 2, parent_buy_id: buyId
             });
 
         expect(sellRes.statusCode).toEqual(400);
-        // --- FIX: Update expected error message ---
-        expect(sellRes.body.message).toBe('Sell quantity exceeds remaining quantity in the selected lot.');
+        // --- FIX: Update expected error message to match backend ---
+        // Use formatQuantity to ensure the message matches exactly
+        const expectedMessage = `Sell quantity (${formatQuantity(sellQuantityAttempt)}) exceeds remaining quantity (${formatQuantity(remainingQuantity)}) in the selected lot.`;
+        expect(sellRes.body.message).toBe(expectedMessage);
         // --- END FIX ---
     });
 

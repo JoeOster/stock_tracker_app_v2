@@ -1,4 +1,5 @@
 // public/event-handlers/_dashboard.js
+// Version Updated (Added Selective Sell Modal Trigger - Task X.5)
 /**
  * @file Initializes event handlers for the Dashboard page.
  * @module event-handlers/_dashboard
@@ -6,13 +7,12 @@
 
 import { state } from '../state.js';
 import { renderDashboardPage } from '../ui/renderers/_dashboard.js';
-// ADDED: Import sortTableByColumn
 import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
-import { getCurrentESTDateString } from '../ui/datetime.js'; // Needed for Sell/Edit modals
-// Add fetchSalesForLot to existing api import
 import { fetchSalesForLot, updateAllPrices } from '../api.js';
-// Add formatQuantity to existing formatters import
+import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
+
+
 /**
  * Helper function to populate the Edit/Limits modal with data from a specific lot.
  * @param {object | undefined} lotData - The data object for the selected open lot.
@@ -51,15 +51,13 @@ function populateEditModal(lotData, limitsOnly = false) {
 
     // --- Populate fields ---
     editIdInput.value = String(lotData.id);
-    // Ensure account holder ID is a string for comparison
     editAccountHolderSelect.value = String(lotData.account_holder_id);
-    editDateInput.value = lotData.purchase_date; // Use purchase_date from lot data
+    editDateInput.value = lotData.purchase_date;
     editTickerInput.value = lotData.ticker;
     editExchangeSelect.value = lotData.exchange;
-    editTypeSelect.value = 'BUY'; // Edit modal only handles BUY lots from dashboard
-    // Use original_quantity for editing the initial buy record
-    editQuantityInput.value = String(lotData.original_quantity ?? lotData.quantity_remaining); // Fallback if original_quantity isn't present
-    editPriceInput.value = String(lotData.cost_basis); // Use cost_basis
+    editTypeSelect.value = 'BUY';
+    editQuantityInput.value = String(lotData.original_quantity ?? lotData.quantity_remaining);
+    editPriceInput.value = String(lotData.cost_basis);
     editLimitPriceUpInput.value = String(lotData.limit_price_up || '');
     editLimitUpExpirationInput.value = lotData.limit_up_expiration || '';
     editLimitPriceDownInput.value = String(lotData.limit_price_down || '');
@@ -76,7 +74,7 @@ function populateEditModal(lotData, limitsOnly = false) {
         limitFields.style.display = 'none';
     }
 
-    // --- Disable fields that shouldn't change when editing from Dashboard ---
+    // --- Disable fields ---
     editTickerInput.readOnly = true;
     editTypeSelect.disabled = true;
 
@@ -101,7 +99,7 @@ export function initializeDashboardHandlers() {
     const refreshButton = document.getElementById('dashboard-refresh-prices-btn');
     const subTabsContainer = dashboardContainer?.querySelector('.dashboard-sub-tabs');
     const cardGrid = document.getElementById('positions-cards-grid');
-    const positionTable = document.getElementById('open-positions-table'); // Use table ID for delegation
+    const positionTable = document.getElementById('open-positions-table');
 
     // --- Sub-Tab Switching ---
     if (subTabsContainer && dashboardContainer) {
@@ -130,54 +128,132 @@ export function initializeDashboardHandlers() {
     // --- Refresh Prices ---
     refreshButton?.addEventListener('click', async () => {
         showToast('Refreshing prices...', 'info', 2000);
-        await updateAllPrices();
-        await renderDashboardPage();
+        await updateAllPrices(); // updateAllPrices now calls renderDashboardPage itself if needed
     });
 
     // --- Action Buttons (Event Delegation on Card Grid and Table Body) ---
-const handleActionClick = async (e) => { // <<< Make async
+    const handleActionClick = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
 
         // Find the relevant button using closest()
-        const sellBtn = target.closest('.sell-from-lot-btn');
+        const sellBtn = target.closest('.sell-from-lot-btn'); // Individual Lot Sell
+        const selectiveSellBtn = target.closest('.selective-sell-btn'); // Aggregated Card Sell
         const limitBtn = target.closest('.set-limit-btn');
         const editBtn = target.closest('.edit-buy-btn');
-        const historyBtn = target.closest('.sales-history-btn'); // <<< ADDED
+        const historyBtn = target.closest('.sales-history-btn');
 
         // Modals
         const sellModal = document.getElementById('sell-from-position-modal');
+        const selectiveSellModal = document.getElementById('selective-sell-modal'); // <<< ADDED
         const editModal = document.getElementById('edit-modal');
-        const salesHistoryModal = document.getElementById('sales-history-modal'); // <<< ADDED
+        const salesHistoryModal = document.getElementById('sales-history-modal');
 
-        // --- Sell Button Logic ---
+        // --- Sell Button Logic (Individual Lot) ---
         if (sellBtn && sellModal) {
             const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
-            // Find lot data directly from state.dashboardOpenLots
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
             if (!lotData) { return showToast('Error: Could not find original lot data.', 'error'); }
 
-            const sellParentBuyIdInput = /** @type {HTMLInputElement} */(document.getElementById('sell-parent-buy-id'));
-            const sellAccountHolderIdInput = /** @type {HTMLInputElement} */(document.getElementById('sell-account-holder-id'));
-            const sellTickerDisplay = document.getElementById('sell-ticker-display');
-            const sellExchangeDisplay = document.getElementById('sell-exchange-display');
+            (/** @type {HTMLInputElement} */(document.getElementById('sell-parent-buy-id'))).value = buyId;
+            (/** @type {HTMLInputElement} */(document.getElementById('sell-account-holder-id'))).value = String(lotData.account_holder_id);
+            document.getElementById('sell-ticker-display').textContent = ticker;
+            document.getElementById('sell-exchange-display').textContent = exchange;
             const sellQuantityInput = /** @type {HTMLInputElement} */ (document.getElementById('sell-quantity'));
-            const sellDateInput = /** @type {HTMLInputElement} */(document.getElementById('sell-date'));
-
-             if (!sellParentBuyIdInput || !sellAccountHolderIdInput || !sellTickerDisplay || !sellExchangeDisplay || !sellQuantityInput || !sellDateInput) {
-               console.error("[Dashboard Event] One or more elements missing inside sell modal.");
-               showToast("UI Error: Cannot display sell details.", "error");
-               return;
-             }
-
-            sellParentBuyIdInput.value = buyId;
-            sellAccountHolderIdInput.value = String(lotData.account_holder_id);
-            sellTickerDisplay.textContent = ticker;
-            sellExchangeDisplay.textContent = exchange;
-            sellQuantityInput.value = quantity; // Use remaining quantity from button dataset
+            sellQuantityInput.value = quantity; // Use remaining quantity
             sellQuantityInput.max = quantity;
-            sellDateInput.value = getCurrentESTDateString();
+            (/** @type {HTMLInputElement} */(document.getElementById('sell-date'))).value = getCurrentESTDateString();
 
             sellModal.classList.add('visible');
+        }
+        // --- Selective Sell Button Logic (Aggregated Card) --- <<< NEW BLOCK
+        else if (selectiveSellBtn && selectiveSellModal) {
+            const { ticker, exchange, totalQuantity, lots: encodedLots } = selectiveSellBtn.dataset;
+            if (!ticker || !exchange || !totalQuantity || !encodedLots) {
+                showToast('Error: Missing data for selective sell.', 'error');
+                return;
+            }
+             if (state.selectedAccountHolderId === 'all') {
+                showToast('Please select a specific account holder before selling.', 'error');
+                return;
+            }
+
+            let underlyingLots = [];
+            try {
+                underlyingLots = JSON.parse(decodeURIComponent(encodedLots));
+            } catch (err) {
+                console.error("Error decoding lots for selective sell:", err);
+                showToast('Error: Could not load lot details for selling.', 'error');
+                return;
+            }
+
+            // --- Populate Modal ---
+            document.getElementById('selective-sell-title').textContent = `Sell ${ticker} (${exchange})`;
+            (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-ticker'))).value = ticker;
+            (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-exchange'))).value = exchange;
+            (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-account-holder-id'))).value = String(state.selectedAccountHolderId);
+            document.getElementById('selective-sell-available-qty').textContent = formatQuantity(totalQuantity);
+            (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-total-quantity'))).value = ''; // Clear previous total
+            (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-total-quantity'))).max = totalQuantity; // Set max based on available
+            (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-price'))).value = '';
+            (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-date'))).value = getCurrentESTDateString();
+            document.getElementById('selective-sell-selected-total').textContent = '0'; // Reset selected total
+            document.getElementById('selective-sell-validation-message').style.display = 'none'; // Hide validation
+
+            // --- Populate Lots Table ---
+            const lotsBody = document.getElementById('selective-sell-lots-body');
+            lotsBody.innerHTML = ''; // Clear previous lots
+            underlyingLots.forEach(lot => {
+                const row = lotsBody.insertRow();
+                row.dataset.lotId = lot.id; // Store lot ID
+                row.innerHTML = `
+                    <td>${lot.purchase_date}</td>
+                    <td class="numeric">${formatAccounting(lot.cost_basis)}</td>
+                    <td class="numeric">${formatQuantity(lot.quantity_remaining)}</td>
+                    <td class="numeric">
+                        <input type="number" class="selective-sell-lot-qty"
+                               step="any" min="0" max="${lot.quantity_remaining}"
+                               data-lot-id="${lot.id}" value="0"
+                               style="width: 100px; text-align: right;">
+                    </td>
+                `;
+            });
+
+            // --- Add Input Listeners for Validation ---
+            const totalQtyInput = /** @type {HTMLInputElement} */(document.getElementById('selective-sell-total-quantity'));
+            const lotQtyInputs = /** @type {HTMLInputElement[]} */(Array.from(lotsBody.querySelectorAll('.selective-sell-lot-qty')));
+            const selectedTotalSpan = document.getElementById('selective-sell-selected-total');
+            const validationMessage = document.getElementById('selective-sell-validation-message');
+            const submitButton = /** @type {HTMLButtonElement} */(document.getElementById('selective-sell-submit-btn'));
+
+            const validateQuantities = () => {
+                let selectedTotal = 0;
+                lotQtyInputs.forEach(input => {
+                    selectedTotal += parseFloat(input.value) || 0;
+                });
+
+                const targetTotal = parseFloat(totalQtyInput.value) || 0;
+                selectedTotalSpan.textContent = formatQuantity(selectedTotal);
+
+                // Basic validation: Check if total selected matches target total
+                const totalsMatch = Math.abs(selectedTotal - targetTotal) < 0.00001 && targetTotal > 0;
+                if (totalsMatch) {
+                    validationMessage.style.display = 'none';
+                    submitButton.disabled = false;
+                } else {
+                    if (targetTotal > 0) { // Only show message if a target is entered
+                        validationMessage.style.display = 'block';
+                    } else {
+                        validationMessage.style.display = 'none';
+                    }
+                    submitButton.disabled = true;
+                }
+            };
+
+            totalQtyInput.addEventListener('input', validateQuantities);
+            lotQtyInputs.forEach(input => input.addEventListener('input', validateQuantities));
+
+            validateQuantities(); // Initial validation check
+            selectiveSellModal.classList.add('visible');
         }
         // --- Limits Button Logic ---
         else if (limitBtn && editModal) {
@@ -191,37 +267,27 @@ const handleActionClick = async (e) => { // <<< Make async
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
             populateEditModal(lotData, false); // False for full edit
         }
-        // --- Sales History Button Logic --- <<< ADDED BLOCK
+        // --- Sales History Button Logic ---
         else if (historyBtn && salesHistoryModal) {
-            const buyId = historyBtn.dataset.id; // <<< Make sure button has data-id="${lot.id}"
+            const buyId = historyBtn.dataset.buyId; // Use data-buy-id
             if (!buyId) return;
-
-            // Find the original BUY lot data from the state
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
-            if (!lotData) {
-                showToast('Could not find original purchase details.', 'error');
-                return;
-            }
-             if (state.selectedAccountHolderId === 'all') {
-                showToast('Please select a specific account holder to view history.', 'error');
-                return;
-            }
+            if (!lotData) { showToast('Could not find original purchase details.', 'error'); return; }
+            if (state.selectedAccountHolderId === 'all') { showToast('Please select a specific account holder to view history.', 'error'); return; }
 
-            // Populate static lot details in the modal
+            // Populate static details
             document.getElementById('sales-history-title').textContent = `Sales History for ${lotData.ticker} Lot`;
             document.getElementById('sales-history-ticker').textContent = lotData.ticker;
             document.getElementById('sales-history-buy-date').textContent = lotData.purchase_date;
-            document.getElementById('sales-history-buy-qty').textContent = formatQuantity(lotData.original_quantity ?? lotData.quantity); // Use original if available
+            document.getElementById('sales-history-buy-qty').textContent = formatQuantity(lotData.original_quantity ?? lotData.quantity);
             document.getElementById('sales-history-buy-price').textContent = formatAccounting(lotData.cost_basis);
 
             const salesBody = document.getElementById('sales-history-body');
             salesBody.innerHTML = '<tr><td colspan="4">Loading sales history...</td></tr>';
-            salesHistoryModal.classList.add('visible');
+            salesHistoryModal.classList.add('visible'); // Make visible BEFORE fetch
 
             try {
-                // Fetch the sales data
                 const sales = await fetchSalesForLot(buyId, state.selectedAccountHolderId);
-
                 if (sales.length === 0) {
                     salesBody.innerHTML = '<tr><td colspan="4">No sales recorded for this lot.</td></tr>';
                 } else {
@@ -245,21 +311,20 @@ const handleActionClick = async (e) => { // <<< Make async
     cardGrid?.addEventListener('click', handleActionClick);
     positionTable?.querySelector('tbody')?.addEventListener('click', handleActionClick); // Delegate on tbody for actions
 
-    // --- ADDED: Table Header Sorting (Event Delegation on Table Header) ---
+    // --- Table Header Sorting ---
     const thead = positionTable?.querySelector('thead');
     if (thead) {
         thead.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             const th = /** @type {HTMLTableCellElement} */ (target.closest('th[data-sort]'));
             if (th) {
-                const tbody = /** @type {HTMLTableSectionElement} */ (document.getElementById('open-positions-tbody')); // Get specific tbody
+                const tbody = /** @type {HTMLTableSectionElement} */ (document.getElementById('open-positions-tbody'));
                 if (tbody) {
                     sortTableByColumn(th, tbody);
                 }
             }
         });
     }
-    // --- END ADDED ---
 
     // --- Reconciliation Checkbox Logic (Placeholder) ---
     positionTable?.addEventListener('change', (e) => {
@@ -270,5 +335,4 @@ const handleActionClick = async (e) => { // <<< Make async
             // Add reconciliation tracking logic here if needed
         }
     });
-
 }

@@ -9,19 +9,16 @@ import { initializeChartsHandlers } from './_charts.js';
 import { initializeDailyReportHandlers } from './_dailyReport.js';
 import { initializeImportHandlers } from './_imports.js';
 import { initializeLedgerHandlers } from './_ledger.js';
+// Updated: Import specific handlers for modals
 import { initializeModalHandlers } from './_modals.js';
 import { initializeNavigationHandlers } from './_navigation.js';
 import { initializeOrdersHandlers } from './_orders.js';
-// Removed: import { initializeSettingsHandlers } from './_settings.js'; // Old import
-import { initializeSettingsModalHandlers } from './_settings_modal.js'; // New core modal logic
-import { initializeExchangeManagementHandlers } from './_settings_exchanges.js'; // New exchange logic
-import { initializeHolderManagementHandlers } from './_settings_holders.js'; // New holder logic
-import { initializeJournalSettingsHandlers } from './_journal_settings.js'; // Handles Advice Sources
+import { initializeSettingsModalHandlers } from './_settings_modal.js';
+import { initializeExchangeManagementHandlers } from './_settings_exchanges.js';
+import { initializeHolderManagementHandlers } from './_settings_holders.js';
+import { initializeJournalSettingsHandlers } from './_journal_settings.js';
 import { initializeSnapshotsHandlers } from './_snapshots.js';
 import { initializeJournalHandlers } from './_journal.js';
-// Removed redundant imports for journal tabs/filters if initializeJournalHandlers calls them
-// import { initializeJournalSubTabHandlers } from './_journal_tabs.js';
-// import { initializeJournalFilterHandlers } from './_journal_filters.js';
 import { initializeDashboardHandlers } from './_dashboard.js';
 
 /**
@@ -29,29 +26,30 @@ import { initializeDashboardHandlers } from './_dashboard.js';
  */
 export function initializeAllEventHandlers() {
     try {
-        console.log("Initializing all event handlers..."); // Add log
+        console.log("Initializing all event handlers...");
 
         initializeNavigationHandlers();
-        initializeModalHandlers(); // Handles general modals (Edit, Confirm, Sell, Advice, Fill)
+        // initializeModalHandlers now includes selective sell init
+        initializeModalHandlers();
 
         // Initialize Settings Modal Sections
-        initializeSettingsModalHandlers();    // Core modal, main tabs, general, appearance
-        initializeExchangeManagementHandlers(); // Data -> Exchanges
-        initializeHolderManagementHandlers();   // Data -> Account Holders
-        initializeJournalSettingsHandlers();  // Data -> Advice Sources (from its own file)
+        initializeSettingsModalHandlers();
+        initializeExchangeManagementHandlers();
+        initializeHolderManagementHandlers();
+        initializeJournalSettingsHandlers();
 
         // Initialize Page-Specific Handlers
         initializeOrdersHandlers();
         initializeLedgerHandlers();
         initializeSnapshotsHandlers();
         initializeAlertsHandlers();
-        initializeDailyReportHandlers(); // Keep for date tab interactions if any remain
+        initializeDailyReportHandlers();
         initializeImportHandlers();
         initializeChartsHandlers();
-        initializeJournalHandlers(); // Includes Journal tabs/filters initialization within it
+        initializeJournalHandlers();
         initializeDashboardHandlers();
 
-        console.log("All event handlers initialized."); // Add log
+        console.log("All event handlers initialized.");
 
     } catch (error) {
         console.error("[Init] Error occurred INSIDE initializeAllEventHandlers:", error);

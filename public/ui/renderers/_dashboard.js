@@ -1,7 +1,7 @@
 // public/ui/renderers/_dashboard.js
-// Version Refactored (Task X.16)
+// Version Refactored (Task X.16 + History Button X.4 + Aggregation Logic X.5 - Fixed comment)
 /**
- * @file Renderer for the Dashboard page (Open Positions). Includes refactored structure.
+ * @file Renderer for the Dashboard page (Open Positions). Includes refactored structure and aggregation logic.
  * @module renderers/_dashboard
  */
 
@@ -70,11 +70,11 @@ function calculateLotMetrics(lot, currentPrice) {
 }
 
 /**
- * Creates the HTML for a single position card.
+ * Creates the HTML for a single **individual lot** card (kept for potential future use or alternative view).
  * @param {object} lot - The processed position lot data including metrics and priceData.
  * @returns {string} HTML string for the card.
  */
-function createCardHTML(lot) {
+function createIndividualLotCardHTML(lot) {
     const { priceData, unrealizedPL, unrealizedPercent, currentValue, proximity } = lot;
     const currentPriceValue = (priceData && typeof priceData.price === 'number') ? priceData.price : null;
     const previousPriceValue = (priceData && typeof priceData.previousPrice === 'number') ? priceData.previousPrice : null;
@@ -107,10 +107,11 @@ function createCardHTML(lot) {
     else currentPriceDisplay = '--';
 
     return `
-        <div class="position-card" data-lot-id="${lot.id}">
+        <div class="position-card individual-lot-card" data-lot-id="${lot.id}">
             <div class="card-header">
                 <img src="${logoSrc}" alt="${lot.exchange} logo" class="exchange-logo">
                 <h3 class="ticker">${lot.ticker}</h3>
+                <small style="margin-left: auto;">Lot ID: ${lot.id}</small>
             </div>
             <div class="card-body">
                 <div class="card-stats">
@@ -129,13 +130,97 @@ function createCardHTML(lot) {
                 <span class="limits-text" title="${limitsCombinedText}">${limitsCombinedText}</span>
                 <div class="action-buttons">
                     <button class="sell-from-lot-btn" data-buy-id="${lot.id}" data-ticker="${lot.ticker}" data-exchange="${lot.exchange}" data-quantity="${lot.quantity_remaining}">Sell</button>
-                    <button class="sales-history-btn" data-buy-id="${lot.id}" title="View Sales History">History</button> <button class="set-limit-btn" data-id="${lot.id}">Limits</button>
+                    <button class="sales-history-btn" data-buy-id="${lot.id}" title="View Sales History">History</button>
+                    <button class="set-limit-btn" data-id="${lot.id}">Limits</button>
                     <button class="edit-buy-btn" data-id="${lot.id}">Edit</button>
                 </div>
             </div>
         </div>
     `;
 }
+
+/**
+ * Creates the HTML for a single **aggregated position** card (NEW for Task X.5).
+ * @param {object} aggData - The aggregated data for a ticker/exchange combination.
+ * @param {string} aggData.ticker
+ * @param {string} aggData.exchange
+ * @param {number} aggData.totalQuantity
+ * @param {number} aggData.totalCurrentValue
+ * @param {number} aggData.totalCostBasisValue
+ * @param {number} aggData.weightedAvgCostBasis
+ * @param {number} aggData.overallUnrealizedPL
+ * @param {number} aggData.overallUnrealizedPercent
+ * @param {object|undefined} aggData.priceData - Price data for this ticker.
+ * @param {any[]} aggData.underlyingLots - Array of the individual lots making up this aggregate.
+ * @returns {string} HTML string for the aggregated card.
+ */
+function createAggregatedCardHTML(aggData) {
+    const {
+        ticker, exchange, totalQuantity, totalCurrentValue, weightedAvgCostBasis,
+        overallUnrealizedPL, overallUnrealizedPercent, priceData, underlyingLots
+    } = aggData;
+
+    const currentPriceValue = (priceData && typeof priceData.price === 'number') ? priceData.price : null;
+    const previousPriceValue = (priceData && typeof priceData.previousPrice === 'number') ? priceData.previousPrice : null;
+    const priceStatus = (priceData && typeof priceData.price !== 'number') ? priceData.price : null;
+
+    const plClass = overallUnrealizedPL >= 0 ? 'positive' : 'negative';
+    const logoSrc = exchangeLogoMap[exchange] || defaultLogo;
+
+    let trendIndicator = '<span class="trend-placeholder">-</span>';
+    if (currentPriceValue !== null && previousPriceValue !== null) {
+        if (currentPriceValue > previousPriceValue) trendIndicator = '<span class="trend-up positive">▲</span>';
+        else if (currentPriceValue < previousPriceValue) trendIndicator = '<span class="trend-down negative">▼</span>';
+        else trendIndicator = '<span class="trend-flat">→</span>';
+    } else if (currentPriceValue !== null) {
+        trendIndicator = '<span class="trend-placeholder">-</span>';
+    }
+
+    let currentPriceDisplay;
+    if (currentPriceValue !== null) currentPriceDisplay = formatAccounting(currentPriceValue);
+    else if (priceStatus === 'invalid') currentPriceDisplay = '<span class="negative">Invalid</span>';
+    else if (priceStatus === 'error') currentPriceDisplay = '<span class="negative">Error</span>';
+    else currentPriceDisplay = '--';
+
+    const lotsForModal = underlyingLots.map(lot => ({
+        id: lot.id,
+        purchase_date: lot.purchase_date,
+        cost_basis: lot.cost_basis,
+        quantity_remaining: lot.quantity_remaining
+    }));
+    const encodedLots = encodeURIComponent(JSON.stringify(lotsForModal));
+
+    return `
+        <div class="position-card aggregated-card" data-ticker="${ticker}" data-exchange="${exchange}">
+            <div class="card-header">
+                <img src="${logoSrc}" alt="${exchange} logo" class="exchange-logo">
+                <h3 class="ticker">${ticker}</h3>
+                <small style="margin-left: auto;">(${underlyingLots.length} Lots)</small>
+            </div>
+            <div class="card-body">
+                <div class="card-stats">
+                    <p><span>Total Qty:</span> <strong>${formatQuantity(totalQuantity)}</strong></p>
+                    <p><span>Avg Basis:</span> <strong>${formatAccounting(weightedAvgCostBasis)}</strong></p>
+                    <p><span>Current:</span> <strong>${currentPriceDisplay}</strong></p>
+                </div>
+                <div class="card-performance">
+                    <p><span>Total P/L:</span> <strong class="unrealized-pl ${plClass}">${formatAccounting(overallUnrealizedPL)}</strong> ${trendIndicator}</p>
+                    <p><span>Total P/L %:</span> <strong class="unrealized-pl ${plClass}">${overallUnrealizedPercent.toFixed(2)}%</strong></p>
+                    <p><span>Total Value:</span> <strong>${formatAccounting(totalCurrentValue)}</strong></p>
+                </div>
+            </div>
+             <div class="card-chart-placeholder">Spark Chart Area</div>
+             <div class="card-footer">
+                <span class="limits-text">Limits managed per lot</span> {/* <<< REMOVED COMMENT HERE */}
+                <div class="action-buttons">
+                    <button class="selective-sell-btn" data-ticker="${ticker}" data-exchange="${exchange}" data-total-quantity="${totalQuantity}" data-lots="${encodedLots}">Sell</button>
+                    {/* Removed other buttons */}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 
 /**
  * Creates the HTML for a single position table row.
@@ -225,33 +310,89 @@ async function loadAndPrepareDashboardData() {
 }
 
 /**
- * Processes raw lot data: calculates metrics, filters, sorts, and calculates totals.
+ * Processes raw lot data: calculates metrics, filters, groups by Ticker/Exchange, sorts, and calculates totals.
  * @param {any[]} openLots - Raw array of open lots.
  * @param {string} filterValue - Uppercase ticker filter string.
  * @param {string} sortValue - Sort criteria string.
- * @returns {{processedLots: any[], totalUnrealizedPL: number, totalCurrentValue: number}}
+ * @returns {{aggregatedLots: any[], individualLotsForTable: any[], totalUnrealizedPL: number, totalCurrentValue: number}}
  */
-function processAndSortLots(openLots, filterValue, sortValue) {
+function processFilterAndSortLots(openLots, filterValue, sortValue) {
     let totalUnrealizedPL = 0;
     let totalCurrentValue = 0;
+    const aggregationMap = new Map();
 
-    const processedLots = openLots
+    const individualLotsForTable = openLots
         .map(lot => {
             const priceData = state.priceCache.get(lot.ticker);
             const currentPriceValue = (priceData && typeof priceData.price === 'number') ? priceData.price : null;
             const metrics = calculateLotMetrics(lot, currentPriceValue);
+
+            const processedLot = { ...lot, ...metrics, priceData }; // Combine lot, metrics, and priceData
+
             // Accumulate totals *after* calculating metrics for each lot
             totalUnrealizedPL += metrics.unrealizedPL;
             totalCurrentValue += metrics.currentValue;
-            return { ...lot, ...metrics, priceData }; // Combine lot, metrics, and priceData
+
+            // --- Aggregation Logic ---
+            const aggKey = `${lot.ticker}|${lot.exchange}`;
+            if (!aggregationMap.has(aggKey)) {
+                aggregationMap.set(aggKey, {
+                    ticker: lot.ticker,
+                    exchange: lot.exchange,
+                    totalQuantity: 0,
+                    totalCurrentValue: 0,
+                    totalCostBasisValue: 0, // Sum of (cost_basis * quantity_remaining) for weighted avg
+                    underlyingLots: []
+                });
+            }
+            const aggEntry = aggregationMap.get(aggKey);
+            aggEntry.totalQuantity += lot.quantity_remaining;
+            aggEntry.totalCurrentValue += metrics.currentValue;
+            aggEntry.totalCostBasisValue += lot.cost_basis * lot.quantity_remaining;
+            aggEntry.underlyingLots.push(processedLot); // Store the fully processed individual lot
+            // --- End Aggregation ---
+
+            return processedLot; // Return processed individual lot for table view filtering/sorting
         })
         .filter(lot => !filterValue || lot.ticker.toUpperCase().includes(filterValue));
 
-    // Apply sorting (logic remains the same as before)
-    processedLots.sort((a, b) => {
+    // --- Finalize Aggregated Data ---
+    const aggregatedLots = Array.from(aggregationMap.values()).map(agg => {
+        const weightedAvgCostBasis = agg.totalQuantity > 0 ? agg.totalCostBasisValue / agg.totalQuantity : 0;
+        const overallUnrealizedPL = agg.totalCurrentValue - agg.totalCostBasisValue;
+        const overallUnrealizedPercent = agg.totalCostBasisValue !== 0 ? (overallUnrealizedPL / agg.totalCostBasisValue) * 100 : 0;
+        const priceData = state.priceCache.get(agg.ticker); // Get price data for the ticker
+
+        // Sort underlying lots by purchase date (useful for the selective sell modal)
+        agg.underlyingLots.sort((a, b) => a.purchase_date.localeCompare(b.purchase_date));
+
+        return {
+            ...agg,
+            weightedAvgCostBasis,
+            overallUnrealizedPL,
+            overallUnrealizedPercent,
+            priceData // Attach price data to aggregated object
+        };
+    }).filter(agg => !filterValue || agg.ticker.toUpperCase().includes(filterValue)); // Also filter aggregated list
+
+
+    // --- Apply Sorting ---
+    // Sort Aggregated Lots (for Card View)
+    aggregatedLots.sort((a, b) => {
          switch (sortValue) {
             case 'exchange-asc':
                 return a.exchange.localeCompare(b.exchange) || a.ticker.localeCompare(b.ticker);
+            // Proximity sort might be complex/less useful for aggregated view, TBD
+            case 'gain-desc': return b.overallUnrealizedPercent - a.overallUnrealizedPercent || a.ticker.localeCompare(b.ticker);
+            case 'loss-asc': return a.overallUnrealizedPercent - b.overallUnrealizedPercent || a.ticker.localeCompare(b.ticker);
+            case 'ticker-asc': default: return a.ticker.localeCompare(b.ticker);
+        }
+    });
+
+    // Sort Individual Lots (for Table View - same logic as before)
+    individualLotsForTable.sort((a, b) => {
+         switch (sortValue) {
+            case 'exchange-asc': return a.exchange.localeCompare(b.exchange) || a.ticker.localeCompare(b.ticker);
             case 'proximity-asc': {
                 const getProximityPercent = (lot) => {
                     let proxPercent = Infinity;
@@ -263,23 +404,26 @@ function processAndSortLots(openLots, filterValue, sortValue) {
                     return proxPercent < 0 ? Infinity : proxPercent; // Treat already passed limits as furthest away
                 };
                 return getProximityPercent(a) - getProximityPercent(b) || a.ticker.localeCompare(b.ticker);
-            }
+             }
             case 'gain-desc': return b.unrealizedPercent - a.unrealizedPercent || a.ticker.localeCompare(b.ticker);
             case 'loss-asc': return a.unrealizedPercent - b.unrealizedPercent || a.ticker.localeCompare(b.ticker);
             case 'ticker-asc': default: return a.ticker.localeCompare(b.ticker);
         }
     });
 
-    return { processedLots, totalUnrealizedPL, totalCurrentValue };
+    return { aggregatedLots, individualLotsForTable, totalUnrealizedPL, totalCurrentValue };
 }
+
 
 /**
  * Renders the dashboard UI elements (cards, table, footers).
- * @param {any[]} processedLots - Processed and sorted array of lots.
+ * Now uses aggregatedLots for Card View and individualLotsForTable for Table View.
+ * @param {any[]} aggregatedLots - Processed and sorted array of aggregated lots.
+ * @param {any[]} individualLotsForTable - Processed and sorted array of individual lots.
  * @param {number} totalUnrealizedPL - Calculated total P/L.
  * @param {number} totalCurrentValue - Calculated total value.
  */
-function renderDashboardUI(processedLots, totalUnrealizedPL, totalCurrentValue) {
+function renderDashboardUI(aggregatedLots, individualLotsForTable, totalUnrealizedPL, totalCurrentValue) {
     const cardGrid = document.getElementById('positions-cards-grid');
     const tableBody = document.getElementById('open-positions-tbody');
     const totalPlFooter = document.getElementById('dashboard-unrealized-pl-total');
@@ -287,23 +431,28 @@ function renderDashboardUI(processedLots, totalUnrealizedPL, totalCurrentValue) 
 
     if (!cardGrid || !tableBody || !totalPlFooter || !totalValueFooter) {
         console.error("Dashboard renderer (UI): Missing required DOM elements.");
-        return; // Early exit if critical elements are missing
+        return;
     }
 
-    // Handle empty or filtered states
-    if (processedLots.length === 0) {
-        const filterInput = /** @type {HTMLInputElement} */ (document.getElementById('dashboard-ticker-filter'));
-        // Check if the original data was empty vs. just filtered out
-        const isEmpty = state.dashboardOpenLots.length === 0;
-        const message = isEmpty ? 'No open positions found.' : (filterInput && filterInput.value ? 'No positions match the current filter.' : 'No open positions found.'); // Adjust message based on filter
+    const filterInput = /** @type {HTMLInputElement} */ (document.getElementById('dashboard-ticker-filter'));
+    const isEmpty = state.dashboardOpenLots.length === 0;
+    const message = isEmpty ? 'No open positions found.' : (filterInput && filterInput.value ? 'No positions match the current filter.' : 'No open positions found.');
+
+    // Render Aggregated Cards
+    if (aggregatedLots.length === 0) {
         cardGrid.innerHTML = `<p>${message}</p>`;
+    } else {
+        cardGrid.innerHTML = aggregatedLots.map(agg => createAggregatedCardHTML(agg)).join('');
+    }
+
+    // Render Individual Lot Table Rows
+    if (individualLotsForTable.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="10">${message}</td></tr>`;
         // Ensure totals are zeroed out when no lots are displayed
         totalUnrealizedPL = 0;
         totalCurrentValue = 0;
     } else {
-        cardGrid.innerHTML = processedLots.map(lot => createCardHTML(lot)).join('');
-        tableBody.innerHTML = processedLots.map(lot => createTableRowHTML(lot)).join('');
+        tableBody.innerHTML = individualLotsForTable.map(lot => createTableRowHTML(lot)).join('');
     }
 
     // Update footers - always update, even if zero
@@ -318,7 +467,7 @@ function renderDashboardUI(processedLots, totalUnrealizedPL, totalCurrentValue) 
 
 /**
  * Main function to render the dashboard page (orchestrator).
- * Fetches data, processes, sorts, and populates the DOM.
+ * Fetches data, processes, aggregates, sorts, and populates the DOM.
  */
 export async function renderDashboardPage() {
     const cardGrid = document.getElementById('positions-cards-grid');
@@ -328,45 +477,39 @@ export async function renderDashboardPage() {
     const totalPlFooter = document.getElementById('dashboard-unrealized-pl-total');
     const totalValueFooter = document.getElementById('dashboard-total-value');
 
-    // Basic check for essential elements needed before proceeding
     if (!cardGrid || !tableBody || !filterInput || !sortSelect || !totalPlFooter || !totalValueFooter) {
         console.error("Dashboard renderer orchestration: Missing required DOM elements. Aborting render.");
-        // Optionally display a user-facing error in a known safe element if possible
         return;
     }
 
-    // Show initial loading state for table and footers
-    cardGrid.innerHTML = '<p>Loading open positions...</p>'; // Keep card grid loading separate for now
+    // Show initial loading state
+    cardGrid.innerHTML = '<p>Loading open positions...</p>';
     tableBody.innerHTML = '<tr><td colspan="10">Loading open positions...</td></tr>';
     totalPlFooter.textContent = '--';
     totalValueFooter.textContent = '--';
 
     try {
-        // Step 1: Load data (fetches positions, prices, updates state)
+        // Step 1: Load data
         const openLots = await loadAndPrepareDashboardData();
 
-        // Get filter/sort values *after* data load attempt
+        // Get filter/sort values
         const filterValue = filterInput.value.toUpperCase();
         const sortValue = sortSelect.value;
 
-        // Step 2: Process data (calculates metrics, filters, sorts, gets totals)
-        // This function now uses state.priceCache internally but relies on openLots from step 1
-        const { processedLots, totalUnrealizedPL, totalCurrentValue } = processAndSortLots(openLots, filterValue, sortValue);
+        // Step 2: Process data
+        const { aggregatedLots, individualLotsForTable, totalUnrealizedPL, totalCurrentValue } = processFilterAndSortLots(openLots, filterValue, sortValue);
 
-        // Step 3: Render the UI with the processed data
-        renderDashboardUI(processedLots, totalUnrealizedPL, totalCurrentValue);
+        // Step 3: Render the UI
+        renderDashboardUI(aggregatedLots, individualLotsForTable, totalUnrealizedPL, totalCurrentValue);
 
     } catch (error) {
-        // Catch any unexpected errors during the orchestration
         console.error("Unexpected error during dashboard page render:", error);
         showToast(`An unexpected error occurred while loading the dashboard: ${error.message}`, 'error');
-        // Display error state in UI
         const errorMsg = 'Error loading positions.';
         if (cardGrid) cardGrid.innerHTML = `<p>${errorMsg}</p>`;
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="10">${errorMsg}</td></tr>`;
         if (totalPlFooter) totalPlFooter.textContent = 'Error';
         if (totalValueFooter) totalValueFooter.textContent = 'Error';
-        // Ensure state is cleared on error
         updateState({ dashboardOpenLots: [] });
     }
 }

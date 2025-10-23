@@ -1,5 +1,5 @@
 // public/api.js
-// Version Updated (Includes previousPrice logic in updatePricesForView)
+// Version Updated (Added fetchSalesForLot)
 /**
  * @file This file centralizes all client-side API (fetch) calls to the server.
  * @module api
@@ -61,8 +61,6 @@ export async function updatePricesForView(viewDate, tickersToUpdate) {
         console.log("updatePricesForView: Exiting early - no tickers to update.");
         return;
     }
-
-    // You might want loading indicators here if desired
 
     try {
         const isToday = viewDate === getCurrentESTDateString();
@@ -354,10 +352,9 @@ export async function deleteJournalEntry(id) {
     });
     return handleResponse(response);
 }
-// ... (other imports and functions) ...
 
 /**
- * Fetches the sales history for a specific parent BUY lot ID.
+ * Fetches the sales history for a specific parent BUY lot ID.  <<< NEW FUNCTION
  * @param {string|number} buyId - The ID of the parent BUY transaction.
  * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<any[]>} A promise resolving to an array of sales transaction objects with calculated P/L.
@@ -369,5 +366,3 @@ export async function fetchSalesForLot(buyId, holderId) {
     const response = await fetch(`/api/transactions/sales/${buyId}?holder=${holderId}`);
     return handleResponse(response);
 }
-
-// ... (rest of the file) ...
