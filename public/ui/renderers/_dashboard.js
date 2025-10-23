@@ -190,10 +190,14 @@ function createTableRowHTML(lot, priceData) {
     const limitDownText = lot.limit_price_down ? formatAccounting(lot.limit_price_down, false) : '--';
     const limitsCombinedText = `${limitUpText} / ${limitDownText}`;
 
-    // Proximity Indicator (optional for table)
+    // MODIFIED (X.6): Add title attribute to proximity indicator span
     let proximityIndicator = '';
-    if (metrics.proximity === 'up') proximityIndicator = '🔥';
-    else if (metrics.proximity === 'down') proximityIndicator = '❄️';
+    if (metrics.proximity === 'up') {
+        proximityIndicator = '<span class="limit-proximity-indicator" title="Nearing Take Profit Limit">🔥</span>';
+    } else if (metrics.proximity === 'down') {
+        proximityIndicator = '<span class="limit-proximity-indicator" title="Nearing Stop Loss Limit">❄️</span>';
+    }
+    // END MODIFICATION
 
     // Display Price or Status
     let currentPriceDisplay;

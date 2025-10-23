@@ -9,9 +9,9 @@
 
 #add-journal-entry-container {
      background-color: var(--info-panel-bg);
-     padding: 20px; /* Added based on template */
-     border: 1px solid var(--container-border); /* Added based on template */
-     border-radius: 8px; /* Added based on template */
+     padding: 20px;
+     border: 1px solid var(--container-border);
+     border-radius: 8px;
 }
 
 #journal-notes {

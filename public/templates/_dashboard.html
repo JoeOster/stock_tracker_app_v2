@@ -7,17 +7,17 @@
         <button class="sub-tab" data-sub-tab="dashboard-table-view">Table View</button>
     </div>
 
-    <div id="dashboard-controls" class="filter-bar">
-        <input type="text" id="dashboard-ticker-filter" placeholder="Filter by Ticker...">
+    <div id="dashboard-controls" class="filter-bar"> <input type="text" id="dashboard-ticker-filter" placeholder="Filter by Ticker...">
         <select id="dashboard-sort-select">
             <option value="ticker-asc">Sort by Ticker (A-Z)</option>
             <option value="exchange-asc">Sort by Exchange</option>
             <option value="proximity-asc">Sort by Limit Proximity</option>
             <option value="gain-desc">Sort by Gain %</option>
             <option value="loss-asc">Sort by Loss %</option>
-        </select>
+            </select>
         <button id="dashboard-refresh-prices-btn">Refresh Prices</button>
     </div>
+
 
     <div class="sub-tab-content">
         <div id="dashboard-card-view" class="sub-tab-panel active">
@@ -37,9 +37,7 @@
                         <th class="numeric" data-sort="cost_basis" data-type="numeric">Basis</th>
                         <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Qty</th>
                         <th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
-                        {/* --- Task X.9: Shorten Header --- */}
                         <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unr. P/L ($ | %)</th>
-                        {/* --- End Task X.9 --- */}
                         <th class="numeric">Limits (Up/Down)</th>
                         <th class="center-align actions-cell sticky-col">Actions</th>
                     </tr>
@@ -49,13 +47,11 @@
                 </tbody>
                  <tfoot>
                      <tr>
-                        {/* --- Task X.10: Comments Removed --- */}
                          <td colspan="6" style="text-align: right; font-weight: bold;">Totals:</td>
                          <td id="dashboard-total-value" class="numeric">--</td>
                          <td id="dashboard-unrealized-pl-total" class="numeric">--</td>
                          <td colspan="2"></td>
-                         {/* --- End Task X.10 --- */}      
-                     </tr>
+                         </tr>
                  </tfoot>
             </table>
         </div>
