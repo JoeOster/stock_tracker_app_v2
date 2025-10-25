@@ -6,6 +6,30 @@ This document outlines the remaining tasks for the Portfolio Tracker application
 
 ---
 
+## **UX Considerations (To Review)**
+
+These are areas to consider for improving the user experience during or after the main phases.
+
+* **Task UX.1: Loading States & Feedback:**
+  * [ ] Review loading feedback during asynchronous operations (tab switching, manual price refresh, CSV commit).
+  * [ ] Consider adding spinners or disabling buttons during processing to provide clearer feedback beyond toasts.
+* **Task UX.2: Importer Workflow Clarity:**
+  * [ ] Add more descriptive text/visual cues during the reconciliation step.
+  * [ ] Ensure error messages during parsing/processing are specific (e.g., row number, error type).
+  * [ ] **(New)** Enhance alert messages for skipped imports (e.g., invalid price, no open BUY lot) to include specific details from the CSV row (Ticker, Date, Qty, Price) to aid manual reconciliation.
+  * [ ] **(New)** Implement detection/messaging for uploading a CSV that seems identical (or contains mostly identical rows) to a previously imported file for the same account holder. Consider if/how to track import history per file/date. Maybe add a "source\_import\_id" to transactions table?
+* **Task UX.3: State Persistence (Filters/Sorts):**
+  * [ ] Decide if filter/sort states on Ledger, Journal, Dashboard should persist when switching main tabs.
+  * [ ] If yes, implement storing/retrieving these UI states (e.g., in global `state` or `localStorage`).
+* **Task UX.4: Modal Management:**
+  * [ ] Review modal closing behavior (background click, escape key).
+  * [ ] Ensure context is clear when modals (like Edit) are opened from different views.
+  * [ ] Consider if the "Manage Position Details" modal should become a dedicated view/panel instead of a modal due to its planned complexity.
+* **Task UX.5: Settings Navigation:**
+  * [ ] Review clarity of Settings modal tab/sub-tab hierarchy.
+
+---
+
 ## **Phase 1: Complete Dashboard Core Functionality**
 
 **Goal:** Finalize the main user interaction loop for managing positions directly from the dashboard.
