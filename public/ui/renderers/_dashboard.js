@@ -1,5 +1,5 @@
 // public/ui/renderers/_dashboard.js
-// Version Refactored (Task X.16 + History Button X.4 + Aggregation Logic X.5 + Conditional Buttons)
+// Version Refactored (Task X.16 + History Button X.4 + Aggregation Logic X.5 + Conditional Buttons + Layout Fixes)
 /**
  * @file Renderer for the Dashboard page (Open Positions). Includes refactored structure, aggregation logic, and conditional button display on cards.
  * @module renderers/_dashboard
@@ -92,7 +92,16 @@ function calculateLotMetrics(lot, currentPrice) {
  * If the aggData contains only one lot, it renders like an individual lot card.
  * If it contains multiple lots, it renders an aggregated summary card with different buttons.
  * @param {object} aggData - The aggregated data for a ticker/exchange combination.
- * // ... (rest of JSDoc params) ...
+ * @param {string} aggData.ticker
+ * @param {string} aggData.exchange
+ * @param {number} aggData.totalQuantity
+ * @param {number} aggData.totalCurrentValue
+ * @param {number} aggData.totalCostBasisValue
+ * @param {number} aggData.weightedAvgCostBasis
+ * @param {number} aggData.overallUnrealizedPL
+ * @param {number} aggData.overallUnrealizedPercent
+ * @param {object|undefined} aggData.priceData - Price data for this ticker.
+ * @param {any[]} aggData.underlyingLots - Array of the individual lots making up this aggregate.
  * @returns {string} HTML string for the card.
  */
 function createAggregatedCardHTML(aggData) {
@@ -117,14 +126,14 @@ function createAggregatedCardHTML(aggData) {
     else if (priceStatus === 'error') currentPriceDisplay = '<span class="negative">Error</span>';
     else currentPriceDisplay = '--';
 
-    let trendIndicator = '<span class="trend-placeholder">-</span>';
+    let trendIndicator = ''; // Default to empty string
     if (currentPriceValue !== null && previousPriceValue !== null) {
-        if (currentPriceValue > previousPriceValue) trendIndicator = '<span class="trend-up positive">▲</span>';
-        else if (currentPriceValue < previousPriceValue) trendIndicator = '<span class="trend-down negative">▼</span>';
-        else trendIndicator = '<span class="trend-flat">→</span>';
-    } else if (currentPriceValue !== null) {
-        trendIndicator = '<span class="trend-placeholder">-</span>';
+        if (currentPriceValue > previousPriceValue) trendIndicator = ' <span class="trend-up positive">▲</span>';
+        else if (currentPriceValue < previousPriceValue) trendIndicator = ' <span class="trend-down negative">▼</span>';
+        // else trendIndicator = ' <span class="trend-flat">→</span>'; // Optional: Add for no change
     }
+    // No placeholder if current price exists but previous doesn't
+
 
     // --- Prepare data specific to single or aggregated view ---
     let cardClass = 'position-card';
@@ -142,27 +151,31 @@ function createAggregatedCardHTML(aggData) {
         headerNote = `Lot ID: ${singleLot.id}`;
 
         const plClass = singleLot.unrealizedPL >= 0 ? 'positive' : 'negative';
+        // Proximity indicator comes from the single lot's calculated metrics
         if (singleLot.proximity === 'up') proximityIndicator = '<span class="limit-proximity-indicator" title="Nearing Take Profit Limit">🔥</span>';
         else if (singleLot.proximity === 'down') proximityIndicator = '<span class="limit-proximity-indicator" title="Nearing Stop Loss Limit">❄️</span>';
 
-        // *** MOVED LIMITS TEXT HERE ***
         const limitUpText = singleLot.limit_price_up ? formatAccounting(singleLot.limit_price_up, false) : '--';
         const limitDownText = singleLot.limit_price_down ? formatAccounting(singleLot.limit_price_down, false) : '--';
+        // limitsCombinedText is used for tooltip below
         const limitsCombinedText = `Up: ${limitUpText} / Down: ${limitDownText}`;
 
+        // Left Column Content (Stats)
         statsHTML = `
             <p><span>Qty:</span> <strong>${formatQuantity(singleLot.quantity_remaining)}</strong></p>
             <p><span>Basis:</span> <strong>${formatAccounting(singleLot.cost_basis)}</strong></p>
-            <p><span>Limits:</span> <strong title="${limitsCombinedText}" class="limits-text">${limitsCombinedText}</strong></p> 
-        `;
-        performanceHTML = `
-            <p><span>Current:</span> <strong>${currentPriceDisplay}</strong></p> 
-            <p><span>P/L:</span> <strong class="unrealized-pl ${plClass}">${formatAccounting(singleLot.unrealizedPL)}</strong> ${trendIndicator} ${proximityIndicator}</p>
-            <p><span>P/L %:</span> <strong class="unrealized-pl ${plClass}">${singleLot.unrealizedPercent.toFixed(2)}%</strong></p>
             <p><span>Value:</span> <strong>${formatAccounting(singleLot.currentValue)}</strong></p>
+            <p><span>Limit ↑:</span> <strong title="${limitsCombinedText}">${limitUpText}</strong></p>
+        `;
+        // Right Column Content (Performance)
+        performanceHTML = `
+            <p><span>Current:</span> <strong>${currentPriceDisplay}</strong></p>
+            <p><span>P/L $:</span> <strong class="unrealized-pl ${plClass}">${formatAccounting(singleLot.unrealizedPL)}</strong></p>
+            <p><span>P/L %:</span> <strong class="unrealized-pl ${plClass}">${singleLot.unrealizedPercent.toFixed(2)}%</strong>${trendIndicator}</p>
+            <p><span>Limit ↓:</span> <strong title="${limitsCombinedText}">${limitDownText}</strong></p>
         `;
 
-        // Footer with all 4 buttons for single lot (NO limits text anymore)
+        // Footer with all 4 buttons for single lot
         footerHTML = `
             <div class="action-buttons" style="margin-left: auto;">
                 <button class="sell-from-lot-btn" data-buy-id="${singleLot.id}" data-ticker="${ticker}" data-exchange="${exchange}" data-quantity="${singleLot.quantity_remaining}">Sell</button>
@@ -175,18 +188,20 @@ function createAggregatedCardHTML(aggData) {
         // --- AGGREGATED LOT CARD ---
         cardClass += ' aggregated-card';
         const plClass = overallUnrealizedPL >= 0 ? 'positive' : 'negative';
+        // Prepare data needed for modals triggered from aggregated card
         const lotsForModal = underlyingLots.map(lot => ({ id: lot.id, purchase_date: lot.purchase_date, cost_basis: lot.cost_basis, quantity_remaining: lot.quantity_remaining }));
         const encodedLots = encodeURIComponent(JSON.stringify(lotsForModal));
 
         statsHTML = `
-            <p><span>Total Qty:</span> <strong>${formatQuantity(totalQuantity)}</strong></p>
-            <p><span>Avg Basis:</span> <strong>${formatAccounting(weightedAvgCostBasis)}</strong></p>
-            <p><span>Current:</span> <strong>${currentPriceDisplay}</strong></p>
+            <p><span>Qty:</span> <strong>${formatQuantity(totalQuantity)}</strong></p>
+            <p><span>Basis:</span> <strong>${formatAccounting(weightedAvgCostBasis)}</strong></p>
+            <p><span>T_Value:</span> <strong>${formatAccounting(totalCurrentValue)}</strong></p>
+            <p><small>Limits: See Manage Lots</small></p>
         `;
         performanceHTML = `
-            <p><span>Total P/L:</span> <strong class="unrealized-pl ${plClass}">${formatAccounting(overallUnrealizedPL)}</strong> ${trendIndicator}</p>
-            <p><span>Total P/L %:</span> <strong class="unrealized-pl ${plClass}">${overallUnrealizedPercent.toFixed(2)}%</strong></p>
-            <p><span>Total Value:</span> <strong>${formatAccounting(totalCurrentValue)}</strong></p>
+            <p><span>Current:</span> <strong>${currentPriceDisplay}</strong></p>
+            <p><span>T_P/L:</span> <strong class="unrealized-pl ${plClass}">${formatAccounting(overallUnrealizedPL)}</strong></p>
+            <p><span>T_P/L %:</span> <strong class="unrealized-pl ${plClass}">${overallUnrealizedPercent.toFixed(2)}%</strong>${trendIndicator}</p>
         `;
         // Footer with Sell (selective) and Manage Lots buttons for aggregated card
         footerHTML = `
@@ -220,8 +235,7 @@ function createAggregatedCardHTML(aggData) {
             </div>
         </div>
     `;
-}
-
+} // End of createAggregatedCardHTML
 
 /**
  * Creates the HTML for a single position table row.
@@ -238,18 +252,25 @@ function createTableRowHTML(lot) {
     const plClass = unrealizedPL >= 0 ? 'positive' : 'negative';
     const logoSrc = exchangeLogoMap[lot.exchange] || defaultLogo;
 
-    let trendIndicator = '';
+    let trendIndicator = ''; // Default to empty string
     if (currentPriceValue !== null && previousPriceValue !== null) {
         if (currentPriceValue > previousPriceValue) trendIndicator = ' <span class="trend-up positive">▲</span>';
         else if (currentPriceValue < previousPriceValue) trendIndicator = ' <span class="trend-down negative">▼</span>';
-        else trendIndicator = ' <span class="trend-flat">→</span>';
-    } else if (currentPriceValue !== null) {
-        trendIndicator = ' <span class="trend-placeholder">-</span>';
+        // else trendIndicator = ' <span class="trend-flat">→</span>'; // Optional: Add for no change
+    }
+    // No placeholder if current price exists but previous doesn't
+
+
+    // Simplified Limits Display for Table
+    const limitUpText = lot.limit_price_up ? `Up: ${formatAccounting(lot.limit_price_up, false)}` : '';
+    const limitDownText = lot.limit_price_down ? `Down: ${formatAccounting(lot.limit_price_down, false)}` : '';
+    let limitsCombinedText = '';
+    if (limitUpText && limitDownText) {
+        limitsCombinedText = `${limitUpText} / ${limitDownText}`;
+    } else {
+        limitsCombinedText = limitUpText || limitDownText; // Show one or the other, or '' if both are empty
     }
 
-    const limitUpText = lot.limit_price_up ? formatAccounting(lot.limit_price_up, false) : '--';
-    const limitDownText = lot.limit_price_down ? formatAccounting(lot.limit_price_down, false) : '--';
-    const limitsCombinedText = `${limitUpText} / ${limitDownText}`;
 
     let proximityIndicator = '';
     if (proximity === 'up') proximityIndicator = '<span class="limit-proximity-indicator" title="Nearing Take Profit Limit">🔥</span>';
@@ -276,9 +297,7 @@ function createTableRowHTML(lot) {
             <td class="numeric">${limitsCombinedText}</td>
             <td class="center-align actions-cell sticky-col">
                 <button class="sell-from-lot-btn" data-buy-id="${lot.id}" data-ticker="${lot.ticker}" data-exchange="${lot.exchange}" data-quantity="${lot.quantity_remaining}">Sell</button>
-                {/* --- ADDED HISTORY BUTTON --- */}
                 <button class="sales-history-btn" data-buy-id="${lot.id}" title="View Sales History">History</button>
-                {/* --- END ADDED HISTORY BUTTON --- */}
                 <button class="set-limit-btn" data-id="${lot.id}">Limits</button>
                 <button class="edit-buy-btn" data-id="${lot.id}">Edit</button>
             </td>
@@ -331,10 +350,9 @@ function processFilterAndSortLots(openLots, filterValue, sortValue) {
         .map(lot => {
             const priceData = state.priceCache.get(lot.ticker);
             const currentPriceValue = (priceData && typeof priceData.price === 'number') ? priceData.price : null;
-           // const metrics = calculateLotMetrics(lot, currentPriceValue);
-            console.log(`Processing Lot ID ${lot.id} (${lot.ticker}): Price=${currentPriceValue}, Basis=${lot.cost_basis}, Qty=${lot.quantity_remaining}`);
+            // console.log(`Processing Lot ID ${lot.id} (${lot.ticker}): Price=${currentPriceValue}, Basis=${lot.cost_basis}, Qty=${lot.quantity_remaining}`); // Keep for debugging if needed
             const metrics = calculateLotMetrics(lot, currentPriceValue);
-            console.log(` -> Metrics for Lot ID ${lot.id}:`, metrics); // Check if unrealizedPL/Percent are calculated
+            // console.log(` -> Metrics for Lot ID ${lot.id}:`, metrics); // Keep for debugging if needed
 
             const processedLot = { ...lot, ...metrics, priceData }; // Combine lot, metrics, and priceData
 
