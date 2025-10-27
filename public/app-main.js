@@ -1,5 +1,5 @@
 // /public/app-main.js
-// Version Updated (Added Sales History & Selective Sell Modals)
+// Version Updated (Added Manage Position Modal)
 /**
  * @file Main application entry point. Handles initialization, state management,
  * and view switching.
@@ -52,7 +52,8 @@ async function initialize() {
             modal_advice, modal_settings, modal_edit_transaction, modal_confirm, // Modal templates
             modal_sell_from_position, modal_confirm_fill, modal_chart_zoom,
             modal_sales_history,
-            modal_selective_sell // <<< ADDED VARIABLE
+            modal_selective_sell,
+            modal_manage_position // <<< ADDED VARIABLE
         ] = await Promise.all([
             // Page fetches
             fetch('./templates/_alerts.html').then(res => res.text()),
@@ -73,7 +74,8 @@ async function initialize() {
             fetch('./templates/_modal_confirm_fill.html').then(res => res.text()),
             fetch('./templates/_modal_chart_zoom.html').then(res => res.text()),
             fetch('./templates/_modal_sales_history.html').then(res => res.text()),
-            fetch('./templates/_modal_selective_sell.html').then(res => res.text()) // <<< ADDED FETCH
+            fetch('./templates/_modal_selective_sell.html').then(res => res.text()),
+            fetch('./templates/_modal_manage_position.html').then(res => res.text()) // <<< ADDED FETCH
        ]);
 
         // Inject page templates
@@ -89,7 +91,8 @@ async function initialize() {
             modal_confirm_fill +
             modal_chart_zoom +
             modal_sales_history +
-            modal_selective_sell; // <<< ADDED VARIABLE TO INJECTION
+            modal_selective_sell +
+            modal_manage_position; // <<< ADDED VARIABLE TO INJECTION
 
     } catch (error) {
         console.error("[App Main] Failed to load or inject one or more templates:", error);

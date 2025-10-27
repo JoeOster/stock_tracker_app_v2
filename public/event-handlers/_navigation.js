@@ -106,8 +106,7 @@ export function initializeNavigationHandlers() {
 // Version Updated (Add Dashboard View)
 
 // ... other imports ...
-import { loadDashboardPage } from './_dashboard.js'; // <-- Import dashboard loader
-
+import { loadDashboardPage } from './_dashboard_loader.js';
 // ... autosizeAccountSelector ...
 
 export async function switchView(viewType, viewValue = null) {
