@@ -4,7 +4,7 @@
  * @module event-handlers/_dashboard_loader
  */
 
-import { renderDashboardPage } from '../ui/renderers/_dashboard_renders';
+import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
 /**
  * Loads data for the dashboard page (which triggers the renderer).
  */

@@ -6,7 +6,7 @@
 
 import { state } from '../state.js';
 // Will update this import later when renderer is split
-import { renderDashboardPage } from '../ui/renderers/_dashboard_renders.js';
+import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
 import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
 // UPDATED: Import handleResponse for potential future batch fetch
 import { fetchSalesForLot, updateAllPrices, handleResponse } from '../api.js';

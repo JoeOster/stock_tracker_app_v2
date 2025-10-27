@@ -264,3 +264,87 @@
 .modal-actions button {
     width: auto; /* Don't force full width */
 }
+
+/* public/css/components/_modals.css */
+/* Contains styles for all modal dialogs. */
+
+/* --- General Modal Styles --- */
+.modal {
+    /* ... (keep existing display, position, etc.) ... */
+    z-index: 1000; /* Base z-index for the background overlay */
+    background-color: rgba(0,0,0,.6);
+    /* ... (rest of .modal styles) ... */
+}
+
+.modal-content {
+    /* ... (keep existing background, padding, etc.) ... */
+    z-index: 1001; /* Base z-index for general modal content */
+    /* ... (rest of .modal-content styles) ... */
+}
+
+/* --- Specific Modal Z-indices --- */
+
+/* Settings, Advice, Chart Zoom, Sales History (Old), Confirm */
+/* These open directly from the main app, use the base content z-index */
+#settings-modal .modal-content,
+#advice-modal .modal-content,
+#chart-zoom-modal .modal-content,
+#sales-history-modal .modal-content, /* Keep for now, might be removed later */
+#confirm-modal .modal-content,
+#confirm-fill-modal .modal-content,
+#selective-sell-modal .modal-content { /* Selective sell opens from dashboard */
+    z-index: 1001;
+}
+
+/* Manage Position Modal - Higher than base modals */
+#manage-position-modal .modal-content {
+    z-index: 1010;
+}
+/* Ensure its background overlay is also appropriately high, but below its content */
+#manage-position-modal {
+    z-index: 1009; /* Slightly lower than its content */
+}
+
+
+/* Modals opened FROM Manage Position - Highest */
+#edit-modal .modal-content,
+#sell-from-position-modal .modal-content {
+    z-index: 1020;
+}
+/* Ensure their background overlays are also appropriately high */
+#edit-modal,
+#sell-from-position-modal {
+    z-index: 1019; /* Slightly lower than their content */
+}
+
+
+/* --- Close Button --- */
+.close-button {
+    color: var(--text-muted-color);
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-size: 28px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    /* Ensure close button is above its own modal content slightly */
+    z-index: 10; /* Relative z-index within the modal-content */
+    background: none;
+    padding: 0;
+    border: none;
+    width: auto;
+    height: auto;
+}
+/* Hide any text added via ::before or ::after */
+.close-button::before,
+.close-button::after {
+    content: none !important;
+}
+
+.close-button:hover {
+    color: var(--heading-color);
+    background: none;
+}
+
+/* ... (rest of modal styles like .modal-large, form styles, settings styles, etc.) ... */

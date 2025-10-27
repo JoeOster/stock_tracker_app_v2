@@ -149,13 +149,15 @@ async function initialize() {
     }
 
     // Switch to the default view
-    const defaultViewType = state.settings.defaultView || 'dashboard';
-    try {
-        await switchView(defaultViewType);
-    } catch (error) {
-        console.error(`[App Main] Error switching to default view (${defaultViewType}):`, error);
-        showToast(`Failed to load default view (${defaultViewType}). Please try selecting a tab manually.`, 'error');
-    }
+const defaultViewType = state.settings.defaultView || 'dashboard';
+    setTimeout(async () => {
+        try {
+            await switchView(defaultViewType);
+        } catch (error) {
+            console.error(`[App Main] Error switching to default view (${defaultViewType}):`, error);
+            showToast(`Failed to load default view (${defaultViewType}). Please try selecting a tab manually.`, 'error');
+        }
+    }, 50); // <<< INCREASE DELAY to 50ms (or 100ms if needed)
 }
 
 // --- Application Entry Point ---

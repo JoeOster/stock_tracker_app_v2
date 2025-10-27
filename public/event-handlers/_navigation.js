@@ -13,6 +13,8 @@ import { loadOrdersPage } from './_orders.js';
 import { loadAlertsPage } from './_alerts.js';
 import { loadChartsPage } from './_charts.js';
 import { loadJournalPage } from './_journal.js';
+// Import dashboard loader
+import { loadDashboardPage } from './_dashboard_loader.js'; // <-- Updated import
 
 /**
  * Autosizes an HTMLSelectElement to fit the width of its currently selected option's text.
@@ -33,7 +35,7 @@ export function autosizeAccountSelector(selectElement) {
     tempSpan.textContent = selectElement.options[selectElement.selectedIndex]?.text || 'All Accounts';
 
     document.body.appendChild(tempSpan);
-    selectElement.style.width = `${tempSpan.offsetWidth + 30}px`;
+    selectElement.style.width = `${tempSpan.offsetWidth + 30}px`; // Add padding for arrow
     document.body.removeChild(tempSpan);
 }
 
@@ -42,82 +44,15 @@ export function autosizeAccountSelector(selectElement) {
  * @param {string} viewType - The type of view to switch to (e.g., 'date', 'charts', 'journal').
  * @param {string|null} [viewValue=null] - The value associated with the view (e.g., a specific date).
  */
-
-/**
- * Initializes all event listeners related to main application navigation.
- */
-export function initializeNavigationHandlers() {
-    const tabsContainer = document.getElementById('tabs-container');
-    const globalHolderFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
-    const customDatePicker = /** @type {HTMLInputElement} */ (document.getElementById('custom-date-picker'));
-    const refreshBtn = document.getElementById('refresh-prices-btn');
-
-    if (globalHolderFilter) {
-        globalHolderFilter.addEventListener('change', async (e) => {
-            const target = /** @type {HTMLSelectElement} */ (e.target);
-            state.selectedAccountHolderId = target.value;
-            await switchView(state.currentView.type, state.currentView.value);
-            autosizeAccountSelector(target);
-        });
-    }
-
-    if (tabsContainer) {
-        tabsContainer.addEventListener('click', (e) => {
-            const target = /** @type {HTMLElement} */ (e.target);
-            if (target.classList.contains('master-tab')) {
-                const viewType = target.dataset.viewType;
-                const viewValue = target.dataset.viewValue || null;
-                if (viewType) {
-                     if (viewType !== state.currentView.type || viewValue !== state.currentView.value) {
-                        switchView(viewType, viewValue);
-                     }
-                }
-            }
-        });
-    }
-
-    if (customDatePicker) {
-        customDatePicker.addEventListener('change', (e) => {
-            const selectedDate = (/** @type {HTMLInputElement} */ (e.target)).value;
-            if (selectedDate) {
-                let persistentDates = JSON.parse(localStorage.getItem('persistentDates')) || [];
-                const newDate = { date: selectedDate, added: Date.now() };
-                persistentDates = persistentDates.filter(d => d.date !== selectedDate);
-                persistentDates.push(newDate);
-                localStorage.setItem('persistentDates', JSON.stringify(persistentDates));
-
-                switchView('date', selectedDate);
-                customDatePicker.value = '';
-            }
-        });
-    }
-
-    if(refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-             if (state.currentView.type === 'date' || state.currentView.type === 'journal') {
-                 showToast('Refreshing prices...', 'info', 2000);
-                 updateAllPrices(); // Assuming updateAllPrices exists in api.js
-             }
-        });
-    }
-}
-
-// /public/event-handlers/_navigation.js
-// Version Updated (Add Dashboard View)
-
-// ... other imports ...
-import { loadDashboardPage } from './_dashboard_loader.js';
-// ... autosizeAccountSelector ...
-
 export async function switchView(viewType, viewValue = null) {
     state.currentView = { type: viewType, value: viewValue };
 
     renderTabs(state.currentView); // Render tabs first
 
-    // ... (global filter logic remains the same) ...
-
+    // Hide all page containers
     document.querySelectorAll('.page-container').forEach(c => (/** @type {HTMLElement} */(c)).style.display = 'none');
 
+    // Map view types to container IDs
     const containerIdMap = {
         'dashboard': 'dashboard-page-container', // <-- Add dashboard mapping
         'ledger': 'ledger-page-container',
@@ -134,7 +69,7 @@ export async function switchView(viewType, viewValue = null) {
     const pageContainer = document.getElementById(finalContainerId);
 
     if (pageContainer) {
-        pageContainer.style.display = 'block';
+        pageContainer.style.display = 'block'; // Show the correct container
     } else {
         console.warn(`Could not find page container with ID: ${finalContainerId}`);
     }
@@ -148,7 +83,6 @@ export async function switchView(viewType, viewValue = null) {
             case 'date':
                 if (viewValue) await loadDailyReportPage(viewValue);
                 break;
-            // ... (other cases remain the same) ...
             case 'charts':
                 await loadChartsPage();
                 break;
@@ -183,3 +117,74 @@ export async function switchView(viewType, viewValue = null) {
     }
 }
 
+
+/**
+ * Initializes all event listeners related to main application navigation.
+ */
+export function initializeNavigationHandlers() {
+    const tabsContainer = document.getElementById('tabs-container');
+    const globalHolderFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
+    const customDatePicker = /** @type {HTMLInputElement} */ (document.getElementById('custom-date-picker'));
+    const refreshBtn = document.getElementById('refresh-prices-btn'); // Assuming this ID exists for a global refresh
+
+    // Global Account Holder Filter Change
+    if (globalHolderFilter) {
+        globalHolderFilter.addEventListener('change', async (e) => {
+            const target = /** @type {HTMLSelectElement} */ (e.target);
+            state.selectedAccountHolderId = target.value;
+            // Reload the current view with the new account holder context
+            await switchView(state.currentView.type, state.currentView.value);
+            autosizeAccountSelector(target); // Resize dropdown after content changes
+        });
+    }
+
+    // Main Tab Clicks
+    if (tabsContainer) {
+        tabsContainer.addEventListener('click', (e) => {
+            const target = /** @type {HTMLElement} */ (e.target);
+            // Ensure the click is directly on a tab or its content, and it has the necessary data attributes
+            const tabElement = target.closest('.master-tab');
+            if (tabElement instanceof HTMLElement) { // Check if it's an HTMLElement
+                const viewType = tabElement.dataset.viewType;
+                const viewValue = tabElement.dataset.viewValue || null;
+                if (viewType) {
+                    // Switch view only if it's different from the current one
+                     if (viewType !== state.currentView.type || viewValue !== state.currentView.value) {
+                        switchView(viewType, viewValue);
+                     }
+                }
+            }
+        });
+    }
+
+    // Custom Date Picker for adding date tabs
+    if (customDatePicker) {
+        customDatePicker.addEventListener('change', (e) => {
+            const selectedDate = (/** @type {HTMLInputElement} */ (e.target)).value;
+            if (selectedDate) {
+                // Persist the selected date in localStorage
+                let persistentDates = JSON.parse(localStorage.getItem('persistentDates')) || [];
+                const newDate = { date: selectedDate, added: Date.now() };
+                // Remove existing entry for the same date before adding the new one (updates timestamp)
+                persistentDates = persistentDates.filter(d => d.date !== selectedDate);
+                persistentDates.push(newDate);
+                localStorage.setItem('persistentDates', JSON.stringify(persistentDates));
+
+                // Switch view to the newly selected date
+                switchView('date', selectedDate);
+                customDatePicker.value = ''; // Clear picker after selection
+            }
+        });
+    }
+
+    // Global Price Refresh Button (if applicable to the current view)
+    if(refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+             // Only refresh prices if the current view actually uses live prices
+             // Adjusted logic: refresh button might be specific to daily/dashboard, handled there?
+             // Or, updateAllPrices can internally check the current view.
+             // Let's assume updateAllPrices handles the view check.
+             updateAllPrices();
+        });
+    }
+}
