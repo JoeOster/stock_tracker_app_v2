@@ -71,6 +71,9 @@ async function setupApp() {
     apiRouter.use('/watchlist', require('./routes/watchlist.js')(db, log));
     apiRouter.use('/advice-sources', require('./routes/advice_sources.js')(db, log));
     apiRouter.use('/journal', require('./routes/journal.js')(db, log));
+    // --- ADDED: Mount the new sources router ---
+    apiRouter.use('/sources', require('./routes/sources.js')(db, log));
+    // --- END ADDITION ---
 
     // Use the '/api' prefix for all API routes
     app.use('/api', apiRouter);
@@ -119,3 +122,4 @@ if (require.main === module) {
 
 // Export setupApp function for use in automated tests
 module.exports = { setupApp };
+

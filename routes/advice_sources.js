@@ -18,8 +18,11 @@ module.exports = (db, log = console.log) => { // Added default logger
      * GET /
      * Fetches all advice sources for a specific account holder.
      * Expects `holder` query parameter.
+     * (No changes needed here yet for backward compatibility with display)
      */
     router.get('/', async (req, res) => {
+        // ... GET logic remains the same ...
+        // @ts-ignore
         const holderId = req.query.holder;
         if (!holderId) {
             return res.status(400).json({ message: 'Account holder ID query parameter is required.' });
@@ -40,12 +43,16 @@ module.exports = (db, log = console.log) => { // Added default logger
     /**
      * POST /
      * Creates a new advice source for a specific account holder.
+     * Now uses contact_app_type and contact_app_handle.
      */
     router.post('/', async (req, res) => {
+        // --- Updated destructuring ---
         const {
             account_holder_id, name, type, description, url,
-            contact_person, contact_email, contact_phone, contact_app
+            contact_person, contact_email, contact_phone,
+            contact_app_type, contact_app_handle // New fields
         } = req.body;
+        // --- End Update ---
 
         // Basic validation
         if (!account_holder_id || !name || !type || name.trim() === '' || type.trim() === '') {
@@ -53,20 +60,26 @@ module.exports = (db, log = console.log) => { // Added default logger
         }
 
         try {
+            // --- Updated INSERT query ---
             const result = await db.run(`
                 INSERT INTO advice_sources (
                     account_holder_id, name, type, description, url,
-                    contact_person, contact_email, contact_phone, contact_app
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    contact_person, contact_email, contact_phone,
+                    contact_app_type, contact_app_handle
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 account_holder_id, name.trim(), type.trim(), description || null, url || null,
-                contact_person || null, contact_email || null, contact_phone || null, contact_app || null
+                contact_person || null, contact_email || null, contact_phone || null,
+                contact_app_type || null, contact_app_handle || null // Use new fields
             ]);
+            // --- End Update ---
+
             // Respond with the newly created source including its ID
             res.status(201).json({
                 id: result.lastID,
                 account_holder_id, name, type, description, url,
-                contact_person, contact_email, contact_phone, contact_app
+                contact_person, contact_email, contact_phone,
+                contact_app_type, contact_app_handle // Include new fields in response
             });
         } catch (error) {
             log(`[ERROR] Failed to add advice source: ${error.message}`);
@@ -81,14 +94,18 @@ module.exports = (db, log = console.log) => { // Added default logger
     /**
      * PUT /:id
      * Updates an existing advice source.
+     * Now uses contact_app_type and contact_app_handle.
      */
     router.put('/:id', async (req, res) => {
         const { id } = req.params;
+        // --- Updated destructuring ---
         const {
             name, type, description, url,
-            contact_person, contact_email, contact_phone, contact_app
+            contact_person, contact_email, contact_phone,
+            contact_app_type, contact_app_handle // New fields
             // Note: account_holder_id is typically not changed via update
         } = req.body;
+        // --- End Update ---
 
         if (!name || !type || name.trim() === '' || type.trim() === '') {
             return res.status(400).json({ message: 'Name and type are required.' });
@@ -101,16 +118,21 @@ module.exports = (db, log = console.log) => { // Added default logger
                 return res.status(404).json({ message: 'Advice source not found.' });
             }
 
+            // --- Updated UPDATE query ---
             await db.run(`
                 UPDATE advice_sources SET
                     name = ?, type = ?, description = ?, url = ?,
-                    contact_person = ?, contact_email = ?, contact_phone = ?, contact_app = ?
+                    contact_person = ?, contact_email = ?, contact_phone = ?,
+                    contact_app_type = ?, contact_app_handle = ?
                 WHERE id = ?
             `, [
                 name.trim(), type.trim(), description || null, url || null,
-                contact_person || null, contact_email || null, contact_phone || null, contact_app || null,
+                contact_person || null, contact_email || null, contact_phone || null,
+                contact_app_type || null, contact_app_handle || null, // Use new fields
                 id
             ]);
+            // --- End Update ---
+
             res.json({ message: 'Advice source updated successfully.' });
         } catch (error) {
             log(`[ERROR] Failed to update advice source with ID ${id}: ${error.message}`);
@@ -125,8 +147,11 @@ module.exports = (db, log = console.log) => { // Added default logger
     /**
      * DELETE /:id
      * Deletes an advice source.
+     * (No changes needed here)
      */
     router.delete('/:id', async (req, res) => {
+        // ... DELETE logic remains the same ...
+        // @ts-ignore
         const { id } = req.params;
         try {
             // Check if the source exists before deleting

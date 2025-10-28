@@ -1,5 +1,4 @@
 // /public/event-handlers/_navigation.js
-// Version 0.1.27 (Cleaned up logging)
 /**
  * @file Manages the primary navigation and view switching for the application.
  * @module event-handlers/_navigation
@@ -12,15 +11,19 @@ import { loadDailyReportPage } from './_dailyReport.js';
 import { loadOrdersPage } from './_orders.js';
 import { loadAlertsPage } from './_alerts.js';
 import { loadChartsPage } from './_charts.js';
-import { loadJournalPage } from './_journal.js';
+// REMOVED: import { loadJournalPage } from './_journal.js';
+// ADDED: Import loadResearchPage
+import { loadResearchPage } from './_research.js';
 // Import dashboard loader
-import { loadDashboardPage } from './_dashboard_loader.js'; // <-- Updated import
+import { loadDashboardPage } from './_dashboard_loader.js';
 
 /**
  * Autosizes an HTMLSelectElement to fit the width of its currently selected option's text.
  * @param {HTMLSelectElement} selectElement The dropdown element to resize.
+ * @returns {void}
  */
 export function autosizeAccountSelector(selectElement) {
+    // ... function content remains the same ...
     if (!selectElement || selectElement.options.length === 0) return;
 
     const tempSpan = document.createElement('span');
@@ -41,8 +44,9 @@ export function autosizeAccountSelector(selectElement) {
 
 /**
  * Switches the main view of the application, rendering the appropriate page.
- * @param {string} viewType - The type of view to switch to (e.g., 'date', 'charts', 'journal').
+ * @param {string} viewType - The type of view to switch to (e.g., 'date', 'charts', 'research').
  * @param {string|null} [viewValue=null] - The value associated with the view (e.g., a specific date).
+ * @returns {Promise<void>}
  */
 export async function switchView(viewType, viewValue = null) {
     state.currentView = { type: viewType, value: viewValue };
@@ -54,7 +58,7 @@ export async function switchView(viewType, viewValue = null) {
 
     // Map view types to container IDs
     const containerIdMap = {
-        'dashboard': 'dashboard-page-container', // <-- Add dashboard mapping
+        'dashboard': 'dashboard-page-container',
         'ledger': 'ledger-page-container',
         'orders': 'orders-page-container',
         'alerts': 'alerts-page-container',
@@ -62,11 +66,15 @@ export async function switchView(viewType, viewValue = null) {
         'charts': 'charts-container',
         'date': 'daily-report-container',
         'watchlist': 'watchlist-page-container',
-        'journal': 'journal-page-container'
+        // ADDED: Mapping for research
+        'research': 'research-page-container'
+        // REMOVED: 'journal': 'journal-page-container'
     };
 
+    // --- MODIFIED: Use correct container ID ---
     const finalContainerId = containerIdMap[viewType] || `${viewType}-page-container`; // Fallback just in case
     const pageContainer = document.getElementById(finalContainerId);
+    // --- END MODIFICATION ---
 
     if (pageContainer) {
         pageContainer.style.display = 'block'; // Show the correct container
@@ -77,7 +85,7 @@ export async function switchView(viewType, viewValue = null) {
     // --- Load data specific to the view ---
     try {
         switch (viewType) {
-            case 'dashboard': // <-- Add case for dashboard
+            case 'dashboard':
                 await loadDashboardPage();
                 break;
             case 'date':
@@ -95,33 +103,34 @@ export async function switchView(viewType, viewValue = null) {
             case 'alerts':
                 await loadAlertsPage();
                 break;
-            case 'journal':
-                await loadJournalPage();
+            // ADDED: Case for research
+            case 'research':
+                await loadResearchPage();
                 break;
+            // REMOVED: Case for journal
             case 'imports':
-                // No specific load action needed, template is static until interaction
                 break;
-             case 'watchlist':
-                 // No specific load action needed yet
-                 break;
-             default:
-                 console.warn(`No specific load function defined for view type: ${viewType}`);
+            case 'watchlist':
+                break;
+            default:
+                console.warn(`No specific load function defined for view type: ${viewType}`);
         }
-    } catch(error) {
-         console.error(`Error loading data for view ${viewType}:`, error);
-         showToast(`Failed to load ${viewType} page: ${error.message}`, 'error');
-         if(pageContainer) {
-             // Display error within the page container if possible
-             pageContainer.innerHTML = `<p style="color: var(--negative-color); text-align: center;">Error loading page data.</p>`;
-         }
+    } catch (error) {
+        console.error(`Error loading data for view ${viewType}:`, error);
+        showToast(`Failed to load ${viewType} page: ${error.message}`, 'error');
+        if (pageContainer) {
+            pageContainer.innerHTML = `<p style="color: var(--negative-color); text-align: center;">Error loading page data.</p>`;
+        }
     }
 }
 
 
 /**
  * Initializes all event listeners related to main application navigation.
+ * @returns {void}
  */
 export function initializeNavigationHandlers() {
+    // ... function content remains the same ...
     const tabsContainer = document.getElementById('tabs-container');
     const globalHolderFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
     const customDatePicker = /** @type {HTMLInputElement} */ (document.getElementById('custom-date-picker'));
@@ -180,10 +189,7 @@ export function initializeNavigationHandlers() {
     // Global Price Refresh Button (if applicable to the current view)
     if(refreshBtn) {
         refreshBtn.addEventListener('click', () => {
-             // Only refresh prices if the current view actually uses live prices
-             // Adjusted logic: refresh button might be specific to daily/dashboard, handled there?
-             // Or, updateAllPrices can internally check the current view.
-             // Let's assume updateAllPrices handles the view check.
+             // updateAllPrices handles the view check internally.
              updateAllPrices();
         });
     }

@@ -1,5 +1,5 @@
-// public/api.js
-// Version Updated (Added fetchSalesForLot)
+// /public/api.js
+// Version Updated (Added source notes, watchlist, document delete functions, fetchSourceDetails)
 /**
  * @file This file centralizes all client-side API (fetch) calls to the server.
  * @module api
@@ -130,9 +130,9 @@ export async function updateAllPrices() {
     else if (state.currentView.type === 'date' && state.activityMap.size > 0) {
         tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
         // dateForUpdate is already set to state.currentView.value for 'date' type
-    } else if (state.currentView.type === 'journal' && state.journalEntries?.openEntries) {
+    } else if (state.currentView.type === 'research' && state.journalEntries?.openEntries) { // <<< Updated 'journal' to 'research'
         tickersToUpdate = [...new Set(state.journalEntries.openEntries.map(entry => entry.ticker))];
-        dateForUpdate = getCurrentESTDateString(); // Journal uses current prices
+        dateForUpdate = getCurrentESTDateString(); // Journal/Research uses current prices
     }
     // Add other views like watchlist if they need price updates
 
@@ -143,14 +143,17 @@ export async function updateAllPrices() {
         // Decide which UI update function to call based on the view
          if (state.currentView.type === 'dashboard') {
              // Dashboard re-renders fully on refresh click, which includes price population
-             const { renderDashboardPage } = await import('./ui/renderers/_dashboard.js');
+             const { renderDashboardPage } = await import('./ui/renderers/_dashboard_render.js'); // Updated import path
              await renderDashboardPage();
          }
          else if (state.currentView.type === 'date') {
             populatePricesFromCache(state.activityMap, state.priceCache);
-        } else if (state.currentView.type === 'journal') {
-             const { loadJournalPage } = await import('./event-handlers/_journal.js');
-             await loadJournalPage(); // Reload journal page data which includes price fetching/rendering
+        } else if (state.currentView.type === 'research') { // <<< Updated 'journal' to 'research'
+             // Need to call the specific loader/renderer for the active research sub-tab
+             const researchModule = await import('./event-handlers/_research.js');
+             if (researchModule.loadResearchPage) {
+                 await researchModule.loadResearchPage();
+             }
         }
         // Add other views if necessary
     } else {
@@ -161,7 +164,7 @@ export async function updateAllPrices() {
 
 /**
  * Fetches all active pending orders for a given account holder.
- * @param {string} holderId - The ID of the account holder ('all' for everyone).
+ * @param {string|number} holderId - The ID of the account holder ('all' for everyone).
  * @returns {Promise<any[]>} A promise that resolves to an array of pending order objects.
  */
 export async function fetchPendingOrders(holderId) {
@@ -171,7 +174,7 @@ export async function fetchPendingOrders(holderId) {
 
 /**
  * Fetches all 'UNREAD' notifications for a given account holder.
- * @param {string} holderId - The ID of the account holder ('all' for everyone).
+ * @param {string|number} holderId - The ID of the account holder ('all' for everyone).
  * @returns {Promise<any[]>} A promise that resolves to an array of notification objects.
  */
 export async function fetchAlerts(holderId) {
@@ -182,7 +185,7 @@ export async function fetchAlerts(holderId) {
 /**
  * Fetches the daily performance summary for a given date and account holder.
  * @param {string} date - The date for the report in 'YYYY-MM-DD' format.
- * @param {string} holderId - The ID of the account holder.
+ * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<object>} A promise that resolves to the performance data.
  */
 export async function fetchDailyPerformance(date, holderId) {
@@ -193,7 +196,7 @@ export async function fetchDailyPerformance(date, holderId) {
 /**
  * Fetches the daily transactions and end-of-day positions for a given date and account holder.
  * @param {string} date - The date for the report in 'YYYY-MM-DD' format.
- * @param {string} holderId - The ID of the account holder.
+ * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<{dailyTransactions: any[], endOfDayPositions: any[]}>} A promise that resolves to an object containing dailyTransactions and endOfDayPositions.
  */
 export async function fetchPositions(date, holderId) {
@@ -209,7 +212,7 @@ export async function fetchPositions(date, holderId) {
 
 /**
  * Fetches all account value snapshots for a given account holder.
- * @param {string} holderId - The ID of the account holder ('all' for everyone).
+ * @param {string|number} holderId - The ID of the account holder ('all' for everyone).
  * @returns {Promise<any[]>} A promise that resolves to an array of snapshot objects.
  */
 export async function fetchSnapshots(holderId) {
@@ -221,7 +224,7 @@ export async function fetchSnapshots(holderId) {
 
 /**
  * Fetches all advice sources for a given account holder.
- * @param {string} holderId - The ID of the account holder.
+ * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<any[]>} A promise that resolves to an array of advice source objects.
  */
 export async function fetchAdviceSources(holderId) {
@@ -277,7 +280,7 @@ export async function deleteAdviceSource(id) {
 
 /**
  * Fetches journal entries for a given account holder, optionally filtering by status.
- * @param {string} holderId - The ID of the account holder ('all' not recommended here).
+ * @param {string|number} holderId - The ID of the account holder ('all' not recommended here).
  * @param {'OPEN' | 'CLOSED' | 'EXECUTED' | 'CANCELLED' | null} [status=null] - Optional status to filter by.
  * @returns {Promise<any[]>} A promise that resolves to an array of journal entry objects.
  */
@@ -354,7 +357,7 @@ export async function deleteJournalEntry(id) {
 }
 
 /**
- * Fetches the sales history for a specific parent BUY lot ID.  <<< NEW FUNCTION
+ * Fetches the sales history for a specific parent BUY lot ID.
  * @param {string|number} buyId - The ID of the parent BUY transaction.
  * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<any[]>} A promise resolving to an array of sales transaction objects with calculated P/L.
@@ -366,3 +369,150 @@ export async function fetchSalesForLot(buyId, holderId) {
     const response = await fetch(`/api/transactions/sales/${buyId}?holder=${holderId}`);
     return handleResponse(response);
 }
+
+// --- Source Details API ---
+
+/**
+ * Fetches detailed information about an advice source, including linked items.
+ * @param {string|number} sourceId - The ID of the advice source.
+ * @param {string|number} holderId - The ID of the account holder.
+ * @returns {Promise<{source: object, journalEntries: any[], watchlistItems: any[], documents: any[], sourceNotes: any[]}>}
+ */
+export async function fetchSourceDetails(sourceId, holderId) {
+    if (!sourceId || !holderId || holderId === 'all') {
+        throw new Error("Source ID and a specific Account Holder ID are required.");
+    }
+    const response = await fetch(`/api/sources/${sourceId}/details?holder=${holderId}`);
+    return handleResponse(response);
+}
+
+// --- Watchlist Item API ---
+
+/**
+ * Adds a ticker to the watchlist, optionally linking it to an advice source.
+ * @param {string|number} accountHolderId - The account holder ID.
+ * @param {string} ticker - The ticker symbol to add.
+ * @param {string|number|null} [adviceSourceId=null] - Optional ID of the advice source to link.
+ * @returns {Promise<any>} The response from the server.
+ */
+export async function addWatchlistItem(accountHolderId, ticker, adviceSourceId = null) {
+    const response = await fetch('/api/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_holder_id: accountHolderId, ticker: ticker, advice_source_id: adviceSourceId })
+    });
+    return handleResponse(response);
+}
+
+/**
+ * Deletes a watchlist item by its ID.
+ * @param {string|number} itemId - The ID of the watchlist item to delete.
+ * @returns {Promise<any>} The response from the server.
+ */
+export async function deleteWatchlistItem(itemId) { // <<< ADDED export
+    const response = await fetch(`/api/watchlist/${itemId}`, {
+        method: 'DELETE'
+    });
+    return handleResponse(response);
+}
+
+
+// --- Document Link API ---
+
+/**
+ * Adds a document link, associating it with either a journal entry or an advice source.
+ * @param {object} documentData - The document data.
+ * @param {string|number|null} documentData.journal_entry_id - The journal entry ID (nullable).
+ * @param {string|number|null} documentData.advice_source_id - The advice source ID (nullable).
+ * @param {string|number} documentData.account_holder_id - The account holder ID.
+ * @param {string} documentData.external_link - The URL of the document.
+ * @param {string} [documentData.title] - Optional title.
+ * @param {string} [documentData.document_type] - Optional type (e.g., 'Chart').
+ * @param {string} [documentData.description] - Optional description.
+ * @returns {Promise<any>} The response from the server.
+ */
+export async function addDocument(documentData) {
+    if (!documentData.account_holder_id || (!documentData.journal_entry_id && !documentData.advice_source_id) || !documentData.external_link) {
+        throw new Error("Missing required fields: account holder, link, and either journal or source ID.");
+    }
+    const response = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(documentData)
+    });
+    return handleResponse(response);
+}
+
+/**
+ * Deletes a document link by its ID.
+ * @param {string|number} documentId - The ID of the document link to delete.
+ * @returns {Promise<any>} The response from the server.
+ */
+export async function deleteDocument(documentId) { // <<< ADDED export
+    const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'DELETE'
+    });
+    return handleResponse(response);
+}
+
+// --- Source Note API ---
+
+/**
+ * Adds a note to a specific advice source.
+ * @param {string|number} sourceId - The ID of the advice source.
+ * @param {string|number} holderId - The ID of the account holder.
+ * @param {string} noteContent - The text content of the note.
+ * @returns {Promise<any>} The response from the server (likely the new note object).
+ */
+export async function addSourceNote(sourceId, holderId, noteContent) { // <<< ADDED export
+    if (!sourceId || !holderId || !noteContent || holderId === 'all') {
+        throw new Error("Missing required fields: source ID, holder ID, and note content.");
+    }
+    const response = await fetch(`/api/sources/${sourceId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_holder_id: holderId, note_content: noteContent })
+    });
+    return handleResponse(response);
+}
+
+/**
+ * Deletes a specific note associated with an advice source.
+ * @param {string|number} sourceId - The ID of the advice source.
+ * @param {string|number} noteId - The ID of the note to delete.
+ * @param {string|number} holderId - The ID of the account holder (for verification).
+ * @returns {Promise<any>} The response from the server.
+ */
+export async function deleteSourceNote(sourceId, noteId, holderId) { // <<< ADDED export
+    if (!sourceId || !noteId || !holderId || holderId === 'all') {
+        throw new Error("Missing required fields: source ID, note ID, and holder ID.");
+    }
+     // Pass holderId in the body for verification on the backend
+    const response = await fetch(`/api/sources/${sourceId}/notes/${noteId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_holder_id: holderId })
+    });
+    return handleResponse(response);
+}
+
+/**
+ * Updates the content of a specific note.
+ * @param {string|number} sourceId - The ID of the advice source the note belongs to.
+ * @param {string|number} noteId - The ID of the note to update.
+ * @param {string|number} holderId - The ID of the account holder (for verification).
+ * @param {string} noteContent - The new text content for the note.
+ * @returns {Promise<any>} The response from the server.
+ */
+export async function updateSourceNote(sourceId, noteId, holderId, noteContent) { // <<< ADDED export
+    if (!sourceId || !noteId || !holderId || holderId === 'all' || noteContent === undefined || noteContent === null) {
+        throw new Error("Missing required fields: source ID, note ID, holder ID, and note content.");
+    }
+    const response = await fetch(`/api/sources/${sourceId}/notes/${noteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_holder_id: holderId, note_content: noteContent })
+    });
+    return handleResponse(response);
+}
+

@@ -10,46 +10,52 @@ import { initializeDailyReportHandlers } from './_dailyReport.js';
 import { initializeImportHandlers } from './_imports.js';
 import { initializeLedgerHandlers } from './_ledger.js';
 import { initializeModalHandlers } from './_modals.js';
-// Correctly import initializeNavigationHandlers
-import { initializeNavigationHandlers } from './_navigation.js'; // <<< ENSURE THIS LINE IS PRESENT AND CORRECT
+import { initializeNavigationHandlers } from './_navigation.js';
 import { initializeOrdersHandlers } from './_orders.js';
 import { initializeSettingsModalHandlers } from './_settings_modal.js';
 import { initializeExchangeManagementHandlers } from './_settings_exchanges.js';
 import { initializeHolderManagementHandlers } from './_settings_holders.js';
 import { initializeJournalSettingsHandlers } from './_journal_settings.js';
-import { initializeJournalHandlers } from './_journal.js';
-// Import from the new dashboard init file
+import { initializeResearchHandlers } from './_research.js';
 import { initializeDashboardHandlers } from './_dashboard_init.js';
 
 /**
  * Initializes all event handlers for the application.
+ * Uses setTimeout for page-specific handlers to ensure DOM elements from templates are ready.
+ * @returns {void}
  */
 export function initializeAllEventHandlers() {
     try {
-        console.log("Initializing all event handlers...");
+        console.log("Initializing core event handlers (Navigation, Modals, Settings)...");
 
-        initializeNavigationHandlers(); // Now it should be defined
+        // Initialize handlers that don't depend heavily on template injection first
+        initializeNavigationHandlers();
         initializeModalHandlers();
-
-        // Initialize Settings Modal Sections
-        initializeSettingsModalHandlers();
+        initializeSettingsModalHandlers(); // Settings modal content is also injected, but often opened later
         initializeExchangeManagementHandlers();
         initializeHolderManagementHandlers();
         initializeJournalSettingsHandlers();
 
-        // Initialize Page-Specific Handlers
-        initializeOrdersHandlers();
-        initializeLedgerHandlers();
-        initializeAlertsHandlers();
-        initializeDailyReportHandlers();
-        initializeImportHandlers();
-        initializeChartsHandlers();
-        initializeJournalHandlers();
-        initializeDashboardHandlers();
-
-        console.log("All event handlers initialized.");
+        // Defer page-specific handlers slightly to allow DOM to update
+        setTimeout(() => {
+            try {
+                console.log("Initializing page-specific event handlers (Deferred)...");
+                initializeOrdersHandlers();
+                initializeLedgerHandlers();
+                initializeAlertsHandlers();
+                initializeDailyReportHandlers();
+                initializeImportHandlers();
+                initializeChartsHandlers();
+                initializeResearchHandlers(); // This includes nested journal handlers
+                initializeDashboardHandlers();
+                console.log("All event handlers initialized.");
+            } catch (deferredError) {
+                 console.error("[Init - Deferred] Error occurred during deferred handler initialization:", deferredError);
+            }
+        }, 0); // Zero delay pushes execution after current stack completes
 
     } catch (error) {
-        console.error("[Init] Error occurred INSIDE initializeAllEventHandlers:", error);
+        console.error("[Init - Immediate] Error occurred during immediate handler initialization:", error);
     }
 }
+
