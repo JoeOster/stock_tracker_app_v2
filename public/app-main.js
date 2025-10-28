@@ -1,5 +1,5 @@
 // /public/app-main.js
-// Version Updated (Added Manage Position Modal)
+// Version Updated (Load Research Template)
 /**
  * @file Main application entry point. Handles initialization, state management,
  * and view switching.
@@ -18,7 +18,7 @@ import { initializeScheduler } from './scheduler.js';
  * Initializes the application after the DOM is fully loaded.
  */
 async function initialize() {
-    // Load settings from localStorage first
+    // ... (settings loading remains the same) ...
     try {
         const storedSettings = JSON.parse(localStorage.getItem('stockTrackerSettings')) || {};
         state.settings = {
@@ -38,6 +38,7 @@ async function initialize() {
         applyAppearanceSettings();
     }
 
+
     const mainContent = document.getElementById('main-content');
     const modalContainer = document.getElementById('modal-container');
     if (!mainContent || !modalContainer) {
@@ -48,12 +49,15 @@ async function initialize() {
     try {
         // Fetch all templates concurrently
         const [
-            alerts, charts, dailyReport, imports, ledger, orders, watchlist, journal, dashboard, // Page templates
-            modal_advice, modal_settings, modal_edit_transaction, modal_confirm, // Modal templates
+            alerts, charts, dailyReport, imports, ledger, orders, watchlist,
+            // ADDED research, REMOVED journal
+            research, dashboard,
+            // Modal templates
+            modal_advice, modal_settings, modal_edit_transaction, modal_confirm,
             modal_sell_from_position, modal_confirm_fill, modal_chart_zoom,
             modal_sales_history,
             modal_selective_sell,
-            modal_manage_position // <<< ADDED VARIABLE
+            modal_manage_position
         ] = await Promise.all([
             // Page fetches
             fetch('./templates/_alerts.html').then(res => res.text()),
@@ -63,7 +67,8 @@ async function initialize() {
             fetch('./templates/_ledger.html').then(res => res.text()),
             fetch('./templates/_orders.html').then(res => res.text()),
             fetch('./templates/_watchlist.html').then(res => res.text()),
-            fetch('./templates/_journal.html').then(res => res.text()),
+            // ADDED research fetch, REMOVED journal fetch
+            fetch('./templates/_research.html').then(res => res.text()), // <-- Fetch Research template
             fetch('./templates/_dashboard.html').then(res => res.text()),
             // Modal fetches
             fetch('./templates/_modal_advice.html').then(res => res.text()),
@@ -75,11 +80,12 @@ async function initialize() {
             fetch('./templates/_modal_chart_zoom.html').then(res => res.text()),
             fetch('./templates/_modal_sales_history.html').then(res => res.text()),
             fetch('./templates/_modal_selective_sell.html').then(res => res.text()),
-            fetch('./templates/_modal_manage_position.html').then(res => res.text()) // <<< ADDED FETCH
+            fetch('./templates/_modal_manage_position.html').then(res => res.text())
        ]);
 
         // Inject page templates
-        mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + watchlist + journal;
+        // ADDED research, REMOVED journal
+        mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + watchlist + research;
 
         // Inject concatenated modal templates
         modalContainer.innerHTML =
@@ -92,7 +98,7 @@ async function initialize() {
             modal_chart_zoom +
             modal_sales_history +
             modal_selective_sell +
-            modal_manage_position; // <<< ADDED VARIABLE TO INJECTION
+            modal_manage_position;
 
     } catch (error) {
         console.error("[App Main] Failed to load or inject one or more templates:", error);
@@ -100,7 +106,8 @@ async function initialize() {
         return;
     }
 
-    // Initialize event handlers
+    // ... (rest of initialize function remains the same) ...
+     // Initialize event handlers
     try {
         initializeAllEventHandlers();
     } catch(error) {
@@ -122,16 +129,25 @@ async function initialize() {
 
     // Set default account holder in the UI
     try {
-        state.selectedAccountHolderId = state.settings.defaultAccountHolderId || 1;
+        // Ensure defaultAccountHolderId is treated as a number if it's not 'all'
+        let defaultHolderId = state.settings.defaultAccountHolderId;
+        // Check if defaultHolderId is potentially a string representation of a number
+        if (typeof defaultHolderId === 'string' && !isNaN(parseInt(defaultHolderId))) {
+            defaultHolderId = parseInt(defaultHolderId);
+        }
+        // Ensure it's a valid number or default to 1
+        state.selectedAccountHolderId = (typeof defaultHolderId === 'number' && defaultHolderId > 0) ? defaultHolderId : 1;
+
+
         const globalFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
         if (globalFilter) {
-            const optionExists = Array.from(globalFilter.options).some(opt => opt.value == state.selectedAccountHolderId);
+            const optionExists = Array.from(globalFilter.options).some(opt => opt.value == state.selectedAccountHolderId); // Use == for comparison
             if (optionExists) {
                 globalFilter.value = String(state.selectedAccountHolderId);
             } else {
                 console.warn(`[App Main] Default holder ID ${state.selectedAccountHolderId} not found in dropdown, defaulting to 1.`);
                 globalFilter.value = '1';
-                state.selectedAccountHolderId = 1;
+                state.selectedAccountHolderId = 1; // Ensure state matches UI
             }
            autosizeAccountSelector(globalFilter);
         } else {
@@ -139,7 +155,9 @@ async function initialize() {
         }
     } catch (e) {
         console.error("[App Main] Error setting default account holder:", e);
+        state.selectedAccountHolderId = 1; // Fallback
     }
+
 
     // Initialize scheduler
     try {
@@ -149,20 +167,26 @@ async function initialize() {
     }
 
     // Switch to the default view
-const defaultViewType = state.settings.defaultView || 'dashboard';
+    const defaultViewType = state.settings.defaultView || 'dashboard';
     setTimeout(async () => {
         try {
             await switchView(defaultViewType);
         } catch (error) {
             console.error(`[App Main] Error switching to default view (${defaultViewType}):`, error);
             showToast(`Failed to load default view (${defaultViewType}). Please try selecting a tab manually.`, 'error');
+            // Attempt fallback to dashboard if default fails
+            if (defaultViewType !== 'dashboard') {
+                 try { await switchView('dashboard'); } catch (fallbackError) { /* Ignore fallback error */ }
+            }
         }
-    }, 50); // <<< INCREASE DELAY to 50ms (or 100ms if needed)
+    }, 50);
 }
+
 
 // --- Application Entry Point ---
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initialize);
 } else {
+    // DOM is already ready, initialize directly
     initialize();
 }

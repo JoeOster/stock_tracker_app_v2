@@ -16,7 +16,8 @@ import { initializeSettingsModalHandlers } from './_settings_modal.js';
 import { initializeExchangeManagementHandlers } from './_settings_exchanges.js';
 import { initializeHolderManagementHandlers } from './_settings_holders.js';
 import { initializeJournalSettingsHandlers } from './_journal_settings.js';
-import { initializeResearchHandlers } from './_research.js';
+// UPDATED: Import from _research_loader.js
+import { initializeResearchHandlers } from './_research_loader.js';
 import { initializeDashboardHandlers } from './_dashboard_init.js';
 
 /**
@@ -28,15 +29,14 @@ export function initializeAllEventHandlers() {
     try {
         console.log("Initializing core event handlers (Navigation, Modals, Settings)...");
 
-        // Initialize handlers that don't depend heavily on template injection first
         initializeNavigationHandlers();
         initializeModalHandlers();
-        initializeSettingsModalHandlers(); // Settings modal content is also injected, but often opened later
+        initializeSettingsModalHandlers();
         initializeExchangeManagementHandlers();
         initializeHolderManagementHandlers();
-        initializeJournalSettingsHandlers();
+        initializeJournalSettingsHandlers(); // Handles Advice Sources in Settings
 
-        // Defer page-specific handlers slightly to allow DOM to update
+        // Defer page-specific handlers slightly
         setTimeout(() => {
             try {
                 console.log("Initializing page-specific event handlers (Deferred)...");
@@ -46,16 +46,15 @@ export function initializeAllEventHandlers() {
                 initializeDailyReportHandlers();
                 initializeImportHandlers();
                 initializeChartsHandlers();
-                initializeResearchHandlers(); // This includes nested journal handlers
+                initializeResearchHandlers(); // Initializes top-level research tabs
                 initializeDashboardHandlers();
                 console.log("All event handlers initialized.");
             } catch (deferredError) {
                  console.error("[Init - Deferred] Error occurred during deferred handler initialization:", deferredError);
             }
-        }, 0); // Zero delay pushes execution after current stack completes
+        }, 0);
 
     } catch (error) {
         console.error("[Init - Immediate] Error occurred during immediate handler initialization:", error);
     }
 }
-

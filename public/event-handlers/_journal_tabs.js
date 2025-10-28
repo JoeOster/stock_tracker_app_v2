@@ -1,11 +1,9 @@
 // /public/event-handlers/_journal_tabs.js
-// Version Updated (Handle dynamic import correctly)
 /**
- * @file Initializes event handlers for the Journal page's sub-tabs.
+ * @file Initializes event handlers for the Research page's top-level sub-tabs.
  * @module event-handlers/_journal_tabs
  */
 
-// Static import for showToast (needed for error handling)
 import { showToast } from '../ui/helpers.js';
 
 /**
@@ -16,46 +14,38 @@ export function initializeResearchSubTabHandlers() {
     const researchPageContainer = document.getElementById('research-page-container');
     const researchSubTabsContainer = researchPageContainer?.querySelector('.research-sub-tabs');
 
-    // --- Main Research Sub-Tab Switching ---
     if (researchSubTabsContainer && researchPageContainer) {
-        researchSubTabsContainer.addEventListener('click', async (e) => { // Make async to handle dynamic import
+        researchSubTabsContainer.addEventListener('click', async (e) => { // Make async
             const target = /** @type {HTMLElement} */ (e.target);
             if (target.classList.contains('sub-tab') && !target.classList.contains('active')) {
                 const subTabName = target.dataset.subTab;
                 if (!subTabName) return;
 
-                // Remove active class from all tabs and panels within the research page context
                 researchSubTabsContainer.querySelectorAll('.sub-tab').forEach(tab => tab.classList.remove('active'));
                 researchPageContainer.querySelectorAll('.sub-tab-panel').forEach(panel => panel.classList.remove('active'));
 
-                // Add active class to the clicked tab and corresponding panel
                 target.classList.add('active');
                 const panelToShow = researchPageContainer.querySelector(`#${subTabName}`);
-                if (panelToShow) {
-                    /** @type {HTMLElement} */ (panelToShow).classList.add('active'); // Cast to HTMLElement
+                if (panelToShow instanceof HTMLElement) { // Type guard
+                    panelToShow.classList.add('active');
                 }
 
                 // Reload content for the newly activated tab
                 try {
-                    // Dynamically import _research.js ONLY when needed to call loadResearchPage
-                    const researchModule = await import('./_research.js');
-                    // --- FIX: Access loadResearchPage via default ---
-                    if (researchModule.default && typeof researchModule.default.loadResearchPage === 'function') {
-                        // Handle potential { default: { loadResearchPage: ... } } structure
-                        await researchModule.default.loadResearchPage();
-                    } else if (typeof researchModule.loadResearchPage === 'function') {
-                         // Handle direct named export structure
+                    // Dynamically import from the new loader file
+                    const researchModule = await import('./_research_loader.js');
+                    if (researchModule.loadResearchPage && typeof researchModule.loadResearchPage === 'function') {
                         await researchModule.loadResearchPage();
                     } else {
                          throw new Error("loadResearchPage function not found in imported module.");
                     }
-                    // --- END FIX ---
                 } catch (error) {
-                    console.error("Error reloading research page content:", error);
-                    showToast(`Failed to load content: ${error.message}`, 'error');
-                    // Optionally clear the panel or show an error message inside it
-                    if(panelToShow) {
-                         /** @type {HTMLElement} */ (panelToShow).innerHTML = '<p style="color: var(--negative-color);">Error loading content.</p>';
+                    // Explicitly cast error to Error type
+                    const err = /** @type {Error} */ (error);
+                    console.error("Error reloading research page content:", err);
+                    showToast(`Failed to load content: ${err.message}`, 'error');
+                    if(panelToShow instanceof HTMLElement) {
+                         panelToShow.innerHTML = '<p style="color: var(--negative-color);">Error loading content.</p>';
                     }
                 }
             }
@@ -65,39 +55,43 @@ export function initializeResearchSubTabHandlers() {
     }
 }
 
-
+// NOTE: initializeJournalSubTabHandlers (for nested tabs in Paper Trading)
+// should remain in this file or potentially move to a _journal_tabs.js file
+// if it becomes complex, but it's fine here for now.
 /**
  * Initializes the event listeners for switching between sub-tabs within the Paper Trading panel.
  * @returns {void}
  */
 export function initializeJournalSubTabHandlers() {
-    // This function now handles the *nested* tabs within the Paper Trading panel
+    // This listener needs to be attached *after* the paper trading panel content is loaded.
+    // We'll attach it within loadResearchPage when the paper trading tab is selected,
+    // OR potentially delegate from the researchPageContainer if structure allows.
+    // For now, let's keep the function definition here.
+
+    // Get the container dynamically when needed, or use event delegation
     const paperTradingPanel = document.getElementById('research-paper-trading-panel');
     const journalSubTabsContainer = paperTradingPanel?.querySelector('.journal-sub-tabs'); // Target nested tabs
 
-    // --- Nested Journal Sub-Tab Switching ---
-    if (journalSubTabsContainer && paperTradingPanel) { // Check parent panel exists
+    if (journalSubTabsContainer && paperTradingPanel) {
+        // Simple click handler for switching nested tabs
         journalSubTabsContainer.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             if (target.classList.contains('sub-tab') && !target.classList.contains('active')) {
                 const subTabName = target.dataset.subTab;
                 if (!subTabName) return;
 
-                // Remove active class from all tabs and panels within the paper trading panel context
                 journalSubTabsContainer.querySelectorAll('.sub-tab').forEach(tab => tab.classList.remove('active'));
                 paperTradingPanel.querySelectorAll('.sub-tab-panel').forEach(panel => panel.classList.remove('active'));
 
-                // Add active class to the clicked tab and corresponding panel
                 target.classList.add('active');
-                const panelToShow = paperTradingPanel.querySelector(`#${subTabName}`); // Find panel within paperTradingPanel
-                if (panelToShow) {
-                    /** @type {HTMLElement} */ (panelToShow).classList.add('active');
+                const panelToShow = paperTradingPanel.querySelector(`#${subTabName}`);
+                if (panelToShow instanceof HTMLElement) {
+                    panelToShow.classList.add('active');
                 }
             }
         });
     } else {
         // This might log during initial setup before paper trading tab is loaded, which is okay
-        console.warn("Could not find paper trading panel or nested journal sub-tabs container for event listener setup.");
+        // console.warn("Could not find paper trading panel or nested journal sub-tabs container for event listener setup (might be expected during init).");
     }
 }
-

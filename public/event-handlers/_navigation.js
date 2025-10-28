@@ -1,4 +1,5 @@
 // /public/event-handlers/_navigation.js
+// Version Updated (Handle 'research' viewType)
 /**
  * @file Manages the primary navigation and view switching for the application.
  * @module event-handlers/_navigation
@@ -11,11 +12,10 @@ import { loadDailyReportPage } from './_dailyReport.js';
 import { loadOrdersPage } from './_orders.js';
 import { loadAlertsPage } from './_alerts.js';
 import { loadChartsPage } from './_charts.js';
-// REMOVED: import { loadJournalPage } from './_journal.js';
 // ADDED: Import loadResearchPage
 import { loadResearchPage } from './_research.js';
 // Import dashboard loader
-import { loadDashboardPage } from './_dashboard_loader.js';
+import { loadDashboardPage } from './_dashboard_loader.js'; // Keep dashboard loader
 
 /**
  * Autosizes an HTMLSelectElement to fit the width of its currently selected option's text.
@@ -72,14 +72,14 @@ export async function switchView(viewType, viewValue = null) {
     };
 
     // --- MODIFIED: Use correct container ID ---
-    const finalContainerId = containerIdMap[viewType] || `${viewType}-page-container`; // Fallback just in case
-    const pageContainer = document.getElementById(finalContainerId);
+    const finalContainerId = containerIdMap[viewType]; // Get ID from map
+    const pageContainer = finalContainerId ? document.getElementById(finalContainerId) : null;
     // --- END MODIFICATION ---
 
     if (pageContainer) {
         pageContainer.style.display = 'block'; // Show the correct container
     } else {
-        console.warn(`Could not find page container with ID: ${finalContainerId}`);
+        console.warn(`Could not find page container for view type: ${viewType}`); // Updated warning
     }
 
     // --- Load data specific to the view ---
@@ -105,12 +105,14 @@ export async function switchView(viewType, viewValue = null) {
                 break;
             // ADDED: Case for research
             case 'research':
-                await loadResearchPage();
+                await loadResearchPage(); // Use the existing research loader
                 break;
             // REMOVED: Case for journal
             case 'imports':
+                 // No specific load function needed for imports view itself
                 break;
             case 'watchlist':
+                 // TODO: Add loadWatchlistPage() if/when implemented
                 break;
             default:
                 console.warn(`No specific load function defined for view type: ${viewType}`);
@@ -140,7 +142,7 @@ export function initializeNavigationHandlers() {
     if (globalHolderFilter) {
         globalHolderFilter.addEventListener('change', async (e) => {
             const target = /** @type {HTMLSelectElement} */ (e.target);
-            state.selectedAccountHolderId = target.value;
+            state.selectedAccountHolderId = target.value === 'all' ? 'all' : parseInt(target.value, 10); // Store as 'all' or number
             // Reload the current view with the new account holder context
             await switchView(state.currentView.type, state.currentView.value);
             autosizeAccountSelector(target); // Resize dropdown after content changes
@@ -172,7 +174,7 @@ export function initializeNavigationHandlers() {
             const selectedDate = (/** @type {HTMLInputElement} */ (e.target)).value;
             if (selectedDate) {
                 // Persist the selected date in localStorage
-                let persistentDates = JSON.parse(localStorage.getItem('persistentDates')) || [];
+                let persistentDates = JSON.parse(localStorage.getItem('persistentDates') || '[]') || [];
                 const newDate = { date: selectedDate, added: Date.now() };
                 // Remove existing entry for the same date before adding the new one (updates timestamp)
                 persistentDates = persistentDates.filter(d => d.date !== selectedDate);

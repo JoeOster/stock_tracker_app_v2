@@ -63,12 +63,11 @@ export function renderAdviceSourceManagementList() {
             <div>
                 <button class="edit-source-btn" data-id="${source.id}">Edit</button>
                 <button class="save-source-btn" data-id="${source.id}" style="display: none;">Save</button>
-                {/* *** START MODIFICATION: Add .cancel-btn class *** */}
+                
                 <button class="cancel-source-btn cancel-btn" data-id="${source.id}" style="display: none;">Cancel</button>
-                {/* *** END MODIFICATION *** */}
-                {/* *** START MODIFICATION: Add .delete-btn class *** */}
+
                 <button class="delete-source-btn delete-btn" data-id="${source.id}">Delete</button>
-                {/* *** END MODIFICATION *** */}
+   
             </div>
         `;
         list.appendChild(li);

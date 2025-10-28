@@ -108,26 +108,31 @@ export async function loadJournalPage() {
  * Initializes event listeners for the Journal page forms and table actions.
  * Sub-tab switching and filtering are handled in separate modules.
  */
+// /public/event-handlers/_journal.js
+// ... (imports and other functions like loadJournalPage) ...
+
+/**
+ * Initializes event listeners for the Journal page forms and table actions.
+ * Sub-tab switching and filtering are handled in separate modules.
+ */
 export function initializeJournalHandlers() {
-    // --- Call initializers for other parts ---
+    // ... (Call initializers for sub-tabs and filters) ...
     initializeJournalSubTabHandlers();
     initializeJournalFilterHandlers();
 
-    // --- Get remaining elements ---
     const journalPageContainer = document.getElementById('journal-page-container');
     const addJournalEntryForm = /** @type {HTMLFormElement | null} */ (document.getElementById('add-journal-entry-form'));
-    // ADDED: Get table elements for sorting listener
     const openTable = document.getElementById('journal-open-table');
     const closedTable = document.getElementById('journal-closed-table');
 
     // --- Add Entry Form Submission ---
     if (addJournalEntryForm) {
         addJournalEntryForm.addEventListener('submit', async (e) => {
-             // Form submission logic remains the same...
             e.preventDefault();
             const addButton = /** @type {HTMLButtonElement | null} */ (addJournalEntryForm.querySelector('#add-journal-entry-btn'));
             if (!addButton) return;
 
+            // ... (Get existing form values: holderId, entryDate, ticker, etc.) ...
             const accountHolderId = state.selectedAccountHolderId === 'all' ? null : String(state.selectedAccountHolderId);
             const entryDate = (/** @type {HTMLInputElement} */(document.getElementById('journal-entry-date'))).value;
             const ticker = (/** @type {HTMLInputElement} */(document.getElementById('journal-ticker'))).value.toUpperCase().trim();
@@ -136,25 +141,41 @@ export function initializeJournalHandlers() {
             const quantityStr = (/** @type {HTMLInputElement} */(document.getElementById('journal-quantity'))).value;
             const entryPriceStr = (/** @type {HTMLInputElement} */(document.getElementById('journal-entry-price'))).value;
             const targetPriceStr = (/** @type {HTMLInputElement} */(document.getElementById('journal-target-price'))).value;
+            // *** GET NEW FIELD VALUE ***
+            const targetPrice2Str = (/** @type {HTMLInputElement} */(document.getElementById('journal-target-price-2'))).value;
             const stopLossPriceStr = (/** @type {HTMLInputElement} */(document.getElementById('journal-stop-loss-price'))).value;
 
+            // ... (Existing validation: holderId, required fields, quantity, entryPrice) ...
             if (!accountHolderId) { return showToast('Please select a specific account holder.', 'error'); }
             if (!entryDate || !ticker || !exchange || !direction) { return showToast('Please fill in all required fields (*).', 'error'); }
             const quantity = parseFloat(quantityStr);
             const entryPrice = parseFloat(entryPriceStr);
             if (isNaN(quantity) || quantity <= 0) { return showToast('Quantity must be a valid positive number.', 'error'); }
             if (isNaN(entryPrice) || entryPrice <= 0) { return showToast('Entry Price must be a valid positive number.', 'error'); }
+
             const targetPrice = targetPriceStr ? parseFloat(targetPriceStr) : null;
-            if (targetPrice !== null && (isNaN(targetPrice) || targetPrice <= 0)) { return showToast('Target Price must be a valid positive number if entered.', 'error'); }
-            if (targetPrice !== null && targetPrice <= entryPrice && direction === 'BUY') { return showToast('Target Price must be greater than Entry Price for a BUY.', 'error'); }
+            if (targetPrice !== null && (isNaN(targetPrice) || targetPrice <= 0)) { return showToast('Target Price 1 must be a valid positive number if entered.', 'error'); }
+            if (targetPrice !== null && targetPrice <= entryPrice && direction === 'BUY') { return showToast('Target Price 1 must be greater than Entry Price for a BUY.', 'error'); }
+
+            // *** VALIDATE NEW FIELD ***
+            const targetPrice2 = targetPrice2Str ? parseFloat(targetPrice2Str) : null;
+            if (targetPrice2 !== null && (isNaN(targetPrice2) || targetPrice2 <= 0)) { return showToast('Target Price 2 must be a valid positive number if entered.', 'error'); }
+            // Ensure T2 > T1 if both are set
+            if (targetPrice !== null && targetPrice2 !== null && targetPrice2 <= targetPrice) { return showToast('Target Price 2 must be greater than Target Price 1.', 'error'); }
+            // Ensure T2 > Entry if T1 is not set but T2 is
+            if (targetPrice === null && targetPrice2 !== null && targetPrice2 <= entryPrice && direction === 'BUY') { return showToast('Target Price 2 must be greater than Entry Price for a BUY.', 'error'); }
+
             const stopLossPrice = stopLossPriceStr ? parseFloat(stopLossPriceStr) : null;
             if (stopLossPrice !== null && (isNaN(stopLossPrice) || stopLossPrice <= 0)) { return showToast('Stop Loss Price must be a valid positive number if entered.', 'error'); }
             if (stopLossPrice !== null && stopLossPrice >= entryPrice && direction === 'BUY') { return showToast('Stop Loss Price must be less than Entry Price for a BUY.', 'error'); }
 
+
             const entryData = {
                 account_holder_id: accountHolderId,
                 entry_date: entryDate, ticker: ticker, exchange: exchange, direction: direction, quantity: quantity, entry_price: entryPrice,
-                target_price: targetPrice, stop_loss_price: stopLossPrice,
+                target_price: targetPrice,
+                target_price_2: targetPrice2, // *** ADD NEW FIELD TO DATA ***
+                stop_loss_price: stopLossPrice,
                 advice_source_id: (/** @type {HTMLSelectElement} */(document.getElementById('journal-advice-source'))).value || null,
                 advice_source_details: (/** @type {HTMLInputElement} */(document.getElementById('journal-advice-details'))).value.trim() || null,
                 entry_reason: (/** @type {HTMLInputElement} */(document.getElementById('journal-entry-reason'))).value.trim() || null,
@@ -163,12 +184,14 @@ export function initializeJournalHandlers() {
 
             addButton.disabled = true;
             try {
+                // NOTE: addJournalEntry API call needs backend update to save target_price_2
                 await addJournalEntry(entryData);
                 showToast('Journal entry added!', 'success');
                 addJournalEntryForm.reset();
                  const entryDateInput = /** @type {HTMLInputElement} */ (document.getElementById('journal-entry-date'));
-                 if (entryDateInput) entryDateInput.valueAsDate = new Date();
-                await loadJournalPage();
+                 if (entryDateInput) entryDateInput.valueAsDate = new Date(); // Reset date to today
+                await loadJournalPage(); // Reload journal data and re-render
+                 // Switch back to 'Open Ideas' tab after adding
                  const journalSubTabsContainer = journalPageContainer?.querySelector('.journal-sub-tabs');
                  const openTabButton = journalSubTabsContainer?.querySelector('[data-sub-tab="journal-open-panel"]');
                  if (openTabButton instanceof HTMLElement) openTabButton.click();
@@ -180,7 +203,8 @@ export function initializeJournalHandlers() {
         });
     }
 
-    // --- ADDED: Table Header Sorting Logic ---
+    // ... (Table Sorting and Action Button logic remain the same) ...
+     // --- ADDED: Table Header Sorting Logic ---
     const addSortListener = (tableElement) => {
         if (!tableElement) return;
         const thead = tableElement.querySelector('thead');

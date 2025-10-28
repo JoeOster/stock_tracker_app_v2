@@ -19,6 +19,7 @@
             <h3>Avg. Gain/Loss</h3>
             <p id="journal-avg-gain-loss">--</p>
         </div>
+
     </div>
     <div class="sub-tabs journal-sub-tabs" style="margin-bottom: 1.5rem;">
         <button class="sub-tab active" data-sub-tab="journal-add-panel">Add Entry</button>
@@ -26,8 +27,8 @@
         <button class="sub-tab" data-sub-tab="journal-closed-panel">Closed Ideas</button>
     </div>
 
-    <div class="sub-tab-content">
 
+    <div class="sub-tab-content">
         <div id="journal-add-panel" class="sub-tab-panel active">
             <div id="add-journal-entry-container" class="info-panel" style="padding: 20px; border: 1px solid var(--container-border); border-radius: 8px;">
                 <h3>Add New Journal Entry / Idea</h3>
@@ -38,13 +39,26 @@
                     <div class="form-group"> <label for="journal-direction">Direction*</label> <select id="journal-direction" required> <option value="BUY" selected>BUY</option> </select> </div>
                     <div class="form-group"> <label for="journal-quantity">Quantity*</label> <input type="number" id="journal-quantity" step="any" min="0.00001" placeholder="e.g., 10" required> </div>
                     <div class="form-group"> <label for="journal-entry-price">Entry Price*</label> <input type="number" id="journal-entry-price" step="any" min="0.01" placeholder="e.g., 150.25" required> </div>
-                    <div class="form-group"> <label for="journal-target-price">Target Price (Take Profit)</label> <input type="number" id="journal-target-price" step="any" min="0.01" placeholder="Optional"> </div>
-                    <div class="form-group"> <label for="journal-stop-loss-price">Stop Loss Price</label> <input type="number" id="journal-stop-loss-price" step="any" min="0.01" placeholder="Optional"> </div>
+
+                    <div class="form-group">
+                        <label for="journal-target-price">Target Price 1 (Take Profit)</label>
+                        <input type="number" id="journal-target-price" step="any" min="0.01" placeholder="Optional">
+                    </div>
+                    <div class="form-group">
+                        <label for="journal-target-price-2">Target Price 2 (Optional)</label>
+                        <input type="number" id="journal-target-price-2" step="any" min="0.01" placeholder="Optional 2nd target">
+                    </div>
+                    <div class="form-group form-group-span-2"> {/* Span 2 if needed for layout */}
+                        <label for="journal-stop-loss-price">Stop Loss Price</label>
+                        <input type="number" id="journal-stop-loss-price" step="any" min="0.01" placeholder="Optional">
+                    </div>
+
                     <div class="form-group"> <label for="journal-advice-source">Advice Source</label> <select id="journal-advice-source"> <option value="">(None/Manual Entry)</option> </select> </div>
                     <div class="form-group"> <label for="journal-advice-details">Quick Source Notes</label> <input type="text" id="journal-advice-details" placeholder="Brief note if no source selected"> </div>
                     <div class="form-group form-group-span-2"> <label for="journal-entry-reason">Entry Reason</label> <input type="text" id="journal-entry-reason" placeholder="e.g., Bullish signal, News catalyst"> </div>
                     <div class="form-group form-group-span-2"> <label for="journal-notes">General Notes</label> <textarea id="journal-notes" rows="2" placeholder="Additional thoughts or observations..."></textarea> </div>
                     <div class="form-group form-group-span-2" style="text-align: right;"> <button type="submit" id="add-journal-entry-btn">Add Journal Entry</button> </div>
+
                 </form>
             </div>
         </div>

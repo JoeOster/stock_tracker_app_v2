@@ -1,22 +1,24 @@
 // /public/ui/renderers/_tabs.js
-// Version Updated (Renamed Orders Tab)
+// Version Updated (Renamed Journal Tab to Research)
 /**
  * @file Renderer for the main navigation tabs.
  * @module renderers/_tabs
  */
 import { getTradingDays, getActivePersistentDates } from '../datetime.js';
 
-// MODIFIED: Renamed 'New Orders' to 'Orders'
+// MODIFIED: Renamed 'Journal' to 'Research'
 export const staticTabs = [
     { viewType: 'dashboard', textContent: 'Dashboard' },
-    { viewType: 'journal', textContent: 'Journal' },
+    { viewType: 'research', textContent: 'Research' }, // <-- Changed viewType and textContent
     { viewType: 'ledger', textContent: 'Ledger' },
-    { viewType: 'orders', textContent: 'Orders' }, // <-- Renamed
+    { viewType: 'orders', textContent: 'Orders' },
     { viewType: 'alerts', textContent: 'Alerts' },
     { viewType: 'imports', textContent: 'Imports' },
     { viewType: 'charts', textContent: 'Charts' },
 ];
 // END MODIFICATION
+
+// ... rest of the file (_tabs.js) remains the same ...
 
 /**
  * Sets the 'active' class on the currently selected tab.
