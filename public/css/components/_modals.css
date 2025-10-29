@@ -5,7 +5,7 @@
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 1000; /* Base z-index for the background overlay */
     left: 0;
     top: 0;
     width: 100%;
@@ -27,18 +27,22 @@
     padding: 2rem;
     border: 1px solid var(--container-border);
     width: 90%; /* Use percentage for better responsiveness */
-    max-width: 500px;
+    max-width: 500px; /* Default max width */
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     position: relative;
     max-height: 90vh; /* Prevent modal from exceeding viewport height */
     overflow-y: auto; /* Allow content to scroll if needed */
+    z-index: 1001; /* Base z-index for general modal content */
 }
 
+/* --- MODIFIED: Increased max-width for modal-large --- */
 .modal-content.modal-large {
-    max-width: 90vw; /* Keep large modal width relative */
-    width: auto; /* Allow it to take up to 90vw */
+    max-width: 90vw; /* Make it take up to 90% of viewport width */
+    width: auto; /* Allow it to shrink if content is narrower */
 }
+/* --- END MODIFICATION --- */
+
 
 .close-button {
     color: var(--text-muted-color);
@@ -49,9 +53,24 @@
     font-weight: 700;
     cursor: pointer;
     line-height: 1; /* Ensure consistent vertical position */
+    /* Ensure close button is above its own modal content slightly */
+    z-index: 10; /* Relative z-index within the modal-content */
+    /* --- ADDED: Make it look less like a button --- */
+    background: none;
+    border: none;
+    padding: 0;
+    width: auto;
+    height: auto;
 }
+/* Hide any text added via ::before or ::after - Fix for button-style inheritance */
+.close-button::before,
+.close-button::after {
+    content: none !important;
+}
+
 .close-button:hover {
     color: var(--heading-color);
+    background: none; /* Ensure no background on hover */
 }
 
 .form-static-text {
@@ -68,6 +87,43 @@
     font-size: 1.5rem;
     color: var(--heading-color);
 }
+
+/* --- Specific Modal Z-indices --- */
+
+/* Settings, Advice, Chart Zoom, Sales History (Old), Confirm, Source Details, Selective Sell, Confirm Fill */
+/* These open directly from the main app, use the base content z-index */
+#settings-modal .modal-content,
+#advice-modal .modal-content,
+#chart-zoom-modal .modal-content,
+#sales-history-modal .modal-content, /* Keep for now, might be removed later */
+#confirm-modal .modal-content,
+#confirm-fill-modal .modal-content,
+#selective-sell-modal .modal-content,
+#source-details-modal .modal-content { /* Added source details modal */
+    z-index: 1001;
+}
+
+/* Manage Position Modal - Higher than base modals */
+#manage-position-modal .modal-content {
+    z-index: 1010;
+}
+/* Ensure its background overlay is also appropriately high, but below its content */
+#manage-position-modal {
+    z-index: 1009; /* Slightly lower than its content */
+}
+
+
+/* Modals opened FROM Manage Position - Highest */
+#edit-modal .modal-content,
+#sell-from-position-modal .modal-content {
+    z-index: 1020;
+}
+/* Ensure their background overlays are also appropriately high */
+#edit-modal,
+#sell-from-position-modal {
+    z-index: 1019; /* Slightly lower than their content */
+}
+
 
 /* --- Settings Modal (Tabbed) --- */
 .settings-layout {
@@ -195,12 +251,6 @@
 }
 
 
-/* Sub-navigation within Data Management - Styles moved to _sub-tabs.css */
-/* .sub-tabs { ... } REMOVED */
-/* .sub-tab { ... } REMOVED */
-/* .sub-tab-panel { ... } REMOVED */
-
-
 /* Grid layout for the Add Advice Source form */
 .add-item-form-grid {
     display: grid;
@@ -264,87 +314,3 @@
 .modal-actions button {
     width: auto; /* Don't force full width */
 }
-
-/* public/css/components/_modals.css */
-/* Contains styles for all modal dialogs. */
-
-/* --- General Modal Styles --- */
-.modal {
-    /* ... (keep existing display, position, etc.) ... */
-    z-index: 1000; /* Base z-index for the background overlay */
-    background-color: rgba(0,0,0,.6);
-    /* ... (rest of .modal styles) ... */
-}
-
-.modal-content {
-    /* ... (keep existing background, padding, etc.) ... */
-    z-index: 1001; /* Base z-index for general modal content */
-    /* ... (rest of .modal-content styles) ... */
-}
-
-/* --- Specific Modal Z-indices --- */
-
-/* Settings, Advice, Chart Zoom, Sales History (Old), Confirm */
-/* These open directly from the main app, use the base content z-index */
-#settings-modal .modal-content,
-#advice-modal .modal-content,
-#chart-zoom-modal .modal-content,
-#sales-history-modal .modal-content, /* Keep for now, might be removed later */
-#confirm-modal .modal-content,
-#confirm-fill-modal .modal-content,
-#selective-sell-modal .modal-content { /* Selective sell opens from dashboard */
-    z-index: 1001;
-}
-
-/* Manage Position Modal - Higher than base modals */
-#manage-position-modal .modal-content {
-    z-index: 1010;
-}
-/* Ensure its background overlay is also appropriately high, but below its content */
-#manage-position-modal {
-    z-index: 1009; /* Slightly lower than its content */
-}
-
-
-/* Modals opened FROM Manage Position - Highest */
-#edit-modal .modal-content,
-#sell-from-position-modal .modal-content {
-    z-index: 1020;
-}
-/* Ensure their background overlays are also appropriately high */
-#edit-modal,
-#sell-from-position-modal {
-    z-index: 1019; /* Slightly lower than their content */
-}
-
-
-/* --- Close Button --- */
-.close-button {
-    color: var(--text-muted-color);
-    position: absolute;
-    top: 1rem;
-    right: 1.5rem;
-    font-size: 28px;
-    font-weight: 700;
-    cursor: pointer;
-    line-height: 1;
-    /* Ensure close button is above its own modal content slightly */
-    z-index: 10; /* Relative z-index within the modal-content */
-    background: none;
-    padding: 0;
-    border: none;
-    width: auto;
-    height: auto;
-}
-/* Hide any text added via ::before or ::after */
-.close-button::before,
-.close-button::after {
-    content: none !important;
-}
-
-.close-button:hover {
-    color: var(--heading-color);
-    background: none;
-}
-
-/* ... (rest of modal styles like .modal-large, form styles, settings styles, etc.) ... */

@@ -8,6 +8,11 @@ import { state } from '../state.js'; // Needed for exchange list in form
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 
 // --- Helper to escape HTML ---
+/**
+ * Escapes HTML special characters in a string.
+ * @param {string | null | undefined} str The string to escape.
+ * @returns {string} The escaped string.
+ */
 const escapeHTML = (str) => {
     if (!str) return '';
     return String(str)
@@ -45,10 +50,11 @@ export function renderSourcesList(panelElement, sources) {
     }
 
     sortedSources.forEach(source => {
+        // Card HTML no longer includes the .source-details-content div
         const cardHTML = `
             <div class="source-card clickable-source" data-source-id="${source.id}" style="cursor: pointer;">
                 <div class="card-header">
-                    <span style="font-size: 1.5em; margin-right: 5px;">ℹ️</span> 
+                    <span style="font-size: 1.5em; margin-right: 5px;">ℹ️</span>
                     <h3 class="source-name" style="margin: 0;">${escapeHTML(source.name)}</h3>
                     <small style="margin-left: auto;" class="source-type">(${escapeHTML(source.type)})</small>
                 </div>
@@ -57,9 +63,6 @@ export function renderSourcesList(panelElement, sources) {
                         ${escapeHTML(source.description) || (source.contact_person ? `Contact: ${escapeHTML(source.contact_person)}` : 'Click to view details...')}
                     </p>
                 </div>
-                <div class="source-details-content" style="display: none; padding: 10px 15px; border-top: 1px solid var(--container-border); background-color: var(--info-panel-bg);">
-                    {/* Details loaded here on click */}
-                </div>
             </div>
         `;
         gridContainer.innerHTML += cardHTML;
@@ -67,8 +70,13 @@ export function renderSourcesList(panelElement, sources) {
 }
 
 /**
- * Renders the detailed view HTML for a selected advice source.
+ * Renders the detailed view HTML for a selected advice source inside the modal.
  * @param {object} details - The fetched details object.
+ * @param {object} details.source - The advice source data.
+ * @param {any[]} details.journalEntries - Array of linked journal entries.
+ * @param {any[]} details.watchlistItems - Array of linked watchlist items.
+ * @param {any[]} details.documents - Array of linked documents.
+ * @param {any[]} details.sourceNotes - Array of linked source notes.
  * @returns {string} The HTML string for the details content.
  */
 export function generateSourceDetailsHTML(details) {
@@ -77,14 +85,14 @@ export function generateSourceDetailsHTML(details) {
 
     // 1. Source Contact Info & Description
     detailsHTML += `<div class="source-contact-info" style="margin-bottom: 1rem; border-bottom: 1px dashed var(--container-border); padding-bottom: 1rem;">`;
-    detailsHTML += `<h5>Contact & Info</h5>`; // Added sub-heading
+    detailsHTML += `<h5>Contact & Info</h5>`;
     detailsHTML += `<p><strong>Description:</strong> ${escapeHTML(source.description) || 'N/A'}</p>`;
     if (source.url) detailsHTML += `<p><strong>URL:</strong> <a href="${escapeHTML(source.url)}" target="_blank" class="source-url-link">${escapeHTML(source.url)}</a></p>`;
     if (source.contact_person) detailsHTML += `<p><strong>Contact:</strong> ${escapeHTML(source.contact_person)}</p>`;
     if (source.contact_email) detailsHTML += `<p><strong>Email:</strong> ${escapeHTML(source.contact_email)}</p>`;
     if (source.contact_phone) detailsHTML += `<p><strong>Phone:</strong> ${escapeHTML(source.contact_phone)}</p>`;
     if (source.contact_app_type) detailsHTML += `<p><strong>App:</strong> ${escapeHTML(source.contact_app_type)}: ${escapeHTML(source.contact_app_handle) || 'N/A'}</p>`;
-    else if (source.contact_app) detailsHTML += `<p><strong>App (Old):</strong> ${escapeHTML(source.contact_app)}</p>`;
+    else if (source.contact_app && !source.contact_app_type && !source.contact_app_handle) detailsHTML += `<p><strong>App (Old):</strong> ${escapeHTML(source.contact_app)}</p>`;
     detailsHTML += `</div>`;
 
     // 2. Linked Journal Entries
@@ -130,33 +138,37 @@ export function generateSourceDetailsHTML(details) {
     } else {
         detailsHTML += `<p>No watchlist items linked.</p>`;
     }
-    // Add Watchlist Item Form (Enhanced)
+    // Add Watchlist Item Form (Modified for "Create Buy Order")
     detailsHTML += `
         <form class="add-watchlist-item-form" data-source-id="${source.id}" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--container-border);">
             <h5>Add Recommended Ticker</h5>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 10px 15px; align-items: end;">
-                {/* Row 1 */}
+
                 <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-ticker-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Ticker*</label><input type="text" id="add-wl-ticker-${source.id}" class="add-watchlist-ticker-input" placeholder="e.g., AAPL" required></div>
-                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-tp1-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Take Profit 1</label><input type="number" id="add-wl-tp1-${source.id}" class="add-watchlist-tp1-input" step="any" min="0.01" placeholder="Optional"></div>
-                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-tp2-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Take Profit 2</label><input type="number" id="add-wl-tp2-${source.id}" class="add-watchlist-tp2-input" step="any" min="0.01" placeholder="Optional"></div>
+                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-tp1-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Take Profit 1</label><input type="number" id="add-wl-tp1-${source.id}" class="add-watchlist-tp1-input" step="any" min="0.01" placeholder="Guideline"></div>
+                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-tp2-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Take Profit 2</label><input type="number" id="add-wl-tp2-${source.id}" class="add-watchlist-tp2-input" step="any" min="0.01" placeholder="Guideline"></div>
                 <button type="submit" class="add-watchlist-ticker-button" style="padding: 8px 12px; grid-row: 1 / 3; align-self: end;">Add</button>
-                {/* Row 2 */}
-                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-rec-entry-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Entry Price</label><input type="number" id="add-wl-rec-entry-${source.id}" class="add-watchlist-rec-entry-input" step="any" min="0.01" placeholder="Optional"></div>
+
+                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-rec-entry-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Entry Price</label><input type="number" id="add-wl-rec-entry-${source.id}" class="add-watchlist-rec-entry-input" step="any" min="0.01" placeholder="Guideline"></div>
                 <div class="form-group" style="grid-column: span 2; margin-bottom: 0;"><label for="add-wl-rec-datetime-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Date/Time</label><input type="datetime-local" id="add-wl-rec-datetime-${source.id}" class="add-watchlist-rec-datetime-input"></div>
-                {/* Row 3 */}
-                <div class="form-group form-group-with-checkbox" style="grid-column: 1 / 4; margin-bottom: 0; margin-top: 5px;"><input type="checkbox" id="add-wl-create-order-${source.id}" class="add-watchlist-create-order-checkbox" style="width: auto; margin-right: 5px;"><label for="add-wl-create-order-${source.id}" style="margin-bottom: 0; font-weight: normal; color: var(--text-color);">Create Pending BUY Order using TP1?</label></div>
-                {/* Row 4 */}
-                <div class="form-group add-wl-order-fields" style="grid-column: 1 / 4; display: none; margin-bottom: 0;" id="add-wl-exchange-group-${source.id}"><label for="add-wl-exchange-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Exchange for Order*</label><select id="add-wl-exchange-${source.id}" class="add-watchlist-exchange-select"></select></div>
-                <div class="form-group add-wl-order-fields" style="grid-column: 1 / 2; display: none; margin-bottom: 0;" id="add-wl-qty-group-${source.id}"><label for="add-wl-qty-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Order Qty*</label><input type="number" id="add-wl-qty-${source.id}" class="add-watchlist-qty-input" step="any" min="0.00001" value="1"></div>
-                <div class="form-group add-wl-order-fields" style="grid-column: 2 / 4; display: none; margin-bottom: 0;" id="add-wl-exp-group-${source.id}"><label for="add-wl-exp-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Order Expiration</label><input type="date" id="add-wl-exp-${source.id}" class="add-watchlist-exp-input" placeholder="Optional (GTC)"></div>
+
+
+                <div class="form-group form-group-with-checkbox" style="grid-column: 1 / 4; margin-bottom: 0; margin-top: 5px;">
+                    <input type="checkbox" id="add-wl-create-buy-${source.id}" class="add-watchlist-create-buy-checkbox" style="width: auto; margin-right: 5px;">
+                    <label for="add-wl-create-buy-${source.id}" style="margin-bottom: 0; font-weight: normal; color: var(--text-color);">Create Buy Order</label>
+                </div>
+
+                
+
             </div>
         </form>`;
+
 
     // 4. Linked Documents & Add Form
     detailsHTML += `<h4 style="margin-top: 1rem;">Linked Documents (${details.documents.length})</h4>`;
     if (details.documents.length > 0) {
         detailsHTML += `<ul class="linked-items-list">`;
-        details.documents.forEach(doc => {
+         details.documents.forEach(doc => {
             const titleDisplay = escapeHTML(doc.title) || 'Untitled Document';
             const typeDisplay = doc.document_type ? `(${escapeHTML(doc.document_type)})` : '';
             const descDisplay = doc.description ? `- ${escapeHTML(doc.description)}` : '';
@@ -185,9 +197,11 @@ export function generateSourceDetailsHTML(details) {
 
     // 5. Source Notes & Add Form
     detailsHTML += `<h4 style="margin-top: 1rem;">Notes (${details.sourceNotes.length})</h4>`;
-    if (details.sourceNotes.length > 0) {
+     if (details.sourceNotes.length > 0) {
         detailsHTML += `<ul class="source-notes-list" style="list-style: none; padding: 0; max-height: 200px; overflow-y: auto;">`;
-        details.sourceNotes.forEach(note => {
+        // Sort notes by created_at descending (newest first)
+        const sortedNotes = [...details.sourceNotes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        sortedNotes.forEach(note => {
             const escapedNoteContent = escapeHTML(note.note_content);
             const createdDateStr = new Date(note.created_at).toLocaleString();
             const updatedDateStr = new Date(note.updated_at).toLocaleString();
@@ -226,5 +240,6 @@ export function generateSourceDetailsHTML(details) {
             </div>
         </form>`;
 
-    return detailsHTML; // Return the generated HTML string
+
+    return detailsHTML;
 }

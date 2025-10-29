@@ -1,5 +1,4 @@
 // /public/app-main.js
-// Version Updated (Load Research Template)
 /**
  * @file Main application entry point. Handles initialization, state management,
  * and view switching.
@@ -8,28 +7,37 @@
 import { initializeAllEventHandlers } from './event-handlers/_init.js';
 import { showToast } from './ui/helpers.js';
 import { switchView, autosizeAccountSelector } from './event-handlers/_navigation.js';
+// Make sure _settings_holders path is correct if split
 import { fetchAndPopulateAccountHolders } from './event-handlers/_settings_holders.js';
-import { fetchAndRenderExchanges,  } from './event-handlers/_settings_exchanges.js';
+// Make sure _settings_exchanges path is correct if split
+import { fetchAndRenderExchanges } from './event-handlers/_settings_exchanges.js';
 import { applyAppearanceSettings } from './ui/settings.js';
 import { state } from './state.js';
 import { initializeScheduler } from './scheduler.js';
 
 /**
  * Initializes the application after the DOM is fully loaded.
+ * Fetches HTML templates, sets up initial state, populates dropdowns,
+ * initializes event handlers, and navigates to the default view.
+ * @returns {Promise<void>}
  */
 async function initialize() {
-    // ... (settings loading remains the same) ...
+    console.log("[App Main] Initializing application...");
+    // --- Settings Loading ---
     try {
         const storedSettings = JSON.parse(localStorage.getItem('stockTrackerSettings')) || {};
+        // Merge defaults with stored settings
         state.settings = {
             theme: 'light', font: 'Inter', takeProfitPercent: 10, stopLossPercent: 5, notificationCooldown: 15,
             defaultAccountHolderId: 1, familyName: '', marketHoursInterval: 2, afterHoursInterval: 15,
-            defaultView: 'dashboard', numberOfDateTabs: 1,
+            defaultView: 'dashboard', numberOfDateTabs: 1, // Ensure defaults exist
             ...storedSettings
         };
+        console.log("[App Main] Loaded settings:", state.settings);
         applyAppearanceSettings();
     } catch (e) {
         console.error("[App Main] Error loading or applying settings:", e);
+        // Fallback to defaults if loading fails
         state.settings = {
             theme: 'light', font: 'Inter', takeProfitPercent: 10, stopLossPercent: 5, notificationCooldown: 15,
             defaultAccountHolderId: 1, familyName: '', marketHoursInterval: 2, afterHoursInterval: 15,
@@ -46,46 +54,49 @@ async function initialize() {
         return;
     }
 
+    console.log("[App Main] Fetching HTML templates...");
     try {
         // Fetch all templates concurrently
         const [
             alerts, charts, dailyReport, imports, ledger, orders, watchlist,
-            // ADDED research, REMOVED journal
             research, dashboard,
             // Modal templates
             modal_advice, modal_settings, modal_edit_transaction, modal_confirm,
             modal_sell_from_position, modal_confirm_fill, modal_chart_zoom,
             modal_sales_history,
             modal_selective_sell,
-            modal_manage_position
+            modal_manage_position,
+            // *** ADDED: Fetch new source details modal ***
+            modal_source_details
         ] = await Promise.all([
             // Page fetches
-            fetch('./templates/_alerts.html').then(res => res.text()),
-            fetch('./templates/_charts.html').then(res => res.text()),
-            fetch('./templates/_dailyReport.html').then(res => res.text()),
-            fetch('./templates/_imports.html').then(res => res.text()),
-            fetch('./templates/_ledger.html').then(res => res.text()),
-            fetch('./templates/_orders.html').then(res => res.text()),
-            fetch('./templates/_watchlist.html').then(res => res.text()),
-            // ADDED research fetch, REMOVED journal fetch
-            fetch('./templates/_research.html').then(res => res.text()), // <-- Fetch Research template
-            fetch('./templates/_dashboard.html').then(res => res.text()),
+            fetch('./templates/_alerts.html').then(res => res.ok ? res.text() : Promise.reject(`_alerts.html: ${res.statusText}`)),
+            fetch('./templates/_charts.html').then(res => res.ok ? res.text() : Promise.reject(`_charts.html: ${res.statusText}`)),
+            fetch('./templates/_dailyReport.html').then(res => res.ok ? res.text() : Promise.reject(`_dailyReport.html: ${res.statusText}`)),
+            fetch('./templates/_imports.html').then(res => res.ok ? res.text() : Promise.reject(`_imports.html: ${res.statusText}`)),
+            fetch('./templates/_ledger.html').then(res => res.ok ? res.text() : Promise.reject(`_ledger.html: ${res.statusText}`)),
+            fetch('./templates/_orders.html').then(res => res.ok ? res.text() : Promise.reject(`_orders.html: ${res.statusText}`)),
+            fetch('./templates/_watchlist.html').then(res => res.ok ? res.text() : Promise.reject(`_watchlist.html: ${res.statusText}`)),
+            fetch('./templates/_research.html').then(res => res.ok ? res.text() : Promise.reject(`_research.html: ${res.statusText}`)),
+            fetch('./templates/_dashboard.html').then(res => res.ok ? res.text() : Promise.reject(`_dashboard.html: ${res.statusText}`)),
             // Modal fetches
-            fetch('./templates/_modal_advice.html').then(res => res.text()),
-            fetch('./templates/_modal_settings.html').then(res => res.text()),
-            fetch('./templates/_modal_edit_transaction.html').then(res => res.text()),
-            fetch('./templates/_modal_confirm.html').then(res => res.text()),
-            fetch('./templates/_modal_sell_from_position.html').then(res => res.text()),
-            fetch('./templates/_modal_confirm_fill.html').then(res => res.text()),
-            fetch('./templates/_modal_chart_zoom.html').then(res => res.text()),
-            fetch('./templates/_modal_sales_history.html').then(res => res.text()),
-            fetch('./templates/_modal_selective_sell.html').then(res => res.text()),
-            fetch('./templates/_modal_manage_position.html').then(res => res.text())
+            fetch('./templates/_modal_advice.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_advice.html: ${res.statusText}`)),
+            fetch('./templates/_modal_settings.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_settings.html: ${res.statusText}`)),
+            fetch('./templates/_modal_edit_transaction.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_edit_transaction.html: ${res.statusText}`)),
+            fetch('./templates/_modal_confirm.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_confirm.html: ${res.statusText}`)),
+            fetch('./templates/_modal_sell_from_position.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_sell_from_position.html: ${res.statusText}`)),
+            fetch('./templates/_modal_confirm_fill.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_confirm_fill.html: ${res.statusText}`)),
+            fetch('./templates/_modal_chart_zoom.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_chart_zoom.html: ${res.statusText}`)),
+            fetch('./templates/_modal_sales_history.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_sales_history.html: ${res.statusText}`)),
+            fetch('./templates/_modal_selective_sell.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_selective_sell.html: ${res.statusText}`)),
+            fetch('./templates/_modal_manage_position.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_manage_position.html: ${res.statusText}`)),
+            // *** ADDED: Fetch new source details modal ***
+            fetch('./templates/_modal_source_details.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_source_details.html: ${res.statusText}`))
        ]);
 
         // Inject page templates
-        // ADDED research, REMOVED journal
         mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + watchlist + research;
+        console.log("[App Main] Page templates injected.");
 
         // Inject concatenated modal templates
         modalContainer.innerHTML =
@@ -98,88 +109,120 @@ async function initialize() {
             modal_chart_zoom +
             modal_sales_history +
             modal_selective_sell +
-            modal_manage_position;
+            modal_manage_position +
+            // *** ADDED: Inject new source details modal ***
+            modal_source_details;
+        console.log("[App Main] Modal templates injected.");
 
     } catch (error) {
         console.error("[App Main] Failed to load or inject one or more templates:", error);
-        showToast('Error loading page templates. Please refresh.', 'error');
-        return;
+        showToast(`Error loading UI templates (${error}). Please refresh.`, 'error', 30000);
+        return; // Stop initialization if templates fail
     }
 
-    // ... (rest of initialize function remains the same) ...
-     // Initialize event handlers
+     // --- Initialize event handlers ---
     try {
-        initializeAllEventHandlers();
+        console.log("[App Main] Initializing all event handlers...");
+        initializeAllEventHandlers(); // This now calls page-specific handlers via setTimeout
     } catch(error) {
         console.error("[App Main] Error during initializeAllEventHandlers():", error);
         showToast('Error setting up page interactions. Please refresh.', 'error');
         return;
     }
 
-    // Fetch initial global data (account holders, exchanges)
+    // --- Fetch initial global data ---
+     console.log("[App Main] Fetching initial global data (holders, exchanges)...");
      try {
         await Promise.all([
             fetchAndRenderExchanges(),
             fetchAndPopulateAccountHolders()
         ]);
+        console.log("[App Main] Initial global data fetched.");
     } catch (error) {
         console.error("[App Main] Error fetching initial global data:", error);
+        // Continue, but show error
         showToast('Error loading account data. Some features may be limited.', 'error');
     }
 
-    // Set default account holder in the UI
+    // --- Set default account holder in UI ---
     try {
+        console.log("[App Main] Setting default account holder...");
         // Ensure defaultAccountHolderId is treated as a number if it's not 'all'
-        let defaultHolderId = state.settings.defaultAccountHolderId;
-        // Check if defaultHolderId is potentially a string representation of a number
-        if (typeof defaultHolderId === 'string' && !isNaN(parseInt(defaultHolderId))) {
-            defaultHolderId = parseInt(defaultHolderId);
+        let defaultHolderIdSetting = state.settings.defaultAccountHolderId;
+        let defaultHolderId = 1; // Fallback to Primary
+
+        // Check if setting is a string representation of a number
+        if (typeof defaultHolderIdSetting === 'string' && !isNaN(parseInt(defaultHolderIdSetting))) {
+            defaultHolderId = parseInt(defaultHolderIdSetting);
+        } else if (typeof defaultHolderIdSetting === 'number') {
+             defaultHolderId = defaultHolderIdSetting;
         }
-        // Ensure it's a valid number or default to 1
-        state.selectedAccountHolderId = (typeof defaultHolderId === 'number' && defaultHolderId > 0) ? defaultHolderId : 1;
+
+        // Validate the ID exists in the fetched list, otherwise default to 1
+        const holderExists = state.allAccountHolders.some(h => h.id === defaultHolderId);
+        if (!holderExists && defaultHolderId !== 1) {
+             console.warn(`[App Main] Default holder ID ${defaultHolderId} from settings not found, defaulting to 1 (Primary).`);
+             defaultHolderId = 1;
+        }
+
+        state.selectedAccountHolderId = defaultHolderId; // Set state
 
 
         const globalFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
         if (globalFilter) {
-            const optionExists = Array.from(globalFilter.options).some(opt => opt.value == state.selectedAccountHolderId); // Use == for comparison
+            // Check if the option *value* exists (comparing strings)
+            const optionExists = Array.from(globalFilter.options).some(opt => opt.value === String(state.selectedAccountHolderId));
             if (optionExists) {
                 globalFilter.value = String(state.selectedAccountHolderId);
+                console.log(`[App Main] Set global filter to ID: ${globalFilter.value}`);
             } else {
-                console.warn(`[App Main] Default holder ID ${state.selectedAccountHolderId} not found in dropdown, defaulting to 1.`);
+                // This case should ideally not happen if validation above works, but as a fallback:
+                console.warn(`[App Main] Option for holder ID ${state.selectedAccountHolderId} not found in dropdown, setting to 1.`);
                 globalFilter.value = '1';
                 state.selectedAccountHolderId = 1; // Ensure state matches UI
             }
-           autosizeAccountSelector(globalFilter);
+           autosizeAccountSelector(globalFilter); // Adjust width
         } else {
             console.warn("[App Main] Global account holder filter dropdown not found.");
         }
     } catch (e) {
         console.error("[App Main] Error setting default account holder:", e);
         state.selectedAccountHolderId = 1; // Fallback
+        const globalFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
+        if (globalFilter) globalFilter.value = '1'; // Try to set fallback in UI too
     }
 
 
-    // Initialize scheduler
+    // --- Initialize scheduler ---
     try {
+        console.log("[App Main] Initializing scheduler...");
         initializeScheduler(state);
     } catch (e) {
         console.error("[App Main] Error initializing scheduler:", e);
     }
 
-    // Switch to the default view
+    // --- Switch to the default view ---
     const defaultViewType = state.settings.defaultView || 'dashboard';
+    console.log(`[App Main] Switching to default view: ${defaultViewType}`);
+    // Use setTimeout to allow DOM painting and event loop to clear before initial load
     setTimeout(async () => {
         try {
             await switchView(defaultViewType);
+            console.log(`[App Main] Successfully switched to default view: ${defaultViewType}`);
         } catch (error) {
             console.error(`[App Main] Error switching to default view (${defaultViewType}):`, error);
             showToast(`Failed to load default view (${defaultViewType}). Please try selecting a tab manually.`, 'error');
-            // Attempt fallback to dashboard if default fails
+            // Attempt fallback to dashboard if default fails and wasn't dashboard
             if (defaultViewType !== 'dashboard') {
-                 try { await switchView('dashboard'); } catch (fallbackError) { /* Ignore fallback error */ }
+                 console.log("[App Main] Attempting fallback to dashboard view...");
+                 try { await switchView('dashboard'); } catch (fallbackError) {
+                      console.error("[App Main] Fallback to dashboard view also failed:", fallbackError);
+                      // Display a more persistent error message if everything fails
+                      mainContent.innerHTML = `<p style="color: red; text-align: center; padding: 2rem;">Error: Could not load the application interface.</p>`;
+                 }
             }
         }
-    }, 50);
+    }, 50); // Small delay
 }
 
 
