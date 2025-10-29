@@ -1,10 +1,14 @@
 /* public/css/components/_research.css */
-/* Contains styles specific to the Research page, including Source Cards */
+/* Contains styles specific to the Research page, including Source Cards and Details Modal */
 
-/* --- Grid Container (Reuses dashboard style if possible, or define here) --- */
-/* .cards-grid { ... } */ /* If not already globally defined or imported */
+/* --- Grid Container for Source Cards --- */
+#sources-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
+    gap: 1.5rem; /* Space between cards */
+}
 
-/* --- Source Card Styles (Adapted from .position-card) --- */
+/* --- Source Card Styles --- */
 .source-card {
     background-color: var(--container-bg);
     border: 1px solid var(--container-border);
@@ -30,22 +34,36 @@
     border-bottom: 1px solid var(--container-border);
 }
 
+/* Thumbnail for image in card list */
+.source-list-thumbnail {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%; /* Circular */
+    margin-right: 0px; /* Space between image and name */
+    object-fit: cover; /* Crop image nicely */
+    vertical-align: middle; /* Align with text */
+    border: 1px solid var(--container-border); /* Subtle border */
+    background-color: var(--info-panel-bg); /* Background if image fails */
+}
+
+
 .source-card .card-header .source-name {
     font-size: 1.2em;
     font-weight: 600;
     color: var(--heading-color);
     margin: 0;
     line-height: 1;
-    /* Prevent wrapping in header if needed */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-grow: 1; 
 }
 
 .source-card .card-header .source-type {
-    margin-left: auto; /* Push type to the right */
+    margin-left: auto; 
     white-space: nowrap;
     color: var(--text-muted-color);
+    flex-shrink: 0; 
 }
 
 /* Card Body (for snippet) */
@@ -54,7 +72,6 @@
     font-size: 0.9em;
     min-height: 60px; /* Ensure a minimum height */
     color: var(--text-muted-color);
-    /* Flex setup for vertical centering if needed, but simple paragraph often enough */
 }
  /* Style for the snippet paragraph to limit lines */
 .source-card .card-body p {
@@ -66,124 +83,219 @@
     -webkit-box-orient: vertical;
 }
 
-/* Card Footer (Optional visual separation) */
-.source-card .card-footer {
-    padding: 8px 15px;
-    border-top: 1px solid var(--container-border);
-    background-color: var(--info-panel-bg);
-    font-size: 0.8em;
-    color: var(--text-muted-color);
-    text-align: center;
+/* --- Styles for Source Details Modal --- */
+
+/* Grid layout for Source Details Modal Content (Top Section) */
+#source-details-modal-content .source-details-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.5rem 2rem; /* row-gap column-gap */
+    margin-bottom: 1.5rem; /* Space before the next section below the grid */
+    align-items: start; /* Align items to the top of the grid cell */
+}
+/* Media query for smaller screens to stack the columns */
+@media (max-width: 900px) {
+    #source-details-modal-content .source-details-grid {
+        grid-template-columns: 1fr; /* Stack columns */
+    }
 }
 
-/* Details Section (Initially hidden, shown on click) */
-.source-card .source-details-content {
-    padding: 15px;
-    border-top: 1px solid var(--container-border);
-    background-color: var(--info-panel-bg); /* Slightly different background */
-    font-size: 0.9em; /* Match card body font size */
+
+/* Styling for sections within the top grid */
+.source-profile-section,
+.add-ticker-section {
+    padding: 1rem;
+    border: 1px solid var(--container-border);
+    border-radius: 8px;
+    background-color: var(--info-panel-bg); /* Slight background difference */
+    min-width: 0; /* Prevent flex item overflow */
+}
+.source-profile-section h4,
+.add-ticker-section h5 {
+    margin-top: 0; /* Remove top margin for first heading in section */
+    margin-bottom: 1rem;
 }
 
-/* --- Styles for content WITHIN source-details-content --- */
-.source-details-content h4,
-.source-details-content h5 {
+/* Profile image styling */
+.profile-image {
+    display: block; 
+    max-width: 100px; 
+    height: 100px;
+    border-radius: 50%; /* Make it circular */
+    object-fit: cover; /* Crop nicely */
+    margin-bottom: 1rem; /* Space below image */
+    border: 2px solid var(--container-border);
+    background-color: var(--container-bg); /* Background if image fails */
+}
+.source-profile-section p {
+    margin: 0.4rem 0; /* Adjust spacing */
+}
+
+/* Contact app icon styling (adjust size as needed) */
+.contact-app-icon {
+    width: 18px;
+    height: 18px;
+    vertical-align: middle; /* Align with text */
+    margin-right: 5px; /* Space between icon and text */
+    object-fit: contain;
+}
+
+/* Styles for the Add Ticker form within its section */
+.add-ticker-section .add-watchlist-item-form {
+     margin-top: 0; 
+     padding-top: 0;
+     border-top: none;
+}
+.add-ticker-section .add-watchlist-item-form > div { /* Target the direct child div containing the grid */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 10px 15px;
+    align-items: end;
+}
+.add-ticker-section .add-watchlist-item-form .form-group {
+    margin-bottom: 0; 
+}
+
+.add-ticker-section .add-watchlist-item-form .form-group:has(#add-wl-ticker),
+.add-ticker-section .add-watchlist-item-form .form-group[style*="grid-column: span 2"],
+.add-ticker-section .add-watchlist-item-form .form-group-with-checkbox {
+    grid-column: span 2;
+}
+.add-ticker-section .add-watchlist-item-form div:has(> .add-watchlist-ticker-button) {
+    grid-column: 2 / 3;
+    text-align: right;
+}
+.add-ticker-section .add-watchlist-item-form input,
+.add-ticker-section .add-watchlist-item-form select {
+    padding: 6px 8px;
+    font-size: 0.9em;
+}
+.add-ticker-section .add-watchlist-item-form button {
+     padding: 6px 12px;
+     font-size: 0.9em;
+}
+
+
+/* --- Styles for content WITHIN source-details-modal-content (Below the top grid) --- */
+#source-details-modal-content h4,
+#source-details-modal-content h5 {
     margin-top: 1rem;
     margin-bottom: 0.5rem;
-    font-size: 1.1em; /* Make subheadings slightly larger */
+    font-size: 1.1em; 
 }
- .source-details-content h4:first-child,
- .source-details-content h5:first-child {
+ #source-details-modal-content h4:first-child,
+ #source-details-modal-content h5:first-child {
     margin-top: 0;
 }
 
-.source-details-content p {
+#source-details-modal-content p {
     margin: 0.3rem 0;
     line-height: 1.5;
 }
 
-.source-details-content .source-contact-info p {
-     margin-bottom: 0.5rem;
-}
-
-.source-details-content a {
+#source-details-modal-content a {
     color: var(--primary-color);
     text-decoration: none;
 }
-.source-details-content a:hover {
+#source-details-modal-content a:hover {
     text-decoration: underline;
 }
 
-/* Mini table for journal entries */
-.source-details-content .mini-journal-table {
-    width: 100%;
-    font-size: 0.9em;
-    border-collapse: collapse; /* Simple collapse */
+/* Container for scrollable tables */
+#source-details-modal-content div:has(> .mini-journal-table),
+#source-details-modal-content div:has(> .recommended-trades-table) {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--container-border);
+    border-radius: 4px;
     margin-bottom: 1rem;
 }
-.source-details-content .mini-journal-table th,
-.source-details-content .mini-journal-table td {
+
+/* Mini table styles (shared by journal and recommended) */
+#source-details-modal-content .mini-journal-table,
+#source-details-modal-content .recommended-trades-table {
+    width: 100%;
+    font-size: 0.9em;
+    border-collapse: collapse; 
+    margin-bottom: 0;
+    border: none; 
+}
+#source-details-modal-content .mini-journal-table th,
+#source-details-modal-content .mini-journal-table td,
+#source-details-modal-content .recommended-trades-table th,
+#source-details-modal-content .recommended-trades-table td {
     padding: 4px 6px;
     border: 1px solid var(--container-border);
     text-align: left;
     white-space: nowrap;
 }
-.source-details-content .mini-journal-table th {
+#source-details-modal-content .mini-journal-table th,
+#source-details-modal-content .recommended-trades-table th {
      background-color: var(--table-header-bg);
      font-weight: 600;
+     position: sticky; 
+     top: 0;
+     z-index: 1;
 }
-.source-details-content .mini-journal-table .numeric { text-align: right; }
-.source-details-content .mini-journal-table .positive { color: var(--positive-color); }
-.source-details-content .mini-journal-table .negative { color: var(--negative-color); }
-.source-details-content .mini-journal-table .text-muted { color: var(--text-muted-color); }
+#source-details-modal-content .mini-journal-table .numeric,
+#source-details-modal-content .recommended-trades-table .numeric { text-align: right; }
+
+#source-details-modal-content .mini-journal-table .positive,
+#source-details-modal-content .recommended-trades-table .positive { color: var(--positive-color); }
+
+#source-details-modal-content .mini-journal-table .negative,
+#source-details-modal-content .recommended-trades-table .negative { color: var(--negative-color); }
+
+#source-details-modal-content .mini-journal-table .text-muted { color: var(--text-muted-color); }
 
 
-/* List for watchlist/documents/notes */
-.source-details-content .linked-items-list,
-.source-details-content .source-notes-list {
+/* List for documents/notes */
+#source-details-modal-content .linked-items-list,
+#source-details-modal-content .source-notes-list {
     list-style: none;
     padding: 0;
     margin: 0.5rem 0 1rem 0;
 }
-.source-details-content .linked-items-list li,
-.source-details-content .source-notes-list li {
+#source-details-modal-content .linked-items-list li,
+#source-details-modal-content .source-notes-list li {
     padding: 6px 0;
     border-bottom: 1px dashed var(--container-border);
 }
- .source-details-content .linked-items-list li:last-child,
- .source-details-content .source-notes-list li:last-child {
+ #source-details-modal-content .linked-items-list li:last-child,
+ #source-details-modal-content .source-notes-list li:last-child {
     border-bottom: none;
     margin-bottom: 0;
     padding-bottom: 0;
  }
 
- /* Input/Textarea styles within the details forms */
- .source-details-content form input[type="text"],
- .source-details-content form input[type="url"],
- .source-details-content form input[type="number"],
- .source-details-content form select,
- .source-details-content form textarea {
-     padding: 6px 8px; /* Smaller padding for inline forms */
+ /* Input/Textarea styles within the details forms (Add Doc, Add Note) */
+ #source-details-modal-content form input[type="text"],
+ #source-details-modal-content form input[type="url"],
+ #source-details-modal-content form input[type="number"],
+ #source-details-modal-content form select,
+ #source-details-modal-content form textarea {
+     padding: 6px 8px; 
      font-size: 0.9em;
-     margin-bottom: 0; /* Remove default form group margin */
-     width: 100%; /* Ensure they fill grid cells */
+     margin-bottom: 0; 
+     width: 100%; 
      box-sizing: border-box;
  }
-  .source-details-content form textarea {
+  #source-details-modal-content form textarea {
      resize: vertical;
      min-height: 40px;
   }
-  .source-details-content form label {
-     margin-bottom: 0; /* Override default */
+  #source-details-modal-content form label {
+     margin-bottom: 0; 
      font-size: 0.8em;
   }
  /* Ensure buttons in forms use smaller size */
- .source-details-content form button {
+ #source-details-modal-content form button {
     padding: 5px 10px;
     font-size: 0.9em;
  }
  /* Styles for note edit/save/cancel */
-.source-details-content .note-actions button,
-.source-details-content .note-content-edit button {
+#source-details-modal-content .note-actions button,
+#source-details-modal-content .note-content-edit button {
     padding: 3px 6px !important;
     font-size: 0.8em !important;
 }

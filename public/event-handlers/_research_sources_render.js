@@ -1,10 +1,10 @@
 // public/event-handlers/_research_sources_render.js
 /**
- * @file Renders UI elements for the Research Sources tab (cards and details).
+ * @file Renders UI elements for the Research Sources tab (cards and details modal).
  * @module event-handlers/_research_sources_render
  */
 
-import { state } from '../state.js'; // Needed for exchange list in form
+import { state } from '../state.js'; // Needed for price cache
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 
 // --- Helper to escape HTML ---
@@ -50,11 +50,15 @@ export function renderSourcesList(panelElement, sources) {
     }
 
     sortedSources.forEach(source => {
-        // Card HTML no longer includes the .source-details-content div
+        // Prepare Image Thumbnail
+        const imagePath = source.image_path ? escapeHTML(source.image_path) : '/images/contacts/default_avatar.png'; // Default path
+        const imageThumbnailHTML = `<img src="${imagePath}" alt="" class="source-list-thumbnail">`;
+        const fallbackIconHTML = '<span style="font-size: 1.5em; margin-right: 5px;">ℹ️</span>';
+
         const cardHTML = `
             <div class="source-card clickable-source" data-source-id="${source.id}" style="cursor: pointer;">
                 <div class="card-header">
-                    <span style="font-size: 1.5em; margin-right: 5px;">ℹ️</span>
+                    ${source.image_path ? imageThumbnailHTML : fallbackIconHTML}
                     <h3 class="source-name" style="margin: 0;">${escapeHTML(source.name)}</h3>
                     <small style="margin-left: auto;" class="source-type">(${escapeHTML(source.type)})</small>
                 </div>
@@ -71,10 +75,11 @@ export function renderSourcesList(panelElement, sources) {
 
 /**
  * Renders the detailed view HTML for a selected advice source inside the modal.
+ * Uses a two-column layout for profile/add ticker, followed by other sections.
  * @param {object} details - The fetched details object.
  * @param {object} details.source - The advice source data.
  * @param {any[]} details.journalEntries - Array of linked journal entries.
- * @param {any[]} details.watchlistItems - Array of linked watchlist items.
+ * @param {any[]} details.watchlistItems - Array of linked watchlist items (recommended trades).
  * @param {any[]} details.documents - Array of linked documents.
  * @param {any[]} details.sourceNotes - Array of linked source notes.
  * @returns {string} The HTML string for the details content.
@@ -83,86 +88,242 @@ export function generateSourceDetailsHTML(details) {
     let detailsHTML = '';
     const source = details.source;
 
-    // 1. Source Contact Info & Description
-    detailsHTML += `<div class="source-contact-info" style="margin-bottom: 1rem; border-bottom: 1px dashed var(--container-border); padding-bottom: 1rem;">`;
-    detailsHTML += `<h5>Contact & Info</h5>`;
+    // --- Start Grid Layout for Top Section ---
+    detailsHTML += '<div class="source-details-grid">';
+
+    // --- Profile Section (Left Column) ---
+    detailsHTML += '<div class="source-profile-section">';
+    detailsHTML += `<h4>Profile</h4>`;
+    const imagePath = source.image_path ? escapeHTML(source.image_path) : '/images/contacts/default_avatar.png'; // Default path
+    detailsHTML += `<img src="${imagePath}" alt="${escapeHTML(source.name)}" class="profile-image">`;
+
+    detailsHTML += `<p><strong>Name:</strong> ${escapeHTML(source.name)}</p>`;
+    detailsHTML += `<p><strong>Type:</strong> ${escapeHTML(source.type)}</p>`;
     detailsHTML += `<p><strong>Description:</strong> ${escapeHTML(source.description) || 'N/A'}</p>`;
     if (source.url) detailsHTML += `<p><strong>URL:</strong> <a href="${escapeHTML(source.url)}" target="_blank" class="source-url-link">${escapeHTML(source.url)}</a></p>`;
-    if (source.contact_person) detailsHTML += `<p><strong>Contact:</strong> ${escapeHTML(source.contact_person)}</p>`;
+
+    // Contact Details within Profile Section
+    detailsHTML += `<h5 style="margin-top: 1rem;">Contact Info</h5>`;
+    if (source.contact_person) detailsHTML += `<p><strong>Person:</strong> ${escapeHTML(source.contact_person)}</p>`;
     if (source.contact_email) detailsHTML += `<p><strong>Email:</strong> ${escapeHTML(source.contact_email)}</p>`;
     if (source.contact_phone) detailsHTML += `<p><strong>Phone:</strong> ${escapeHTML(source.contact_phone)}</p>`;
-    if (source.contact_app_type) detailsHTML += `<p><strong>App:</strong> ${escapeHTML(source.contact_app_type)}: ${escapeHTML(source.contact_app_handle) || 'N/A'}</p>`;
-    else if (source.contact_app && !source.contact_app_type && !source.contact_app_handle) detailsHTML += `<p><strong>App (Old):</strong> ${escapeHTML(source.contact_app)}</p>`;
-    detailsHTML += `</div>`;
 
-    // 2. Linked Journal Entries
+    // App Contact with Icon
+    let appIconHTML = '';
+    const appType = source.contact_app_type?.toLowerCase();
+    const appHandle = escapeHTML(source.contact_app_handle);
+    if (appType === 'signal') {
+        appIconHTML = `<img src="/images/logos/signal.png" alt="Signal" class="contact-app-icon"> `;
+    } else if (appType === 'whatsapp') {
+        appIconHTML = `<img src="/images/logos/whatsapp.jpeg" alt="WhatsApp" class="contact-app-icon"> `;
+    } // Add more icons here (Discord, Email, etc.) later if available
+
+    if (source.contact_app_type) {
+        detailsHTML += `<p><strong>App:</strong> ${appIconHTML}${escapeHTML(source.contact_app_type)}: ${appHandle || 'N/A'}</p>`;
+    } else if (source.contact_app) { // Fallback for old data
+        detailsHTML += `<p><strong>App (Old):</strong> ${escapeHTML(source.contact_app)}</p>`;
+    }
+    detailsHTML += '</div>'; // End source-profile-section
+
+    // --- Add Recommended Ticker Form (Right Column) ---
+    detailsHTML += '<div class="add-ticker-section">';
+    detailsHTML += `<h5>Add Recommended Trade</h5>`;
+    detailsHTML += `
+        <form class="add-watchlist-item-form" data-source-id="${source.id}">
+             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 15px; align-items: end;">
+
+                <div class="form-group" style="grid-column: span 2; margin-bottom: 0;">
+                    <label for="add-wl-ticker-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Ticker*</label>
+                    <input type="text" id="add-wl-ticker-${source.id}" class="add-watchlist-ticker-input" placeholder="e.g., AAPL" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="add-wl-rec-entry-low-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Entry Low</label>
+                    <input type="number" id="add-wl-rec-entry-low-${source.id}" class="add-watchlist-rec-entry-low-input" step="any" min="0" placeholder="Guideline Low">
+                </div>
+                 <div class="form-group" style="margin-bottom: 0;">
+                    <label for="add-wl-rec-entry-high-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Entry High</label>
+                    <input type="number" id="add-wl-rec-entry-high-${source.id}" class="add-watchlist-rec-entry-high-input" step="any" min="0" placeholder="Guideline High">
+                </div>
+
+                 <div class="form-group" style="margin-bottom: 0;">
+                    <label for="add-wl-rec-datetime-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Date</label>
+                    <input type="datetime-local" id="add-wl-rec-datetime-${source.id}" class="add-watchlist-rec-datetime-input">
+                </div>
+                 <div></div> {/* */}
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="add-wl-tp1-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Take Profit 1</label>
+                    <input type="number" id="add-wl-tp1-${source.id}" class="add-watchlist-tp1-input" step="any" min="0.01" placeholder="Guideline">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="add-wl-tp2-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Take Profit 2</label>
+                    <input type="number" id="add-wl-tp2-${source.id}" class="add-watchlist-tp2-input" step="any" min="0.01" placeholder="Guideline">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0; grid-column: span 2;">
+                    <label for="add-wl-rec-stop-loss-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Stop Loss</label>
+                    <input type="number" id="add-wl-rec-stop-loss-${source.id}" class="add-watchlist-rec-stop-loss-input" step="any" min="0.01" placeholder="Guideline">
+                </div>
+
+
+                 <div class="form-group form-group-with-checkbox" style="grid-column: 1 / 3; margin-bottom: 0; margin-top: 5px;">
+                    <input type="checkbox" id="add-wl-create-buy-${source.id}" class="add-watchlist-create-buy-checkbox" style="width: auto; margin-right: 5px;">
+                    <label for="add-wl-create-buy-${source.id}" style="margin-bottom: 0; font-weight: normal; color: var(--text-color);">Create Buy Order</label>
+                </div>
+                <div style="grid-column: 2 / 3; text-align: right;">
+                    <button type="submit" class="add-watchlist-ticker-button" style="padding: 8px 12px;">Add</button>
+                </div>
+            </div>
+        </form>
+    `;
+    detailsHTML += '</div>'; // End add-ticker-section
+    detailsHTML += '</div>'; // End source-details-grid
+
+    // --- Separator ---
+    detailsHTML += '<hr style="margin: 1.5rem 0;">';
+
+    // --- Linked Sections Below Grid ---
+
+
+
+    // 3. Recommended Trades (Watchlist Items) - New Table Format
+    detailsHTML += `<h4 style="margin-top: 1rem;">Recommended Trades (${details.watchlistItems.length})</h4>`;
+    if (details.watchlistItems.length > 0) {
+        detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="recommended-trades-table mini-journal-table" style="width: 100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Date Added</th>
+                    <th>Rec. Entry Range</th>
+                    <th>Current $</th>
+                    <th>Dist. to Entry</th>
+                    <th>Rec. Guidelines (SL/TP1/TP2)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead><tbody>`;
+        
+        details.watchlistItems.forEach(item => {
+            const currentPriceData = state.priceCache.get(item.ticker);
+            const currentPrice = (currentPriceData && typeof currentPriceData.price === 'number') ? currentPriceData.price : null;
+            
+            // Format Entry Range
+            let entryRange = '';
+            if (item.rec_entry_low !== null && item.rec_entry_high !== null) {
+                entryRange = `${formatAccounting(item.rec_entry_low, false)} - ${formatAccounting(item.rec_entry_high, false)}`;
+            } else if (item.rec_entry_low !== null) {
+                entryRange = `${formatAccounting(item.rec_entry_low, false)}+`;
+            } else if (item.rec_entry_high !== null) {
+                entryRange = `Up to ${formatAccounting(item.rec_entry_high, false)}`;
+            } else {
+                entryRange = '--';
+            }
+
+            // Calculate Distance to Entry
+            let distance = '--';
+            let distClass = '';
+            if (currentPrice !== null && item.rec_entry_low !== null) {
+                const distPercent = ((currentPrice - item.rec_entry_low) / item.rec_entry_low) * 100;
+                distClass = distPercent >= 0 ? 'positive' : 'negative'; // Green if above, red if below
+                // Check if inside range
+                if (item.rec_entry_high !== null && currentPrice <= item.rec_entry_high) {
+                    distClass = 'positive'; // Green if inside range
+                    distance = `In Range (${distPercent.toFixed(1)}%)`;
+                } else {
+                    distance = `${distPercent > 0 ? '+' : ''}${distPercent.toFixed(1)}%`;
+                }
+            } else if (currentPrice !== null && item.rec_entry_high !== null) {
+                 const distPercent = ((currentPrice - item.rec_entry_high) / item.rec_entry_high) * 100;
+                 distClass = distPercent > 0 ? 'negative' : 'positive'; // Red if above, green if below
+                 distance = `${distPercent > 0 ? '+' : ''}${distPercent.toFixed(1)}%`;
+            }
+
+            // Format Recommended Limits
+            const recLimits = [
+                item.rec_stop_loss ? `SL: ${formatAccounting(item.rec_stop_loss, false)}` : null,
+                item.rec_tp1 ? `TP1: ${formatAccounting(item.rec_tp1, false)}` : null,
+                item.rec_tp2 ? `TP2: ${formatAccounting(item.rec_tp2, false)}` : null
+            ].filter(Boolean).join(' / ') || '--';
+
+            detailsHTML += `
+                <tr>
+                    <td>${escapeHTML(item.ticker)}</td>
+                    <td>${new Date(item.created_at).toLocaleDateString()}</td>
+                    <td class="numeric">${entryRange}</td>
+                    <td class="numeric">${currentPrice ? formatAccounting(currentPrice) : '--'}</td>
+                    <td class="numeric ${distClass}">${distance}</td>
+                    <td class="numeric">${recLimits}</td>
+                    <td class="center-align actions-cell">
+                        <button class="delete-watchlist-item-button delete-btn" data-item-id="${item.id}" title="Remove Recommendation" style="padding: 2px 5px; font-size: 0.8em;">X</button>
+                    </td>
+                </tr>`;
+        });
+        detailsHTML += `</tbody></table></div>`;
+    } else {
+        detailsHTML += `<p>No recommended trades linked.</p>`;
+    }
+ 
+     // 2. Linked Journal Entries (Enhanced Table)
     detailsHTML += `<h4>Linked Journal Entries (${details.journalEntries.length})</h4>`;
     if (details.journalEntries.length > 0) {
-        detailsHTML += `<table class="mini-journal-table" style="width: 100%; font-size: 0.9em;"><thead><tr><th>Date</th><th>Ticker</th><th>Type</th><th>Entry Price</th><th>Status</th><th>P/L</th></tr></thead><tbody>`;
+        detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Ticker</th>
+                    <th>Buy $</th>
+                    <th>Current $</th>
+                    <th>Unrealized P/L</th>
+                    <th>Rec. Limits (SL/TP1/TP2)</th>
+                    <th>Actual Limits (SL/TP)</th>
+                    <th>Status</th>
+                </tr>
+            </thead><tbody>`;
         details.journalEntries.forEach(entry => {
-            const pnlClass = entry.pnl ? (entry.pnl >= 0 ? 'positive' : 'negative') : (entry.current_pnl ? (entry.current_pnl >= 0 ? 'positive' : 'negative') : '');
+            const pnlClass = entry.current_pnl ? (entry.current_pnl >= 0 ? 'positive' : 'negative') : '';
             const statusClass = entry.status === 'OPEN' ? '' : 'text-muted';
+            
             let pnlDisplay = '--';
             if (entry.status === 'OPEN') {
                 pnlDisplay = entry.current_pnl !== null && entry.current_pnl !== undefined ? formatAccounting(entry.current_pnl) : '--';
             } else {
                 pnlDisplay = entry.pnl !== null && entry.pnl !== undefined ? formatAccounting(entry.pnl) : '--';
             }
+
+            const recLimits = [
+                entry.stop_loss_price ? `SL: ${formatAccounting(entry.stop_loss_price, false)}` : null,
+                entry.target_price ? `TP1: ${formatAccounting(entry.target_price, false)}` : null,
+                entry.target_price_2 ? `TP2: ${formatAccounting(entry.target_price_2, false)}` : null
+            ].filter(Boolean).join(' / ') || '--';
+
+            // Find the linked transaction (if executed) to get *actual* limits
+            let actualLimits = '--';
+            if (entry.status === 'EXECUTED' && entry.linked_trade_id) {
+                const transaction = state.transactions.find(t => t.id === entry.linked_trade_id);
+                if (transaction) {
+                     const actualSL = transaction.limit_price_down ? `SL: ${formatAccounting(transaction.limit_price_down, false)}` : null;
+                     const actualTP = transaction.limit_price_up ? `TP: ${formatAccounting(transaction.limit_price_up, false)}` : null;
+                     actualLimits = [actualSL, actualTP].filter(Boolean).join(' / ') || '--';
+                }
+            }
+
             detailsHTML += `
                 <tr class="${statusClass}">
                     <td>${escapeHTML(entry.entry_date) || 'N/A'}</td>
                     <td>${escapeHTML(entry.ticker) || 'N/A'}</td>
-                    <td>${escapeHTML(entry.direction) || 'N/A'} (${formatQuantity(entry.quantity || 0)})</td>
                     <td class="numeric">${formatAccounting(entry.entry_price)}</td>
-                    <td>${escapeHTML(entry.status) || 'N/A'}</td>
+                    <td class="numeric">${entry.current_price ? formatAccounting(entry.current_price) : '--'}</td>
                     <td class="numeric ${pnlClass}">${pnlDisplay}</td>
+                    <td class="numeric">${recLimits}</td>
+                    <td class="numeric">${actualLimits}</td>
+                    <td>${escapeHTML(entry.status) || 'N/A'}</td>
                 </tr>`;
         });
-        detailsHTML += `</tbody></table>`;
+        detailsHTML += `</tbody></table></div>`;
     } else {
         detailsHTML += `<p>No journal entries linked.</p>`;
     }
-
-    // 3. Linked Watchlist Items & Add Form
-    detailsHTML += `<h4 style="margin-top: 1rem;">Watchlist Recommendations (${details.watchlistItems.length})</h4>`;
-    if (details.watchlistItems.length > 0) {
-        detailsHTML += `<ul class="linked-items-list">`;
-        details.watchlistItems.forEach(item => {
-            detailsHTML += `
-                <li style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>${escapeHTML(item.ticker)} (Added: ${new Date(item.created_at).toLocaleDateString()})</span>
-                    <button class="delete-watchlist-item-button delete-btn" data-item-id="${item.id}" title="Remove from Watchlist" style="padding: 2px 5px; font-size: 0.8em;">X</button>
-                </li>`;
-        });
-        detailsHTML += `</ul>`;
-    } else {
-        detailsHTML += `<p>No watchlist items linked.</p>`;
-    }
-    // Add Watchlist Item Form (Modified for "Create Buy Order")
-    detailsHTML += `
-        <form class="add-watchlist-item-form" data-source-id="${source.id}" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--container-border);">
-            <h5>Add Recommended Ticker</h5>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 10px 15px; align-items: end;">
-
-                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-ticker-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Ticker*</label><input type="text" id="add-wl-ticker-${source.id}" class="add-watchlist-ticker-input" placeholder="e.g., AAPL" required></div>
-                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-tp1-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Take Profit 1</label><input type="number" id="add-wl-tp1-${source.id}" class="add-watchlist-tp1-input" step="any" min="0.01" placeholder="Guideline"></div>
-                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-tp2-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Take Profit 2</label><input type="number" id="add-wl-tp2-${source.id}" class="add-watchlist-tp2-input" step="any" min="0.01" placeholder="Guideline"></div>
-                <button type="submit" class="add-watchlist-ticker-button" style="padding: 8px 12px; grid-row: 1 / 3; align-self: end;">Add</button>
-
-                <div class="form-group" style="margin-bottom: 0;"><label for="add-wl-rec-entry-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Entry Price</label><input type="number" id="add-wl-rec-entry-${source.id}" class="add-watchlist-rec-entry-input" step="any" min="0.01" placeholder="Guideline"></div>
-                <div class="form-group" style="grid-column: span 2; margin-bottom: 0;"><label for="add-wl-rec-datetime-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Date/Time</label><input type="datetime-local" id="add-wl-rec-datetime-${source.id}" class="add-watchlist-rec-datetime-input"></div>
-
-
-                <div class="form-group form-group-with-checkbox" style="grid-column: 1 / 4; margin-bottom: 0; margin-top: 5px;">
-                    <input type="checkbox" id="add-wl-create-buy-${source.id}" class="add-watchlist-create-buy-checkbox" style="width: auto; margin-right: 5px;">
-                    <label for="add-wl-create-buy-${source.id}" style="margin-bottom: 0; font-weight: normal; color: var(--text-color);">Create Buy Order</label>
-                </div>
-
-                
-
-            </div>
-        </form>`;
-
+       // Form was moved to the top grid
 
     // 4. Linked Documents & Add Form
     detailsHTML += `<h4 style="margin-top: 1rem;">Linked Documents (${details.documents.length})</h4>`;

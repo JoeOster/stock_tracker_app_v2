@@ -1,5 +1,4 @@
 // /public/api.js
-// Version Updated (Added source notes, watchlist, document delete functions, fetchSourceDetails)
 /**
  * @file This file centralizes all client-side API (fetch) calls to the server.
  * @module api
@@ -9,6 +8,54 @@ import { populatePricesFromCache, showToast } from './ui/helpers.js';
 import { renderLedgerPage } from './ui/renderers/_ledger.js';
 import { getCurrentESTDateString } from './ui/datetime.js';
 // import { populateJournalPrices } from './ui/renderers/_journal.js'; // Import if created
+
+/**
+ * @typedef {object} PriceData
+ * @property {number|string|null} price - The fetched price ('invalid', null, or number).
+ * @property {number|null} previousPrice - The previous price, if available.
+ * @property {number} timestamp - The timestamp when the price was fetched or retrieved from cache.
+ */
+
+/**
+ * @typedef {object} AdviceSourcePostBody
+ * @property {string|number} account_holder_id
+ * @property {string} name
+ * @property {string} type
+ * @property {string|null} [description]
+ * @property {string|null} [url]
+ * @property {string|null} [contact_person]
+ * @property {string|null} [contact_email]
+ * @property {string|null} [contact_phone]
+ * @property {string|null} [contact_app_type]
+ * @property {string|null} [contact_app_handle]
+ * @property {string|null} [image_path]
+ */
+
+ /**
+ * @typedef {object} AdviceSourcePutBody
+ * @property {string} name
+ * @property {string} type
+ * @property {string|null} [description]
+ * @property {string|null} [url]
+ * @property {string|null} [contact_person]
+ * @property {string|null} [contact_email]
+ * @property {string|null} [contact_phone]
+ * @property {string|null} [contact_app_type]
+ * @property {string|null} [contact_app_handle]
+ * @property {string|null} [image_path]
+ */
+
+/**
+ * @typedef {object} DocumentData
+ * @property {string|number|null} journal_entry_id - The journal entry ID (nullable).
+ * @property {string|number|null} advice_source_id - The advice source ID (nullable).
+ * @property {string|number} account_holder_id - The account holder ID.
+ * @property {string} external_link - The URL of the document.
+ * @property {string} [title] - Optional title.
+ * @property {string} [document_type] - Optional type (e.g., 'Chart').
+ * @property {string} [description] - Optional description.
+ */
+
 
 /**
  * A helper function to handle fetch responses, throwing an error with a server message if not ok.
@@ -26,6 +73,18 @@ export async function handleResponse(response) {
     if (response.status === 204) {
         return { message: 'Operation successful.' }; // Return a success object
     }
+    // Handle text/plain responses (like some DELETEs might send)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/plain')) {
+        const text = await response.text();
+        try {
+            // Try to parse if it's JSON disguised as text
+            return JSON.parse(text);
+        } catch (e) {
+            // Return plain text message
+            return { message: text };
+        }
+    }
     return response.json(); // Otherwise, parse JSON body
 }
 
@@ -42,6 +101,7 @@ export async function refreshLedger() {
         renderLedgerPage(state.transactions, state.ledgerSort);
     } catch (error) {
         console.error("Failed to refresh ledger:", error);
+        // @ts-ignore
         showToast(`Failed to refresh ledger: ${error.message}`, 'error');
         updateState({ transactions: [] }); // Clear state on error
         renderLedgerPage([], state.ledgerSort); // Render empty ledger
@@ -56,9 +116,9 @@ export async function refreshLedger() {
  * @returns {Promise<void>}
  */
 export async function updatePricesForView(viewDate, tickersToUpdate) {
-    console.log("updatePricesForView called with:", { viewDate, tickersToUpdate });
+    // console.log("updatePricesForView called with:", { viewDate, tickersToUpdate });
     if (!tickersToUpdate || tickersToUpdate.length === 0) {
-        console.log("updatePricesForView: Exiting early - no tickers to update.");
+        // console.log("updatePricesForView: Exiting early - no tickers to update.");
         return;
     }
 
@@ -70,12 +130,12 @@ export async function updatePricesForView(viewDate, tickersToUpdate) {
             body: JSON.stringify({ tickers: tickersToUpdate, date: viewDate, allowLive: isToday })
         });
         const pricesData = await handleResponse(response);
-        console.log("updatePricesForView: Received pricesData:", pricesData);
+        // console.log("updatePricesForView: Received pricesData:", pricesData);
 
         const now = Date.now();
         let pricesUpdated = false;
         for (const ticker in pricesData) {
-            console.log("updatePricesForView: Processing ticker:", ticker, pricesData[ticker]);
+            // console.log("updatePricesForView: Processing ticker:", ticker, pricesData[ticker]);
 
             // --- Store previous price ---
             const currentCached = state.priceCache.get(ticker);
@@ -86,29 +146,32 @@ export async function updatePricesForView(viewDate, tickersToUpdate) {
             const newPriceValue = pricesData[ticker];
             const newPrice = (typeof newPriceValue === 'number' && newPriceValue > 0) ? newPriceValue : 'invalid';
 
+            /** @type {PriceData} */
             const newPriceData = {
                 price: newPrice,
                 // Keep the old 'previousPrice' if the new price is invalid, otherwise use the 'previousPrice' we just captured
                 previousPrice: newPrice === 'invalid' ? currentCached?.previousPrice : previousPrice,
                 timestamp: now
             };
-            console.log("updatePricesForView: Caching data:", newPriceData);
+            // console.log("updatePricesForView: Caching data:", newPriceData);
 
             state.priceCache.set(ticker, newPriceData);
             pricesUpdated = true;
-            console.log("updatePricesForView: Cache updated for", ticker, state.priceCache.get(ticker));
+            // console.log("updatePricesForView: Cache updated for", ticker, state.priceCache.get(ticker));
         }
         if (!pricesUpdated) {
-            console.log("updatePricesForView: No valid price data found in response to process.");
+            // console.log("updatePricesForView: No valid price data found in response to process.");
         }
 
     } catch (error) {
         console.error("Error inside updatePricesForView:", error);
+        // @ts-ignore
         showToast(`Price update failed: ${error.message}`, 'error');
         // Mark prices as error in cache
         tickersToUpdate.forEach(ticker => {
              // Preserve previous price on error if possible
              const existingPrevious = state.priceCache.get(ticker)?.previousPrice;
+             // @ts-ignore
              state.priceCache.set(ticker, { price: 'error', previousPrice: existingPrevious ?? null, timestamp: Date.now() });
         });
     }
@@ -237,7 +300,7 @@ export async function fetchAdviceSources(holderId) {
 
 /**
  * Adds a new advice source to the database.
- * @param {object} sourceData - The data for the new advice source.
+ * @param {AdviceSourcePostBody} sourceData - The data for the new advice source.
  * @returns {Promise<any>} A promise that resolves to the newly created advice source object.
  */
 export async function addAdviceSource(sourceData) {
@@ -252,7 +315,7 @@ export async function addAdviceSource(sourceData) {
 /**
  * Updates an existing advice source.
  * @param {string|number} id - The ID of the advice source to update.
- * @param {object} sourceData - The updated data for the advice source.
+ * @param {AdviceSourcePutBody} sourceData - The updated data for the advice source.
  * @returns {Promise<any>} A promise that resolves to the server's response message.
  */
 export async function updateAdviceSource(id, sourceData) {
@@ -389,17 +452,31 @@ export async function fetchSourceDetails(sourceId, holderId) {
 // --- Watchlist Item API ---
 
 /**
- * Adds a ticker to the watchlist, optionally linking it to an advice source.
+ * Adds a ticker to the watchlist, optionally linking it to an advice source and guidelines.
  * @param {string|number} accountHolderId - The account holder ID.
  * @param {string} ticker - The ticker symbol to add.
  * @param {string|number|null} [adviceSourceId=null] - Optional ID of the advice source to link.
+ * @param {number|null} [recEntryLow=null] - Optional recommended entry price low.
+ * @param {number|null} [recEntryHigh=null] - Optional recommended entry price high.
+ * @param {number|null} [recTp1=null] - Optional recommended take profit 1.
+ * @param {number|null} [recTp2=null] - Optional recommended take profit 2.
+ * @param {number|null} [recStopLoss=null] - Optional recommended stop loss.
  * @returns {Promise<any>} The response from the server.
  */
-export async function addWatchlistItem(accountHolderId, ticker, adviceSourceId = null) {
+export async function addWatchlistItem(accountHolderId, ticker, adviceSourceId = null, recEntryLow = null, recEntryHigh = null, recTp1 = null, recTp2 = null, recStopLoss = null) {
     const response = await fetch('/api/watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account_holder_id: accountHolderId, ticker: ticker, advice_source_id: adviceSourceId })
+        body: JSON.stringify({
+            account_holder_id: accountHolderId,
+            ticker: ticker,
+            advice_source_id: adviceSourceId,
+            rec_entry_low: recEntryLow,
+            rec_entry_high: recEntryHigh,
+            rec_tp1: recTp1, // <-- New
+            rec_tp2: recTp2, // <-- New
+            rec_stop_loss: recStopLoss // <-- New
+        })
     });
     return handleResponse(response);
 }
@@ -409,7 +486,7 @@ export async function addWatchlistItem(accountHolderId, ticker, adviceSourceId =
  * @param {string|number} itemId - The ID of the watchlist item to delete.
  * @returns {Promise<any>} The response from the server.
  */
-export async function deleteWatchlistItem(itemId) { // <<< ADDED export
+export async function deleteWatchlistItem(itemId) {
     const response = await fetch(`/api/watchlist/${itemId}`, {
         method: 'DELETE'
     });
@@ -421,14 +498,7 @@ export async function deleteWatchlistItem(itemId) { // <<< ADDED export
 
 /**
  * Adds a document link, associating it with either a journal entry or an advice source.
- * @param {object} documentData - The document data.
- * @param {string|number|null} documentData.journal_entry_id - The journal entry ID (nullable).
- * @param {string|number|null} documentData.advice_source_id - The advice source ID (nullable).
- * @param {string|number} documentData.account_holder_id - The account holder ID.
- * @param {string} documentData.external_link - The URL of the document.
- * @param {string} [documentData.title] - Optional title.
- * @param {string} [documentData.document_type] - Optional type (e.g., 'Chart').
- * @param {string} [documentData.description] - Optional description.
+ * @param {DocumentData} documentData - The document data.
  * @returns {Promise<any>} The response from the server.
  */
 export async function addDocument(documentData) {
@@ -448,7 +518,7 @@ export async function addDocument(documentData) {
  * @param {string|number} documentId - The ID of the document link to delete.
  * @returns {Promise<any>} The response from the server.
  */
-export async function deleteDocument(documentId) { // <<< ADDED export
+export async function deleteDocument(documentId) {
     const response = await fetch(`/api/documents/${documentId}`, {
         method: 'DELETE'
     });
@@ -464,14 +534,14 @@ export async function deleteDocument(documentId) { // <<< ADDED export
  * @param {string} noteContent - The text content of the note.
  * @returns {Promise<any>} The response from the server (likely the new note object).
  */
-export async function addSourceNote(sourceId, holderId, noteContent) { // <<< ADDED export
+export async function addSourceNote(sourceId, holderId, noteContent) {
     if (!sourceId || !holderId || !noteContent || holderId === 'all') {
         throw new Error("Missing required fields: source ID, holder ID, and note content.");
     }
     const response = await fetch(`/api/sources/${sourceId}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account_holder_id: holderId, note_content: noteContent })
+        body: JSON.stringify({ holderId: holderId, note_content: noteContent })
     });
     return handleResponse(response);
 }
@@ -483,7 +553,7 @@ export async function addSourceNote(sourceId, holderId, noteContent) { // <<< AD
  * @param {string|number} holderId - The ID of the account holder (for verification).
  * @returns {Promise<any>} The response from the server.
  */
-export async function deleteSourceNote(sourceId, noteId, holderId) { // <<< ADDED export
+export async function deleteSourceNote(sourceId, noteId, holderId) {
     if (!sourceId || !noteId || !holderId || holderId === 'all') {
         throw new Error("Missing required fields: source ID, note ID, and holder ID.");
     }
@@ -491,7 +561,7 @@ export async function deleteSourceNote(sourceId, noteId, holderId) { // <<< ADDE
     const response = await fetch(`/api/sources/${sourceId}/notes/${noteId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account_holder_id: holderId })
+        body: JSON.stringify({ holderId: holderId }) // Pass holderId in body
     });
     return handleResponse(response);
 }
@@ -504,14 +574,14 @@ export async function deleteSourceNote(sourceId, noteId, holderId) { // <<< ADDE
  * @param {string} noteContent - The new text content for the note.
  * @returns {Promise<any>} The response from the server.
  */
-export async function updateSourceNote(sourceId, noteId, holderId, noteContent) { // <<< ADDED export
+export async function updateSourceNote(sourceId, noteId, holderId, noteContent) {
     if (!sourceId || !noteId || !holderId || holderId === 'all' || noteContent === undefined || noteContent === null) {
         throw new Error("Missing required fields: source ID, note ID, holder ID, and note content.");
     }
     const response = await fetch(`/api/sources/${sourceId}/notes/${noteId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account_holder_id: holderId, note_content: noteContent })
+        body: JSON.stringify({ holderId: holderId, note_content: noteContent })
     });
     return handleResponse(response);
 }

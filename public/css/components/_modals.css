@@ -38,7 +38,8 @@
 
 /* --- MODIFIED: Increased max-width for modal-large --- */
 .modal-content.modal-large {
-    max-width: 90vw; /* Make it take up to 90% of viewport width */
+    /* Adjusted from 90vw to 95vw for slightly more width */
+    max-width: 99vw; /* Make it take up to 95% of viewport width */
     width: auto; /* Allow it to shrink if content is narrower */
 }
 /* --- END MODIFICATION --- */
@@ -53,9 +54,7 @@
     font-weight: 700;
     cursor: pointer;
     line-height: 1; /* Ensure consistent vertical position */
-    /* Ensure close button is above its own modal content slightly */
     z-index: 10; /* Relative z-index within the modal-content */
-    /* --- ADDED: Make it look less like a button --- */
     background: none;
     border: none;
     padding: 0;
@@ -313,4 +312,43 @@
 /* Ensure all buttons in actions have consistent size */
 .modal-actions button {
     width: auto; /* Don't force full width */
+}
+
+/* Small icon for app type in management list display */
+.contact-app-icon-small {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle; /* Align with text */
+    margin-right: 4px; /* Space before text */
+    object-fit: contain; /* Ensure icon scales nicely */
+}
+
+/* Thumbnail for image in management list */
+.source-list-thumbnail {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%; /* Circular */
+    margin-right: 8px; /* Space between image and name */
+    object-fit: cover; /* Crop image nicely */
+    vertical-align: middle; /* Align with text */
+    border: 1px solid var(--container-border); /* Subtle border */
+    background-color: var(--info-panel-bg); /* Background if image fails */
+}
+
+/* Ensure edit inputs inside source list take reasonable space */
+.management-list li .source-edit input,
+.management-list li .source-edit select {
+    width: 100%; /* Make inputs fill grid cells */
+    box-sizing: border-box;
+    padding: 5px; /* Smaller padding */
+    font-size: 0.9em;
+}
+
+/* Grid layout specifically for the edit view within the list item */
+.management-list li .source-edit {
+    display: grid; /* Use grid for layout */
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 10px; /* row-gap column-gap */
+    align-items: center; /* Vertically align items */
+    padding: 5px 0; /* Add some padding */
 }

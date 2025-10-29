@@ -9,19 +9,23 @@ const router = express.Router();
 /**
  * Creates and returns an Express router for handling advice source endpoints.
  * @param {import('sqlite').Database} db - The database connection object.
- * @param {function(string): void} log - The logging function (optional).
+ * @param {function(string): void} [log=console.log] - The logging function (optional).
  * @returns {express.Router} The configured Express router.
  */
-module.exports = (db, log = console.log) => { // Added default logger
+module.exports = (db, log = console.log) => {
 
     /**
      * GET /
      * Fetches all advice sources for a specific account holder.
      * Expects `holder` query parameter.
-     * (No changes needed here yet for backward compatibility with display)
+     * @route GET /api/advice-sources
+     * @group Advice Sources - Operations about advice sources
+     * @param {string} holder.query.required - Account holder ID.
+     * @returns {Array<object>} 200 - An array of advice source objects.
+     * @returns {Error} 400 - Missing holder query parameter.
+     * @returns {Error} 500 - Server error.
      */
     router.get('/', async (req, res) => {
-        // ... GET logic remains the same ...
         // @ts-ignore
         const holderId = req.query.holder;
         if (!holderId) {
@@ -43,16 +47,37 @@ module.exports = (db, log = console.log) => { // Added default logger
     /**
      * POST /
      * Creates a new advice source for a specific account holder.
-     * Now uses contact_app_type and contact_app_handle.
+     * Now uses contact_app_type, contact_app_handle, and image_path.
+     * @route POST /api/advice-sources
+     * @group Advice Sources - Operations about advice sources
+     * @param {AdviceSourcePostBody.model} AdviceSourcePostBody.body.required - The advice source data.
+     * @returns {object} 201 - The newly created advice source object.
+     * @returns {Error} 400 - Missing required fields.
+     * @returns {Error} 409 - Source with the same name and type already exists.
+     * @returns {Error} 500 - Server error.
      */
     router.post('/', async (req, res) => {
-        // --- Updated destructuring ---
+        /**
+         * @typedef {object} AdviceSourcePostBody
+         * @property {string|number} account_holder_id
+         * @property {string} name
+         * @property {string} type
+         * @property {string|null} [description]
+         * @property {string|null} [url]
+         * @property {string|null} [contact_person]
+         * @property {string|null} [contact_email]
+         * @property {string|null} [contact_phone]
+         * @property {string|null} [contact_app_type]
+         * @property {string|null} [contact_app_handle]
+         * @property {string|null} [image_path]
+         */
+
+        /** @type {AdviceSourcePostBody} */
         const {
             account_holder_id, name, type, description, url,
             contact_person, contact_email, contact_phone,
-            contact_app_type, contact_app_handle // New fields
+            contact_app_type, contact_app_handle, image_path
         } = req.body;
-        // --- End Update ---
 
         // Basic validation
         if (!account_holder_id || !name || !type || name.trim() === '' || type.trim() === '') {
@@ -60,29 +85,30 @@ module.exports = (db, log = console.log) => { // Added default logger
         }
 
         try {
-            // --- Updated INSERT query ---
             const result = await db.run(`
                 INSERT INTO advice_sources (
                     account_holder_id, name, type, description, url,
                     contact_person, contact_email, contact_phone,
-                    contact_app_type, contact_app_handle
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    contact_app_type, contact_app_handle, image_path
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 account_holder_id, name.trim(), type.trim(), description || null, url || null,
                 contact_person || null, contact_email || null, contact_phone || null,
-                contact_app_type || null, contact_app_handle || null // Use new fields
+                contact_app_type || null, contact_app_handle || null,
+                image_path || null // <-- Added image_path
             ]);
-            // --- End Update ---
 
-            // Respond with the newly created source including its ID
+            // Respond with the newly created source including its ID and all fields
             res.status(201).json({
                 id: result.lastID,
-                account_holder_id, name, type, description, url,
-                contact_person, contact_email, contact_phone,
-                contact_app_type, contact_app_handle // Include new fields in response
+                account_holder_id, name: name.trim(), type: type.trim(), description: description || null, url: url || null,
+                contact_person: contact_person || null, contact_email: contact_email || null, contact_phone: contact_phone || null,
+                contact_app_type: contact_app_type || null, contact_app_handle: contact_app_handle || null,
+                image_path: image_path || null // <-- Added image_path
             });
         } catch (error) {
             log(`[ERROR] Failed to add advice source: ${error.message}`);
+            // @ts-ignore
             if (error.code === 'SQLITE_CONSTRAINT') {
                 res.status(409).json({ message: 'An advice source with this name and type already exists for this account holder.' });
             } else {
@@ -94,18 +120,40 @@ module.exports = (db, log = console.log) => { // Added default logger
     /**
      * PUT /:id
      * Updates an existing advice source.
-     * Now uses contact_app_type and contact_app_handle.
+     * Now uses contact_app_type, contact_app_handle, and image_path.
+     * @route PUT /api/advice-sources/{id}
+     * @group Advice Sources - Operations about advice sources
+     * @param {string} id.path.required - The ID of the advice source.
+     * @param {AdviceSourcePutBody.model} AdviceSourcePutBody.body.required - The updated advice source data.
+     * @returns {object} 200 - Success message.
+     * @returns {Error} 400 - Missing required fields.
+     * @returns {Error} 404 - Source not found.
+     * @returns {Error} 409 - Source with the same name and type already exists.
+     * @returns {Error} 500 - Server error.
      */
     router.put('/:id', async (req, res) => {
         const { id } = req.params;
-        // --- Updated destructuring ---
+         /**
+         * @typedef {object} AdviceSourcePutBody
+         * @property {string} name
+         * @property {string} type
+         * @property {string|null} [description]
+         * @property {string|null} [url]
+         * @property {string|null} [contact_person]
+         * @property {string|null} [contact_email]
+         * @property {string|null} [contact_phone]
+         * @property {string|null} [contact_app_type]
+         * @property {string|null} [contact_app_handle]
+         * @property {string|null} [image_path]
+         */
+
+        /** @type {AdviceSourcePutBody} */
         const {
             name, type, description, url,
             contact_person, contact_email, contact_phone,
-            contact_app_type, contact_app_handle // New fields
+            contact_app_type, contact_app_handle, image_path
             // Note: account_holder_id is typically not changed via update
         } = req.body;
-        // --- End Update ---
 
         if (!name || !type || name.trim() === '' || type.trim() === '') {
             return res.status(400).json({ message: 'Name and type are required.' });
@@ -118,24 +166,24 @@ module.exports = (db, log = console.log) => { // Added default logger
                 return res.status(404).json({ message: 'Advice source not found.' });
             }
 
-            // --- Updated UPDATE query ---
             await db.run(`
                 UPDATE advice_sources SET
                     name = ?, type = ?, description = ?, url = ?,
                     contact_person = ?, contact_email = ?, contact_phone = ?,
-                    contact_app_type = ?, contact_app_handle = ?
+                    contact_app_type = ?, contact_app_handle = ?, image_path = ?
                 WHERE id = ?
             `, [
                 name.trim(), type.trim(), description || null, url || null,
                 contact_person || null, contact_email || null, contact_phone || null,
-                contact_app_type || null, contact_app_handle || null, // Use new fields
+                contact_app_type || null, contact_app_handle || null,
+                image_path || null, // <-- Added image_path
                 id
             ]);
-            // --- End Update ---
 
             res.json({ message: 'Advice source updated successfully.' });
         } catch (error) {
             log(`[ERROR] Failed to update advice source with ID ${id}: ${error.message}`);
+            // @ts-ignore
              if (error.code === 'SQLITE_CONSTRAINT') {
                 res.status(409).json({ message: 'An advice source with this name and type already exists for this account holder.' });
             } else {
@@ -147,11 +195,15 @@ module.exports = (db, log = console.log) => { // Added default logger
     /**
      * DELETE /:id
      * Deletes an advice source.
-     * (No changes needed here)
+     * @route DELETE /api/advice-sources/{id}
+     * @group Advice Sources - Operations about advice sources
+     * @param {string} id.path.required - The ID of the advice source.
+     * @returns {object} 200 - Success message.
+     * @returns {Error} 404 - Source not found.
+     * @returns {Error} 400 - Source is in use (if FOREIGN KEY constraint prevents delete).
+     * @returns {Error} 500 - Server error.
      */
     router.delete('/:id', async (req, res) => {
-        // ... DELETE logic remains the same ...
-        // @ts-ignore
         const { id } = req.params;
         try {
             // Check if the source exists before deleting
@@ -160,15 +212,14 @@ module.exports = (db, log = console.log) => { // Added default logger
                 return res.status(404).json({ message: 'Advice source not found.' });
             }
 
-            // Note: The FOREIGN KEY constraint `ON DELETE SET NULL` in `journal_entries`
-            // and `transactions` will handle unlinking associated entries automatically.
+            // Note: FOREIGN KEY constraints handle unlinking in other tables
             await db.run('DELETE FROM advice_sources WHERE id = ?', [id]);
             res.json({ message: 'Advice source deleted successfully.' });
         } catch (error) {
             log(`[ERROR] Failed to delete advice source with ID ${id}: ${error.message}`);
-            // Check if it's a foreign key constraint error (if not using ON DELETE SET NULL properly)
+            // @ts-ignore
              if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
-                 res.status(400).json({ message: 'Cannot delete source as it is referenced by journal entries or transactions. Please handle related entries first.' });
+                 res.status(400).json({ message: 'Cannot delete source as it is referenced by other records. Please handle related entries first.' });
              } else {
                 res.status(500).json({ message: 'Error deleting advice source.' });
              }

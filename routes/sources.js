@@ -1,5 +1,4 @@
 // /routes/sources.js
-// Version Updated (Add PUT endpoint for source notes)
 /**
  * @file Defines API routes for managing advice sources and their details.
  * @module routes/sources
@@ -10,7 +9,7 @@ const router = express.Router();
 /**
  * Creates and returns an Express router for handling advice source detail endpoints.
  * @param {import('sqlite').Database} db - The database connection object.
- * @param {function(string): void} log - The logging function (optional).
+ * @param {function(string): void} [log=console.log] - The logging function (optional).
  * @returns {express.Router} The configured Express router.
  */
 module.exports = (db, log = console.log) => {
@@ -18,11 +17,18 @@ module.exports = (db, log = console.log) => {
     /**
      * GET /:id/details
      * Fetches details for a specific advice source, including linked journal entries,
-     * watchlist items, documents, and source notes.
+     * watchlist items (with guidelines), documents, source notes, and the image path.
      * Expects `holder` query parameter for context/permissions.
+     * @route GET /api/sources/{id}/details
+     * @group Sources - Operations about source details
+     * @param {string} id.path.required - The ID of the advice source.
+     * @param {string} holder.query.required - Account holder ID.
+     * @returns {object} 200 - An object containing source details and linked items.
+     * @returns {Error} 400 - Missing ID or holder query parameter.
+     * @returns {Error} 404 - Source not found for this holder.
+     * @returns {Error} 500 - Server error.
      */
     router.get('/:id/details', async (req, res) => {
-        // ... (implementation remains the same) ...
         const sourceId = req.params.id;
         const holderId = req.query.holder;
 
@@ -32,8 +38,9 @@ module.exports = (db, log = console.log) => {
 
         try {
             const [source, journalEntries, watchlistItems, documents, sourceNotes] = await Promise.all([
-                db.get('SELECT * FROM advice_sources WHERE id = ? AND account_holder_id = ?', [sourceId, holderId]),
+                db.get('SELECT *, image_path FROM advice_sources WHERE id = ? AND account_holder_id = ?', [sourceId, holderId]),
                 db.all('SELECT * FROM journal_entries WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY entry_date DESC', [sourceId, holderId]),
+                // <-- Select all columns from watchlist -->
                 db.all('SELECT * FROM watchlist WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY ticker', [sourceId, holderId]),
                 db.all('SELECT * FROM documents WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId]),
                 db.all('SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId])
@@ -60,9 +67,16 @@ module.exports = (db, log = console.log) => {
      * POST /:id/notes
      * Creates a new note linked to a specific advice source.
      * Expects `holderId` (for validation) and `noteContent` in the request body.
+     * @route POST /api/sources/{id}/notes
+     * @group Sources - Operations about source details
+     * @param {string} id.path.required - The ID of the advice source.
+     * @param {object} NotePostBody.body.required - Note data ({ holderId: string|number, noteContent: string }).
+     * @returns {object} 201 - The newly created note object.
+     * @returns {Error} 400 - Missing required fields.
+     * @returns {Error} 404 - Source not found for this holder.
+     * @returns {Error} 500 - Server error.
      */
     router.post('/:id/notes', async (req, res) => {
-        // ... (implementation remains the same) ...
         const sourceId = req.params.id;
         const { holderId, noteContent } = req.body;
 
@@ -94,6 +108,15 @@ module.exports = (db, log = console.log) => {
      * PUT /:id/notes/:noteId
      * Updates a specific note linked to an advice source.
      * Expects `holderId` (for validation) and `noteContent` in the request body.
+     * @route PUT /api/sources/{id}/notes/{noteId}
+     * @group Sources - Operations about source details
+     * @param {string} id.path.required - The ID of the advice source.
+     * @param {string} noteId.path.required - The ID of the note.
+     * @param {object} NotePutBody.body.required - Note update data ({ holderId: string|number, noteContent: string }).
+     * @returns {object} 200 - The updated note object.
+     * @returns {Error} 400 - Missing required fields.
+     * @returns {Error} 404 - Source or Note not found.
+     * @returns {Error} 500 - Server error.
      */
     router.put('/:id/notes/:noteId', async (req, res) => {
         const sourceId = req.params.id;
@@ -137,24 +160,35 @@ module.exports = (db, log = console.log) => {
     /**
      * DELETE /:id/notes/:noteId
      * Deletes a specific note linked to an advice source.
-     * Expects `holderId` in the query parameters for validation.
+     * Expects `holderId` in the request body for validation.
+     * @route DELETE /api/sources/{id}/notes/{noteId}
+     * @group Sources - Operations about source details
+     * @param {string} id.path.required - The ID of the advice source.
+     * @param {string} noteId.path.required - The ID of the note.
+     * @param {object} NoteDeleteBody.body.required - Body containing holderId ({ holderId: string|number }).
+     * @returns {object} 200 - Success message.
+     * @returns {Error} 400 - Missing required fields.
+     * @returns {Error} 404 - Source or Note not found.
+     * @returns {Error} 500 - Server error.
      */
     router.delete('/:id/notes/:noteId', async (req, res) => {
-        // ... (implementation remains the same) ...
         const sourceId = req.params.id;
         const noteId = req.params.noteId;
-        const holderId = req.query.holder;
+        // Get holderId from request body for DELETE consistency
+        const { holderId } = req.body;
 
         if (!sourceId || !noteId || !holderId) {
-            return res.status(400).json({ message: 'Source ID, Note ID, and Account Holder ID (query param) are required.' });
+            return res.status(400).json({ message: 'Source ID, Note ID, and Account Holder ID (body param) are required.' });
         }
 
         try {
+            // Validate that the source exists and belongs to the holder
             const source = await db.get('SELECT id FROM advice_sources WHERE id = ? AND account_holder_id = ?', [sourceId, holderId]);
             if (!source) {
                 return res.status(404).json({ message: 'Advice source not found for this account holder.' });
             }
 
+            // Ensure the note belongs to this source before deleting
             const result = await db.run(
                 'DELETE FROM source_notes WHERE id = ? AND advice_source_id = ?',
                 [noteId, sourceId]
@@ -172,6 +206,6 @@ module.exports = (db, log = console.log) => {
         }
     });
 
+
     return router;
 };
-

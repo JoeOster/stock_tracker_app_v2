@@ -13,13 +13,12 @@ import {
 } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
-// Import handleResponse for consistency
 import { handleResponse } from '../api.js';
 
 
 /**
  * Fetches advice sources based on the currently selected account holder and stores them in state.
- * @returns {Promise<void>}
+ * @returns {Promise<void>} A promise that resolves when sources are fetched and stored.
  */
 export async function fetchAndStoreAdviceSources() {
     try {
@@ -34,6 +33,7 @@ export async function fetchAndStoreAdviceSources() {
         const sources = await fetchAdviceSources(holderIdToFetch);
         state.allAdviceSources = sources; // Update state
     } catch (error) {
+        // @ts-ignore
         showToast(`Could not load advice sources: ${error.message}`, 'error'); // Use message
         state.allAdviceSources = [];
     }
@@ -41,6 +41,8 @@ export async function fetchAndStoreAdviceSources() {
 
 /**
  * Initializes event listeners for the Advice Sources management section in the Settings modal.
+ * Handles adding, editing, saving, canceling, and deleting advice sources.
+ * @returns {void}
  */
 export function initializeJournalSettingsHandlers() {
     const addAdviceSourceForm = /** @type {HTMLFormElement | null} */ (document.getElementById('add-advice-source-form'));
@@ -59,6 +61,9 @@ export function initializeJournalSettingsHandlers() {
             const type = (/** @type {HTMLSelectElement} */(document.getElementById('new-source-type'))).value;
             const url = (/** @type {HTMLInputElement} */(document.getElementById('new-source-url'))).value.trim();
             const email = (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-email'))).value.trim();
+            const appType = (/** @type {HTMLSelectElement} */(document.getElementById('new-source-contact-app-type'))).value;
+            const appHandle = (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-app-handle'))).value.trim();
+            const imagePath = (/** @type {HTMLInputElement} */(document.getElementById('new-source-image-path'))).value.trim();
 
             // --- Client-Side Validation ---
             if (!accountHolderId) {
@@ -69,13 +74,10 @@ export function initializeJournalSettingsHandlers() {
             }
             // Optional: Basic URL validation
             if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-                // Simple check, could be more robust
                  // return showToast('Please enter a valid URL starting with http:// or https://', 'error');
-                 // For now, allow more flexibility
             }
              // Optional: Basic Email validation
              if (email && !email.includes('@')) {
-                 // Simple check
                  // return showToast('Please enter a valid email address.', 'error');
              }
              // Check for duplicate name/type combination for this user
@@ -84,7 +86,7 @@ export function initializeJournalSettingsHandlers() {
              }
             // --- End Validation ---
 
-
+            /** @type {import('../api.js').AdviceSourcePostBody} */ // Assuming AdviceSourcePostBody type is defined in api.js JSDoc
             const sourceData = {
                 account_holder_id: accountHolderId,
                 name: name,
@@ -94,7 +96,9 @@ export function initializeJournalSettingsHandlers() {
                 contact_person: (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-person'))).value.trim() || null,
                 contact_email: email || null,
                 contact_phone: (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-phone'))).value.trim() || null,
-                contact_app: (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-app'))).value.trim() || null,
+                contact_app_type: appType || null, // <-- New field
+                contact_app_handle: appHandle || null, // <-- New field
+                image_path: imagePath || null, // <-- New field
             };
 
             addButton.disabled = true;
@@ -106,6 +110,7 @@ export function initializeJournalSettingsHandlers() {
                 await fetchAndStoreAdviceSources(); // Refresh state
                 renderAdviceSourceManagementList(); // Re-render list
             } catch (error) {
+                // @ts-ignore
                 showToast(`Error adding source: ${error.message}`, 'error'); // Use message
             } finally {
                 addButton.disabled = false;
@@ -129,21 +134,50 @@ export function initializeJournalSettingsHandlers() {
             const cancelBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.cancel-source-btn'));
             const deleteBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.delete-source-btn'));
 
-            if (!displayDiv || !editDiv || !editBtn || !saveBtn || !cancelBtn || !deleteBtn) return;
+            if (!displayDiv || !editDiv || !editBtn || !saveBtn || !cancelBtn || !deleteBtn) {
+                console.error("Could not find necessary elements in list item for source ID:", sourceId);
+                return;
+            }
 
-            if (target.classList.contains('edit-source-btn')) { /* ... Edit toggle ... */ }
-            else if (target.classList.contains('cancel-source-btn')) { /* ... Cancel toggle ... */ }
-            else if (target.classList.contains('save-source-btn')) {
+            if (target === editBtn) {
+                // Toggle to edit mode
+                displayDiv.style.display = 'none';
+                editBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
+                editDiv.style.display = 'grid'; // Use grid as defined in renderer
+                saveBtn.style.display = '';
+                cancelBtn.style.display = '';
+                // Optional: focus the name input
+                const nameInput = /** @type {HTMLInputElement | null} */(editDiv.querySelector('.edit-source-name'));
+                if (nameInput) nameInput.focus();
+            }
+            else if (target === cancelBtn) {
+                 // Toggle back to display mode
+                 editDiv.style.display = 'none';
+                 saveBtn.style.display = 'none';
+                 cancelBtn.style.display = 'none';
+                 displayDiv.style.display = 'flex'; // Use flex as defined in renderer
+                 editBtn.style.display = '';
+                 deleteBtn.style.display = '';
+                 // Optional: Reset edit fields to original values (renderer should handle this on next load)
+            }
+            else if (target === saveBtn) {
                 // --- Get Updated Values ---
                 const nameInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-name'));
                 const typeSelect = /** @type {HTMLSelectElement} */(editDiv.querySelector('.edit-source-type'));
                 const urlInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-url'));
                 const emailInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-email'));
+                const appTypeSelect = /** @type {HTMLSelectElement} */(editDiv.querySelector('.edit-source-contact-app-type'));
+                const appHandleInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-app-handle'));
+                const imagePathInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-image-path'));
 
                 const name = nameInput.value.trim();
                 const type = typeSelect.value;
                 const url = urlInput.value.trim();
                 const email = emailInput.value.trim();
+                const appType = appTypeSelect.value;
+                const appHandle = appHandleInput.value.trim();
+                const imagePath = imagePathInput.value.trim();
 
                 // --- Validation ---
                 if (!name || !type) {
@@ -161,6 +195,7 @@ export function initializeJournalSettingsHandlers() {
                  }
                 // --- End Validation ---
 
+                /** @type {import('../api.js').AdviceSourcePutBody} */ // Assuming AdviceSourcePutBody type is defined in api.js JSDoc
                 const updatedData = {
                     name: name,
                     type: type,
@@ -169,7 +204,9 @@ export function initializeJournalSettingsHandlers() {
                     contact_person: (/** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-person'))).value.trim() || null,
                     contact_email: email || null,
                     contact_phone: (/** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-phone'))).value.trim() || null,
-                    contact_app: (/** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-app'))).value.trim() || null,
+                    contact_app_type: appType || null, // <-- New field
+                    contact_app_handle: appHandle || null, // <-- New field
+                    image_path: imagePath || null, // <-- New field
                 };
 
 
@@ -179,16 +216,17 @@ export function initializeJournalSettingsHandlers() {
                     await updateAdviceSource(sourceId, updatedData);
                     showToast('Advice Source updated!', 'success');
                     await fetchAndStoreAdviceSources(); // Refresh state
-                    renderAdviceSourceManagementList(); // Re-render list
+                    renderAdviceSourceManagementList(); // Re-render list (which implicitly exits edit mode)
                 } catch (error) {
+                    // @ts-ignore
                     showToast(`Error updating source: ${error.message}`, 'error'); // Use message
                     saveBtn.disabled = false; // Re-enable only on error
                 }
             }
-            else if (target.classList.contains('delete-source-btn')) {
+            else if (target === deleteBtn) {
                  const sourceNameElement = li.querySelector('.source-name');
                  const sourceName = sourceNameElement ? sourceNameElement.textContent : 'this source';
-                 showConfirmationModal(`Delete Advice Source "${sourceName}"?`, 'This cannot be undone. Associated journal entries and transactions will be unlinked.', async () => {
+                 showConfirmationModal(`Delete Advice Source "${sourceName}"?`, 'This cannot be undone. Associated journal entries, watchlist items, documents, and notes will be unlinked or deleted.', async () => {
                     try {
                         // Use API function which uses handleResponse
                         await deleteAdviceSource(sourceId);
@@ -196,6 +234,7 @@ export function initializeJournalSettingsHandlers() {
                         await fetchAndStoreAdviceSources(); // Refresh state
                         renderAdviceSourceManagementList(); // Re-render list
                     } catch (error) {
+                        // @ts-ignore
                         showToast(`Error deleting source: ${error.message}`, 'error'); // Use message
                     }
                 });
