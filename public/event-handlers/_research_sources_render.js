@@ -87,6 +87,11 @@ export function renderSourcesList(panelElement, sources) {
 export function generateSourceDetailsHTML(details) {
     let detailsHTML = '';
     const source = details.source;
+    
+    // Get current local datetime for default value
+    const now = new Date();
+    // Adjust for local timezone offset to get YYYY-MM-DDTHH:MM format for the input
+    const localDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 
     // --- Start Grid Layout for Top Section ---
     detailsHTML += '<div class="source-details-grid">';
@@ -127,51 +132,44 @@ export function generateSourceDetailsHTML(details) {
 
     // --- Add Recommended Ticker Form (Right Column) ---
     detailsHTML += '<div class="add-ticker-section">';
-    detailsHTML += `<h5>Add Recommended Trade</h5>`;
+    detailsHTML += `<h5>Add Trade Idea</h5>`;
     detailsHTML += `
         <form class="add-watchlist-item-form" data-source-id="${source.id}">
              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 15px; align-items: end;">
 
                 <div class="form-group" style="grid-column: span 2; margin-bottom: 0;">
-                    <label for="add-wl-ticker-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Ticker*</label>
+                    <label for="add-wl-ticker-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Ticker*</label>
                     <input type="text" id="add-wl-ticker-${source.id}" class="add-watchlist-ticker-input" placeholder="e.g., AAPL" required>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="add-wl-rec-entry-low-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Entry Low</label>
+                    <label for="add-wl-rec-entry-low-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Entry Low</label>
                     <input type="number" id="add-wl-rec-entry-low-${source.id}" class="add-watchlist-rec-entry-low-input" step="any" min="0" placeholder="Guideline Low">
                 </div>
                  <div class="form-group" style="margin-bottom: 0;">
-                    <label for="add-wl-rec-entry-high-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Entry High</label>
+                    <label for="add-wl-rec-entry-high-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Entry High</label>
                     <input type="number" id="add-wl-rec-entry-high-${source.id}" class="add-watchlist-rec-entry-high-input" step="any" min="0" placeholder="Guideline High">
                 </div>
-
-                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="add-wl-rec-datetime-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Date</label>
-                    <input type="datetime-local" id="add-wl-rec-datetime-${source.id}" class="add-watchlist-rec-datetime-input">
-                </div>
-                 <div></div>
-
+                
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="add-wl-tp1-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Take Profit 1</label>
+                    <label for="add-wl-tp1-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Take Profit 1</label>
                     <input type="number" id="add-wl-tp1-${source.id}" class="add-watchlist-tp1-input" step="any" min="0.01" placeholder="Guideline">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="add-wl-tp2-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Take Profit 2</label>
+                    <label for="add-wl-tp2-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Take Profit 2</label>
                     <input type="number" id="add-wl-tp2-${source.id}" class="add-watchlist-tp2-input" step="any" min="0.01" placeholder="Guideline">
                 </div>
 
-                <div class="form-group" style="margin-bottom: 0; grid-column: span 2;">
-                    <label for="add-wl-rec-stop-loss-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Stop Loss</label>
+                 <div class="form-group" style="margin-bottom: 0;">
+                    <label for="add-wl-rec-datetime-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Date</label>
+                    <input type="datetime-local" id="add-wl-rec-datetime-${source.id}" class="add-watchlist-rec-datetime-input" value="${localDateTime}">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="add-wl-rec-stop-loss-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Stop Loss</label>
                     <input type="number" id="add-wl-rec-stop-loss-${source.id}" class="add-watchlist-rec-stop-loss-input" step="any" min="0.01" placeholder="Guideline">
                 </div>
 
-
-                 <div class="form-group form-group-with-checkbox" style="grid-column: 1 / 3; margin-bottom: 0; margin-top: 5px;">
-                    <input type="checkbox" id="add-wl-create-buy-${source.id}" class="add-watchlist-create-buy-checkbox" style="width: auto; margin-right: 5px;">
-                    <label for="add-wl-create-buy-${source.id}" style="margin-bottom: 0; font-weight: normal; color: var(--text-color);">Create Buy Order</label>
-                </div>
-                <div style="grid-column: 2 / 3; text-align: right;">
+                 <div style="grid-column: span 2; text-align: right; margin-top: 5px;">
                     <button type="submit" class="add-watchlist-ticker-button" style="padding: 8px 12px;">Add</button>
                 </div>
             </div>
@@ -186,17 +184,17 @@ export function generateSourceDetailsHTML(details) {
     // --- Linked Sections Below Grid ---
 
     // 1. Recommended Trades (Watchlist Items) - New Table Format
-    detailsHTML += `<h4 style="margin-top: 1rem;">Recommended Trades (${details.watchlistItems.length})</h4>`;
+    detailsHTML += `<h4 style="margin-top: 1rem;">Trade Ideas (${details.watchlistItems.length})</h4>`;
     if (details.watchlistItems.length > 0) {
         detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="recommended-trades-table mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
                 <tr>
                     <th>Ticker</th>
                     <th>Date Added</th>
-                    <th class="numeric">Rec. Entry Range</th>
+                    <th class="numeric">Entry Range</th>
                     <th class="numeric">Current $</th>
                     <th class="numeric">Dist. to Entry</th>
-                    <th class="numeric">Rec. Guidelines (SL/TP1/TP2)</th>
+                    <th class="numeric">Guidelines (SL/TP1/TP2)</th>
                     <th class="center-align">Actions</th>
                 </tr>
             </thead><tbody>`;
@@ -256,6 +254,10 @@ export function generateSourceDetailsHTML(details) {
                 // @ts-ignore
                 item.rec_tp2 ? `TP2: ${formatAccounting(item.rec_tp2, false)}` : null
             ].filter(Boolean).join(' / ') || '--';
+            
+            // --- MODIFICATION: Request 1 - Added "Buy" button ---
+            // Use rec_entry_high or rec_entry_low as the suggested price, fallback to empty string
+            const suggestedPrice = item.rec_entry_high || item.rec_entry_low || '';
 
             detailsHTML += `
                 <tr>
@@ -266,13 +268,14 @@ export function generateSourceDetailsHTML(details) {
                     <td class="numeric ${distClass}">${distance}</td>
                     <td class="numeric">${recLimits}</td>
                     <td class="center-align actions-cell">
+                        <button class="create-buy-order-btn" data-ticker="${escapeHTML(item.ticker)}" data-price="${suggestedPrice}" data-source-id="${source.id}" title="Create Buy Order from this Idea" style="padding: 2px 5px; font-size: 0.8em; margin-right: 5px;">Buy</button>
                         <button class="delete-watchlist-item-button delete-btn" data-item-id="${item.id}" title="Remove Recommendation" style="padding: 2px 5px; font-size: 0.8em;">X</button>
                     </td>
                 </tr>`;
         });
         detailsHTML += `</tbody></table></div>`;
     } else {
-        detailsHTML += `<p>No recommended trades linked.</p>`;
+        detailsHTML += `<p>No trade ideas linked.</p>`;
     }
     // Form was moved to the top grid
 
@@ -287,7 +290,7 @@ export function generateSourceDetailsHTML(details) {
                     <th class="numeric">Buy $</th>
                     <th class="numeric">Current $</th>
                     <th class="numeric">Unrealized P/L</th>
-                    <th class="numeric">Rec. Limits (SL/TP1/TP2)</th>
+                    <th class="numeric">Guidelines (SL/TP1/TP2)</th>
                     <th class="numeric">Actual Limits (SL/TP)</th>
                     <th>Status</th>
                 </tr>

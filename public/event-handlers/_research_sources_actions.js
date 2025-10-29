@@ -11,17 +11,21 @@ import {
     updatePricesForView,
     refreshLedger
 } from '../api.js';
+// --- MODIFICATION: Added switchView import ---
 import { switchView } from './_navigation.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 // @ts-ignore
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
+// --- MODIFICATION: Added autosizeAccountSelector import ---
+import { autosizeAccountSelector } from './_navigation.js';
+
 
 // --- Action Handlers ---
 
 /**
  * Handles submission of the "Add Recommended Trade" form.
- * Adds to watchlist (including guidelines) and optionally navigates to Orders page.
+ * Adds to watchlist (including guidelines).
  * @param {Event} e - The form submission event.
  * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
@@ -44,10 +48,11 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     const tp2Input = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-tp2-input'));
     const stopLossInput = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-rec-stop-loss-input'));
     const recDatetimeInput = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-rec-datetime-input'));
-    const createBuyCheckbox = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-create-buy-checkbox'));
-
+    
+    // --- MODIFICATION: Request 2 - Removed checkbox variables ---
+    // const createBuyCheckbox = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-create-buy-checkbox'));
     const ticker = tickerInput?.value.trim().toUpperCase();
-    const createBuy = createBuyCheckbox?.checked ?? false;
+    // const createBuy = createBuyCheckbox?.checked ?? false; // <-- REMOVED
 
     // --- Validation ---
     if (!ticker) { return showToast('Ticker is required.', 'error'); }
@@ -59,9 +64,9 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     const recEntryLow = (recEntryLowStr && recEntryLowStr !== '0') ? parseFloat(recEntryLowStr) : null;
     const recEntryHigh = (recEntryHighStr && recEntryHighStr !== '0') ? parseFloat(recEntryHighStr) : null;
 
-    if (recEntryLow !== null && (isNaN(recEntryLow) || recEntryLow < 0)) { return showToast('Invalid Rec. Entry Low (must be positive).', 'error'); }
-    if (recEntryHigh !== null && (isNaN(recEntryHigh) || recEntryHigh < 0)) { return showToast('Invalid Rec. Entry High (must be positive).', 'error'); }
-    if (recEntryLow !== null && recEntryHigh !== null && recEntryLow > recEntryHigh) { return showToast('Rec. Entry Low cannot be greater than Rec. Entry High.', 'error'); }
+    if (recEntryLow !== null && (isNaN(recEntryLow) || recEntryLow < 0)) { return showToast('Invalid Entry Low (must be positive).', 'error'); }
+    if (recEntryHigh !== null && (isNaN(recEntryHigh) || recEntryHigh < 0)) { return showToast('Invalid Entry High (must be positive).', 'error'); }
+    if (recEntryLow !== null && recEntryHigh !== null && recEntryLow > recEntryHigh) { return showToast('Entry Low cannot be greater than Entry High.', 'error'); }
 
     // Validate Guidelines
     const tp1Str = tp1Input?.value;
@@ -71,86 +76,32 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     const recTp2 = (tp2Str && tp2Str !== '0') ? parseFloat(tp2Str) : null;
     const recStopLoss = (stopLossStr && stopLossStr !== '0') ? parseFloat(stopLossStr) : null;
 
-    if (recTp1 !== null && (isNaN(recTp1) || recTp1 <= 0)) { return showToast('Invalid Rec. TP1 (must be positive).', 'error'); }
-    if (recTp2 !== null && (isNaN(recTp2) || recTp2 <= 0)) { return showToast('Invalid Rec. TP2 (must be positive).', 'error'); }
-    if (recStopLoss !== null && (isNaN(recStopLoss) || recStopLoss <= 0)) { return showToast('Invalid Rec. Stop Loss (must be positive).', 'error'); }
+    if (recTp1 !== null && (isNaN(recTp1) || recTp1 <= 0)) { return showToast('Invalid TP1 (must be positive).', 'error'); }
+    if (recTp2 !== null && (isNaN(recTp2) || recTp2 <= 0)) { return showToast('Invalid TP2 (must be positive).', 'error'); }
+    if (recStopLoss !== null && (isNaN(recStopLoss) || recStopLoss <= 0)) { return showToast('Invalid Stop Loss (must be positive).', 'error'); }
     // Add cross-validation if needed (e.g., TP > Entry High, Stop < Entry Low)
 
 
     addButton.disabled = true;
     try {
+        // --- MODIFICATION: Request 2 - Removed if/else ---
         // Step 1: Always add to watchlist (now includes all guidelines)
         await addWatchlistItem(holderId, ticker, formSourceId, recEntryLow, recEntryHigh, recTp1, recTp2, recStopLoss);
-        let toastMessage = `${ticker} added to Recommended Trades`;
-
-        // Step 2: If checkbox checked, navigate and pre-fill Orders form
-        if (createBuy && typeof holderId === 'number') { // Ensure holderId is a number
-            console.log("Create Buy checked, navigating to Orders page...");
-            // Close the source details modal *before* navigating
-            const detailsModal = document.getElementById('source-details-modal');
-            if(detailsModal) detailsModal.classList.remove('visible');
-
-            await switchView('orders', null); // Navigate to Orders tab
-
-            // Use setTimeout to allow the DOM for the Orders page to render
-            setTimeout(() => {
-                console.log("Attempting to pre-fill Orders form...");
-                const orderTickerInput = /** @type {HTMLInputElement | null} */(document.getElementById('ticker'));
-                const orderAccountSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-account-holder'));
-                const orderQuantityInput = /** @type {HTMLInputElement | null} */(document.getElementById('quantity')); // For focus
-
-                if (orderTickerInput) {
-                    orderTickerInput.value = ticker; // Pre-fill ticker
-                    console.log(`Pre-filled ticker: ${ticker}`);
-                } else {
-                    console.warn("Could not find Ticker input on Orders page.");
-                }
-                if (orderAccountSelect) {
-                    orderAccountSelect.value = String(holderId); // Pre-select account holder
-                    console.log(`Pre-selected account holder: ${holderId}`);
-                    if (orderAccountSelect.value !== String(holderId)) {
-                        console.warn(`Failed to pre-select account holder ${holderId}.`);
-                    }
-                     // Trigger autosize for the account selector if needed
-                     const navigationModule = import('./_navigation.js');
-                     navigationModule.then(mod => {
-                         if (mod.autosizeAccountSelector) {
-                             mod.autosizeAccountSelector(orderAccountSelect);
-                         }
-                     });
-                } else {
-                     console.warn("Could not find Account Holder select on Orders page.");
-                }
-                // Focus quantity for quick entry
-                if (orderQuantityInput) {
-                    orderQuantityInput.focus();
-                    console.log("Focused Quantity input.");
-                }
-
-                // Add source info as a hint (maybe placeholder or small text) - Optional
-                const addButtonOrders = document.querySelector('#add-transaction-form button[type="submit"]');
-                if (addButtonOrders) {
-                    // This is just an example, could add a small <p> tag instead
-                    // @ts-ignore
-                    addButtonOrders.title = `Source ID: ${formSourceId}`;
-                }
-
-            }, 150); // Small delay to ensure Orders page DOM is ready
-
-            toastMessage += `. Navigate to 'Orders' to complete BUY details.`;
-            // Do NOT refresh details modal immediately as we are navigating away
-            form.reset(); // Reset the form in the modal
-
-        } else {
-             // If not creating buy order, just refresh the details modal content
-             if (!createBuy) { // Ensure refresh only happens if NOT navigating
-                await refreshDetailsCallback();
-                form.reset(); // Reset the form in the modal
-             }
+        let toastMessage = `${ticker} added to Trade Ideas`;
+        
+        // Step 2: Refresh details modal content and reset form
+        await refreshDetailsCallback();
+        form.reset(); // Reset the form in the modal
+        
+        // Set date back to default after reset
+        const dateInput = form.querySelector('.add-watchlist-rec-datetime-input');
+        if (dateInput instanceof HTMLInputElement) {
+            const now = new Date();
+            const localDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            dateInput.value = localDateTime;
         }
 
-        showToast(toastMessage, 'success', createBuy ? 10000 : 5000); // Longer toast if navigating
-
+        showToast(toastMessage, 'success', 5000);
 
     } catch (error) {
         // Assert error as Error type for message access
@@ -159,6 +110,85 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     } finally {
         addButton.disabled = false;
     }
+}
+
+/**
+ * --- MODIFICATION: Request 1 - New function to handle "Buy" button click ---
+ * Handles click on "Buy" button from the watchlist to navigate to Orders page.
+ * @param {HTMLElement} target - The button element that was clicked.
+ * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @returns {Promise<void>}
+ */
+export async function handleCreateBuyOrderFromIdea(target, refreshDetailsCallback) {
+    const { ticker, price, sourceId } = target.dataset;
+    const holderId = state.selectedAccountHolderId;
+    
+    if (!ticker || !sourceId || holderId === 'all') {
+        return showToast('Error: Missing data (ticker, source) or "All Accounts" selected.', 'error');
+    }
+    
+    // Ensure holderId is a number for this action
+    if (typeof holderId !== 'number') {
+        return showToast('Please select a specific account holder before creating an order.', 'error');
+    }
+
+    console.log(`Create Buy Order for ${ticker}, Price: ${price}, Source: ${sourceId}, Holder: ${holderId}`);
+    
+    // Close the source details modal *before* navigating
+    const detailsModal = document.getElementById('source-details-modal');
+    if(detailsModal) detailsModal.classList.remove('visible');
+
+    await switchView('orders', null); // Navigate to Orders tab
+
+    // Use setTimeout to allow the DOM for the Orders page to render
+    setTimeout(() => {
+        console.log("Attempting to pre-fill Orders form...");
+        const orderTickerInput = /** @type {HTMLInputElement | null} */(document.getElementById('ticker'));
+        const orderAccountSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-account-holder'));
+        const orderQuantityInput = /** @type {HTMLInputElement | null} */(document.getElementById('quantity')); // For focus
+        // --- Try to pre-fill a limit price ---
+        const orderLimitPriceInput = /** @type {HTMLInputElement | null} */(document.getElementById('add-limit-price-down')); // Using Stop Loss as an example, maybe 'price' (main price) is better?
+        const orderPriceInput = /** @type {HTMLInputElement | null} */(document.getElementById('price'));
+
+
+        if (orderTickerInput) {
+            orderTickerInput.value = ticker; // Pre-fill ticker
+            console.log(`Pre-filled ticker: ${ticker}`);
+        } else {
+            console.warn("Could not find Ticker input on Orders page.");
+        }
+        
+        if (orderAccountSelect) {
+            orderAccountSelect.value = String(holderId); // Pre-select account holder
+            console.log(`Pre-selected account holder: ${holderId}`);
+            if (orderAccountSelect.value !== String(holderId)) {
+                console.warn(`Failed to pre-select account holder ${holderId}.`);
+            }
+             // Trigger autosize for the account selector
+             if (autosizeAccountSelector) {
+                 autosizeAccountSelector(orderAccountSelect);
+             }
+        } else {
+             console.warn("Could not find Account Holder select on Orders page.");
+        }
+        
+        // Pre-fill the main price input if a price was passed
+        if (orderPriceInput && price) {
+            orderPriceInput.value = price;
+            // Trigger change event to auto-populate limits
+            orderPriceInput.dispatchEvent(new Event('change'));
+            console.log(`Pre-filled price: ${price}`);
+        }
+        
+        // Focus quantity for quick entry
+        if (orderQuantityInput) {
+            orderQuantityInput.focus();
+            console.log("Focused Quantity input.");
+        }
+        
+    }, 150); // Small delay to ensure Orders page DOM is ready
+
+    showToast(`Navigating to 'Orders' to create BUY order for ${ticker}.`, 'info', 7000);
 }
 
 

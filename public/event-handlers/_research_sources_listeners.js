@@ -8,10 +8,11 @@ import { state } from '../state.js';
 import { fetchSourceDetails } from '../api.js';
 import { showToast } from '../ui/helpers.js';
 import { generateSourceDetailsHTML } from './_research_sources_render.js';
-// Import action handlers
+// --- MODIFICATION: Import new action handler ---
 import {
     handleAddWatchlistSubmit, handleAddDocumentSubmit, handleAddNoteSubmit,
-    handleDeleteClick, handleNoteEditActions
+    handleDeleteClick, handleNoteEditActions,
+    handleCreateBuyOrderFromIdea // <-- ADDED IMPORT
 } from './_research_sources_actions.js';
 
 /**
@@ -29,7 +30,7 @@ let currentModalActionHandler = null; // Listener for modal content
  * Attaches event listeners specifically for actions *within* the source details modal content area.
  * Ensures only one listener is active at a time.
  * @param {HTMLElement} modalContentArea - The content area element (`#source-details-modal-content`).
- * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the modal content.
+ * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {void}
  */
 function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback) {
@@ -78,14 +79,17 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
             console.log("[Modal Actions] Delegating to handleNoteEditActions");
             // Pass modal's source/holder ID
             await handleNoteEditActions(target, modalSourceId, modalHolderId, refreshDetailsCallback);
+        
+        // --- MODIFICATION: Request 1 - Add handler for new "Buy" button ---
+        } else if (target.closest('.create-buy-order-btn')) {
+            console.log("[Modal Actions] Delegating to handleCreateBuyOrderFromIdea");
+            // This function now handles closing the modal and navigating
+            await handleCreateBuyOrderFromIdea(target, refreshDetailsCallback);
         }
-        // --- Handle Checkbox for Order Fields (Keep as is, but it's now correctly scoped) ---
-        const createBuyCheckbox = /** @type {HTMLInputElement | null} */ (target.closest('.add-watchlist-item-form')?.querySelector('.add-watchlist-create-buy-checkbox'));
-        if (createBuyCheckbox && target === createBuyCheckbox) {
-             console.log(`[Modal Actions] Create Buy Order checkbox toggled: ${createBuyCheckbox.checked}`);
-             // No fields to show/hide anymore
-        } // End Checkbox handler
-    };
+        
+        // --- MODIFICATION: Request 2 - Removed checkbox handler ---
+        
+    }; // End of newModalHandler
 
     modalContentArea.addEventListener('click', newModalHandler);
     currentModalActionHandler = newModalHandler; // Store reference
@@ -196,4 +200,3 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
     sourcesListContainer.addEventListener('click', newGridClickHandler);
     currentSourcesListClickHandler = newGridClickHandler; // Store reference to the NEW handler
     console.log("[Grid Listener] Attached new sources list grid click handler (modal opener).");
-}

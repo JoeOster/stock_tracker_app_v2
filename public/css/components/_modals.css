@@ -39,7 +39,7 @@
 /* --- MODIFIED: Increased max-width for modal-large --- */
 .modal-content.modal-large {
     /* Change 90vw to a larger value, e.g., 1400px or 95vw */
-    max-width: 1400px; /* Or 95vw if you prefer percentage */
+    max-width: 1600px; /* Or 95vw if you prefer percentage */
     width: auto; /* Allow it to shrink if content is narrower */
 }
 /* --- END MODIFICATION --- */
