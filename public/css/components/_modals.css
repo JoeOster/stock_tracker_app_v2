@@ -38,8 +38,8 @@
 
 /* --- MODIFIED: Increased max-width for modal-large --- */
 .modal-content.modal-large {
-    /* Adjusted from 90vw to 95vw for slightly more width */
-    max-width: 99vw; /* Make it take up to 95% of viewport width */
+    /* Change 90vw to a larger value, e.g., 1400px or 95vw */
+    max-width: 1400px; /* Or 95vw if you prefer percentage */
     width: auto; /* Allow it to shrink if content is narrower */
 }
 /* --- END MODIFICATION --- */
@@ -346,9 +346,24 @@
 
 /* Grid layout specifically for the edit view within the list item */
 .management-list li .source-edit {
-    display: grid; /* Use grid for layout */
-    grid-template-columns: 1fr 1fr;
-    gap: 5px 10px; /* row-gap column-gap */
-    align-items: center; /* Vertically align items */
-    padding: 5px 0; /* Add some padding */
+    /* display: grid; /* Use grid for layout */
+    /* grid-template-columns: 1fr 1fr; */
+    /* gap: 5px 10px; /* row-gap column-gap */
+    /* align-items: center; /* Vertically align items */
+    /* padding: 5px 0; /* Add some padding */
+    
+    /* NEW FLEX LAYOUT FOR EDIT */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 5px;
+}
+.management-list li .source-edit > div {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    gap: 5px 10px;
+    align-items: center;
+}
+.management-list li .source-edit > input {
+    grid-column: 2 / 4; /* Make single inputs span */
 }

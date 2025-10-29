@@ -18,7 +18,7 @@ module.exports = (db, log = console.log) => {
     /**
      * GET /
      * Fetches all watchlist items for a given account holder.
-     * Includes the recommended entry range and targets.
+     * Includes all recommended guideline fields.
      * @route GET /api/watchlist
      * @group Watchlist - Operations for recommended trades watchlist
      * @param {string} holder.query.required - Account holder ID.
@@ -33,6 +33,7 @@ module.exports = (db, log = console.log) => {
             if (!holderId) {
                 return res.status(400).json({ message: 'Account holder ID is required.' });
             }
+            // <-- Select all columns -->
             const items = await db.all(
                 'SELECT * FROM watchlist WHERE account_holder_id = ? ORDER BY ticker',
                 [holderId]
@@ -65,16 +66,16 @@ module.exports = (db, log = console.log) => {
          * @property {string|number|null} [advice_source_id]
          * @property {number|null} [rec_entry_low]
          * @property {number|null} [rec_entry_high]
-         * @property {number|null} [rec_tp1] // <-- New
-         * @property {number|null} [rec_tp2] // <-- New
-         * @property {number|null} [rec_stop_loss] // <-- New
+         * @property {number|null} [rec_tp1]
+         * @property {number|null} [rec_tp2]
+         * @property {number|null} [rec_stop_loss]
          */
 
         /** @type {WatchlistPostBody} */
         const {
             account_holder_id, ticker, advice_source_id,
             rec_entry_low, rec_entry_high,
-            rec_tp1, rec_tp2, rec_stop_loss // <-- New
+            rec_tp1, rec_tp2, rec_stop_loss
         } = req.body;
 
         if (!account_holder_id || !ticker || ticker.trim() === '') {
@@ -82,6 +83,7 @@ module.exports = (db, log = console.log) => {
         }
 
         // Optional validation for range
+        // @ts-ignore
         if (rec_entry_low !== null && rec_entry_high !== null && rec_entry_low > rec_entry_high) {
              return res.status(400).json({ message: 'Recommended Entry Low cannot be greater than Entry High.' });
         }
@@ -93,16 +95,22 @@ module.exports = (db, log = console.log) => {
                     account_holder_id,
                     ticker.toUpperCase().trim(),
                     advice_source_id || null,
+                    // @ts-ignore
                     rec_entry_low ?? null,
+                    // @ts-ignore
                     rec_entry_high ?? null,
-                    rec_tp1 ?? null, // <-- New
-                    rec_tp2 ?? null, // <-- New
-                    rec_stop_loss ?? null // <-- New
+                    // @ts-ignore
+                    rec_tp1 ?? null,
+                    // @ts-ignore
+                    rec_tp2 ?? null,
+                    // @ts-ignore
+                    rec_stop_loss ?? null
                 ]
             );
 
+            // Fetch the newly created row to return all fields
             const newEntry = await db.get('SELECT * FROM watchlist WHERE id = ?', result.lastID);
-            res.status(201).json(newEntry); // Return the full new entry
+            res.status(201).json(newEntry);
         } catch (error) {
             // @ts-ignore
             log(`[ERROR] Failed to add to watchlist: ${error.message}`);

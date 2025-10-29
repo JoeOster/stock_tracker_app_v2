@@ -1,5 +1,4 @@
 // /public/state.js
-// Version Updated (Default view changed to Dashboard, added dashboardOpenLots, updated priceCache typedef)
 /**
  * @file Manages the application's global state.
  * @module state
@@ -12,6 +11,13 @@
  */
 
 /**
+ * @typedef {object} PriceData
+ * @property {number|string|null} price - The fetched price ('invalid', null, or number).
+ * @property {number|null} previousPrice - The previous price, if available.
+ * @property {number} timestamp - The timestamp when the price was fetched or retrieved from cache.
+ */
+
+/**
  * @typedef {object} AppState
  * @property {Array<object>} transactions - All transactions for the selected account.
  * @property {Array<object>} openOrders - Deprecated? (Consider removing or clarifying usage)
@@ -21,7 +27,7 @@
  * @property {Array<object>} allExchanges - All exchanges in the system.
  * @property {string|number} selectedAccountHolderId - The ID of the currently selected account holder ('all' or number).
  * @property {{type: string, value: string|null}} currentView - The current active view.
- * @property {Map<string, {price: number|string|null, previousPrice: number|null, timestamp: number}>} priceCache - A cache for recently fetched stock prices, including previous price.
+ * @property {Map<string, PriceData>} priceCache - A cache for recently fetched stock prices.
  * @property {import('chart.js').Chart | null} allTimeChart - The instance of the 'All Time' chart.
  * @property {import('chart.js').Chart | null} fiveDayChart - The instance of the 'Five Day' chart.
  * @property {import('chart.js').Chart | null} dateRangeChart - The instance of the 'Date Range' chart.
@@ -34,6 +40,7 @@
  * @property {any[]} allAdviceSources - All advice sources for the selected account.
  * @property {JournalEntriesState | null} journalEntries - Holds fetched journal entries (open and closed).
  * @property {any[]} dashboardOpenLots - Raw array of open lots fetched for the dashboard view.
+ * @property {any[]} researchWatchlistItems - Raw array of watchlist items fetched for the source details modal.
  * @property {object} settings - The user's application settings.
  * @property {number} settings.takeProfitPercent
  * @property {number} settings.stopLossPercent
@@ -60,8 +67,8 @@ export let state = {
     allAccountHolders: [],
     allExchanges: [],
     selectedAccountHolderId: 1,
-    currentView: { type: 'dashboard', value: null }, // Default view changed
-    priceCache: new Map(), // Updated typedef comment above reflects {price, previousPrice, timestamp} structure
+    currentView: { type: 'dashboard', value: null },
+    priceCache: new Map(),
     allTimeChart: null,
     fiveDayChart: null,
     dateRangeChart: null,
@@ -72,6 +79,7 @@ export let state = {
     allAdviceSources: [],
     journalEntries: null,
     dashboardOpenLots: [],
+    researchWatchlistItems: [], // <-- Added this line
     settings: {
         takeProfitPercent: 10,
         stopLossPercent: 5,
@@ -90,6 +98,7 @@ export let state = {
 /**
  * Updates the global state by merging in a partial state object.
  * @param {Partial<AppState>} newState - An object containing the state properties to update.
+ * @returns {void}
  */
 export function updateState(newState) {
     // Deep merge settings object if present in newState

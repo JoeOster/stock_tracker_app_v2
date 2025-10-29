@@ -7,11 +7,13 @@
 import { state } from '../state.js';
 import {
     addWatchlistItem, addDocument, addSourceNote, deleteWatchlistItem,
-    deleteDocument, deleteSourceNote, updateSourceNote, addPendingOrder, // Keep addPendingOrder for now if needed elsewhere
-    updatePricesForView // Keep updatePricesForView for now if needed elsewhere
+    deleteDocument, deleteSourceNote, updateSourceNote, addPendingOrder,
+    updatePricesForView,
+    refreshLedger
 } from '../api.js';
 import { switchView } from './_navigation.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
+// @ts-ignore
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 
@@ -26,8 +28,8 @@ import { getCurrentESTDateString } from '../ui/datetime.js';
  */
 export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     e.preventDefault();
-    const form = /** @type {HTMLFormElement} */ (e.target.closest('form')); // Use closest('form')
-    if (!form) return; // Exit if form not found
+    const form = /** @type {HTMLFormElement} */ (e.target.closest('form'));
+    if (!form) return;
     const addButton = /** @type {HTMLButtonElement | null} */ (form.querySelector('.add-watchlist-ticker-button'));
     if (!addButton) return;
 
@@ -40,7 +42,6 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     // Get Guideline Inputs
     const tp1Input = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-tp1-input'));
     const tp2Input = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-tp2-input'));
-    // <-- Get new Stop Loss Input -->
     const stopLossInput = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-rec-stop-loss-input'));
     const recDatetimeInput = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-rec-datetime-input'));
     const createBuyCheckbox = /** @type {HTMLInputElement | null} */ (form.querySelector('.add-watchlist-create-buy-checkbox'));
@@ -55,20 +56,20 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     // Validate Low/High
     const recEntryLowStr = recEntryLowInput?.value;
     const recEntryHighStr = recEntryHighInput?.value;
-    const recEntryLow = recEntryLowStr ? parseFloat(recEntryLowStr) : null;
-    const recEntryHigh = recEntryHighStr ? parseFloat(recEntryHighStr) : null;
+    const recEntryLow = (recEntryLowStr && recEntryLowStr !== '0') ? parseFloat(recEntryLowStr) : null;
+    const recEntryHigh = (recEntryHighStr && recEntryHighStr !== '0') ? parseFloat(recEntryHighStr) : null;
 
-    if (recEntryLow !== null && (isNaN(recEntryLow) || recEntryLow < 0)) { return showToast('Invalid Rec. Entry Low (must be zero or positive).', 'error'); }
-    if (recEntryHigh !== null && (isNaN(recEntryHigh) || recEntryHigh < 0)) { return showToast('Invalid Rec. Entry High (must be zero or positive).', 'error'); }
+    if (recEntryLow !== null && (isNaN(recEntryLow) || recEntryLow < 0)) { return showToast('Invalid Rec. Entry Low (must be positive).', 'error'); }
+    if (recEntryHigh !== null && (isNaN(recEntryHigh) || recEntryHigh < 0)) { return showToast('Invalid Rec. Entry High (must be positive).', 'error'); }
     if (recEntryLow !== null && recEntryHigh !== null && recEntryLow > recEntryHigh) { return showToast('Rec. Entry Low cannot be greater than Rec. Entry High.', 'error'); }
 
     // Validate Guidelines
     const tp1Str = tp1Input?.value;
     const tp2Str = tp2Input?.value;
     const stopLossStr = stopLossInput?.value;
-    const recTp1 = tp1Str ? parseFloat(tp1Str) : null;
-    const recTp2 = tp2Str ? parseFloat(tp2Str) : null;
-    const recStopLoss = stopLossStr ? parseFloat(stopLossStr) : null;
+    const recTp1 = (tp1Str && tp1Str !== '0') ? parseFloat(tp1Str) : null;
+    const recTp2 = (tp2Str && tp2Str !== '0') ? parseFloat(tp2Str) : null;
+    const recStopLoss = (stopLossStr && stopLossStr !== '0') ? parseFloat(stopLossStr) : null;
 
     if (recTp1 !== null && (isNaN(recTp1) || recTp1 <= 0)) { return showToast('Invalid Rec. TP1 (must be positive).', 'error'); }
     if (recTp2 !== null && (isNaN(recTp2) || recTp2 <= 0)) { return showToast('Invalid Rec. TP2 (must be positive).', 'error'); }
@@ -79,7 +80,7 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     addButton.disabled = true;
     try {
         // Step 1: Always add to watchlist (now includes all guidelines)
-        await addWatchlistItem(holderId, ticker, formSourceId, recEntryLow, recEntryHigh, recTp1, recTp2, recStopLoss); // <-- Pass new args
+        await addWatchlistItem(holderId, ticker, formSourceId, recEntryLow, recEntryHigh, recTp1, recTp2, recStopLoss);
         let toastMessage = `${ticker} added to Recommended Trades`;
 
         // Step 2: If checkbox checked, navigate and pre-fill Orders form
@@ -130,6 +131,7 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
                 const addButtonOrders = document.querySelector('#add-transaction-form button[type="submit"]');
                 if (addButtonOrders) {
                     // This is just an example, could add a small <p> tag instead
+                    // @ts-ignore
                     addButtonOrders.title = `Source ID: ${formSourceId}`;
                 }
 
@@ -168,7 +170,7 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
  */
 export async function handleAddDocumentSubmit(e, refreshDetailsCallback) {
     e.preventDefault();
-    const form = /** @type {HTMLFormElement} */ (e.target.closest('form')); // Use closest('form')
+    const form = /** @type {HTMLFormElement} */ (e.target.closest('form'));
     if (!form) return;
     const addButton = /** @type {HTMLButtonElement | null} */ (form.querySelector('.add-document-button'));
     if (!addButton) return;
@@ -223,7 +225,7 @@ export async function handleAddDocumentSubmit(e, refreshDetailsCallback) {
  */
 export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
     e.preventDefault();
-    const form = /** @type {HTMLFormElement} */ (e.target.closest('form')); // Use closest('form')
+    const form = /** @type {HTMLFormElement} */ (e.target.closest('form'));
     if (!form) return;
     const addButton = /** @type {HTMLButtonElement | null} */ (form.querySelector('.add-source-note-button'));
     if (!addButton) return;
@@ -244,7 +246,7 @@ export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
         await refreshDetailsCallback();
     } catch (error) {
          // Assert error as Error type for message access
-         const err = /** @type {Error} */ (err);
+         const err = /** @type {Error} */ (error);
         showToast(`Error adding note: ${err.message}`, 'error');
     } finally {
         addButton.disabled = false;

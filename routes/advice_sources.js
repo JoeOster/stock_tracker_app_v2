@@ -95,17 +95,12 @@ module.exports = (db, log = console.log) => {
                 account_holder_id, name.trim(), type.trim(), description || null, url || null,
                 contact_person || null, contact_email || null, contact_phone || null,
                 contact_app_type || null, contact_app_handle || null,
-                image_path || null // <-- Added image_path
+                image_path || null
             ]);
 
             // Respond with the newly created source including its ID and all fields
-            res.status(201).json({
-                id: result.lastID,
-                account_holder_id, name: name.trim(), type: type.trim(), description: description || null, url: url || null,
-                contact_person: contact_person || null, contact_email: contact_email || null, contact_phone: contact_phone || null,
-                contact_app_type: contact_app_type || null, contact_app_handle: contact_app_handle || null,
-                image_path: image_path || null // <-- Added image_path
-            });
+            const newSource = await db.get('SELECT * FROM advice_sources WHERE id = ?', result.lastID);
+            res.status(201).json(newSource);
         } catch (error) {
             log(`[ERROR] Failed to add advice source: ${error.message}`);
             // @ts-ignore
@@ -152,7 +147,6 @@ module.exports = (db, log = console.log) => {
             name, type, description, url,
             contact_person, contact_email, contact_phone,
             contact_app_type, contact_app_handle, image_path
-            // Note: account_holder_id is typically not changed via update
         } = req.body;
 
         if (!name || !type || name.trim() === '' || type.trim() === '') {
@@ -176,7 +170,7 @@ module.exports = (db, log = console.log) => {
                 name.trim(), type.trim(), description || null, url || null,
                 contact_person || null, contact_email || null, contact_phone || null,
                 contact_app_type || null, contact_app_handle || null,
-                image_path || null, // <-- Added image_path
+                image_path || null,
                 id
             ]);
 

@@ -56,6 +56,18 @@ import { getCurrentESTDateString } from './ui/datetime.js';
  * @property {string} [description] - Optional description.
  */
 
+/**
+ * @typedef {object} WatchlistPostBody
+ * @property {string|number} account_holder_id
+ * @property {string} ticker
+ * @property {string|number|null} [advice_source_id]
+ * @property {number|null} [rec_entry_low]
+ * @property {number|null} [rec_entry_high]
+ * @property {number|null} [rec_tp1]
+ * @property {number|null} [rec_tp2]
+ * @property {number|null} [rec_stop_loss]
+ */
+
 
 /**
  * A helper function to handle fetch responses, throwing an error with a server message if not ok.
@@ -193,9 +205,12 @@ export async function updateAllPrices() {
     else if (state.currentView.type === 'date' && state.activityMap.size > 0) {
         tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
         // dateForUpdate is already set to state.currentView.value for 'date' type
-    } else if (state.currentView.type === 'research' && state.journalEntries?.openEntries) { // <<< Updated 'journal' to 'research'
-        tickersToUpdate = [...new Set(state.journalEntries.openEntries.map(entry => entry.ticker))];
-        dateForUpdate = getCurrentESTDateString(); // Journal/Research uses current prices
+    } else if (state.currentView.type === 'research') {
+        // <-- MODIFIED: Combine tickers from journal AND recommended trades -->
+        const journalTickers = state.journalEntries?.openEntries ? state.journalEntries.openEntries.map(entry => entry.ticker) : [];
+        const recommendedTickers = state.researchWatchlistItems ? state.researchWatchlistItems.map(item => item.ticker) : [];
+        tickersToUpdate = [...new Set([...journalTickers, ...recommendedTickers])];
+        dateForUpdate = getCurrentESTDateString(); // Research tab always uses current prices
     }
     // Add other views like watchlist if they need price updates
 
@@ -206,12 +221,12 @@ export async function updateAllPrices() {
         // Decide which UI update function to call based on the view
          if (state.currentView.type === 'dashboard') {
              // Dashboard re-renders fully on refresh click, which includes price population
-             const { renderDashboardPage } = await import('./ui/renderers/_dashboard_render.js'); // Updated import path
+             const { renderDashboardPage } = await import('./ui/renderers/_dashboard_render.js');
              await renderDashboardPage();
          }
          else if (state.currentView.type === 'date') {
             populatePricesFromCache(state.activityMap, state.priceCache);
-        } else if (state.currentView.type === 'research') { // <<< Updated 'journal' to 'research'
+        } else if (state.currentView.type === 'research') {
              // Need to call the specific loader/renderer for the active research sub-tab
              const researchModule = await import('./event-handlers/_research.js');
              if (researchModule.loadResearchPage) {
@@ -446,7 +461,14 @@ export async function fetchSourceDetails(sourceId, holderId) {
         throw new Error("Source ID and a specific Account Holder ID are required.");
     }
     const response = await fetch(`/api/sources/${sourceId}/details?holder=${holderId}`);
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    // <-- MODIFIED: Store watchlist items in state -->
+    if (data && data.watchlistItems) {
+        updateState({ researchWatchlistItems: data.watchlistItems });
+    } else {
+        updateState({ researchWatchlistItems: [] }); // Clear if none found
+    }
+    return data;
 }
 
 // --- Watchlist Item API ---
@@ -464,19 +486,22 @@ export async function fetchSourceDetails(sourceId, holderId) {
  * @returns {Promise<any>} The response from the server.
  */
 export async function addWatchlistItem(accountHolderId, ticker, adviceSourceId = null, recEntryLow = null, recEntryHigh = null, recTp1 = null, recTp2 = null, recStopLoss = null) {
+    /** @type {WatchlistPostBody} */
+    const body = {
+        account_holder_id: accountHolderId,
+        ticker: ticker,
+        advice_source_id: adviceSourceId,
+        rec_entry_low: recEntryLow,
+        rec_entry_high: recEntryHigh,
+        rec_tp1: recTp1,
+        rec_tp2: recTp2,
+        rec_stop_loss: recStopLoss
+    };
+
     const response = await fetch('/api/watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            account_holder_id: accountHolderId,
-            ticker: ticker,
-            advice_source_id: adviceSourceId,
-            rec_entry_low: recEntryLow,
-            rec_entry_high: recEntryHigh,
-            rec_tp1: recTp1, // <-- New
-            rec_tp2: recTp2, // <-- New
-            rec_stop_loss: recStopLoss // <-- New
-        })
+        body: JSON.stringify(body)
     });
     return handleResponse(response);
 }
@@ -502,6 +527,7 @@ export async function deleteWatchlistItem(itemId) {
  * @returns {Promise<any>} The response from the server.
  */
 export async function addDocument(documentData) {
+    // @ts-ignore
     if (!documentData.account_holder_id || (!documentData.journal_entry_id && !documentData.advice_source_id) || !documentData.external_link) {
         throw new Error("Missing required fields: account holder, link, and either journal or source ID.");
     }
@@ -585,7 +611,6 @@ export async function updateSourceNote(sourceId, noteId, holderId, noteContent) 
     });
     return handleResponse(response);
 }
-// Add this function within your /public/api.js file, for example, after the watchlist functions
 
 /**
  * Adds a new pending order to the database.

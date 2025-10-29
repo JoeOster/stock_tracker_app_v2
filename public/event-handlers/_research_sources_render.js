@@ -150,7 +150,7 @@ export function generateSourceDetailsHTML(details) {
                     <label for="add-wl-rec-datetime-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Date</label>
                     <input type="datetime-local" id="add-wl-rec-datetime-${source.id}" class="add-watchlist-rec-datetime-input">
                 </div>
-                 <div></div> {/* */}
+                 <div></div>
 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="add-wl-tp1-${source.id}" style="font-size: 0.8em; margin-bottom: 2px;">Rec. Take Profit 1</label>
@@ -185,9 +185,7 @@ export function generateSourceDetailsHTML(details) {
 
     // --- Linked Sections Below Grid ---
 
-
-
-    // 3. Recommended Trades (Watchlist Items) - New Table Format
+    // 1. Recommended Trades (Watchlist Items) - New Table Format
     detailsHTML += `<h4 style="margin-top: 1rem;">Recommended Trades (${details.watchlistItems.length})</h4>`;
     if (details.watchlistItems.length > 0) {
         detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="recommended-trades-table mini-journal-table" style="width: 100%; font-size: 0.9em;">
@@ -195,11 +193,11 @@ export function generateSourceDetailsHTML(details) {
                 <tr>
                     <th>Ticker</th>
                     <th>Date Added</th>
-                    <th>Rec. Entry Range</th>
-                    <th>Current $</th>
-                    <th>Dist. to Entry</th>
-                    <th>Rec. Guidelines (SL/TP1/TP2)</th>
-                    <th>Actions</th>
+                    <th class="numeric">Rec. Entry Range</th>
+                    <th class="numeric">Current $</th>
+                    <th class="numeric">Dist. to Entry</th>
+                    <th class="numeric">Rec. Guidelines (SL/TP1/TP2)</th>
+                    <th class="center-align">Actions</th>
                 </tr>
             </thead><tbody>`;
         
@@ -209,11 +207,17 @@ export function generateSourceDetailsHTML(details) {
             
             // Format Entry Range
             let entryRange = '';
+            // @ts-ignore
             if (item.rec_entry_low !== null && item.rec_entry_high !== null) {
+                // @ts-ignore
                 entryRange = `${formatAccounting(item.rec_entry_low, false)} - ${formatAccounting(item.rec_entry_high, false)}`;
+            // @ts-ignore
             } else if (item.rec_entry_low !== null) {
+                // @ts-ignore
                 entryRange = `${formatAccounting(item.rec_entry_low, false)}+`;
+            // @ts-ignore
             } else if (item.rec_entry_high !== null) {
+                // @ts-ignore
                 entryRange = `Up to ${formatAccounting(item.rec_entry_high, false)}`;
             } else {
                 entryRange = '--';
@@ -222,17 +226,22 @@ export function generateSourceDetailsHTML(details) {
             // Calculate Distance to Entry
             let distance = '--';
             let distClass = '';
+            // @ts-ignore
             if (currentPrice !== null && item.rec_entry_low !== null) {
+                // @ts-ignore
                 const distPercent = ((currentPrice - item.rec_entry_low) / item.rec_entry_low) * 100;
                 distClass = distPercent >= 0 ? 'positive' : 'negative'; // Green if above, red if below
                 // Check if inside range
+                // @ts-ignore
                 if (item.rec_entry_high !== null && currentPrice <= item.rec_entry_high) {
                     distClass = 'positive'; // Green if inside range
                     distance = `In Range (${distPercent.toFixed(1)}%)`;
                 } else {
                     distance = `${distPercent > 0 ? '+' : ''}${distPercent.toFixed(1)}%`;
                 }
+            // @ts-ignore
             } else if (currentPrice !== null && item.rec_entry_high !== null) {
+                // @ts-ignore
                  const distPercent = ((currentPrice - item.rec_entry_high) / item.rec_entry_high) * 100;
                  distClass = distPercent > 0 ? 'negative' : 'positive'; // Red if above, green if below
                  distance = `${distPercent > 0 ? '+' : ''}${distPercent.toFixed(1)}%`;
@@ -240,8 +249,11 @@ export function generateSourceDetailsHTML(details) {
 
             // Format Recommended Limits
             const recLimits = [
+                // @ts-ignore
                 item.rec_stop_loss ? `SL: ${formatAccounting(item.rec_stop_loss, false)}` : null,
+                // @ts-ignore
                 item.rec_tp1 ? `TP1: ${formatAccounting(item.rec_tp1, false)}` : null,
+                // @ts-ignore
                 item.rec_tp2 ? `TP2: ${formatAccounting(item.rec_tp2, false)}` : null
             ].filter(Boolean).join(' / ') || '--';
 
@@ -262,46 +274,56 @@ export function generateSourceDetailsHTML(details) {
     } else {
         detailsHTML += `<p>No recommended trades linked.</p>`;
     }
- 
-     // 2. Linked Journal Entries (Enhanced Table)
-    detailsHTML += `<h4>Linked Journal Entries (${details.journalEntries.length})</h4>`;
+    // Form was moved to the top grid
+
+    // 2. Linked Journal Entries (Enhanced Table)
+    detailsHTML += `<h4 style="margin-top: 1rem;">Linked Journal Entries (${details.journalEntries.length})</h4>`;
     if (details.journalEntries.length > 0) {
         detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
                 <tr>
                     <th>Date</th>
                     <th>Ticker</th>
-                    <th>Buy $</th>
-                    <th>Current $</th>
-                    <th>Unrealized P/L</th>
-                    <th>Rec. Limits (SL/TP1/TP2)</th>
-                    <th>Actual Limits (SL/TP)</th>
+                    <th class="numeric">Buy $</th>
+                    <th class="numeric">Current $</th>
+                    <th class="numeric">Unrealized P/L</th>
+                    <th class="numeric">Rec. Limits (SL/TP1/TP2)</th>
+                    <th class="numeric">Actual Limits (SL/TP)</th>
                     <th>Status</th>
                 </tr>
             </thead><tbody>`;
         details.journalEntries.forEach(entry => {
-            const pnlClass = entry.current_pnl ? (entry.current_pnl >= 0 ? 'positive' : 'negative') : '';
+            // @ts-ignore
+            const pnlClass = entry.current_pnl ? (entry.current_pnl >= 0 ? 'positive' : 'negative') : (entry.pnl ? (entry.pnl >= 0 ? 'positive' : 'negative') : '');
             const statusClass = entry.status === 'OPEN' ? '' : 'text-muted';
             
             let pnlDisplay = '--';
             if (entry.status === 'OPEN') {
+                // @ts-ignore
                 pnlDisplay = entry.current_pnl !== null && entry.current_pnl !== undefined ? formatAccounting(entry.current_pnl) : '--';
             } else {
+                // @ts-ignore
                 pnlDisplay = entry.pnl !== null && entry.pnl !== undefined ? formatAccounting(entry.pnl) : '--';
             }
 
             const recLimits = [
+                // @ts-ignore
                 entry.stop_loss_price ? `SL: ${formatAccounting(entry.stop_loss_price, false)}` : null,
+                // @ts-ignore
                 entry.target_price ? `TP1: ${formatAccounting(entry.target_price, false)}` : null,
+                // @ts-ignore
                 entry.target_price_2 ? `TP2: ${formatAccounting(entry.target_price_2, false)}` : null
             ].filter(Boolean).join(' / ') || '--';
 
             // Find the linked transaction (if executed) to get *actual* limits
             let actualLimits = '--';
             if (entry.status === 'EXECUTED' && entry.linked_trade_id) {
+                // @ts-ignore
                 const transaction = state.transactions.find(t => t.id === entry.linked_trade_id);
                 if (transaction) {
+                     // @ts-ignore
                      const actualSL = transaction.limit_price_down ? `SL: ${formatAccounting(transaction.limit_price_down, false)}` : null;
+                     // @ts-ignore
                      const actualTP = transaction.limit_price_up ? `TP: ${formatAccounting(transaction.limit_price_up, false)}` : null;
                      actualLimits = [actualSL, actualTP].filter(Boolean).join(' / ') || '--';
                 }
@@ -312,6 +334,7 @@ export function generateSourceDetailsHTML(details) {
                     <td>${escapeHTML(entry.entry_date) || 'N/A'}</td>
                     <td>${escapeHTML(entry.ticker) || 'N/A'}</td>
                     <td class="numeric">${formatAccounting(entry.entry_price)}</td>
+                    {/* @ts-ignore */}
                     <td class="numeric">${entry.current_price ? formatAccounting(entry.current_price) : '--'}</td>
                     <td class="numeric ${pnlClass}">${pnlDisplay}</td>
                     <td class="numeric">${recLimits}</td>
@@ -323,9 +346,8 @@ export function generateSourceDetailsHTML(details) {
     } else {
         detailsHTML += `<p>No journal entries linked.</p>`;
     }
-       // Form was moved to the top grid
 
-    // 4. Linked Documents & Add Form
+    // 3. Linked Documents & Add Form
     detailsHTML += `<h4 style="margin-top: 1rem;">Linked Documents (${details.documents.length})</h4>`;
     if (details.documents.length > 0) {
         detailsHTML += `<ul class="linked-items-list">`;
@@ -356,7 +378,7 @@ export function generateSourceDetailsHTML(details) {
             </div>
         </form>`;
 
-    // 5. Source Notes & Add Form
+    // 4. Source Notes & Add Form
     detailsHTML += `<h4 style="margin-top: 1rem;">Notes (${details.sourceNotes.length})</h4>`;
      if (details.sourceNotes.length > 0) {
         detailsHTML += `<ul class="source-notes-list" style="list-style: none; padding: 0; max-height: 200px; overflow-y: auto;">`;
