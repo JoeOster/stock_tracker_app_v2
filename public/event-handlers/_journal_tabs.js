@@ -33,7 +33,7 @@ export function initializeResearchSubTabHandlers() {
                 // Reload content for the newly activated tab
                 try {
                     // Dynamically import from the new loader file
-                    const researchModule = await import('./_research_loader.js');
+                    const researchModule = await import('./_research.js');
                     if (researchModule.loadResearchPage && typeof researchModule.loadResearchPage === 'function') {
                         await researchModule.loadResearchPage();
                     } else {

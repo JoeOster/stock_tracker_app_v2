@@ -48,7 +48,7 @@ export function renderSourcesList(panelElement, sources) {
         const cardHTML = `
             <div class="source-card clickable-source" data-source-id="${source.id}" style="cursor: pointer;">
                 <div class="card-header">
-                    <span style="font-size: 1.5em; margin-right: 5px;">ℹ️</span> {/* Placeholder Icon */}
+                    <span style="font-size: 1.5em; margin-right: 5px;">ℹ️</span> 
                     <h3 class="source-name" style="margin: 0;">${escapeHTML(source.name)}</h3>
                     <small style="margin-left: auto;" class="source-type">(${escapeHTML(source.type)})</small>
                 </div>

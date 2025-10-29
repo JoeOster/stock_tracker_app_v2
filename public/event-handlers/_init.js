@@ -16,8 +16,7 @@ import { initializeSettingsModalHandlers } from './_settings_modal.js';
 import { initializeExchangeManagementHandlers } from './_settings_exchanges.js';
 import { initializeHolderManagementHandlers } from './_settings_holders.js';
 import { initializeJournalSettingsHandlers } from './_journal_settings.js';
-// UPDATED: Import from _research_loader.js
-import { initializeResearchHandlers } from './_research_loader.js';
+import { initializeResearchHandlers } from './_research.js';
 import { initializeDashboardHandlers } from './_dashboard_init.js';
 
 /**
