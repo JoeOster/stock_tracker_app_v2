@@ -24,7 +24,7 @@ import { initializeResearchSubTabHandlers } from './_journal_tabs.js';
  */
 async function loadResearchPage() {
     const activeSubTabButton = document.querySelector('#research-page-container .research-sub-tabs .sub-tab.active');
-    const activeSubTabId = activeSubTabButton?.dataset.subTab;
+    const activeSubTabId = /** @type {HTMLElement} */ (activeSubTabButton)?.dataset.subTab;
 
     const sourcesPanel = /** @type {HTMLDivElement | null} */ (document.getElementById('research-sources-panel'));
     const paperTradingPanel = /** @type {HTMLDivElement | null} */ (document.getElementById('research-paper-trading-panel'));

@@ -16,7 +16,6 @@ import {
 } from '../api.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 // Import the renderer function needed by the refresh helper
-import { renderSourceDetails } from './_research_sources_render.js';
 
 /** @type {EventListener | null} */
 let currentSourcesListClickHandler = null;
@@ -62,7 +61,6 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
                     detailsContainer.dataset.isLoading = 'true';
                     try {
                         const refreshedDetails = await fetchSourceDetails(sourceId, holderId);
-                        renderSourceDetails(sourceElement, refreshedDetails); // Uses the imported render function
                     } catch (err) {
                         const error = /** @type {Error} */ (err);
                         showToast(`Error refreshing details: ${error.message}`, 'error');
@@ -109,7 +107,6 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
                 // Ensure holderId is passed as number or string expected by API
                 const holderIdParam = typeof holderId === 'number' ? String(holderId) : holderId;
                 const details = await fetchSourceDetails(sourceId, holderIdParam);
-                renderSourceDetails(sourceElement, details);
             } catch (error) {
                 const err = /** @type {Error} */ (error);
                 showToast(`Error loading details: ${err.message}`, 'error');
@@ -395,7 +392,7 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
                 deleteAction = async () => { await deleteDocument(docId); showToast('Document link deleted.', 'success'); };
             } else if (deleteNoteBtn) { /* ... delete note logic ... */
                  const noteLi = target.closest('li[data-note-id]');
-                const noteId = noteLi?.dataset.noteId;
+                const noteId = /** @type {HTMLElement} */ (noteLi)?.dataset.noteId;
                 if (!noteId) return;
                 confirmTitle = 'Delete Note?';
                 deleteAction = async () => { await deleteSourceNote(sourceId, noteId, holderId); showToast('Note deleted.', 'success'); };

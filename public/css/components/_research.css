@@ -1,0 +1,189 @@
+/* public/css/components/_research.css */
+/* Contains styles specific to the Research page, including Source Cards */
+
+/* --- Grid Container (Reuses dashboard style if possible, or define here) --- */
+/* .cards-grid { ... } */ /* If not already globally defined or imported */
+
+/* --- Source Card Styles (Adapted from .position-card) --- */
+.source-card {
+    background-color: var(--container-bg);
+    border: 1px solid var(--container-border);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent content overflow */
+    cursor: pointer; /* Indicate it's clickable */
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.source-card:hover {
+    box-shadow: 0 4px 10px var(--shadow-color); /* Add hover effect */
+}
+
+/* Card Header */
+.source-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--container-border);
+}
+
+.source-card .card-header .source-name {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--heading-color);
+    margin: 0;
+    line-height: 1;
+    /* Prevent wrapping in header if needed */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.source-card .card-header .source-type {
+    margin-left: auto; /* Push type to the right */
+    white-space: nowrap;
+    color: var(--text-muted-color);
+}
+
+/* Card Body (for snippet) */
+.source-card .card-body {
+    padding: 15px;
+    font-size: 0.9em;
+    min-height: 60px; /* Ensure a minimum height */
+    color: var(--text-muted-color);
+    /* Flex setup for vertical centering if needed, but simple paragraph often enough */
+}
+ /* Style for the snippet paragraph to limit lines */
+.source-card .card-body p {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Limit to 2 lines */
+    -webkit-box-orient: vertical;
+}
+
+/* Card Footer (Optional visual separation) */
+.source-card .card-footer {
+    padding: 8px 15px;
+    border-top: 1px solid var(--container-border);
+    background-color: var(--info-panel-bg);
+    font-size: 0.8em;
+    color: var(--text-muted-color);
+    text-align: center;
+}
+
+/* Details Section (Initially hidden, shown on click) */
+.source-card .source-details-content {
+    padding: 15px;
+    border-top: 1px solid var(--container-border);
+    background-color: var(--info-panel-bg); /* Slightly different background */
+    font-size: 0.9em; /* Match card body font size */
+}
+
+/* --- Styles for content WITHIN source-details-content --- */
+.source-details-content h4,
+.source-details-content h5 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.1em; /* Make subheadings slightly larger */
+}
+ .source-details-content h4:first-child,
+ .source-details-content h5:first-child {
+    margin-top: 0;
+}
+
+.source-details-content p {
+    margin: 0.3rem 0;
+    line-height: 1.5;
+}
+
+.source-details-content .source-contact-info p {
+     margin-bottom: 0.5rem;
+}
+
+.source-details-content a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+.source-details-content a:hover {
+    text-decoration: underline;
+}
+
+/* Mini table for journal entries */
+.source-details-content .mini-journal-table {
+    width: 100%;
+    font-size: 0.9em;
+    border-collapse: collapse; /* Simple collapse */
+    margin-bottom: 1rem;
+}
+.source-details-content .mini-journal-table th,
+.source-details-content .mini-journal-table td {
+    padding: 4px 6px;
+    border: 1px solid var(--container-border);
+    text-align: left;
+    white-space: nowrap;
+}
+.source-details-content .mini-journal-table th {
+     background-color: var(--table-header-bg);
+     font-weight: 600;
+}
+.source-details-content .mini-journal-table .numeric { text-align: right; }
+.source-details-content .mini-journal-table .positive { color: var(--positive-color); }
+.source-details-content .mini-journal-table .negative { color: var(--negative-color); }
+.source-details-content .mini-journal-table .text-muted { color: var(--text-muted-color); }
+
+
+/* List for watchlist/documents/notes */
+.source-details-content .linked-items-list,
+.source-details-content .source-notes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 1rem 0;
+}
+.source-details-content .linked-items-list li,
+.source-details-content .source-notes-list li {
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--container-border);
+}
+ .source-details-content .linked-items-list li:last-child,
+ .source-details-content .source-notes-list li:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+ }
+
+ /* Input/Textarea styles within the details forms */
+ .source-details-content form input[type="text"],
+ .source-details-content form input[type="url"],
+ .source-details-content form input[type="number"],
+ .source-details-content form select,
+ .source-details-content form textarea {
+     padding: 6px 8px; /* Smaller padding for inline forms */
+     font-size: 0.9em;
+     margin-bottom: 0; /* Remove default form group margin */
+     width: 100%; /* Ensure they fill grid cells */
+     box-sizing: border-box;
+ }
+  .source-details-content form textarea {
+     resize: vertical;
+     min-height: 40px;
+  }
+  .source-details-content form label {
+     margin-bottom: 0; /* Override default */
+     font-size: 0.8em;
+  }
+ /* Ensure buttons in forms use smaller size */
+ .source-details-content form button {
+    padding: 5px 10px;
+    font-size: 0.9em;
+ }
+ /* Styles for note edit/save/cancel */
+.source-details-content .note-actions button,
+.source-details-content .note-content-edit button {
+    padding: 3px 6px !important;
+    font-size: 0.8em !important;
+}

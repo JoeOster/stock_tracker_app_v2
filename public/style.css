@@ -18,7 +18,7 @@
 @import url('./css/components/_importers.css');
 @import url('./css/components/_journal.css');
 @import url('./css/components/_dashboard.css');
-
+@import url('./css/components/_research.css');
 
 /* --- UTILITIES --- */
 @import url('./css/base/_utilities.css');

@@ -1,32 +1,37 @@
 <div id="research-page-container" class="page-container" style="display: none;">
-    <h2>Research & Analysis</h2>
-    <p class="subtitle">Explore advice sources, track paper trades, and plan your actions.</p>
-
-    <div class="sub-tabs research-sub-tabs" style="margin-bottom: 1.5rem;">
+    <h2>Research</h2>
+    <div class="sub-tabs research-sub-tabs">
         <button class="sub-tab active" data-sub-tab="research-sources-panel">Sources</button>
         <button class="sub-tab" data-sub-tab="research-paper-trading-panel">Paper Trading</button>
         <button class="sub-tab" data-sub-tab="research-action-plan-panel">Action Plan</button>
-        </div>
+    </div>
 
     <div class="sub-tab-content">
 
+        {/* --- SOURCES PANEL --- */}
         <div id="research-sources-panel" class="sub-tab-panel active">
-            <h3>Advice Sources Overview</h3>
-            <p class="subtitle" style="text-align: left; margin: 0 0 10px 0;">Click on a source to view details, linked items, and notes.</p>
-            <div id="sources-list" class="sources-list-container">
-                <p>Loading sources...</p>
+            <h3>Advice Sources</h3>
+
+            {/* --- THIS IS THE CRITICAL PART --- */}
+            {/* Make sure this div exists inside research-sources-panel */}
+            <div id="sources-cards-grid" class="cards-grid">
+                <p>Loading sources...</p> {/* Initial loading message is okay */}
             </div>
+            {/* --- END CRITICAL PART --- */}
+
         </div>
 
+        {/* --- PAPER TRADING PANEL --- */}
         <div id="research-paper-trading-panel" class="sub-tab-panel">
-            <h3>Paper Trading (Journal)</h3>
-             <p>Loading paper trading interface...</p>
-             </div>
-
-        <div id="research-action-plan-panel" class="sub-tab-panel">
-            <h3>Action Plan</h3>
-            <p><i>Content for Action Plan to be developed...</i></p>
-            </div>
-
+            {/* Content/Structure for Paper Trading (Journal) */}
+             <p>Loading paper trading...</p>
         </div>
+
+        {/* --- ACTION PLAN PANEL --- */}
+        <div id="research-action-plan-panel" class="sub-tab-panel">
+            {/* Content for Action Plan */}
+             <p>Action Plan TBD...</p>
+        </div>
+
+    </div>
 </div>
