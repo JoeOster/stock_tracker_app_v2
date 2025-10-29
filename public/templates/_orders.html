@@ -16,9 +16,10 @@
 
         <div class="form-row-divider"></div>
         <div class="limit-order-group">
-            <input type="checkbox" id="set-profit-limit-checkbox" title="Set Take Profit Limit">
-            <label for="add-limit-price-up">Take Profit:</label>
+            <input type="checkbox" id="set-profit-limit-checkbox" title="Set Take Profit Limit 1">
+            <label for="add-limit-price-up">Take Profit 1:</label>
             <input type="number" id="add-limit-price-up" step="any" placeholder="Price">
+            <div class="limit-spacer"></div>
             <label for="add-limit-up-expiration">Exp:</label>
             <input type="date" id="add-limit-up-expiration">
         </div>
@@ -26,8 +27,17 @@
             <input type="checkbox" id="set-loss-limit-checkbox" title="Set Stop Loss Limit">
             <label for="add-limit-price-down">Stop Loss:</label>
             <input type="number" id="add-limit-price-down" step="any" placeholder="Price">
+            <div class="limit-spacer"></div>
             <label for="add-limit-down-expiration">Exp:</label>
             <input type="date" id="add-limit-down-expiration">
+        </div>
+        <div class="limit-order-group">
+            <input type="checkbox" id="set-profit-limit-2-checkbox" title="Set Take Profit Limit 2">
+            <label for="add-limit-price-up-2">Take Profit 2:</label>
+            <input type="number" id="add-limit-price-up-2" step="any" placeholder="Price (Optional)">
+            <div class="limit-spacer"></div>
+            <label for="add-limit-up-expiration-2">Exp:</label>
+            <input type="date" id="add-limit-up-expiration-2">
         </div>
     </form>
 

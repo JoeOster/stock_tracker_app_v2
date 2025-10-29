@@ -1,7 +1,29 @@
 // routes/transactions.js
-// Version Updated (Modify POST / to handle selective sell - Task X.5)
+/**
+ * @file Creates and returns an Express router for handling transaction endpoints.
+ * @module routes/transactions
+ */
+
 const express = require('express');
 const router = express.Router();
+// const { formatQuantity } = require('../public/ui/formatters.js'); // Cannot import ESM
+
+/**
+ * Simple quantity formatter for error messages (internal to this module).
+ * @param {number | string | null | undefined} number - The number to format.
+ * @returns {string} The formatted quantity string.
+ */
+function internalFormatQuantity(number) {
+     const num = typeof number === 'string' ? parseFloat(number) : number;
+     if (num === null || num === undefined || isNaN(num)) { return ''; }
+     const formatter = new Intl.NumberFormat('en-US', {
+         maximumFractionDigits: 5,
+         minimumFractionDigits: 0,
+         useGrouping: true
+     });
+     return formatter.format(num);
+}
+
 
 /**
  * Creates and returns an Express router for handling transaction endpoints.
@@ -19,7 +41,6 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
      * Handles the batch import of reconciled transactions from the CSV importer.
      */
     router.post('/import', async (req, res) => {
-        // ... (Import logic remains the same - code omitted for brevity) ...
         const { sessionId, resolutions } = req.body;
 
         if (!sessionId || !Array.isArray(resolutions)) {
@@ -79,7 +100,7 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
 
                     if (isNaN(price) || price <= 0) {
                         log(`[IMPORT WARNING] Invalid price (${tx.price}) for ${tx.ticker} on ${tx.date}. Skipping and creating notification.`);
-                        const message = `An imported transaction for ${formatQuantity(quantity)} shares of ${tx.ticker} on ${tx.date} was ignored because the price was invalid or zero (${tx.price}).`;
+                        const message = `An imported transaction for ${internalFormatQuantity(quantity)} shares of ${tx.ticker} on ${tx.date} was ignored because the price was invalid or zero (${tx.price}).`;
                         await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (?, ?, ?)", [accountHolderId, message, 'UNREAD']);
                         continue;
                     }
@@ -99,7 +120,7 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
 
                         if (openLots.length === 0) {
                              log(`[IMPORT WARNING] No open BUY lot for SELL of ${tx.ticker} on ${tx.date}. Skipping and creating notification.`);
-                             const message = `An imported SELL transaction for ${formatQuantity(quantity)} shares of ${tx.ticker} on ${tx.date} was ignored because no corresponding open BUY lot could be found.`;
+                             const message = `An imported SELL transaction for ${internalFormatQuantity(quantity)} shares of ${tx.ticker} on ${tx.date} was ignored because no corresponding open BUY lot could be found.`;
                              await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (?, ?, ?)", [accountHolderId, message, 'UNREAD']);
                              continue;
                         }
@@ -119,8 +140,8 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                         }
 
                          if (sellQuantityRemaining > 0.00001) {
-                            log(`[IMPORT WARNING] Not enough shares to cover entire SELL of ${tx.ticker} on ${tx.date}. ${formatQuantity(sellQuantityRemaining)} shares were not recorded as sold.`);
-                            const message = `An imported SELL transaction for ${tx.ticker} on ${tx.date} could not be fully completed. There were not enough shares in open lots to cover the entire sale. ${formatQuantity(sellQuantityRemaining)} shares were not recorded as sold.`;
+                            log(`[IMPORT WARNING] Not enough shares to cover entire SELL of ${tx.ticker} on ${tx.date}. ${internalFormatQuantity(sellQuantityRemaining)} shares were not recorded as sold.`);
+                            const message = `An imported SELL transaction for ${tx.ticker} on ${tx.date} could not be fully completed. There were not enough shares in open lots to cover the entire sale. ${internalFormatQuantity(sellQuantityRemaining)} shares were not recorded as sold.`;
                             await db.run("INSERT INTO notifications (account_holder_id, message, status) VALUES (?, ?, ?)", [accountHolderId, message, 'UNREAD']);
                         }
                     }
@@ -139,7 +160,10 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
         }
     });
 
-    // --- GET / --- (Fetch all transactions)
+    /**
+     * GET /
+     * Fetches all transactions, optionally filtered by account holder.
+     */
     router.get('/', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -158,12 +182,17 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
         }
     });
 
-    // --- POST / --- (Add single manual OR selective sell transaction) <<< MODIFIED LOGIC
+    /**
+     * POST /
+     * Adds a single manual BUY/SELL transaction or a selective SELL transaction.
+     */
     router.post('/', async (req, res) => {
-        // --- Destructure ALL possible fields ---
+        // --- Destructure ALL possible fields (including new TP2 fields) ---
         const {
             ticker, exchange, transaction_type, quantity, price, transaction_date,
-            limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration,
+            limit_price_up, limit_up_expiration,
+            limit_price_down, limit_down_expiration,
+            limit_price_up_2, limit_up_expiration_2, // *** ADDED TP2 FIELDS ***
             parent_buy_id, // For single lot sell
             lots, // For selective sell: Array of { parent_buy_id, quantity_to_sell }
             account_holder_id
@@ -172,13 +201,13 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
         const numPrice = parseFloat(price);
         const createdAt = new Date().toISOString();
 
-        // --- Basic Validation common to all types ---
+        // Basic Validation
         if (!ticker || !exchange || !transaction_date || !['BUY', 'SELL'].includes(transaction_type) || isNaN(numPrice) || numPrice <= 0 || !account_holder_id) {
             return res.status(400).json({ message: 'Invalid input. Ensure ticker, exchange, type, date, price, and holder ID are valid.' });
         }
 
         try {
-            await db.exec('BEGIN TRANSACTION'); // Use transaction for all types
+            await db.exec('BEGIN TRANSACTION');
 
             // --- Handle BUY ---
             if (transaction_type === 'BUY') {
@@ -190,13 +219,23 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                 const original_quantity = numQuantity;
                 const quantity_remaining = numQuantity;
 
-                const query = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, parent_buy_id, original_quantity, quantity_remaining, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                await db.run(query, [ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, limit_price_up || null, limit_price_down || null, limit_up_expiration || null, limit_down_expiration || null, null, original_quantity, quantity_remaining, account_holder_id, 'MANUAL', createdAt]);
-
+                // *** ADDED TP2 COLUMNS TO INSERT ***
+                const query = `INSERT INTO transactions (
+                                ticker, exchange, transaction_type, quantity, price, transaction_date,
+                                limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration,
+                                limit_price_up_2, limit_up_expiration_2,
+                                parent_buy_id, original_quantity, quantity_remaining, account_holder_id, source, created_at
+                               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                await db.run(query, [
+                    ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date,
+                    limit_price_up || null, limit_up_expiration || null, limit_price_down || null, limit_down_expiration || null,
+                    limit_price_up_2 || null, limit_up_expiration_2 || null, // *** ADDED TP2 VALUES ***
+                    null, original_quantity, quantity_remaining, account_holder_id, 'MANUAL', createdAt
+                ]);
             }
             // --- Handle SELL (Single Lot OR Selective) ---
             else if (transaction_type === 'SELL') {
-                // --- Case 1: Single Lot Sell (from old modal or table) ---
+                // --- Case 1: Single Lot Sell ---
                 if (parent_buy_id && !lots) {
                     const numQuantity = parseFloat(quantity);
                     if (isNaN(numQuantity) || numQuantity <= 0) {
@@ -213,31 +252,23 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                         await db.exec('ROLLBACK');
                         return res.status(400).json({ message: 'Sell date cannot be before the buy date.' });
                     }
-                    // Use a tolerance for floating point comparisons
                     if (parentBuy.quantity_remaining < numQuantity - 0.00001) {
                          await db.exec('ROLLBACK');
-                        return res.status(400).json({ message: `Sell quantity (${formatQuantity(numQuantity)}) exceeds remaining quantity (${formatQuantity(parentBuy.quantity_remaining)}) in the selected lot.` });
+                        return res.status(400).json({ message: `Sell quantity (${internalFormatQuantity(numQuantity)}) exceeds remaining quantity (${internalFormatQuantity(parentBuy.quantity_remaining)}) in the selected lot.` });
                     }
-
                     // Insert the single SELL record
                     const sellQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
                     await db.run(sellQuery, [ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, parent_buy_id, account_holder_id, 'MANUAL', createdAt]);
-
                     // Update parent BUY lot
                     await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [numQuantity, parent_buy_id]);
-
                 }
-                // --- Case 2: Selective Sell (from new modal) ---
+                // --- Case 2: Selective Sell ---
                 else if (lots && Array.isArray(lots) && lots.length > 0) {
                     let totalSellQuantityFromLots = 0;
                     for (const lotInfo of lots) {
                         const lotQty = parseFloat(lotInfo.quantity_to_sell);
-                        if (isNaN(lotQty) || lotQty < 0) { // Allow zero quantity entries from UI, just ignore them
-                           continue; // Skip lots with invalid or zero quantity
-                        }
+                        if (isNaN(lotQty) || lotQty <= 0) continue; // Skip invalid or zero
                         totalSellQuantityFromLots += lotQty;
-
-                        if (lotQty === 0) continue; // Skip if quantity is zero
 
                         const parentBuy = await db.get('SELECT * FROM transactions WHERE id = ? AND account_holder_id = ? AND transaction_type = \'BUY\'', [lotInfo.parent_buy_id, account_holder_id]);
                         if (!parentBuy) {
@@ -245,43 +276,36 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                             return res.status(404).json({ message: `Parent buy transaction (ID: ${lotInfo.parent_buy_id}) not found for this account holder.` });
                         }
                         if (new Date(transaction_date) < new Date(parentBuy.transaction_date)) {
-                            await db.exec('ROLLBACK');
-                            return res.status(400).json({ message: `Sell date cannot be before the buy date of lot ID ${lotInfo.parent_buy_id}.` });
+                             await db.exec('ROLLBACK');
+                             return res.status(400).json({ message: `Sell date cannot be before the buy date of lot ID ${lotInfo.parent_buy_id}.` });
                         }
-                        // Use tolerance for float comparison
                         if (parentBuy.quantity_remaining < lotQty - 0.00001) {
                              await db.exec('ROLLBACK');
-                            return res.status(400).json({ message: `Sell quantity (${formatQuantity(lotQty)}) exceeds remaining quantity (${formatQuantity(parentBuy.quantity_remaining)}) in lot ID ${lotInfo.parent_buy_id}.` });
+                            return res.status(400).json({ message: `Sell quantity (${internalFormatQuantity(lotQty)}) exceeds remaining quantity (${internalFormatQuantity(parentBuy.quantity_remaining)}) in lot ID ${lotInfo.parent_buy_id}.` });
                         }
-
-                        // Insert a SELL record for this specific lot
+                        // Insert a SELL record for this lot
                         const sellQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
                         await db.run(sellQuery, [ticker.toUpperCase(), exchange, transaction_type, lotQty, numPrice, transaction_date, lotInfo.parent_buy_id, account_holder_id, 'MANUAL', createdAt]);
-
                         // Update parent BUY lot
                         await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [lotQty, lotInfo.parent_buy_id]);
                     }
-
-                    // Final check: Ensure total quantity from lots array matches expected total (if provided, e.g., from UI total input)
-                    const expectedTotalQuantity = parseFloat(quantity); // 'quantity' field might hold the total from UI
+                    // Final check
+                    const expectedTotalQuantity = parseFloat(quantity);
                      if (!isNaN(expectedTotalQuantity) && Math.abs(totalSellQuantityFromLots - expectedTotalQuantity) > 0.00001) {
                          await db.exec('ROLLBACK');
-                         log(`[ERROR] Mismatch between total quantity (${expectedTotalQuantity}) and sum of lot quantities (${totalSellQuantityFromLots}).`);
                          return res.status(400).json({ message: 'Total quantity specified does not match the sum of quantities entered for individual lots.' });
                      }
-                      if (totalSellQuantityFromLots <= 0) {
+                     if (totalSellQuantityFromLots <= 0) {
                          await db.exec('ROLLBACK');
                          return res.status(400).json({ message: 'Total quantity to sell must be greater than zero.' });
                      }
-
                 }
                 // --- Case 3: Invalid SELL payload ---
                 else {
                     await db.exec('ROLLBACK');
                     return res.status(400).json({ message: 'Invalid SELL transaction payload. Must provide either a single parent_buy_id or a valid lots array.' });
                 }
-
-                // Trigger EOD price capture if a SELL occurred (and not testing)
+                // Trigger EOD price capture
                 if (process.env.NODE_ENV !== 'test' && typeof captureEodPrices === 'function') {
                     captureEodPrices(db, transaction_date);
                 }
@@ -291,18 +315,28 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
             res.status(201).json({ message: 'Transaction logged successfully!' });
 
         } catch (error) {
-            await db.exec('ROLLBACK'); // Ensure rollback on any error within try block
+            await db.exec('ROLLBACK');
             log(`[ERROR] Failed to add transaction: ${error.message}\n${error.stack}`);
             res.status(500).json({ message: 'Server Error processing transaction.' });
         }
     });
 
-     // --- PUT /:id --- (Update existing transaction)
+     /**
+      * PUT /:id
+      * Updates an existing transaction (e.g., from Edit Modal).
+      */
      router.put('/:id', async (req, res) => {
-        // ... (PUT logic remains the same - code omitted for brevity) ...
         try {
             const { id } = req.params;
-            const { ticker, exchange, quantity, price, transaction_date, limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration, account_holder_id } = req.body;
+            // --- ADDED TP2 FIELDS ---
+            const {
+                ticker, exchange, quantity, price, transaction_date,
+                limit_price_up, limit_up_expiration,
+                limit_price_down, limit_down_expiration,
+                limit_price_up_2, limit_up_expiration_2, // *** ADDED ***
+                account_holder_id
+            } = req.body;
+            // --- END DESTRUCTURE ---
 
             const numQuantity = parseFloat(quantity);
             const numPrice = parseFloat(price);
@@ -316,25 +350,34 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                 return res.status(404).json({ message: 'Transaction not found.' });
             }
 
-            if (originalTx.transaction_type === 'BUY' && originalTx.quantity !== numQuantity && originalTx.quantity_remaining !== originalTx.original_quantity) {
-                 log(`[WARN] Updating quantity of BUY transaction (ID: ${id}) which has associated SELLs. Manual adjustment of SELLs/parent quantity_remaining might be needed.`);
-                 const diff = numQuantity - originalTx.quantity;
-                 await db.run('UPDATE transactions SET original_quantity = ?, quantity_remaining = quantity_remaining + ? WHERE id = ?', [numQuantity, diff, id]);
-
-            } else if (originalTx.transaction_type === 'BUY') {
-                 await db.run('UPDATE transactions SET original_quantity = ?, quantity_remaining = ? WHERE id = ?', [numQuantity, numQuantity, id]);
+            // Adjust quantity_remaining if original_quantity of a BUY lot is changed
+            if (originalTx.transaction_type === 'BUY') {
+                 // Only adjust remaining if it was untouched (equal to original)
+                 if (Math.abs(originalTx.quantity_remaining - originalTx.original_quantity) < 0.00001) {
+                     await db.run('UPDATE transactions SET original_quantity = ?, quantity_remaining = ? WHERE id = ?', [numQuantity, numQuantity, id]);
+                 } else {
+                     // Quantity has been sold, only update original_quantity
+                      await db.run('UPDATE transactions SET original_quantity = ? WHERE id = ?', [numQuantity, id]);
+                 }
             }
 
+            // *** ADDED TP2 COLUMNS TO UPDATE ***
             const query = `UPDATE transactions SET
                 ticker = ?, exchange = ?, quantity = ?, price = ?, transaction_date = ?,
-                limit_price_up = ?, limit_up_expiration = ?, limit_price_down = ?, limit_down_expiration = ?,
+                limit_price_up = ?, limit_up_expiration = ?,
+                limit_price_down = ?, limit_down_expiration = ?,
+                limit_price_up_2 = ?, limit_up_expiration_2 = ?,
                 account_holder_id = ?
                 WHERE id = ?`;
             await db.run(query, [
                 ticker.toUpperCase(), exchange, numQuantity, numPrice, transaction_date,
-                limit_price_up || null, limit_up_expiration || null, limit_price_down || null, limit_down_expiration || null,
-                account_holder_id, id
+                limit_price_up || null, limit_up_expiration || null,
+                limit_price_down || null, limit_down_expiration || null,
+                limit_price_up_2 || null, limit_up_expiration_2 || null, // *** ADDED ***
+                account_holder_id,
+                id
             ]);
+            // *** END UPDATE ---
 
             res.json({ message: 'Transaction updated successfully.' });
 
@@ -344,9 +387,11 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
         }
     });
 
-    // --- DELETE /:id --- (Delete transaction)
+    /**
+     * DELETE /:id
+     * Deletes a transaction.
+     */
     router.delete('/:id', async (req, res) => {
-        // ... (DELETE logic remains the same - code omitted for brevity) ...
         try {
             const { id } = req.params;
             const transaction = await db.get('SELECT * FROM transactions WHERE id = ?', id);
@@ -358,6 +403,7 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
             await db.exec('BEGIN TRANSACTION');
 
             if (transaction.transaction_type === 'SELL' && transaction.parent_buy_id) {
+                // Restore quantity to parent BUY
                 await db.run(
                     'UPDATE transactions SET quantity_remaining = quantity_remaining + ? WHERE id = ?',
                     [transaction.quantity, transaction.parent_buy_id]
@@ -365,6 +411,7 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                 log(`[DELETE] Restored quantity ${transaction.quantity} to parent BUY ID ${transaction.parent_buy_id}`);
             }
              else if (transaction.transaction_type === 'BUY') {
+                 // Check for child SELLs
                  const childSells = await db.all('SELECT id FROM transactions WHERE parent_buy_id = ?', id);
                  if (childSells.length > 0) {
                      await db.exec('ROLLBACK');
@@ -373,6 +420,7 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
                  log(`[DELETE] Deleting BUY transaction ID ${id}`);
              }
 
+            // Delete the transaction itself
             await db.run('DELETE FROM transactions WHERE id = ?', id);
 
             await db.exec('COMMIT');
@@ -391,54 +439,26 @@ module.exports = (db, log, captureEodPrices, importSessions) => {
      * Fetches all SELL transactions linked to a specific parent BUY transaction ID.
      */
     router.get('/sales/:buyId', async (req, res) => {
-        // ... (GET /sales/:buyId logic remains the same - code omitted for brevity) ...
         const { buyId } = req.params;
         const accountHolderId = req.query.holder;
 
-        if (!buyId) {
-            return res.status(400).json({ message: 'Parent Buy ID is required.' });
-        }
-        if (!accountHolderId || accountHolderId === 'all') {
-             return res.status(400).json({ message: 'Account Holder ID is required.' });
-        }
+        if (!buyId) { return res.status(400).json({ message: 'Parent Buy ID is required.' }); }
+        if (!accountHolderId || accountHolderId === 'all') { return res.status(400).json({ message: 'Account Holder ID is required.' }); }
 
         try {
-            const parentBuy = await db.get(
-                'SELECT price as cost_basis FROM transactions WHERE id = ? AND account_holder_id = ? AND transaction_type = \'BUY\'',
-                [buyId, accountHolderId]
-            );
-
+            const parentBuy = await db.get( 'SELECT price as cost_basis FROM transactions WHERE id = ? AND account_holder_id = ? AND transaction_type = \'BUY\'', [buyId, accountHolderId] );
             if (!parentBuy) {
                 log(`[INFO] Parent BUY lot ID ${buyId} not found for holder ${accountHolderId} when fetching sales.`);
                 return res.json([]);
             }
-
-            const sales = await db.all(
-                'SELECT id, transaction_date, quantity, price FROM transactions WHERE parent_buy_id = ? AND account_holder_id = ? AND transaction_type = \'SELL\' ORDER BY transaction_date ASC, id ASC',
-                [buyId, accountHolderId]
-            );
-
-            const salesWithPL = sales.map(sale => ({
-                ...sale,
-                realizedPL: (sale.price - parentBuy.cost_basis) * sale.quantity
-            }));
-
+            const sales = await db.all( 'SELECT id, transaction_date, quantity, price FROM transactions WHERE parent_buy_id = ? AND account_holder_id = ? AND transaction_type = \'SELL\' ORDER BY transaction_date ASC, id ASC', [buyId, accountHolderId] );
+            const salesWithPL = sales.map(sale => ({ ...sale, realizedPL: (sale.price - parentBuy.cost_basis) * sale.quantity }));
             res.json(salesWithPL);
         } catch (error) {
             log(`[ERROR] Failed to fetch sales for buyId ${buyId}: ${error.message}\n${error.stack}`);
             res.status(500).json({ message: 'Server error fetching sales history.' });
         }
     });
-
-
-    // Helper function for formatting quantity
-    function formatQuantity(number) {
-        const num = typeof number === 'string' ? parseFloat(number) : number;
-        if (num === null || num === undefined || isNaN(num)) { return ''; }
-        const formatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 5, minimumFractionDigits: 0, useGrouping: true });
-        return formatter.format(num);
-    }
-
 
     return router;
 };

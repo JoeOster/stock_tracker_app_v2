@@ -1,5 +1,4 @@
 ﻿// /public/event-handlers/_orders.js
-// Version Updated (Removed Add Pending Order Form handler, added sorting, Persist Account/Exchange - Task X.12)
 /**
  * @file Initializes all event handlers for the Orders page.
  * @module event-handlers/_orders
@@ -17,17 +16,33 @@ import { formatAccounting } from '../ui/formatters.js';
  * Loads data for the orders page and triggers rendering.
  */
 export async function loadOrdersPage() {
+    console.log("[loadOrdersPage] Starting...");
     const tableBody = document.querySelector('#pending-orders-table tbody');
     if (tableBody) tableBody.innerHTML = '<tr><td colspan="7">Loading open orders...</td></tr>'; // Updated colspan
     try {
-        const orders = await fetchPendingOrders(String(state.selectedAccountHolderId));
+        const holderId = (state.selectedAccountHolderId === 'all' || !state.selectedAccountHolderId)
+            ? 'all' // Explicitly handle 'all' although API might ignore it
+            : String(state.selectedAccountHolderId);
+
+        console.log(`[loadOrdersPage] Fetching orders for holder: ${holderId}`);
+        if (holderId === 'all') {
+             console.warn("[loadOrdersPage] 'All Accounts' selected, will not fetch pending orders.");
+             renderOpenOrders([]); // Render empty state
+             console.log("[loadOrdersPage] Finished (All Accounts).");
+             return; // Don't proceed with fetch
+        }
+
+        const orders = await fetchPendingOrders(holderId);
+        console.log("[loadOrdersPage] Fetched orders:", orders);
         renderOpenOrders(orders);
+        console.log("[loadOrdersPage] Finished successfully.");
     } catch (error) {
-        console.error("[Orders] Error in loadOrdersPage:", error);
-        showToast(error.message, 'error');
+        console.error("[loadOrdersPage] Error during execution:", error);
+        showToast(`Error loading orders page: ${error.message}`, 'error');
         if (tableBody) {
             tableBody.innerHTML = '<tr><td colspan="7">Error loading open orders.</td></tr>'; // Updated colspan
         }
+        console.log("[loadOrdersPage] Finished with error.");
     }
 }
 
@@ -60,7 +75,7 @@ export function initializeOrdersHandlers() {
             transactionForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                // Validation logic remains the same...
+                // --- Get Base Values ---
                 const accountHolder = (/** @type {HTMLSelectElement} */(document.getElementById('add-tx-account-holder'))).value;
                 const transactionDate = (/** @type {HTMLInputElement} */(document.getElementById('transaction-date'))).value;
                 const ticker = (/** @type {HTMLInputElement} */(document.getElementById('ticker'))).value.toUpperCase().trim();
@@ -72,15 +87,19 @@ export function initializeOrdersHandlers() {
                 if (!accountHolder || !transactionDate || !ticker || !exchange || !transactionType || isNaN(quantity) || quantity <= 0 || isNaN(price) || price <= 0) {
                     return showToast('Please fill in all required fields (*) with valid positive numbers for quantity and price.', 'error');
                 }
+
+                // --- Get TP1 Values & Validate ---
                 const isProfitLimitSet = (/** @type {HTMLInputElement} */(document.getElementById('set-profit-limit-checkbox'))).checked;
                 const profitPrice = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-up'))).value);
                 const profitExpirationDate = (/** @type {HTMLInputElement} */(document.getElementById('add-limit-up-expiration'))).value;
                 if (isProfitLimitSet && (isNaN(profitPrice) || profitPrice <= price)) {
-                     return showToast('Take Profit price must be a valid number greater than the purchase price.', 'error');
+                     return showToast('Take Profit 1 price must be a valid number greater than the purchase price.', 'error');
                 }
                 if (isProfitLimitSet && !profitExpirationDate) {
-                    return showToast('A Take Profit limit requires an expiration date.', 'error');
+                    return showToast('A Take Profit 1 limit requires an expiration date.', 'error');
                 }
+
+                // --- Get Stop Loss Values & Validate ---
                 const isLossLimitSet = (/** @type {HTMLInputElement} */(document.getElementById('set-loss-limit-checkbox'))).checked;
                 const lossPrice = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-down'))).value);
                 const lossExpirationDate = (/** @type {HTMLInputElement} */(document.getElementById('add-limit-down-expiration'))).value;
@@ -90,6 +109,22 @@ export function initializeOrdersHandlers() {
                 if (isLossLimitSet && !lossExpirationDate) {
                     return showToast('A Stop Loss limit requires an expiration date.', 'error');
                 }
+
+                // --- Get TP2 Values & Validate ---
+                const isProfitLimit2Set = (/** @type {HTMLInputElement} */(document.getElementById('set-profit-limit-2-checkbox'))).checked;
+                const profitPrice2 = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-up-2'))).value);
+                const profitExpirationDate2 = (/** @type {HTMLInputElement} */(document.getElementById('add-limit-up-expiration-2'))).value;
+                if (isProfitLimit2Set && (isNaN(profitPrice2) || profitPrice2 <= price)) {
+                     return showToast('Take Profit 2 price must be a valid number greater than the purchase price.', 'error');
+                }
+                if (isProfitLimit2Set && isProfitLimitSet && (profitPrice2 <= profitPrice)) {
+                     return showToast('Take Profit 2 price must be greater than Take Profit 1 price.', 'error');
+                }
+                if (isProfitLimit2Set && !profitExpirationDate2) {
+                    return showToast('A Take Profit 2 limit requires an expiration date.', 'error');
+                }
+                // --- End Validation ---
+
 
                 const transaction = {
                     account_holder_id: accountHolder,
@@ -102,7 +137,9 @@ export function initializeOrdersHandlers() {
                     limit_price_up: isProfitLimitSet ? profitPrice : null,
                     limit_up_expiration: isProfitLimitSet ? profitExpirationDate : null,
                     limit_price_down: isLossLimitSet ? lossPrice : null,
-                    limit_down_expiration: isLossLimitSet ? lossExpirationDate : null
+                    limit_down_expiration: isLossLimitSet ? lossExpirationDate : null,
+                    limit_price_up_2: isProfitLimit2Set ? profitPrice2 : null,
+                    limit_up_expiration_2: isProfitLimit2Set ? profitExpirationDate2 : null
                 };
 
                 const submitButton = /** @type {HTMLButtonElement} */ (transactionForm.querySelector('button[type="submit"]'));
@@ -115,7 +152,6 @@ export function initializeOrdersHandlers() {
                     }
                     showToast('Transaction logged successfully!', 'success');
 
-                    // --- MODIFICATION START (Task X.12) ---
                     /** @type {HTMLSelectElement} */
                     const accountHolderSelect = (/** @type {HTMLSelectElement} */(document.getElementById('add-tx-account-holder')));
                     /** @type {HTMLSelectElement} */
@@ -131,7 +167,6 @@ export function initializeOrdersHandlers() {
                     // Restore the saved values
                     accountHolderSelect.value = savedAccountHolderValue;
                     exchangeSelect.value = savedExchangeValue;
-                    // --- MODIFICATION END (Task X.12) ---
 
                     (/** @type {HTMLInputElement} */(document.getElementById('transaction-date'))).value = getCurrentESTDateString();
                     await refreshLedger();
@@ -169,7 +204,7 @@ export function initializeOrdersHandlers() {
                 const fillButton = /** @type {HTMLElement} */ (target.closest('.fill-order-btn'));
 
                 if (cancelButton) {
-                    // Cancel logic remains the same...
+                    // Cancel logic
                     const orderId = cancelButton.dataset.id;
                     if (!orderId) return;
                     showConfirmationModal('Cancel Order?', 'This will change the order status to CANCELLED.', async () => {
@@ -191,7 +226,7 @@ export function initializeOrdersHandlers() {
                     });
                 }
                 else if (fillButton) {
-                    // Fill logic remains the same...
+                    // Fill logic
                      const orderId = fillButton.dataset.id;
                     if (!orderId) return;
                     const order = state.pendingOrders.find(o => String(o.id) === orderId);
@@ -225,7 +260,7 @@ export function initializeOrdersHandlers() {
         // --- Confirm Fill Modal Logic ---
         if (confirmFillForm) {
             confirmFillForm.addEventListener('submit', async (e) => {
-                // Submit logic remains the same...
+                // Submit logic
                 e.preventDefault();
                 const submitButton = /** @type {HTMLButtonElement} */ (confirmFillForm.querySelector('button[type="submit"]'));
                 const executionPrice = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('fill-execution-price'))).value);

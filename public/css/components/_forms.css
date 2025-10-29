@@ -148,26 +148,39 @@ button:disabled {
 .limit-order-group {
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex: 1 1 400px; /* Adjust basis/grow as needed */
+    gap: 10px; /* MODIFIED: Increased gap for spacing between elements */
+    flex-basis: 100%; 
 }
 
 .limit-order-group label {
-    flex-shrink: 0;
-    font-size: 0.9em; /* Match general form label */
+    flex-shrink: 0; /* Don't shrink labels */
+    font-size: 0.9em; 
     color: var(--text-muted-color);
 }
 
 .limit-order-group input[type="checkbox"] {
     width: auto;
-    flex-shrink: 0;
-    margin: 0; /* Remove default margins */
+    flex-shrink: 0; 
+    margin: 0; 
 }
 
-.limit-order-group input[type="number"],
-.limit-order-group input[type="date"] {
-    width: 100%; /* Take remaining space */
+.limit-order-group input[type="number"] {
+    width: 150px;       /* MODIFIED: Set a fixed width */
+    flex-grow: 0;       /* MODIFIED: Do not grow */
+    flex-shrink: 0;     /* MODIFIED: Do not shrink */
 }
+
+.limit-order-group input[type="date"] {
+    width: 130px;       /* MODIFIED: Set a fixed width */
+    flex-grow: 0;       /* MODIFIED: Do not grow */
+    flex-shrink: 0;     /* MODIFIED: Do not shrink */
+}
+
+/* NEW RULE: This spacer div will grow to fill all extra space */
+.limit-order-group .limit-spacer {
+    flex-grow: 1;
+}
+
 
 /* Settings Modal "Add" Form (used for Exchange/Holder) */
 .add-item-form {
