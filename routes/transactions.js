@@ -53,7 +53,8 @@ module.exports = (db, log, captureEodPrices) => {
             parent_buy_id, // For single lot sell
             lots, // For selective sell: Array of { parent_buy_id, quantity_to_sell }
             account_holder_id,
-            advice_source_id // *** ADDED ADVICE SOURCE ID ***
+            advice_source_id, // *** ADDED ADVICE SOURCE ID ***
+            linked_journal_id // --- ADDED ---
         } = req.body;
 
         const numPrice = parseFloat(price);
@@ -83,14 +84,15 @@ module.exports = (db, log, captureEodPrices) => {
                                 limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration,
                                 limit_price_up_2, limit_up_expiration_2,
                                 parent_buy_id, original_quantity, quantity_remaining, account_holder_id, source, created_at,
-                                advice_source_id
-                               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`; // Added ?
+                                advice_source_id, linked_journal_id
+                               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`; // Added ?, ?
                 await db.run(query, [
                     ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date,
                     limit_price_up || null, limit_up_expiration || null, limit_price_down || null, limit_down_expiration || null,
                     limit_price_up_2 || null, limit_up_expiration_2 || null, // *** ADDED TP2 VALUES ***
                     null, original_quantity, quantity_remaining, account_holder_id, 'MANUAL', createdAt,
-                    advice_source_id || null // *** ADDED ADVICE SOURCE ID VALUE ***
+                    advice_source_id || null, // *** ADDED ADVICE SOURCE ID VALUE ***
+                    linked_journal_id || null // --- ADDED ---
                 ]);
             }
             // --- Handle SELL (Single Lot OR Selective) ---
@@ -195,7 +197,8 @@ module.exports = (db, log, captureEodPrices) => {
                 limit_price_up, limit_up_expiration,
                 limit_price_down, limit_down_expiration,
                 limit_price_up_2, limit_up_expiration_2, // *** ADDED ***
-                account_holder_id
+                account_holder_id,
+                linked_journal_id // --- ADDED ---
             } = req.body;
             // --- END DESTRUCTURE ---
 
@@ -222,13 +225,13 @@ module.exports = (db, log, captureEodPrices) => {
                  }
             }
 
-            // *** ADDED TP2 COLUMNS TO UPDATE ***
+            // *** ADDED TP2 and linked_journal_id COLUMNS TO UPDATE ***
             const query = `UPDATE transactions SET
                 ticker = ?, exchange = ?, quantity = ?, price = ?, transaction_date = ?,
                 limit_price_up = ?, limit_up_expiration = ?,
                 limit_price_down = ?, limit_down_expiration = ?,
                 limit_price_up_2 = ?, limit_up_expiration_2 = ?,
-                account_holder_id = ?
+                account_holder_id = ?, linked_journal_id = ?
                 WHERE id = ?`;
             await db.run(query, [
                 ticker.toUpperCase(), exchange, numQuantity, numPrice, transaction_date,
@@ -236,6 +239,7 @@ module.exports = (db, log, captureEodPrices) => {
                 limit_price_down || null, limit_down_expiration || null,
                 limit_price_up_2 || null, limit_up_expiration_2 || null, // *** ADDED ***
                 account_holder_id,
+                linked_journal_id || null, // --- ADDED ---
                 id
             ]);
             // *** END UPDATE ---
@@ -243,7 +247,7 @@ module.exports = (db, log, captureEodPrices) => {
             res.json({ message: 'Transaction updated successfully.' });
 
         } catch (error) {
-            log(`[ERROR] Failed to update transaction with ID ${req.params.id}: ${error.message}\n${error.stack}`);
+            log(`[ERROR] Failed to update transaction with ID ${id}: ${error.message}\n${error.stack}`);
             res.status(500).json({ message: 'Server error during transaction update.' });
         }
     });

@@ -95,7 +95,8 @@ module.exports = (db, log = console.log) => {
         const {
             account_holder_id, advice_source_id, entry_date, ticker, exchange,
             direction, quantity, entry_price, target_price, stop_loss_price,
-            advice_source_details, entry_reason, notes, tags
+            advice_source_details, entry_reason, notes, tags,
+            chart_type // --- ADDED ---
         } = req.body;
 
         // Basic validation
@@ -107,21 +108,25 @@ module.exports = (db, log = console.log) => {
         }
          const numQuantity = parseFloat(quantity);
          const numEntryPrice = parseFloat(entry_price);
-         if (isNaN(numQuantity) || numQuantity <= 0 || isNaN(numEntryPrice) || numEntryPrice <= 0) {
-              return res.status(400).json({ message: 'Quantity and Entry Price must be valid positive numbers.' });
+         // --- MODIFICATION: Allow 0 or positive quantity ---
+         if (isNaN(numQuantity) || numQuantity < 0 || isNaN(numEntryPrice) || numEntryPrice <= 0) {
+              return res.status(400).json({ message: 'Quantity must be 0 or positive, and Entry Price must be a valid positive number.' });
          }
+         // --- END MODIFICATION ---
 
         try {
             const result = await db.run(`
                 INSERT INTO journal_entries (
                     account_holder_id, advice_source_id, entry_date, ticker, exchange,
                     direction, quantity, entry_price, target_price, stop_loss_price,
-                    advice_source_details, entry_reason, notes, tags, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    advice_source_details, entry_reason, notes, tags, status,
+                    chart_type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 account_holder_id, advice_source_id || null, entry_date, ticker.toUpperCase().trim(), exchange,
                 direction, numQuantity, numEntryPrice, target_price || null, stop_loss_price || null,
-                advice_source_details || null, entry_reason || null, notes || null, tags || null, 'OPEN' // Default status
+                advice_source_details || null, entry_reason || null, notes || null, tags || null, 'OPEN', // Default status
+                chart_type || null // --- ADDED ---
             ]);
 
              const newEntry = await db.get('SELECT * FROM journal_entries WHERE id = ?', result.lastID);
@@ -145,7 +150,8 @@ module.exports = (db, log = console.log) => {
             // Fields for closing a trade
             status, exit_date, exit_price, exit_reason,
             // Fields less likely to change but could technically (ticker, exchange, etc.) - decide if allowed
-             entry_date, ticker, exchange, direction, quantity, entry_price
+             entry_date, ticker, exchange, direction, quantity, entry_price,
+             chart_type // --- ADDED ---
         } = req.body;
 
         // Basic check for required update fields if closing/executing
@@ -187,7 +193,8 @@ module.exports = (db, log = console.log) => {
                     advice_source_details = ?, advice_source_id = ?, status = ?, exit_date = ?,
                     exit_price = ?, exit_reason = ?, pnl = ?,
                     -- Potentially allow updating core details if needed, carefully consider implications
-                    entry_date = ?, ticker = ?, exchange = ?, direction = ?, quantity = ?, entry_price = ?
+                    entry_date = ?, ticker = ?, exchange = ?, direction = ?, quantity = ?, entry_price = ?,
+                    chart_type = ?
                 WHERE id = ? AND account_holder_id = ?
             `, [
                 target_price !== undefined ? target_price : entry.target_price,
@@ -209,6 +216,7 @@ module.exports = (db, log = console.log) => {
                 direction || entry.direction,
                 quantity !== undefined ? parseFloat(quantity) : entry.quantity,
                 entry_price !== undefined ? parseFloat(entry_price) : entry.entry_price,
+                chart_type !== undefined ? chart_type : entry.chart_type, // --- ADDED ---
                 id,
                 entry.account_holder_id // Ensure user can only update their own entries
             ]);

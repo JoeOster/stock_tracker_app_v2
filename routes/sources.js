@@ -23,9 +23,9 @@ module.exports = (db, log = console.log) => {
      * @param {string} id.path.required - The ID of the advice source.
      * @param {string} holder.query.required - Account holder ID.
      * @returns {object} 200 - An object containing source details, linked items, and summary stats.
-     * @returns {object} 400 - An object with an error message for missing ID or holder.
-     * @returns {object} 404 - An object with an error message if the source is not found.
-     * @returns {object} 500 - An object with an error message for server errors.
+     * 400 - An object with an error message for missing ID or holder.
+     * 404 - An object with an error message if the source is not found.
+     * 500 - An object with an error message for server errors.
      */
     router.get('/:id/details', async (req, res) => {
         const sourceId = req.params.id;
@@ -40,9 +40,11 @@ module.exports = (db, log = console.log) => {
             const linkedTransactionsQuery = `
                 SELECT 
                     t.*, 
-                    b.price as parent_buy_price
+                    b.price as parent_buy_price,
+                    j.entry_reason as technique_name
                 FROM transactions t
                 LEFT JOIN transactions b ON t.parent_buy_id = b.id AND b.transaction_type = 'BUY'
+                LEFT JOIN journal_entries j ON t.linked_journal_id = j.id
                 WHERE t.advice_source_id = ? 
                   AND t.account_holder_id = ?
                 ORDER BY t.transaction_date DESC, t.id DESC
@@ -73,8 +75,12 @@ module.exports = (db, log = console.log) => {
 
             journalEntries.forEach(entry => {
                 if (entry.status === 'OPEN') {
-                    totalInvestment += (entry.entry_price * entry.quantity);
-                    tickersToPrice.add(entry.ticker); // Add journal ticker
+                    // --- MODIFICATION: Only count "non-general" trades for paper stats ---
+                    if (entry.ticker.toUpperCase() !== 'GENERAL' && entry.ticker.toUpperCase() !== 'N/A') {
+                        totalInvestment += (entry.entry_price * entry.quantity);
+                        tickersToPrice.add(entry.ticker); // Add journal ticker
+                    }
+                    // --- END MODIFICATION ---
                 } else if (['CLOSED', 'EXECUTED'].includes(entry.status) && entry.pnl !== null) {
                     totalRealizedPL += entry.pnl;
                 }
@@ -96,6 +102,13 @@ module.exports = (db, log = console.log) => {
                 // Calculate P/L for open journal entries
                 journalEntries.forEach(entry => {
                     if (entry.status === 'OPEN') {
+                        // --- MODIFICATION: Skip "general" trades ---
+                        if (entry.ticker.toUpperCase() === 'GENERAL' || entry.ticker.toUpperCase() === 'N/A') {
+                             entry.current_pnl = null;
+                             return;
+                        }
+                        // --- END MODIFICATION ---
+                        
                         const currentPriceInfo = priceData[entry.ticker];
                         if (currentPriceInfo && typeof currentPriceInfo.price === 'number') {
                             const currentPrice = currentPriceInfo.price;
