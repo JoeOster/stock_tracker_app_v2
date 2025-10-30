@@ -62,11 +62,13 @@ async function setupApp() {
     const apiRouter = express.Router();
 
     // Mount various API modules, passing database connection, logger, and other dependencies
-    apiRouter.use('/transactions', require('./routes/transactions.js')(db, log, captureEodPrices, importSessions));
+    // *** MODIFIED: Removed importSessions from transactions.js ***
+    apiRouter.use('/transactions', require('./routes/transactions.js')(db, log, captureEodPrices));
     apiRouter.use('/orders', require('./routes/orders.js')(db, log));
     apiRouter.use('/reporting', require('./routes/reporting.js')(db, log));
     apiRouter.use('/accounts', require('./routes/accounts.js')(db, log));
     apiRouter.use('/utility', require('./routes/utility.js')(db, log));
+    // *** importer.js call remains the same, it already gets what it needs ***
     apiRouter.use('/importer', require('./routes/importer.js')(db, log, importSessions));
     apiRouter.use('/watchlist', require('./routes/watchlist.js')(db, log));
     apiRouter.use('/advice-sources', require('./routes/advice_sources.js')(db, log));
@@ -122,4 +124,3 @@ if (require.main === module) {
 
 // Export setupApp function for use in automated tests
 module.exports = { setupApp };
-

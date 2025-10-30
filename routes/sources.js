@@ -5,6 +5,7 @@
  */
 const express = require('express');
 const router = express.Router();
+const { getPrices } = require('../services/priceService'); // Import price service for P/L calculation
 
 /**
  * Creates and returns an Express router for handling advice source detail endpoints.
@@ -16,17 +17,15 @@ module.exports = (db, log = console.log) => {
 
     /**
      * GET /:id/details
-     * Fetches details for a specific advice source, including linked journal entries,
-     * watchlist items (with guidelines), documents, source notes, and the image path.
-     * Expects `holder` query parameter for context/permissions.
+     * Fetches details for a specific advice source, including linked items and calculated summary statistics.
      * @route GET /api/sources/{id}/details
      * @group Sources - Operations about source details
      * @param {string} id.path.required - The ID of the advice source.
      * @param {string} holder.query.required - Account holder ID.
-     * @returns {object} 200 - An object containing source details and linked items.
-     * @returns {Error} 400 - Missing ID or holder query parameter.
-     * @returns {Error} 404 - Source not found for this holder.
-     * @returns {Error} 500 - Server error.
+     * @returns {object} 200 - An object containing source details, linked items, and summary stats.
+     * @returns {object} 400 - An object with an error message for missing ID or holder.
+     * @returns {object} 404 - An object with an error message if the source is not found.
+     * @returns {object} 500 - An object with an error message for server errors.
      */
     router.get('/:id/details', async (req, res) => {
         const sourceId = req.params.id;
@@ -50,12 +49,58 @@ module.exports = (db, log = console.log) => {
                 return res.status(404).json({ message: 'Advice source not found for this account holder.' });
             }
 
+            // --- Calculate Summary Statistics ---
+            let totalTrades = journalEntries.length;
+            let totalInvestment = 0;
+            let totalUnrealizedPL = 0;
+            let totalRealizedPL = 0;
+            let openTradeTickers = [];
+
+            journalEntries.forEach(entry => {
+                if (entry.status === 'OPEN') {
+                    totalInvestment += (entry.entry_price * entry.quantity);
+                    openTradeTickers.push(entry.ticker);
+                    // Placeholder for unrealized - will be calculated after fetching prices
+                } else if (['CLOSED', 'EXECUTED'].includes(entry.status) && entry.pnl !== null) {
+                    totalRealizedPL += entry.pnl;
+                }
+            });
+
+            // Fetch current prices for open trades to calculate unrealized P/L
+            const uniqueOpenTickers = [...new Set(openTradeTickers)];
+            if (uniqueOpenTickers.length > 0) {
+                const priceData = await getPrices(uniqueOpenTickers, 6); // Use moderate priority
+                journalEntries.forEach(entry => {
+                    if (entry.status === 'OPEN') {
+                        const currentPriceInfo = priceData[entry.ticker];
+                        if (currentPriceInfo && typeof currentPriceInfo.price === 'number') {
+                            const currentPrice = currentPriceInfo.price;
+                            let currentPnl = 0;
+                            if (entry.direction === 'BUY') {
+                                currentPnl = (currentPrice - entry.entry_price) * entry.quantity;
+                            } // Add SELL logic if needed later
+                            entry.current_pnl = currentPnl; // Add to entry object for frontend table
+                            totalUnrealizedPL += currentPnl;
+                        } else {
+                            entry.current_pnl = null; // Mark as null if price unavailable
+                        }
+                    }
+                });
+            }
+            // --- End Calculation ---
+
             res.json({
                 source,
-                journalEntries,
+                journalEntries, // Still send all entries, frontend will filter
                 watchlistItems,
                 documents,
-                sourceNotes
+                sourceNotes,
+                summaryStats: { // Send calculated stats
+                    totalTrades,
+                    totalInvestment,
+                    totalUnrealizedPL,
+                    totalRealizedPL
+                }
             });
         } catch (error) {
             log(`[ERROR] Failed to fetch details for source ${sourceId}: ${error.message}`);
@@ -63,18 +108,18 @@ module.exports = (db, log = console.log) => {
         }
     });
 
+    // ... (rest of the routes: /:id/notes, /:id/notes/:noteId) ...
     /**
      * POST /:id/notes
      * Creates a new note linked to a specific advice source.
-     * Expects `holderId` (for validation) and `noteContent` in the request body.
      * @route POST /api/sources/{id}/notes
      * @group Sources - Operations about source details
      * @param {string} id.path.required - The ID of the advice source.
      * @param {object} NotePostBody.body.required - Note data ({ holderId: string|number, noteContent: string }).
      * @returns {object} 201 - The newly created note object.
-     * @returns {Error} 400 - Missing required fields.
-     * @returns {Error} 404 - Source not found for this holder.
-     * @returns {Error} 500 - Server error.
+     * 400 - An object with an error message for missing fields.
+     * 404 - An object with an error message if the source is not found.
+     * 500 - An object with an error message for server errors.
      */
     router.post('/:id/notes', async (req, res) => {
         const sourceId = req.params.id;
@@ -107,16 +152,15 @@ module.exports = (db, log = console.log) => {
     /**
      * PUT /:id/notes/:noteId
      * Updates a specific note linked to an advice source.
-     * Expects `holderId` (for validation) and `noteContent` in the request body.
      * @route PUT /api/sources/{id}/notes/{noteId}
      * @group Sources - Operations about source details
      * @param {string} id.path.required - The ID of the advice source.
      * @param {string} noteId.path.required - The ID of the note.
      * @param {object} NotePutBody.body.required - Note update data ({ holderId: string|number, noteContent: string }).
      * @returns {object} 200 - The updated note object.
-     * @returns {Error} 400 - Missing required fields.
-     * @returns {Error} 404 - Source or Note not found.
-     * @returns {Error} 500 - Server error.
+     * 400 - An object with an error message for missing fields.
+     * 404 - An object with an error message if the source or note is not found.
+     * 500 - An object with an error message for server errors.
      */
     router.put('/:id/notes/:noteId', async (req, res) => {
         const sourceId = req.params.id;
@@ -160,16 +204,15 @@ module.exports = (db, log = console.log) => {
     /**
      * DELETE /:id/notes/:noteId
      * Deletes a specific note linked to an advice source.
-     * Expects `holderId` in the request body for validation.
      * @route DELETE /api/sources/{id}/notes/{noteId}
      * @group Sources - Operations about source details
      * @param {string} id.path.required - The ID of the advice source.
      * @param {string} noteId.path.required - The ID of the note.
      * @param {object} NoteDeleteBody.body.required - Body containing holderId ({ holderId: string|number }).
-     * @returns {object} 200 - Success message.
-     * @returns {Error} 400 - Missing required fields.
-     * @returns {Error} 404 - Source or Note not found.
-     * @returns {Error} 500 - Server error.
+     * @returns {object} 200 - An object with a success message.
+     * 400 - An object with an error message for missing fields.
+     * 404 - An object with an error message if the source or note is not found.
+     * 500 - An object with an error message for server errors.
      */
     router.delete('/:id/notes/:noteId', async (req, res) => {
         const sourceId = req.params.id;
@@ -205,7 +248,6 @@ module.exports = (db, log = console.log) => {
             res.status(500).json({ message: 'Error deleting source note.' });
         }
     });
-
 
     return router;
 };

@@ -8,23 +8,23 @@ import { state } from '../state.js';
 import { fetchSourceDetails } from '../api.js';
 import { showToast } from '../ui/helpers.js';
 import { generateSourceDetailsHTML } from './_research_sources_render.js';
-// --- MODIFICATION: Import new action handler ---
 import {
-    handleAddWatchlistSubmit, handleAddDocumentSubmit, handleAddNoteSubmit,
-    handleDeleteClick, handleNoteEditActions,
-    handleCreateBuyOrderFromIdea // <-- ADDED IMPORT
-} from './_research_sources_actions.js';
+    handleAddWatchlistSubmit,
+    handleCreateBuyOrderFromIdea
+} from './_research_sources_actions_watchlist.js';
+import {
+    handleAddDocumentSubmit
+} from './_research_sources_actions_docs.js';
+import {
+    handleAddNoteSubmit,
+    handleDeleteClick,
+    handleNoteEditActions
+} from './_research_sources_actions_notes.js';
 
-/**
- * Stores the reference to the currently active click handler for the sources list grid.
- * @type {EventListener | null}
- */
+/** @type {EventListener | null} */
 let currentSourcesListClickHandler = null;
-/**
- * Stores the reference to the currently active click handler for the modal actions.
- * @type {EventListener | null}
- */
-let currentModalActionHandler = null; // Listener for modal content
+/** @type {EventListener | null} */
+let currentModalActionHandler = null;
 
 /**
  * Attaches event listeners specifically for actions *within* the source details modal content area.
@@ -34,36 +34,31 @@ let currentModalActionHandler = null; // Listener for modal content
  * @returns {void}
  */
 function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback) {
-    console.log("[Modal Actions] Initializing listeners for modal content area."); // Log init
+    console.log("[Modal Actions] Initializing listeners for modal content area.");
 
-    // Remove previous listener if exists
     if (currentModalActionHandler) {
         modalContentArea.removeEventListener('click', currentModalActionHandler);
         console.log("[Modal Actions] Removed previous modal action handler.");
     }
 
-    /**
-     * Handles clicks *within* the modal content area.
-     * @param {Event} e - The click event.
-     */
+    /** @param {Event} e */
     const newModalHandler = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
-        const detailsModal = target.closest('#source-details-modal'); // Get modal ref
-        const modalSourceId = detailsModal?.dataset.sourceId;
-        const modalHolderId = detailsModal?.dataset.holderId; // Stored as string
+        // --- FIX: Cast detailsModal ---
+        const detailsModal = /** @type {HTMLElement | null} */(target.closest('#source-details-modal'));
+        // --- END FIX ---
+        const modalSourceId = detailsModal?.dataset.sourceId; // Now valid
+        const modalHolderId = detailsModal?.dataset.holderId; // Now valid
 
-        // Basic check
         if (!modalSourceId || !modalHolderId || modalHolderId === 'all') {
              console.warn("[Modal Actions] Click handler: Missing sourceId or holderId on modal dataset.");
              return;
         }
 
-        console.log(`[Modal Actions] Click detected inside modal content. Target:`, target); // Log click target
+        console.log(`[Modal Actions] Click detected inside modal content. Target:`, target);
 
-        // --- Delegate Actions triggered *within the modal* ---
         if (target.closest('.add-watchlist-item-form') && target.matches('.add-watchlist-ticker-button')) {
             console.log("[Modal Actions] Delegating to handleAddWatchlistSubmit");
-            // Pass the modal's refreshDetails function as the callback
             await handleAddWatchlistSubmit(e, refreshDetailsCallback);
         } else if (target.closest('.add-document-form') && target.matches('.add-document-button')) {
             console.log("[Modal Actions] Delegating to handleAddDocumentSubmit");
@@ -73,130 +68,124 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
             await handleAddNoteSubmit(e, refreshDetailsCallback);
         } else if (target.closest('.delete-btn')) {
             console.log("[Modal Actions] Delegating to handleDeleteClick");
-            // Pass modal's source/holder ID
             await handleDeleteClick(target, modalSourceId, modalHolderId, refreshDetailsCallback);
         } else if (target.closest('.note-actions button, .note-content-edit button')) {
             console.log("[Modal Actions] Delegating to handleNoteEditActions");
-            // Pass modal's source/holder ID
             await handleNoteEditActions(target, modalSourceId, modalHolderId, refreshDetailsCallback);
-        
-        // --- MODIFICATION: Request 1 - Add handler for new "Buy" button ---
         } else if (target.closest('.create-buy-order-btn')) {
             console.log("[Modal Actions] Delegating to handleCreateBuyOrderFromIdea");
-            // This function now handles closing the modal and navigating
-            await handleCreateBuyOrderFromIdea(target, refreshDetailsCallback);
+            await handleCreateBuyOrderFromIdea(target);
         }
-        
-        // --- MODIFICATION: Request 2 - Removed checkbox handler ---
-        
-    }; // End of newModalHandler
+    };
 
     modalContentArea.addEventListener('click', newModalHandler);
-    currentModalActionHandler = newModalHandler; // Store reference
+    currentModalActionHandler = newModalHandler;
      console.log("[Modal Actions] Attached new modal action handler.");
 }
 
 
 /**
  * Initializes or re-initializes the event listener for the sources card grid container.
- * Handles opening the details modal. Action delegation is now handled by initializeModalActionHandlers.
- * Ensures only one listener is active at a time.
  * @param {HTMLElement} sourcesListContainer - The container element holding the source cards (`#sources-cards-grid`).
  * @returns {void}
  */
 export function initializeSourcesListClickListener(sourcesListContainer) {
-    // Remove the previous grid listener if it exists
     if (currentSourcesListClickHandler) {
         sourcesListContainer.removeEventListener('click', currentSourcesListClickHandler);
          console.log("[Grid Listener] Removed previous grid click handler.");
     }
 
-    /**
-     * Handles clicks within the sources card grid (primarily for opening the modal).
-     * @param {Event} e - The click event.
-     * @returns {Promise<void>}
-     */
+    /** @param {Event} e */
     const newGridClickHandler = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
-        // Ensure state.selectedAccountHolderId is treated consistently
         const holderId = (typeof state.selectedAccountHolderId === 'string' && state.selectedAccountHolderId.toLowerCase() === 'all')
             ? 'all'
             : state.selectedAccountHolderId;
-        // Target the card itself
         const sourceCardElement = /** @type {HTMLElement | null} */ (target.closest('.source-card[data-source-id]'));
-        const sourceId = sourceCardElement?.dataset.sourceId;
+        const sourceId = sourceCardElement?.dataset.sourceId; // Now valid
 
-        // --- Get Modal Elements ---
-        const detailsModal = document.getElementById('source-details-modal');
+        const detailsModal = /** @type {HTMLElement | null} */(document.getElementById('source-details-modal')); // --- FIX: Cast detailsModal ---
         const modalTitle = document.getElementById('source-details-modal-title');
-        const modalContentArea = /** @type {HTMLElement | null} */ (document.getElementById('source-details-modal-content')); // Ensure type
+        const modalContentArea = /** @type {HTMLElement | null} */ (document.getElementById('source-details-modal-content'));
 
-        /**
-         * Refreshes the details view within the modal. (Defined inside click handler scope)
-         * @async
-         * @returns {Promise<void>}
-         */
+        /** @async @returns {Promise<void>} */
         const refreshDetails = async () => {
-             console.log("[refreshDetails - inner] Attempting refresh..."); // Differentiate log
-            if (!detailsModal || !detailsModal.classList.contains('visible') || !modalContentArea) { /* ... */ return; }
-            const modalSourceId = detailsModal.dataset.sourceId;
-            const modalHolderId = detailsModal.dataset.holderId;
-            if (!modalSourceId || !modalHolderId || modalHolderId === 'all') { /* ... */ return; }
+             console.log("[refreshDetails - inner] Attempting refresh...");
+            if (!detailsModal || !detailsModal.classList.contains('visible') || !modalContentArea) { return; }
+            const modalSourceId = detailsModal.dataset.sourceId; // Now valid
+            const modalHolderId = detailsModal.dataset.holderId; // Now valid
+            if (!modalSourceId || !modalHolderId || modalHolderId === 'all') { return; }
 
             console.log(`[refreshDetails - inner] Source ID: ${modalSourceId}, Holder ID: ${modalHolderId}`);
             modalContentArea.innerHTML = '<p><i>Refreshing details...</i></p>';
             try {
                 console.log("[refreshDetails - inner] Calling fetchSourceDetails...");
+                // --- FIX: Ensure fetchSourceDetails returns the summaryStats ---
                 const refreshedDetails = await fetchSourceDetails(modalSourceId, modalHolderId);
+                // --- END FIX ---
                 console.log("[refreshDetails - inner] fetchSourceDetails returned:", refreshedDetails);
                 console.log("[refreshDetails - inner] Watchlist items:", refreshedDetails?.watchlistItems);
 
-                // Re-render HTML and re-attach action listeners
+                // --- FIX: Pass refreshedDetails which now includes summaryStats ---
                 modalContentArea.innerHTML = generateSourceDetailsHTML(refreshedDetails);
-                initializeModalActionHandlers(modalContentArea, refreshDetails); // Re-attach listeners after render
+                // --- END FIX ---
+                initializeModalActionHandlers(modalContentArea, refreshDetails);
                 console.log("[refreshDetails - inner] Refreshed details rendered and listeners re-attached.");
-            } catch (err) { /* ... error handling ... */ }
+            } catch (err) {
+                 const error = /** @type {Error} */ (err);
+                 showToast(`Error refreshing details: ${error.message}`, 'error');
+                 if (modalContentArea) {
+                     modalContentArea.innerHTML = '<p style="color: var(--negative-color);">Error refreshing details.</p>';
+                 }
+            }
         };
 
-        // --- Check if the click is on the card itself (not inside modal) ---
         const isClickableArea = sourceCardElement && sourceCardElement.contains(target);
-        const isClickInsideModal = target.closest('#source-details-modal'); // Still useful check
+        const isClickInsideModal = target.closest('#source-details-modal');
 
-        // --- Open Details Modal on Card Click ---
         if (isClickableArea && sourceCardElement && !isClickInsideModal) {
             console.log("[Grid Listener] Processing click on source card to open modal.");
 
-            // Basic checks
-            if (!sourceId || holderId === 'all' || !detailsModal || !modalTitle || !modalContentArea) { /* ... error handling ... */ return; }
+            if (!sourceId || holderId === 'all' || !detailsModal || !modalTitle || !modalContentArea) {
+                if(holderId === 'all') showToast("Please select a specific account holder.", "info");
+                console.warn("Could not open details: Missing sourceId, specific holderId, or modal elements.");
+                return;
+            }
 
-            // Set loading state and store IDs on the modal for refresh
             modalTitle.textContent = `Source Details: Loading...`;
             modalContentArea.innerHTML = '<p><i>Loading details...</i></p>';
-            detailsModal.dataset.sourceId = sourceId; // Store for refresh
-            detailsModal.dataset.holderId = String(holderId); // Store for refresh
-            detailsModal.classList.add('visible'); // Show modal immediately
+            detailsModal.dataset.sourceId = sourceId; // Now valid
+            detailsModal.dataset.holderId = String(holderId); // Now valid
+            detailsModal.classList.add('visible');
 
             try {
-                // Fetch and render
                 const holderIdParam = typeof holderId === 'number' ? String(holderId) : holderId;
                 console.log(`[Grid Listener] Calling fetchSourceDetails. ID: ${sourceId}, Holder: ${holderIdParam}`);
+                // --- FIX: Ensure fetchSourceDetails returns the summaryStats ---
                 const details = await fetchSourceDetails(sourceId, holderIdParam);
+                // --- END FIX ---
                 console.log("[Grid Listener] Fetched details for modal:", details);
 
-                modalTitle.textContent = `Source Details: ${details.source.name || 'Unknown'}`;
+                const sourceName = details?.source?.name || 'Unknown';
+                modalTitle.textContent = `Source Details: ${sourceName}`;
+                // --- FIX: Pass details which now includes summaryStats ---
                 modalContentArea.innerHTML = generateSourceDetailsHTML(details);
+                // --- END FIX ---
                 console.log("[Grid Listener] Details rendered in modal.");
 
-                // *** Initialize modal action listeners AFTER content is rendered ***
                 initializeModalActionHandlers(modalContentArea, refreshDetails);
 
-            } catch (error) { /* ... error handling ... */ }
-        } // End if (isClickableArea)
-
-        // --- Action delegation logic is REMOVED from here ---
-
-    }; // End of newGridClickHandler
+            } catch (error) {
+                 const err = /** @type {Error} */ (error);
+                 console.error("[Grid Listener] Error fetching source details:", err);
+                 showToast(`Error loading details: ${err.message}`, 'error');
+                 modalTitle.textContent = `Source Details: Error`;
+                 modalContentArea.innerHTML = '<p style="color: var(--negative-color);">Error loading details.</p>';
+            }
+        }
+    };
 
     sourcesListContainer.addEventListener('click', newGridClickHandler);
-    currentSourcesListClickHandler = newGridClickHandler; // Store reference to the NEW handler
+    currentSourcesListClickHandler = newGridClickHandler;
     console.log("[Grid Listener] Attached new sources list grid click handler (modal opener).");
+}

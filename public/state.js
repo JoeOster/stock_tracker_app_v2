@@ -41,6 +41,7 @@
  * @property {JournalEntriesState | null} journalEntries - Holds fetched journal entries (open and closed).
  * @property {any[]} dashboardOpenLots - Raw array of open lots fetched for the dashboard view.
  * @property {any[]} researchWatchlistItems - Raw array of watchlist items fetched for the source details modal.
+ * @property {{sourceId: string, sourceName: string, ticker: string, price: string}|null} prefillOrderFromSource - Temp state for pre-filling the order form.
  * @property {object} settings - The user's application settings.
  * @property {number} settings.takeProfitPercent
  * @property {number} settings.stopLossPercent
@@ -79,7 +80,8 @@ export let state = {
     allAdviceSources: [],
     journalEntries: null,
     dashboardOpenLots: [],
-    researchWatchlistItems: [], // <-- Added this line
+    researchWatchlistItems: [],
+    prefillOrderFromSource: null, // This line was already here
     settings: {
         takeProfitPercent: 10,
         stopLossPercent: 5,

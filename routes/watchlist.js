@@ -22,9 +22,9 @@ module.exports = (db, log = console.log) => {
      * @route GET /api/watchlist
      * @group Watchlist - Operations for recommended trades watchlist
      * @param {string} holder.query.required - Account holder ID.
-     * @returns {Array<object>} 200 - An array of watchlist item objects.
-     * @returns {Error} 400 - Missing holder query parameter.
-     * @returns {Error} 500 - Server error.
+     * @returns {Array<object>|object} 200 - An array of watchlist item objects.
+     * 400 - An object with an error message if the holder ID is missing.
+     * 500 - An object with an error message if the fetch fails.
      */
     router.get('/', async (req, res) => {
         try {
@@ -47,30 +47,30 @@ module.exports = (db, log = console.log) => {
     });
 
     /**
+     * @typedef {object} WatchlistPostBody
+     * @property {string|number} account_holder_id
+     * @property {string} ticker
+     * @property {string|number|null} [advice_source_id]
+     * @property {number|null} [rec_entry_low]
+     * @property {number|null} [rec_entry_high]
+     * @property {number|null} [rec_tp1]
+     * @property {number|null} [rec_tp2]
+     * @property {number|null} [rec_stop_loss]
+     */
+
+    /**
      * POST /
      * Adds a new ticker to the watchlist for a given account holder.
      * Now accepts an optional advice_source_id and all guideline fields.
      * @route POST /api/watchlist
      * @group Watchlist - Operations for recommended trades watchlist
-     * @param {WatchlistPostBody.model} WatchlistPostBody.body.required - Watchlist item data.
+     * @param {WatchlistPostBody} req.body.required - Watchlist item data.
      * @returns {object} 201 - The newly created watchlist item object.
-     * @returns {Error} 400 - Missing required fields or invalid data.
-     * @returns {Error} 409 - Ticker already exists in watchlist.
-     * @returns {Error} 500 - Server error.
+     * 400 - An object with an error message for invalid data.
+     * 409 - An object with an error message if the ticker already exists.
+     * 500 - An object with an error message if the insert fails.
      */
     router.post('/', async (req, res) => {
-        /**
-         * @typedef {object} WatchlistPostBody
-         * @property {string|number} account_holder_id
-         * @property {string} ticker
-         * @property {string|number|null} [advice_source_id]
-         * @property {number|null} [rec_entry_low]
-         * @property {number|null} [rec_entry_high]
-         * @property {number|null} [rec_tp1]
-         * @property {number|null} [rec_tp2]
-         * @property {number|null} [rec_stop_loss]
-         */
-
         /** @type {WatchlistPostBody} */
         const {
             account_holder_id, ticker, advice_source_id,
@@ -129,8 +129,8 @@ module.exports = (db, log = console.log) => {
      * @route DELETE /api/watchlist/{id}
      * @group Watchlist - Operations for recommended trades watchlist
      * @param {string} id.path.required - The ID of the watchlist item.
-     * @returns {object} 200 - Success message.
-     * @returns {Error} 500 - Server error.
+     * @returns {object} 200 - An object with a success message.
+     * 500 - An object with an error message if the delete fails.
      */
     router.delete('/:id', async (req, res) => {
         try {
