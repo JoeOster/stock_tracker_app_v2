@@ -89,14 +89,12 @@
 
 /* --- Specific Modal Z-indices --- */
 
-/* Settings, Advice, Chart Zoom, Sales History (Old), Confirm, Source Details, Selective Sell, Confirm Fill */
+/* Settings, Advice, Chart Zoom, Sales History (Old), Source Details, Selective Sell */
 /* These open directly from the main app, use the base content z-index */
 #settings-modal .modal-content,
 #advice-modal .modal-content,
 #chart-zoom-modal .modal-content,
 #sales-history-modal .modal-content, /* Keep for now, might be removed later */
-#confirm-modal .modal-content,
-#confirm-fill-modal .modal-content,
 #selective-sell-modal .modal-content,
 #source-details-modal .modal-content { /* Added source details modal */
     z-index: 1001;
@@ -122,6 +120,18 @@
 #sell-from-position-modal {
     z-index: 1019; /* Slightly lower than their content */
 }
+
+/* --- ADDED: Confirmation Modals - Highest Z-index --- */
+/* Must appear on top of other modals that trigger them (e.g., Settings, Manage, Edit, Source Details) */
+#confirm-modal,
+#confirm-fill-modal {
+    z-index: 1029; /* Overlay z-index (higher than Edit/Sell overlay) */
+}
+#confirm-modal .modal-content,
+#confirm-fill-modal .modal-content {
+    z-index: 1030; /* Content z-index (highest) */
+}
+/* --- END ADDITION --- */
 
 
 /* --- Settings Modal (Tabbed) --- */

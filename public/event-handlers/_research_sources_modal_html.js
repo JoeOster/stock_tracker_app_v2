@@ -191,14 +191,22 @@ export function _renderModalTradeIdeas(watchlistItems, linkedTxTickers, paperTra
  * @param {any[]} linkedTransactions - Array of transaction objects.
  * @returns {string} HTML string.
  */
+// public/event-handlers/_research_sources_modal_html.js
+
+/**
+ * Renders the "Linked Real Trades" (Open and History) tables.
+ * @param {any[]} linkedTransactions - Array of transaction objects.
+ * @returns {string} HTML string.
+ */
 export function _renderModalRealTrades(linkedTransactions) {
     let html = '';
     const openRealTrades = linkedTransactions
         .filter(tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001)
         .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
 
+    // --- FIX: Filter for SELL transactions ONLY for history ---
     const closedRealTrades = linkedTransactions
-        .filter(tx => (tx.transaction_type === 'BUY' && tx.quantity_remaining <= 0.00001) || tx.transaction_type === 'SELL')
+        .filter(tx => tx.transaction_type === 'SELL')
         .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
     
     html += `<h4 style="margin-top: 1rem;">Linked Real Trades (Open) (${openRealTrades.length})</h4>`;
@@ -238,16 +246,11 @@ export function _renderModalRealTrades(linkedTransactions) {
                     <th>Date</th> <th>Ticker</th> <th>Type</th> <th class="numeric">Price</th> <th class="numeric">Qty</th> <th class="numeric">Realized P/L</th> <th>Status</th>
                 </tr>
             </thead><tbody>`;
+        // --- FIX: Logic now only iterates over SELLs ---
         closedRealTrades.forEach(entry => {
-            let pnl = null;
-            let statusDisplay = escapeHTML(entry.transaction_type);
-            if (entry.transaction_type === 'SELL') {
-                pnl = entry.realized_pnl;
-                statusDisplay = 'SELL';
-            } else if (entry.transaction_type === 'BUY') {
-                statusDisplay = 'BUY (Closed)';
-                pnl = null; 
-            }
+            let pnl = entry.realized_pnl; // This comes from the backend calculation
+            let statusDisplay = 'SELL';
+            
             const pnlClass = pnl !== null && pnl !== undefined ? (pnl >= 0 ? 'positive' : 'negative') : '';
             const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
             html += `
@@ -258,9 +261,10 @@ export function _renderModalRealTrades(linkedTransactions) {
                     <td class="numeric">${formatAccounting(entry.price)}</td> 
                     <td class="numeric">${formatQuantity(entry.quantity)}</td> 
                     <td class="numeric ${pnlClass}">${pnlDisplay}</td> 
-                    <td>Closed</td>
+                    <td>Sold</td>
                 </tr>`;
         });
+        // --- END FIX ---
         html += `</tbody></table></div>`;
     } else {
         html += `<p>No closed or sold real-money trades linked to this source.</p>`;

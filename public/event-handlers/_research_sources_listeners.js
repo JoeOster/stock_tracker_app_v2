@@ -7,7 +7,7 @@
 import { state } from '../state.js';
 import { fetchSourceDetails } from '../api.js';
 import { showToast } from '../ui/helpers.js';
-import { generateSourceDetailsHTML } from './_research_sources_modal.js'; // <-- UPDATED IMPORT
+import { generateSourceDetailsHTML } from './_research_sources_modal.js';
 import {
     handleAddWatchlistSubmit,
     handleCreateBuyOrderFromIdea,
@@ -31,7 +31,7 @@ let currentModalActionHandler = null;
  * Attaches event listeners specifically for actions *within* the source details modal content area.
  * Ensures only one listener is active at a time.
  * @param {HTMLElement} modalContentArea - The content area element (`#source-details-modal-content`).
- *Z
+ *
  * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {void}
  */
@@ -55,20 +55,26 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
              return;
         }
 
-        console.log(`[Modal Actions] Click detected inside modal content. Target:`, target);
+        // console.log(`[Modal Actions] Click detected inside modal content. Target:`, target); // Keep for debugging
 
-        if (target.closest('.add-watchlist-item-form') && target.matches('.add-watchlist-ticker-button')) {
+        // --- FIX: Check for specific submit buttons first ---
+        if (target.matches('.add-watchlist-ticker-button')) {
             console.log("[Modal Actions] Delegating to handleAddWatchlistSubmit");
             await handleAddWatchlistSubmit(e, refreshDetailsCallback);
-        } else if (target.closest('.add-document-form') && target.matches('.add-document-button')) {
+        } else if (target.matches('.add-document-button')) {
             console.log("[Modal Actions] Delegating to handleAddDocumentSubmit");
             await handleAddDocumentSubmit(e, refreshDetailsCallback);
-        } else if (target.closest('.add-source-note-form') && target.matches('.add-source-note-button')) {
+        } else if (target.matches('.add-source-note-button')) {
             console.log("[Modal Actions] Delegating to handleAddNoteSubmit");
             await handleAddNoteSubmit(e, refreshDetailsCallback);
-        } else if (target.closest('.delete-btn')) {
+        
+        // --- FIX: Explicitly check for *each* type of delete/action button ---
+        } else if (target.closest('.delete-watchlist-item-button, .delete-document-button, .delete-source-note-button')) {
             console.log("[Modal Actions] Delegating to handleDeleteClick");
+            // Pass the *target* that was clicked
             await handleDeleteClick(target, modalSourceId, modalHolderId, refreshDetailsCallback);
+        // --- END FIX ---
+        
         } else if (target.closest('.note-actions button, .note-content-edit button')) {
             console.log("[Modal Actions] Delegating to handleNoteEditActions");
             await handleNoteEditActions(target, modalSourceId, modalHolderId, refreshDetailsCallback);
@@ -176,7 +182,7 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
                 initializeModalActionHandlers(modalContentArea, refreshDetails);
 
             } catch (error) {
-                 const err = /** @type {Error} */ (error);
+                 const err = /** @type {Error} */ (err);
                  console.error("[Grid Listener] Error fetching source details:", err);
                  showToast(`Error loading details: ${err.message}`, 'error');
                  modalTitle.textContent = `Source Details: Error`;

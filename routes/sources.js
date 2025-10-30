@@ -15,6 +15,8 @@ const { getPrices } = require('../services/priceService'); // Import price servi
  */
 module.exports = (db, log = console.log) => {
 
+// /routes/sources.js
+
     /**
      * @route GET /api/sources/:id/details
      * @group Sources - Operations about source details
@@ -32,7 +34,10 @@ module.exports = (db, log = console.log) => {
         }
 
         try {
-            // Query for real transactions linked to this source
+            // --- UPDATED QUERY ---
+            // This query now finds:
+            // 1. Transactions (BUYs) linked directly to the advice source.
+            // 2. SELL transactions whose PARENT BUY is linked to the advice source.
             const linkedTransactionsQuery = `
                 SELECT 
                     t.*, 
@@ -41,12 +46,25 @@ module.exports = (db, log = console.log) => {
                 FROM transactions t
                 LEFT JOIN transactions b ON t.parent_buy_id = b.id AND b.transaction_type = 'BUY'
                 LEFT JOIN journal_entries j ON t.linked_journal_id = j.id
-                WHERE t.advice_source_id = ? 
-                  AND t.account_holder_id = ?
-                ORDER BY t.transaction_date DESC, t.id DESC
-            `;
+                WHERE t.advice_source_id = ? AND t.account_holder_id = ?
 
-            // --- UPDATED: Filter watchlist items by status = 'OPEN' ---
+                UNION
+
+                SELECT 
+                    s.*, 
+                    b.price as parent_buy_price,
+                    j.entry_reason as technique_name
+                FROM transactions s
+                JOIN transactions b ON s.parent_buy_id = b.id -- The parent BUY
+                LEFT JOIN journal_entries j ON b.linked_journal_id = j.id -- Join journal via parent BUY
+                WHERE b.advice_source_id = ? AND s.account_holder_id = ? -- Check parent BUY for source_id
+                  AND s.transaction_type = 'SELL'
+                
+                ORDER BY transaction_date DESC, id DESC
+            `;
+            // --- END UPDATED QUERY ---
+
+
             const watchlistQuery = `
                 SELECT * FROM watchlist 
                 WHERE advice_source_id = ? AND account_holder_id = ? AND status = 'OPEN' 
@@ -56,10 +74,11 @@ module.exports = (db, log = console.log) => {
             const [source, journalEntries, watchlistItems, documents, sourceNotes, linkedTransactions] = await Promise.all([
                 db.get('SELECT *, image_path FROM advice_sources WHERE id = ? AND account_holder_id = ?', [sourceId, holderId]),
                 db.all('SELECT * FROM journal_entries WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY entry_date DESC', [sourceId, holderId]),
-                db.all(watchlistQuery, [sourceId, holderId]), // Use updated query
+                db.all(watchlistQuery, [sourceId, holderId]),
                 db.all('SELECT * FROM documents WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId]),
                 db.all('SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId]),
-                db.all(linkedTransactionsQuery, [sourceId, holderId]) // Fetch real transactions
+                // Pass params for both parts of the UNION query
+                db.all(linkedTransactionsQuery, [sourceId, holderId, sourceId, holderId])
             ]);
 
             if (!source) {
@@ -67,86 +86,82 @@ module.exports = (db, log = console.log) => {
             }
 
             // --- Calculate Summary Statistics ---
-            let totalTrades = journalEntries.length;
+            let totalTrades = journalEntries.length + watchlistItems.length;
             let totalInvestment = 0;
             let totalUnrealizedPL = 0;
             let totalRealizedPL = 0;
             
-            // Use a Set to gather all tickers that need pricing
             let tickersToPrice = new Set();
 
             journalEntries.forEach(entry => {
                 if (entry.status === 'OPEN') {
-                    // Only count "non-general" trades for paper stats
                     if (entry.ticker.toUpperCase() !== 'GENERAL' && entry.ticker.toUpperCase() !== 'N/A') {
                         totalInvestment += (entry.entry_price * entry.quantity);
-                        tickersToPrice.add(entry.ticker); // Add journal ticker
+                        tickersToPrice.add(entry.ticker);
                     }
                 } else if (['CLOSED', 'EXECUTED'].includes(entry.status) && entry.pnl !== null) {
                     totalRealizedPL += entry.pnl;
                 }
             });
 
-            // Add tickers from *open* BUY transactions
             linkedTransactions.forEach(tx => {
                 if (tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001) {
-                    tickersToPrice.add(tx.ticker); // Add real trade ticker
+                    tickersToPrice.add(tx.ticker);
                 }
             });
 
-            // --- ADDED: Add tickers from watchlist items ---
             watchlistItems.forEach(item => {
                 tickersToPrice.add(item.ticker);
             });
 
-            // Fetch current prices for open paper trades AND open real trades
-            const uniqueTickers = [...tickersToPrice]; // Convert Set to array
+            const uniqueTickers = [...tickersToPrice];
             if (uniqueTickers.length > 0) {
-                const priceData = await getPrices(uniqueTickers, 6); // Use moderate priority
+                const priceData = await getPrices(uniqueTickers, 6);
                 
-                // Calculate P/L for open journal entries
                 journalEntries.forEach(entry => {
                     if (entry.status === 'OPEN') {
-                        // Skip "general" trades
                         if (entry.ticker.toUpperCase() === 'GENERAL' || entry.ticker.toUpperCase() === 'N/A') {
                              entry.current_pnl = null;
                              return;
                         }
-                        
                         const currentPriceInfo = priceData[entry.ticker];
                         if (currentPriceInfo && typeof currentPriceInfo.price === 'number') {
                             const currentPrice = currentPriceInfo.price;
                             let currentPnl = 0;
                             if (entry.direction === 'BUY') {
                                 currentPnl = (currentPrice - entry.entry_price) * entry.quantity;
-                            } // Add SELL logic if needed later
-                            entry.current_pnl = currentPnl; // Add to entry object for frontend table
-                            totalUnrealizedPL += currentPnl; // Add to paper trade stats
+                            }
+                            entry.current_pnl = currentPnl;
+                            totalUnrealizedPL += currentPnl;
                         } else {
-                            entry.current_pnl = null; // Mark as null if price unavailable
+                            entry.current_pnl = null;
                         }
                     }
                 });
 
-                // Calculate P/L for real transactions
                 linkedTransactions.forEach(tx => {
                     if (tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001) {
-                        // It's an open BUY lot
+                        // This is an open BUY lot
+                        totalInvestment += (tx.price * tx.quantity_remaining); // Add real investment
                         const currentPriceInfo = priceData[tx.ticker];
                         if (currentPriceInfo && typeof currentPriceInfo.price === 'number') {
                             const currentPrice = currentPriceInfo.price;
                             tx.current_price = currentPrice;
                             tx.unrealized_pnl = (currentPrice - tx.price) * tx.quantity_remaining;
+                            totalUnrealizedPL += tx.unrealized_pnl; // Add real unrealized P/L
                         } else {
                             tx.current_price = null;
                             tx.unrealized_pnl = null;
                         }
                     } else if (tx.transaction_type === 'SELL') {
-                        // It's a SELL, calculate realized P/L
+                        // This is a SELL, calculate realized P/L
                         if (tx.parent_buy_price !== null) {
                             tx.realized_pnl = (tx.price - tx.parent_buy_price) * tx.quantity;
+                            if (tx.realized_pnl !== null) {
+                                totalRealizedPL += tx.realized_pnl; // Add real realized P/L
+                            }
                         } else {
-                            tx.realized_pnl = null; // Should not happen if data is clean
+                            tx.realized_pnl = null;
                         }
                     }
                 });
@@ -159,7 +174,7 @@ module.exports = (db, log = console.log) => {
                 watchlistItems,
                 documents,
                 sourceNotes,
-                linkedTransactions, // <-- Send real transactions to frontend
+                linkedTransactions,
                 summaryStats: { 
                     totalTrades,
                     totalInvestment,
