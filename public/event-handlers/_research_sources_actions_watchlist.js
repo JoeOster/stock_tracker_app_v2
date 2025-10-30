@@ -101,11 +101,8 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
  * @returns {Promise<void>}
  */
 export async function handleCreateBuyOrderFromIdea(target) {
-    const { ticker, price, sourceId } = target.dataset;
-    // Find the source name from the modal title
-    const modalTitle = document.getElementById('source-details-modal-title')?.textContent || '';
-    const sourceName = modalTitle.replace('Source Details: ', '').trim();
-
+    // --- UPDATED: Destructure tp1, tp2, and sl ---
+    const { ticker, price, sourceId, sourceName, tp1, tp2, sl } = target.dataset;
     const holderId = state.selectedAccountHolderId;
     
     if (!ticker || !sourceId || !sourceName || holderId === 'all') {
@@ -118,15 +115,18 @@ export async function handleCreateBuyOrderFromIdea(target) {
     }
 
     // Set price to an empty string to allow manual entry,
-    // as the 'price' from the dataset is just a guideline.
-    console.log(`Create Buy Order for ${ticker}, Source: ${sourceId}, Holder: ${holderId}. Price field will be empty.`);
+    console.log(`Create Buy Order for ${ticker}, Source: ${sourceId}, Holder: ${holderId}.`);
     
+    // --- UPDATED: Add guidelines to prefill state ---
     updateState({ 
         prefillOrderFromSource: { 
             sourceId: sourceId, 
             sourceName: sourceName, // Pass the name for the lock message
             ticker: ticker, 
-            price: '' // Pass empty string to allow manual price entry
+            price: '', // Pass empty string to allow manual price entry
+            tp1: tp1 || null,
+            tp2: tp2 || null,
+            sl: sl || null
         } 
     });
     
@@ -138,4 +138,77 @@ export async function handleCreateBuyOrderFromIdea(target) {
 
     // Note: Pre-fill logic is now handled by loadOrdersPage
     showToast(`Navigating to 'Orders' to create BUY order for ${ticker}.`, 'info', 7000);
+}
+
+/**
+ * Handles click on "Paper" button from the watchlist to pre-fill the journal form.
+ * @param {HTMLElement} target - The button element that was clicked.
+ * @returns {Promise<void>}
+ */
+export async function handleCreatePaperTradeFromIdea(target) {
+    const { 
+        ticker, sourceId, sourceName, 
+        entryLow, entryHigh, tp1, tp2, sl 
+    } = target.dataset;
+
+    if (!ticker || !sourceId || !sourceName) {
+        return showToast('Error: Missing data (ticker, source) to create paper trade.', 'error');
+    }
+
+    // 1. Switch main Research sub-tab to Paper Trading
+    const researchSubTabs = document.querySelector('.research-sub-tabs');
+    const paperTradingTabButton = researchSubTabs?.querySelector('[data-sub-tab="research-paper-trading-panel"]');
+    
+    if (!(paperTradingTabButton instanceof HTMLElement)) {
+         console.error("Could not find Paper Trading tab button to switch.");
+         showToast('UI Error: Could not switch to Paper Trading tab.', 'error');
+         return;
+    }
+    
+    // Click the tab, which will also trigger loadResearchPage for the journal
+    paperTradingTabButton.click(); 
+
+    // Use setTimeout to allow DOM updates from tab switch (loading journal template) to complete
+    setTimeout(() => {
+        // 2. Switch nested Journal sub-tab to Add Entry
+        const paperTradingPanel = document.getElementById('research-paper-trading-panel');
+        const journalSubTabs = paperTradingPanel?.querySelector('.journal-sub-tabs');
+        const addEntryTabButton = journalSubTabs?.querySelector('[data-sub-tab="journal-add-panel"]');
+        
+        if(addEntryTabButton instanceof HTMLElement) {
+            addEntryTabButton.click(); // Switch to the add form tab
+        } else {
+            console.warn("Could not find 'Add Entry' sub-tab button within Paper Trading panel.");
+        }
+
+        // 3. Pre-fill and focus form elements
+        const adviceSourceSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById('journal-advice-source'));
+        const tickerInput = /** @type {HTMLInputElement|null} */ (document.getElementById('journal-ticker'));
+        const entryPriceInput = /** @type {HTMLInputElement|null} */ (document.getElementById('journal-entry-price'));
+        const tp1Input = /** @type {HTMLInputElement|null} */ (document.getElementById('journal-target-price'));
+        const tp2Input = /** @type {HTMLInputElement|null} */ (document.getElementById('journal-target-price-2'));
+        const slInput = /** @type {HTMLInputElement|null} */ (document.getElementById('journal-stop-loss-price'));
+        const quantityInput = /** @type {HTMLInputElement|null} */ (document.getElementById('journal-quantity'));
+        
+        // Determine best entry price to pre-fill
+        let entryPriceGuess = entryHigh || entryLow || '';
+
+        if (adviceSourceSelect) adviceSourceSelect.value = sourceId;
+        if (tickerInput) tickerInput.value = ticker;
+        if (entryPriceInput) entryPriceInput.value = entryPriceGuess;
+        if (tp1Input) tp1Input.value = tp1 || '';
+        if (tp2Input) tp2Input.value = tp2 || '';
+        if (slInput) slInput.value = sl || '';
+
+        if (quantityInput) {
+            quantityInput.focus(); // Focus the quantity input
+        }
+
+        // Close the source details modal *after* navigating and pre-filling
+        const detailsModal = document.getElementById('source-details-modal');
+        if(detailsModal) detailsModal.classList.remove('visible');
+
+        showToast(`Pre-filling journal entry for ${ticker}.`, 'info');
+
+    }, 150); // 150ms delay to allow tabs to switch and render
 }

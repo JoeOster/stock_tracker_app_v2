@@ -18,7 +18,7 @@ module.exports = (db, log = console.log) => {
     /**
      * @route GET /api/watchlist/
      * @group Watchlist - Operations for recommended trades watchlist
-     * @description Fetches all watchlist items for a given account holder.
+     * @description Fetches all 'OPEN' watchlist items for a given account holder.
      * @param {string} holder.query.required - Account holder ID.
      * @returns {Array<object>|object} 200 - An array of watchlist item objects. 400 - An object with an error message if the holder ID is missing. 500 - An object with an error message if the fetch fails.
      */
@@ -30,8 +30,9 @@ module.exports = (db, log = console.log) => {
                 return res.status(400).json({ message: 'Account holder ID is required.' });
             }
             // Select all columns to include new guideline fields
+            // --- UPDATED: Only select items where status is OPEN ---
             const items = await db.all(
-                'SELECT * FROM watchlist WHERE account_holder_id = ? ORDER BY ticker',
+                "SELECT * FROM watchlist WHERE account_holder_id = ? AND status = 'OPEN' ORDER BY ticker",
                 [holderId]
             );
             res.json(items);
@@ -84,8 +85,9 @@ module.exports = (db, log = console.log) => {
             const result = await db.run(
                 `INSERT INTO watchlist (
                     account_holder_id, ticker, advice_source_id, 
-                    rec_entry_low, rec_entry_high, rec_tp1, rec_tp2, rec_stop_loss
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    rec_entry_low, rec_entry_high, rec_tp1, rec_tp2, rec_stop_loss,
+                    status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     account_holder_id,
                     ticker.toUpperCase().trim(),
@@ -99,7 +101,8 @@ module.exports = (db, log = console.log) => {
                     // @ts-ignore
                     rec_tp2 ?? null,
                     // @ts-ignore
-                    rec_stop_loss ?? null
+                    rec_stop_loss ?? null,
+                    'OPEN' // --- ADDED: Default status
                 ]
             );
 
@@ -122,19 +125,20 @@ module.exports = (db, log = console.log) => {
     /**
      * @route DELETE /api/watchlist/:id
      * @group Watchlist - Operations for recommended trades watchlist
-     * @description Removes a ticker from the watchlist.
+     * @description "Closes" (archives) a ticker from the watchlist by setting its status to 'CLOSED'.
      * @param {string} id.path.required - The ID of the watchlist item.
-     * @returns {object} 200 - An object with a success message. 500 - An object with an error message if the delete fails.
+     * @returns {object} 200 - An object with a success message. 500 - An object with an error message if the update fails.
      */
     router.delete('/:id', async (req, res) => {
         try {
-            await db.run('DELETE FROM watchlist WHERE id = ?', req.params.id);
-            res.json({ message: 'Ticker removed from watchlist.' });
+            // --- UPDATED: Change DELETE to UPDATE (soft delete) ---
+            await db.run("UPDATE watchlist SET status = 'CLOSED' WHERE id = ?", req.params.id);
+            res.json({ message: 'Trade Idea closed/archived successfully.' });
         } catch (error) {
             // @ts-ignore
-            log(`[ERROR] Failed to delete from watchlist with ID ${req.params.id}: ${error.message}`);
+            log(`[ERROR] Failed to close watchlist item with ID ${req.params.id}: ${error.message}`);
             // @ts-ignore
-            res.status(500).json({ message: `Error removing from watchlist: ${error.message}` });
+            res.status(500).json({ message: `Error closing watchlist item: ${error.message}` });
         }
     });
 

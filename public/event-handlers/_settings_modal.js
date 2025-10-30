@@ -132,18 +132,9 @@ export function initializeSettingsModalHandlers() {
         });
     }
 
-     // --- Generic Modal Closing ---
-    settingsModal?.querySelectorAll('.close-button').forEach(btn =>
-        btn.addEventListener('click', e =>
-            (/** @type {HTMLElement} */ (e.target)).closest('.modal')?.classList.remove('visible')
-        )
-    );
-     settingsModal?.addEventListener('click', (e) => {
-        // Close if clicking on the background overlay
-        if (e.target === settingsModal) {
-            settingsModal.classList.remove('visible');
-        }
-    });
+     // --- REMOVED: Generic Modal Closing ---
+     // This is now handled globally by initializeModalHandlers() in _modals.js
+     // --- END REMOVAL ---
 
     // --- Live Appearance Updates ---
     if (themeSelector) themeSelector.addEventListener('change', () => { state.settings.theme = themeSelector.value; applyAppearanceSettings(); });

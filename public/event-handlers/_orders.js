@@ -40,24 +40,30 @@ export async function loadOrdersPage() {
         const accountSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-account-holder'));
         const dateInput = /** @type {HTMLInputElement | null} */(document.getElementById('transaction-date'));
         const adviceSourceSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-advice-source')); // Still need the select itself
-        // --- END MODIFICATION ---
+        
+        // --- ADDED: Get Limit Inputs ---
+        const limitUpInput = /** @type {HTMLInputElement | null} */(document.getElementById('add-limit-price-up'));
+        const limitUp2Input = /** @type {HTMLInputElement | null} */(document.getElementById('add-limit-price-up-2'));
+        const limitDownInput = /** @type {HTMLInputElement | null} */(document.getElementById('add-limit-price-down'));
+        // --- END ADDED ---
 
 
         console.log("[loadOrdersPage - Delayed] Form elements found:", {
-            // --- MODIFICATION: Update element checks ---
             adviceSourceSelectGroup: !!adviceSourceSelectGroup,
             adviceSourceLockedDisplay: !!adviceSourceLockedDisplay,
             lockedSourceNameSpan: !!lockedSourceNameSpan,
-            // --- END MODIFICATION ---
             tickerInput: !!tickerInput,
             priceInput: !!priceInput,
             accountSelect: !!accountSelect,
             dateInput: !!dateInput,
-            adviceSourceSelect: !!adviceSourceSelect
+            adviceSourceSelect: !!adviceSourceSelect,
+            limitUpInput: !!limitUpInput, // --- ADDED ---
+            limitUp2Input: !!limitUp2Input, // --- ADDED ---
+            limitDownInput: !!limitDownInput // --- ADDED ---
         });
 
-        // --- MODIFICATION: Check for all necessary elements ---
-        if (!adviceSourceSelectGroup || !adviceSourceLockedDisplay || !lockedSourceNameSpan || !tickerInput || !priceInput || !accountSelect || !dateInput || !adviceSourceSelect) {
+        // --- Check for all necessary elements ---
+        if (!adviceSourceSelectGroup || !adviceSourceLockedDisplay || !lockedSourceNameSpan || !tickerInput || !priceInput || !accountSelect || !dateInput || !adviceSourceSelect || !limitUpInput || !limitUp2Input || !limitDownInput) {
             console.warn("[loadOrdersPage - Delayed] Could not apply prefill/defaults because some form elements were missing.");
             // Ensure dropdown group is visible if locked display is missing
             if(adviceSourceSelectGroup) adviceSourceSelectGroup.style.display = '';
@@ -69,13 +75,22 @@ export async function loadOrdersPage() {
 
         if (state.prefillOrderFromSource) {
             console.log("[loadOrdersPage - Delayed] Applying prefill data...");
-            const { sourceId, sourceName, ticker, price } = state.prefillOrderFromSource;
+            // --- MODIFIED: Destructure new fields ---
+            const { sourceId, sourceName, ticker, price, tp1, tp2, sl } = state.prefillOrderFromSource;
 
             // --- Populate values ---
             tickerInput.value = ticker;
             console.log(`[loadOrdersPage - Delayed] Set tickerInput.value to: ${tickerInput.value}`);
             priceInput.value = price;
             console.log(`[loadOrdersPage - Delayed] Set priceInput.value to: ${priceInput.value}`);
+            
+            // --- ADDED: Populate limit fields ---
+            if (tp1) limitUpInput.value = tp1;
+            if (tp2) limitUp2Input.value = tp2;
+            if (sl) limitDownInput.value = sl;
+            console.log(`[loadOrdersPage - Delayed] Set limits: TP1=${tp1}, TP2=${tp2}, SL=${sl}`);
+            // --- END ADDED ---
+
             adviceSourceSelect.value = sourceId; // Still set the hidden dropdown value for submission
             console.log(`[loadOrdersPage - Delayed] Set adviceSourceSelect.value to: ${adviceSourceSelect.value} (target was ${sourceId})`);
             accountSelect.value = String(state.selectedAccountHolderId);
@@ -85,7 +100,7 @@ export async function loadOrdersPage() {
 
             // --- Lock fields ---
             tickerInput.readOnly = true;
-            priceInput.readOnly = true;
+            priceInput.readOnly = false; // Price field remains editable
             accountSelect.disabled = true;
 
             // --- MODIFICATION: Adjust visibility ---
@@ -94,7 +109,7 @@ export async function loadOrdersPage() {
             adviceSourceLockedDisplay.style.display = 'block'; // Show dedicated display
             // --- END MODIFICATION ---
 
-            console.log("[loadOrdersPage - Delayed] Locked fields and adjusted source display.");
+            console.log("[loadOrdersPage - Delayed] Locked fields (except price) and adjusted source display.");
             
             // Dispatch change event to trigger limit suggestions (if priceInput isn't readOnly, but good to keep)
             priceInput.dispatchEvent(new Event('change'));

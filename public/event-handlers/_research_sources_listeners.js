@@ -7,10 +7,11 @@
 import { state } from '../state.js';
 import { fetchSourceDetails } from '../api.js';
 import { showToast } from '../ui/helpers.js';
-import { generateSourceDetailsHTML } from './_research_sources_render.js';
+import { generateSourceDetailsHTML } from './_research_sources_modal.js'; // <-- UPDATED IMPORT
 import {
     handleAddWatchlistSubmit,
-    handleCreateBuyOrderFromIdea
+    handleCreateBuyOrderFromIdea,
+    handleCreatePaperTradeFromIdea
 } from './_research_sources_actions_watchlist.js';
 import {
     handleAddDocumentSubmit
@@ -30,6 +31,7 @@ let currentModalActionHandler = null;
  * Attaches event listeners specifically for actions *within* the source details modal content area.
  * Ensures only one listener is active at a time.
  * @param {HTMLElement} modalContentArea - The content area element (`#source-details-modal-content`).
+ *Z
  * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {void}
  */
@@ -73,6 +75,9 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
         } else if (target.closest('.create-buy-order-btn')) {
             console.log("[Modal Actions] Delegating to handleCreateBuyOrderFromIdea");
             await handleCreateBuyOrderFromIdea(target);
+        } else if (target.closest('.create-paper-trade-btn')) {
+            console.log("[Modal Actions] Delegating to handleCreatePaperTradeFromIdea");
+            await handleCreatePaperTradeFromIdea(target);
         }
     };
 

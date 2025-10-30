@@ -46,10 +46,17 @@ module.exports = (db, log = console.log) => {
                 ORDER BY t.transaction_date DESC, t.id DESC
             `;
 
+            // --- UPDATED: Filter watchlist items by status = 'OPEN' ---
+            const watchlistQuery = `
+                SELECT * FROM watchlist 
+                WHERE advice_source_id = ? AND account_holder_id = ? AND status = 'OPEN' 
+                ORDER BY ticker
+            `;
+
             const [source, journalEntries, watchlistItems, documents, sourceNotes, linkedTransactions] = await Promise.all([
                 db.get('SELECT *, image_path FROM advice_sources WHERE id = ? AND account_holder_id = ?', [sourceId, holderId]),
                 db.all('SELECT * FROM journal_entries WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY entry_date DESC', [sourceId, holderId]),
-                db.all('SELECT * FROM watchlist WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY ticker', [sourceId, holderId]),
+                db.all(watchlistQuery, [sourceId, holderId]), // Use updated query
                 db.all('SELECT * FROM documents WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId]),
                 db.all('SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId]),
                 db.all(linkedTransactionsQuery, [sourceId, holderId]) // Fetch real transactions
@@ -85,6 +92,11 @@ module.exports = (db, log = console.log) => {
                 if (tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001) {
                     tickersToPrice.add(tx.ticker); // Add real trade ticker
                 }
+            });
+
+            // --- ADDED: Add tickers from watchlist items ---
+            watchlistItems.forEach(item => {
+                tickersToPrice.add(item.ticker);
             });
 
             // Fetch current prices for open paper trades AND open real trades

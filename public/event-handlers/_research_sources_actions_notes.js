@@ -56,33 +56,40 @@ export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
  * @returns {Promise<void>}
  */
 export async function handleDeleteClick(target, sourceId, holderId, refreshDetailsCallback) {
-    const deleteWatchlistBtn = /** @type {HTMLButtonElement | null} */ (target.closest('.delete-watchlist-item-button'));
+    // --- UPDATED: Changed class selector ---
+    const closeWatchlistBtn = /** @type {HTMLButtonElement | null} */ (target.closest('.delete-watchlist-item-button'));
     const deleteDocumentBtn = /** @type {HTMLButtonElement | null} */ (target.closest('.delete-document-button'));
     const deleteNoteBtn = /** @type {HTMLButtonElement | null} */ (target.closest('.delete-source-note-button'));
 
-    if (!deleteWatchlistBtn && !deleteDocumentBtn && !deleteNoteBtn) return; // Not a delete button we handle here
+    if (!closeWatchlistBtn && !deleteDocumentBtn && !deleteNoteBtn) return; // Not a delete button we handle here
 
     let confirmTitle = 'Confirm Deletion';
     let confirmBody = 'Are you sure? This cannot be undone.';
     /** @type {(() => Promise<any>) | null} */
     let deleteAction = null;
+    let successMessage = 'Item deleted.'; // Default success message
 
-    if (deleteWatchlistBtn) {
-        const itemId = deleteWatchlistBtn.dataset.itemId;
+    if (closeWatchlistBtn) {
+        // --- UPDATED: Use data-item-id and change messages ---
+        const itemId = closeWatchlistBtn.dataset.itemId;
         if (!itemId) return;
-        confirmTitle = 'Delete Recommended Trade?';
-        deleteAction = async () => deleteWatchlistItem(itemId);
+        confirmTitle = 'Close Trade Idea?';
+        confirmBody = 'This will archive the idea and remove it from this list. It will not delete any real or paper trades.';
+        deleteAction = async () => deleteWatchlistItem(itemId); // This now calls the "soft delete" backend route
+        successMessage = 'Trade Idea closed/archived.';
     } else if (deleteDocumentBtn) {
         const docId = deleteDocumentBtn.dataset.docId;
         if (!docId) return;
         confirmTitle = 'Delete Document Link?';
         deleteAction = async () => deleteDocument(docId);
+        successMessage = 'Document link deleted.';
     } else if (deleteNoteBtn) {
         const noteLi = target.closest('li[data-note-id]');
         const noteId = noteLi?.dataset.noteId;
         if (!noteId) return;
         confirmTitle = 'Delete Note?';
         deleteAction = async () => deleteSourceNote(sourceId, noteId, holderId);
+        successMessage = 'Note deleted.';
     }
 
     if (deleteAction) {
@@ -90,13 +97,13 @@ export async function handleDeleteClick(target, sourceId, holderId, refreshDetai
             try {
                 if (deleteAction) { // Re-check deleteAction inside async callback
                     await deleteAction(); // Execute the API call
-                    showToast('Item deleted.', 'success'); // Generic success message
+                    showToast(successMessage, 'success'); // Use specific success message
                     await refreshDetailsCallback(); // Refresh modal view after successful deletion
                 }
             } catch (error) {
                  // Assert error as Error type for message access
                  const err = /** @type {Error} */ (error);
-                showToast(`Delete failed: ${err.message}`, 'error');
+                showToast(`Action failed: ${err.message}`, 'error');
             }
         });
     }
@@ -107,7 +114,7 @@ export async function handleDeleteClick(target, sourceId, holderId, refreshDetai
  * @param {HTMLElement} target - The clicked element.
  * @param {string} sourceId - The ID of the source context (from modal dataset).
  * @param {string|number} holderId - The current account holder ID (from modal dataset).
- * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ *@param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
 export async function handleNoteEditActions(target, sourceId, holderId, refreshDetailsCallback) {

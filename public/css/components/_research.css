@@ -258,6 +258,54 @@
 #source-details-modal-content .mini-journal-table .text-muted { color: var(--text-muted-color); }
 
 
+/* --- ADDED: Styles for Trade Idea Actions --- */
+#source-details-modal-content .recommended-trades-table .actions-cell button,
+#source-details-modal-content .recommended-trades-table .actions-cell span[class*="marker-"] {
+    padding: 4px 8px;       /* Consistent padding */
+    font-size: 0.8em;       /* Consistent font size */
+    margin: 0 2px;          /* Consistent spacing */
+    border-radius: 6px;     /* Consistent shape */
+    font-weight: 600;
+    line-height: 1.4;
+    display: inline-block;  /* Ensure spans behave like buttons */
+    vertical-align: middle; /* Align them on the same line */
+}
+
+/* Override default button styles if needed */
+#source-details-modal-content .recommended-trades-table .actions-cell button {
+    border: none; /* Remove border from default/blue buttons */
+}
+
+/* Style delete button specifically */
+#source-details-modal-content .recommended-trades-table .actions-cell .delete-btn {
+    color: #fff; /* Ensure white text */
+    font-weight: 600;
+}
+
+/* --- UPDATED: Marker styles to match new button sizing --- */
+#source-details-modal-content .marker-live,
+#source-details-modal-content .marker-paper {
+    font-weight: 600;
+    font-size: 0.8em;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-left: 2px;
+    margin-right: 2px;
+    cursor: default; /* Markers aren't clickable */
+}
+
+#source-details-modal-content .marker-live {
+    background-color: var(--positive-color);
+    color: #fff;
+}
+
+#source-details-modal-content .marker-paper {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+/* --- END UPDATED --- */
+
+
 /* List for documents/notes */
 #source-details-modal-content .linked-items-list,
 #source-details-modal-content .source-notes-list {
