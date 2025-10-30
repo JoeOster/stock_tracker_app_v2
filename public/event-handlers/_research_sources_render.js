@@ -75,14 +75,15 @@ export function renderSourcesList(panelElement, sources) {
 
 /**
  * Renders the detailed view HTML for a selected advice source inside the modal.
-* Includes profile, summary stats, trade ideas, open/closed journal entries, documents, and notes.
+ * Includes profile, summary stats, trade ideas, paper trades, real trades, documents, and notes.
  * @param {object} details - The fetched details object.
  * @param {object} details.source - The advice source data.
  * @param {any[]} details.journalEntries - Array of linked journal entries (includes calculated current_pnl).
  * @param {any[]} details.watchlistItems - Array of linked watchlist items (recommended trades).
+ * @param {any[]} details.linkedTransactions - Array of linked real transactions (BUYs/SELLs).
  * @param {any[]} details.documents - Array of linked documents.
  * @param {any[]} details.sourceNotes - Array of linked source notes.
- * @param {object} details.summaryStats - Calculated summary statistics. // <-- ADDED THIS LINE
+ * @param {object} details.summaryStats - Calculated summary statistics.
  * @param {number} details.summaryStats.totalTrades
  * @param {number} details.summaryStats.totalInvestment
  * @param {number} details.summaryStats.totalUnrealizedPL
@@ -146,21 +147,20 @@ export function generateSourceDetailsHTML(details) {
     detailsHTML += '</div>'; // End add-ticker-section
     detailsHTML += '</div>'; // End source-details-grid
 
-    // --- ADDED: Summary Statistics Header ---
+    // --- Summary Statistics Header ---
     detailsHTML += `<div class="summary-container source-summary-header" style="margin-top: 1.5rem; justify-content: space-around;">`;
     detailsHTML += `<div class="summary-item"><h3>Total Ideas</h3><p>${stats.totalTrades}</p></div>`;
     detailsHTML += `<div class="summary-item"><h3>Investment (Open)</h3><p>${formatAccounting(stats.totalInvestment)}</p></div>`;
     detailsHTML += `<div class="summary-item"><h3>Unrealized P/L (Open)</h3><p class="${stats.totalUnrealizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(stats.totalUnrealizedPL)}</p></div>`;
     detailsHTML += `<div class="summary-item"><h3>Realized P/L (Closed)</h3><p class="${stats.totalRealizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(stats.totalRealizedPL)}</p></div>`;
     detailsHTML += `</div>`;
-    // --- END ADDITION ---
 
     // --- Separator ---
     detailsHTML += '<hr style="margin: 1.5rem 0;">';
 
     // --- Linked Sections Below Grid ---
 
-    // 1. Recommended Trades (Watchlist Items) - New Table Format
+    // 1. Recommended Trades (Watchlist Items)
     detailsHTML += `<h4 style="margin-top: 1rem;">Trade Ideas (${details.watchlistItems.length})</h4>`;
     if (details.watchlistItems.length > 0) {
         // ... (Watchlist Table HTML generation remains unchanged) ...
@@ -184,13 +184,101 @@ export function generateSourceDetailsHTML(details) {
         detailsHTML += `<p>No trade ideas linked.</p>`;
     }
 
+    
+    // --- MODIFICATION: Linked Real Trades (MOVED UP) ---
+    const allLinkedTrades = details.linkedTransactions || [];
+    
+    // Find open BUY lots
+    const openRealTrades = allLinkedTrades
+        .filter(tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001)
+        .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()); // Newest first
 
-    // --- MODIFIED: Split Journal Entries into Two Tables ---
+    // Find closed BUY lots and all SELLs
+    const closedRealTrades = allLinkedTrades
+        .filter(tx => (tx.transaction_type === 'BUY' && tx.quantity_remaining <= 0.00001) || tx.transaction_type === 'SELL')
+        .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()); // Newest first
+    
+    detailsHTML += `<h4 style="margin-top: 1rem;">Linked Real Trades (Open) (${openRealTrades.length})</h4>`;
+    if (openRealTrades.length > 0) {
+        detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Date</th> <th>Ticker</th> <th class="numeric">Entry $</th> <th class="numeric">Rem. Qty</th> <th class="numeric">Current $</th> <th class="numeric">Unrealized P/L</th> <th>Status</th>
+                </tr>
+            </thead><tbody>`;
+        openRealTrades.forEach(entry => {
+            const pnl = entry.unrealized_pnl;
+            const pnlClass = pnl !== null && pnl !== undefined ? (pnl >= 0 ? 'positive' : 'negative') : '';
+            const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
+            const currentPriceDisplay = entry.current_price ? formatAccounting(entry.current_price) : '--';
+            
+            detailsHTML += `
+                <tr>
+                    <td>${escapeHTML(entry.transaction_date) || 'N/A'}</td> 
+                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td> 
+                    <td class="numeric">${formatAccounting(entry.price)}</td> 
+                    <td class="numeric">${formatQuantity(entry.quantity_remaining)}</td> 
+                    <td class="numeric">${currentPriceDisplay}</td> 
+                    <td class="numeric ${pnlClass}">${pnlDisplay}</td> 
+                    <td>Open Lot</td>
+                </tr>`;
+        });
+        detailsHTML += `</tbody></table></div>`;
+    } else {
+        detailsHTML += `<p>No open real-money trades linked to this source.</p>`;
+    }
+
+    detailsHTML += `<h4 style="margin-top: 1rem;">Linked Real Trades (History) (${closedRealTrades.length})</h4>`;
+    if (closedRealTrades.length > 0) {
+            detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Date</th> <th>Ticker</th> <th>Type</th> <th class="numeric">Price</th> <th class="numeric">Qty</th> <th class="numeric">Realized P/L</th> <th>Status</th>
+                </tr>
+            </thead><tbody>`;
+        
+        closedRealTrades.forEach(entry => {
+            let pnl = null;
+            let statusDisplay = escapeHTML(entry.transaction_type); // Default to BUY/SELL
+
+            if (entry.transaction_type === 'SELL') {
+                pnl = entry.realized_pnl;
+                statusDisplay = 'SELL';
+            } else if (entry.transaction_type === 'BUY') {
+                // This is a fully closed BUY lot
+                statusDisplay = 'BUY (Closed)';
+                // P/L for closed BUYs isn't calculated here, it's on the SELLs
+                pnl = null; 
+            }
+            
+            const pnlClass = pnl !== null && pnl !== undefined ? (pnl >= 0 ? 'positive' : 'negative') : '';
+            const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
+            
+            detailsHTML += `
+                <tr class="text-muted">
+                    <td>${escapeHTML(entry.transaction_date) || 'N/A'}</td> 
+                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td> 
+                    <td>${statusDisplay}</td>
+                    <td class="numeric">${formatAccounting(entry.price)}</td> 
+                    <td class="numeric">${formatQuantity(entry.quantity)}</td> 
+                    <td class="numeric ${pnlClass}">${pnlDisplay}</td> 
+                    <td>Closed</td>
+                </tr>`;
+        });
+
+        detailsHTML += `</tbody></table></div>`;
+    } else {
+        detailsHTML += `<p>No closed or sold real-money trades linked to this source.</p>`;
+    }
+    // --- END: Linked Real Trades ---
+
+
+    // --- Split Journal Entries into Two Tables (MOVED DOWN) ---
     const openJournalEntries = details.journalEntries.filter(entry => entry.status === 'OPEN');
     const closedJournalEntries = details.journalEntries.filter(entry => ['CLOSED', 'EXECUTED'].includes(entry.status));
 
-    // 2a. Open Journal Entries Table (Unrealized P/L)
-    detailsHTML += `<h4 style="margin-top: 1rem;">Open Paper Trades (${openJournalEntries.length})</h4>`;
+    // 2a. Tracked Paper Trades (Open)
+    detailsHTML += `<h4 style="margin-top: 1rem;">Tracked Paper Trades (${openJournalEntries.length})</h4>`;
     if (openJournalEntries.length > 0) {
         detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
@@ -199,22 +287,16 @@ export function generateSourceDetailsHTML(details) {
                 </tr>
             </thead><tbody>`;
         openJournalEntries.forEach(entry => {
-            // @ts-ignore - current_pnl is added by backend/API
+            // ... (row generation code remains the same) ...
             const pnl = entry.current_pnl;
             const pnlClass = pnl !== null && pnl !== undefined ? (pnl >= 0 ? 'positive' : 'negative') : '';
             const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
-            // @ts-ignore - current_price is added by backend/API
             const currentPriceDisplay = entry.current_price ? formatAccounting(entry.current_price) : '--';
-
             const recLimits = [
-                // @ts-ignore
                 entry.stop_loss_price ? `SL: ${formatAccounting(entry.stop_loss_price, false)}` : null,
-                // @ts-ignore
                 entry.target_price ? `TP1: ${formatAccounting(entry.target_price, false)}` : null,
-                // @ts-ignore
                 entry.target_price_2 ? `TP2: ${formatAccounting(entry.target_price_2, false)}` : null
             ].filter(Boolean).join(' / ') || '--';
-
             detailsHTML += `
                 <tr>
                     <td>${escapeHTML(entry.entry_date) || 'N/A'}</td> <td>${escapeHTML(entry.ticker) || 'N/A'}</td> <td class="numeric">${formatAccounting(entry.entry_price)}</td> <td class="numeric">${formatQuantity(entry.quantity)}</td> <td class="numeric">${currentPriceDisplay}</td> <td class="numeric ${pnlClass}">${pnlDisplay}</td> <td class="numeric">${recLimits}</td> <td>${escapeHTML(entry.status)}</td>
@@ -222,11 +304,11 @@ export function generateSourceDetailsHTML(details) {
         });
         detailsHTML += `</tbody></table></div>`;
     } else {
-        detailsHTML += `<p>No open paper trades linked.</p>`;
+        detailsHTML += `<p>No paper trades are being tracked for this source.</p>`;
     }
 
-    // 2b. Closed Journal Entries Table (Realized P/L)
-    detailsHTML += `<h4 style="margin-top: 1rem;">Closed Paper Trades (${closedJournalEntries.length})</h4>`;
+    // 2b. Completed Paper Trades (Closed/Executed)
+    detailsHTML += `<h4 style="margin-top: 1rem;">Completed Paper Trades (${closedJournalEntries.length})</h4>`;
     if (closedJournalEntries.length > 0) {
         detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
@@ -235,12 +317,11 @@ export function generateSourceDetailsHTML(details) {
                 </tr>
             </thead><tbody>`;
         closedJournalEntries.forEach(entry => {
-            // @ts-ignore
+            // ... (row generation code remains the same) ...
             const pnl = entry.pnl;
             const pnlClass = pnl !== null && pnl !== undefined ? (pnl >= 0 ? 'positive' : 'negative') : '';
             const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
             const statusDisplay = entry.status === 'EXECUTED' && entry.linked_trade_id ? `Executed (Tx #${entry.linked_trade_id})` : escapeHTML(entry.status);
-
             detailsHTML += `
                 <tr class="text-muted">
                     <td>${escapeHTML(entry.entry_date) || 'N/A'}</td> <td>${escapeHTML(entry.exit_date) || '--'}</td> <td>${escapeHTML(entry.ticker) || 'N/A'}</td> <td class="numeric">${formatAccounting(entry.entry_price)}</td> <td class="numeric">${entry.exit_price ? formatAccounting(entry.exit_price) : '--'}</td> <td class="numeric">${formatQuantity(entry.quantity)}</td> <td class="numeric ${pnlClass}">${pnlDisplay}</td> <td>${statusDisplay}</td>
@@ -248,9 +329,10 @@ export function generateSourceDetailsHTML(details) {
         });
         detailsHTML += `</tbody></table></div>`;
     } else {
-        detailsHTML += `<p>No closed or executed paper trades linked.</p>`;
+        detailsHTML += `<p>No completed paper trades linked to this source.</p>`;
     }
     // --- END JOURNAL TABLE SPLIT ---
+
 
     // 3. Linked Documents & Add Form
     // ... (Documents HTML remains unchanged) ...

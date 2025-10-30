@@ -1,4 +1,3 @@
- 
 // public/event-handlers/_research_sources_actions_watchlist.js
 /**
  * @file Handles Watchlist and Buy actions triggered from within the Research Source details view.
@@ -118,18 +117,18 @@ export async function handleCreateBuyOrderFromIdea(target) {
         return showToast('Please select a specific account holder before creating an order.', 'error');
     }
 
-    console.log(`Create Buy Order for ${ticker}, Price: ${price}, Source: ${sourceId}, Holder: ${holderId}`);
+    // --- MODIFICATION: Set price to an empty string ---
+    console.log(`Create Buy Order for ${ticker}, Source: ${sourceId}, Holder: ${holderId}. Price field will be empty.`);
     
-    // --- ADDED: Set prefill state ---
     updateState({ 
         prefillOrderFromSource: { 
             sourceId: sourceId, 
             sourceName: sourceName, // Pass the name for the lock message
             ticker: ticker, 
-            price: price 
+            price: '' // <-- THIS IS THE FIX: Pass empty string
         } 
     });
-    // --- END ADDITION ---
+    // --- END MODIFICATION ---
     
     // Close the source details modal *before* navigating
     const detailsModal = document.getElementById('source-details-modal');

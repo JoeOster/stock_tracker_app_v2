@@ -21,6 +21,10 @@ export function initializeOrdersFormHandlers() { // <-- ADDED 'export'
 
         // Suggest limits based on price input
         priceInput.addEventListener('change', () => {
+            // --- MODIFICATION: Check if readOnly before suggesting ---
+            if (priceInput.readOnly) return; // Don't suggest if pre-filled
+            // --- END MODIFICATION ---
+
             const price = parseFloat(priceInput.value);
             if (!price || isNaN(price) || price <= 0) return;
             const takeProfitPercent = state.settings.takeProfitPercent;
@@ -131,18 +135,11 @@ export function initializeOrdersFormHandlers() { // <-- ADDED 'export'
                 accountHolderSelect.value = savedAccountHolderValue;
                 exchangeSelect.value = savedExchangeValue;
 
-                // --- Clear prefill state and reset form elements ---
+                // --- Clear prefill state on SUCCESS ---
                 if (state.prefillOrderFromSource) {
                     updateState({ prefillOrderFromSource: null });
                 }
-                const adviceSourceSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-advice-source'));
-                const adviceSourceMsg = /** @type {HTMLElement | null} */(document.getElementById('add-tx-source-lock-msg'));
-                if (adviceSourceSelect && adviceSourceMsg) {
-                    adviceSourceSelect.disabled = false;
-                    adviceSourceSelect.value = '';
-                    adviceSourceMsg.style.display = 'none';
-                }
-                // --- END ADDITION ---
+                // --- END ---
 
                 (/** @type {HTMLInputElement} */(document.getElementById('transaction-date'))).value = getCurrentESTDateString();
                 await refreshLedger();
@@ -151,18 +148,31 @@ export function initializeOrdersFormHandlers() { // <-- ADDED 'export'
                 showToast(`Failed to log transaction: ${err.message}`, 'error');
             } finally {
                 submitButton.disabled = false;
-                // --- Clear prefill state even on failure ---
+                
+                // --- MODIFICATION: ALWAYS clear prefill state (if it still exists) and UNLOCK form ---
                 if (state.prefillOrderFromSource) {
+                    console.log("[Orders Form] Clearing prefill state from finally block.");
                     updateState({ prefillOrderFromSource: null });
-                    // We don't reset the form fields on failure, but we must unlock the dropdown
-                     const adviceSourceSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-advice-source'));
-                     const adviceSourceMsg = /** @type {HTMLElement | null} */(document.getElementById('add-tx-source-lock-msg'));
-                     if (adviceSourceSelect && adviceSourceMsg) {
-                         adviceSourceSelect.disabled = false;
-                         adviceSourceMsg.style.display = 'none';
-                     }
                 }
-                // --- END ADDITION ---
+                
+                // Always run the unlock/reset visibility logic in case it was locked
+                const adviceSourceSelectGroup = /** @type {HTMLElement | null} */(document.getElementById('add-tx-advice-source-group'));
+                const adviceSourceLockedDisplay = /** @type {HTMLElement | null} */(document.getElementById('add-tx-source-locked-display'));
+                
+                if (adviceSourceSelectGroup && adviceSourceLockedDisplay) {
+                    adviceSourceSelectGroup.style.display = ''; // Show dropdown
+                    adviceSourceLockedDisplay.style.display = 'none'; // Hide locked display
+                    
+                    // Also unlock other fields
+                    const tickerInput = /** @type {HTMLInputElement | null} */(document.getElementById('ticker'));
+                    const priceInputEl = /** @type {HTMLInputElement | null} */(document.getElementById('price'));
+                    const accountSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-account-holder'));
+                    
+                    if (tickerInput) tickerInput.readOnly = false;
+                    if (priceInputEl) priceInputEl.readOnly = false;
+                    if (accountSelect) accountSelect.disabled = false;
+                }
+                // --- END MODIFICATION ---
             }
         });
     } else {

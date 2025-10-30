@@ -36,14 +36,27 @@ module.exports = (db, log = console.log) => {
         }
 
         try {
-            const [source, journalEntries, watchlistItems, documents, sourceNotes] = await Promise.all([
+            // --- MODIFICATION: Added linkedTransactions query ---
+            const linkedTransactionsQuery = `
+                SELECT 
+                    t.*, 
+                    b.price as parent_buy_price
+                FROM transactions t
+                LEFT JOIN transactions b ON t.parent_buy_id = b.id AND b.transaction_type = 'BUY'
+                WHERE t.advice_source_id = ? 
+                  AND t.account_holder_id = ?
+                ORDER BY t.transaction_date DESC, t.id DESC
+            `;
+
+            const [source, journalEntries, watchlistItems, documents, sourceNotes, linkedTransactions] = await Promise.all([
                 db.get('SELECT *, image_path FROM advice_sources WHERE id = ? AND account_holder_id = ?', [sourceId, holderId]),
                 db.all('SELECT * FROM journal_entries WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY entry_date DESC', [sourceId, holderId]),
-                // <-- Select all columns from watchlist -->
                 db.all('SELECT * FROM watchlist WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY ticker', [sourceId, holderId]),
                 db.all('SELECT * FROM documents WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId]),
-                db.all('SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId])
+                db.all('SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId]),
+                db.all(linkedTransactionsQuery, [sourceId, holderId]) // Fetch real transactions
             ]);
+            // --- END MODIFICATION ---
 
             if (!source) {
                 return res.status(404).json({ message: 'Advice source not found for this account holder.' });
@@ -54,22 +67,33 @@ module.exports = (db, log = console.log) => {
             let totalInvestment = 0;
             let totalUnrealizedPL = 0;
             let totalRealizedPL = 0;
-            let openTradeTickers = [];
+            
+            // --- MODIFICATION: Use a Set to gather all tickers that need pricing ---
+            let tickersToPrice = new Set();
 
             journalEntries.forEach(entry => {
                 if (entry.status === 'OPEN') {
                     totalInvestment += (entry.entry_price * entry.quantity);
-                    openTradeTickers.push(entry.ticker);
-                    // Placeholder for unrealized - will be calculated after fetching prices
+                    tickersToPrice.add(entry.ticker); // Add journal ticker
                 } else if (['CLOSED', 'EXECUTED'].includes(entry.status) && entry.pnl !== null) {
                     totalRealizedPL += entry.pnl;
                 }
             });
 
-            // Fetch current prices for open trades to calculate unrealized P/L
-            const uniqueOpenTickers = [...new Set(openTradeTickers)];
-            if (uniqueOpenTickers.length > 0) {
-                const priceData = await getPrices(uniqueOpenTickers, 6); // Use moderate priority
+            // Add tickers from *open* BUY transactions
+            linkedTransactions.forEach(tx => {
+                if (tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001) {
+                    tickersToPrice.add(tx.ticker); // Add real trade ticker
+                }
+            });
+            // --- END MODIFICATION ---
+
+            // Fetch current prices for open paper trades AND open real trades
+            const uniqueTickers = [...tickersToPrice]; // Convert Set to array
+            if (uniqueTickers.length > 0) {
+                const priceData = await getPrices(uniqueTickers, 6); // Use moderate priority
+                
+                // Calculate P/L for open journal entries
                 journalEntries.forEach(entry => {
                     if (entry.status === 'OPEN') {
                         const currentPriceInfo = priceData[entry.ticker];
@@ -80,22 +104,47 @@ module.exports = (db, log = console.log) => {
                                 currentPnl = (currentPrice - entry.entry_price) * entry.quantity;
                             } // Add SELL logic if needed later
                             entry.current_pnl = currentPnl; // Add to entry object for frontend table
-                            totalUnrealizedPL += currentPnl;
+                            totalUnrealizedPL += currentPnl; // Add to paper trade stats
                         } else {
                             entry.current_pnl = null; // Mark as null if price unavailable
                         }
                     }
                 });
+
+                // --- MODIFICATION: Calculate P/L for real transactions ---
+                linkedTransactions.forEach(tx => {
+                    if (tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001) {
+                        // It's an open BUY lot
+                        const currentPriceInfo = priceData[tx.ticker];
+                        if (currentPriceInfo && typeof currentPriceInfo.price === 'number') {
+                            const currentPrice = currentPriceInfo.price;
+                            tx.current_price = currentPrice;
+                            tx.unrealized_pnl = (currentPrice - tx.price) * tx.quantity_remaining;
+                        } else {
+                            tx.current_price = null;
+                            tx.unrealized_pnl = null;
+                        }
+                    } else if (tx.transaction_type === 'SELL') {
+                        // It's a SELL, calculate realized P/L
+                        if (tx.parent_buy_price !== null) {
+                            tx.realized_pnl = (tx.price - tx.parent_buy_price) * tx.quantity;
+                        } else {
+                            tx.realized_pnl = null; // Should not happen if data is clean
+                        }
+                    }
+                });
+                // --- END MODIFICATION ---
             }
             // --- End Calculation ---
 
             res.json({
                 source,
-                journalEntries, // Still send all entries, frontend will filter
+                journalEntries,
                 watchlistItems,
                 documents,
                 sourceNotes,
-                summaryStats: { // Send calculated stats
+                linkedTransactions, // <-- ADDED: Send real transactions to frontend
+                summaryStats: { 
                     totalTrades,
                     totalInvestment,
                     totalUnrealizedPL,

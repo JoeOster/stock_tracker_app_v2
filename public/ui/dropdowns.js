@@ -13,7 +13,40 @@ import { state } from '../state.js';
 export function populateAllAdviceSourceDropdowns() {
     // Selects ALL elements with this class, including the one in _orders.html
     const selects = document.querySelectorAll('.advice-source-select');
-    if (selects.length === 0) return;
+    if (selects.length === 0) {
+        console.log("[Dropdowns] No '.advice-source-select' elements found to populate.");
+        return;
+    }
 
-    // ... (rest of the function remains the same) ...
+    console.log(`[Dropdowns] Populating ${selects.length} advice source dropdown(s).`);
+
+    const sortedSources = Array.isArray(state.allAdviceSources)
+        ? [...state.allAdviceSources].sort((a, b) => a.name.localeCompare(b.name))
+        : [];
+
+    selects.forEach(select => {
+        const currentVal = (/** @type {HTMLSelectElement} */(select)).value;
+        select.innerHTML = ''; // Clear existing
+
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = "";
+        defaultOption.textContent = "(None/Manual Entry)";
+        select.appendChild(defaultOption);
+
+        // Add sorted sources
+        sortedSources.forEach(source => {
+            const option = document.createElement('option');
+            option.value = String(source.id);
+            option.textContent = `${source.name} (${source.type})`;
+            select.appendChild(option);
+        });
+
+        // Try to restore the previously selected value (for settings modal, etc.)
+        if (select.querySelector(`option[value="${currentVal}"]`)) {
+            (/** @type {HTMLSelectElement} */(select)).value = currentVal;
+        } else {
+            (/** @type {HTMLSelectElement} */(select)).value = ""; // Default to 'None'
+        }
+    });
 }

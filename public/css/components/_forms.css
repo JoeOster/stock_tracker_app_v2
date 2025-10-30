@@ -126,16 +126,13 @@ button:disabled {
     margin-bottom: 2rem;
 }
 
-#add-transaction-form input, #add-transaction-form select,
-#add-pending-order-form input, #add-pending-order-form select {
+/* --- MODIFICATION: Use direct child selector (>) --- */
+#add-transaction-form > input, #add-transaction-form > select,
+#add-pending-order-form > input, #add-pending-order-form > select {
     flex: 1 1 150px; /* Allow shrinking but base width 150px */
     min-width: 120px; /* Prevent becoming too small */
 }
-
-#add-transaction-form button, #add-pending-order-form button {
-    flex-grow: 0;
-    flex-shrink: 0;
-}
+/* --- END MODIFICATION --- */
 
 /* Limit Order Group (within #add-transaction-form) */
 .form-row-divider {
@@ -145,17 +142,22 @@ button:disabled {
     margin: 10px 0;
 }
 
+/* --- MODIFICATION: Removed flex-basis: 100% --- */
 .limit-order-group {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* MODIFIED: Increased gap for spacing between elements */
-    flex-basis: 100%; 
+    display: grid;
+    /* 5 columns: Checkbox, Label, Price(150px), Exp Label, Date(130px) */
+    grid-template-columns: auto auto 150px auto 130px;
+    align-items: baseline; /* Align along the baseline */
+    gap: 10px 15px; /* row-gap column-gap (increased column gap) */
+    /* flex-basis: 100%; <-- REMOVED */
 }
+/* --- END MODIFICATION --- */
 
 .limit-order-group label {
     flex-shrink: 0; /* Don't shrink labels */
     font-size: 0.9em; 
     color: var(--text-muted-color);
+    white-space: nowrap; /* Prevent labels from wrapping */
 }
 
 .limit-order-group input[type="checkbox"] {
@@ -165,22 +167,16 @@ button:disabled {
 }
 
 .limit-order-group input[type="number"] {
-    width: 150px;       /* MODIFIED: Set a fixed width */
-    flex-grow: 0;       /* MODIFIED: Do not grow */
-    flex-shrink: 0;     /* MODIFIED: Do not shrink */
+    width: 100%; /* Make input fill its 150px grid cell */
+    flex-grow: 0;       
+    flex-shrink: 0;     
 }
 
 .limit-order-group input[type="date"] {
-    width: 130px;       /* MODIFIED: Set a fixed width */
-    flex-grow: 0;       /* MODIFIED: Do not grow */
-    flex-shrink: 0;     /* MODIFIED: Do not shrink */
+    width: 100%;       /* Make date input fill its 130px cell */
+    flex-grow: 0;       
+    flex-shrink: 0;     
 }
-
-/* NEW RULE: This spacer div will grow to fill all extra space */
-.limit-order-group .limit-spacer {
-    flex-grow: 1;
-}
-
 
 /* Settings Modal "Add" Form (used for Exchange/Holder) */
 .add-item-form {

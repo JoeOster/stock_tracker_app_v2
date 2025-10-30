@@ -21,13 +21,15 @@
             <select id="add-tx-advice-source" class="advice-source-select">
                 <option value="">(None/Manual Entry)</option>
             </select>
-            <small id="add-tx-source-lock-msg" style="color: var(--text-muted-color); display: none;"></small>
         </div>
+        <p id="add-tx-source-locked-display" style="flex-basis: 100%; text-align: center; color: var(--text-muted-color); font-weight: bold; display: none; margin-top: 10px; margin-bottom: 10px;">
+            Source Locked: <span id="locked-source-name"></span>
+        </p>
+
         <div class="limit-order-group">
             <input type="checkbox" id="set-profit-limit-checkbox" title="Set Take Profit Limit 1">
             <label for="add-limit-price-up">Take Profit 1:</label>
             <input type="number" id="add-limit-price-up" step="any" placeholder="Price">
-            <div class="limit-spacer"></div>
             <label for="add-limit-up-expiration">Exp:</label>
             <input type="date" id="add-limit-up-expiration">
         </div>
@@ -35,7 +37,6 @@
             <input type="checkbox" id="set-loss-limit-checkbox" title="Set Stop Loss Limit">
             <label for="add-limit-price-down">Stop Loss:</label>
             <input type="number" id="add-limit-price-down" step="any" placeholder="Price">
-            <div class="limit-spacer"></div>
             <label for="add-limit-down-expiration">Exp:</label>
             <input type="date" id="add-limit-down-expiration">
         </div>
@@ -43,7 +44,6 @@
             <input type="checkbox" id="set-profit-limit-2-checkbox" title="Set Take Profit Limit 2">
             <label for="add-limit-price-up-2">Take Profit 2:</label>
             <input type="number" id="add-limit-price-up-2" step="any" placeholder="Price (Optional)">
-            <div class="limit-spacer"></div>
             <label for="add-limit-up-expiration-2">Exp:</label>
             <input type="date" id="add-limit-up-expiration-2">
         </div>

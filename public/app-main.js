@@ -11,6 +11,10 @@ import { switchView, autosizeAccountSelector } from './event-handlers/_navigatio
 import { fetchAndPopulateAccountHolders } from './event-handlers/_settings_holders.js';
 // Make sure _settings_exchanges path is correct if split
 import { fetchAndRenderExchanges } from './event-handlers/_settings_exchanges.js';
+// --- ADDED IMPORTS ---
+import { fetchAndStoreAdviceSources } from './event-handlers/_journal_settings.js';
+import { populateAllAdviceSourceDropdowns } from './ui/dropdowns.js';
+// --- END ADDED IMPORTS ---
 import { applyAppearanceSettings } from './ui/settings.js';
 import { state } from './state.js';
 import { initializeScheduler } from './scheduler.js';
@@ -191,6 +195,18 @@ async function initialize() {
         const globalFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
         if (globalFilter) globalFilter.value = '1'; // Try to set fallback in UI too
     }
+
+    // --- MODIFICATION: Fetch initial Advice Sources for default holder ---
+    try {
+        console.log(`[App Main] Fetching initial advice sources for default holder: ${state.selectedAccountHolderId}`);
+        await fetchAndStoreAdviceSources(); // Fetches using the new default state.selectedAccountHolderId
+        populateAllAdviceSourceDropdowns(); // Populates all '.advice-source-select' dropdowns
+        console.log("[App Main] Initial advice sources populated.");
+    } catch (error) {
+         console.error("[App Main] Error fetching initial advice sources:", error);
+         showToast('Error loading advice sources for dropdowns.', 'error');
+    }
+    // --- END MODIFICATION ---
 
 
     // --- Initialize scheduler ---

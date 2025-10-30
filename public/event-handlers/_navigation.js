@@ -1,7 +1,8 @@
 // /public/event-handlers/_navigation.js
 
-// --- Keep existing imports ---
-import { state } from '../state.js';
+// --- MODIFICATION: Added updateState ---
+import { state, updateState } from '../state.js';
+// --- END MODIFICATION ---
 import { updateAllPrices, refreshLedger } from '../api.js';
 import { renderTabs } from '../ui/renderers/_tabs.js';
 import { showToast } from '../ui/helpers.js';
@@ -11,6 +12,11 @@ import { loadAlertsPage } from './_alerts.js';
 import { loadChartsPage } from './_charts.js';
 import { loadResearchPage } from './_research.js';
 import { loadDashboardPage } from './_dashboard_loader.js';
+// --- ADDED IMPORTS ---
+import { fetchAndStoreAdviceSources } from './_journal_settings.js';
+import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
+// --- END ADDED IMPORTS ---
+
 
 // --- Keep autosizeAccountSelector function ---
 export function autosizeAccountSelector(selectElement) {
@@ -36,6 +42,10 @@ export function autosizeAccountSelector(selectElement) {
 export async function switchView(viewType, viewValue = null) {
     console.log(`[Navigation] Attempting switch view to: ${viewType} ${viewValue || ''}`);
 
+    // --- MODIFICATION: Store previous view type ---
+    const previousViewType = state.currentView.type;
+    // --- END MODIFICATION ---
+
     const isSameViewType = state.currentView.type === viewType;
     const isSameViewValue = state.currentView.value === viewValue;
     const isSameView = isSameViewType && isSameViewValue;
@@ -51,17 +61,21 @@ export async function switchView(viewType, viewValue = null) {
     const finalContainerId = containerIdMap[viewType] || `${viewType}-page-container`;
     const targetPageContainer = document.getElementById(finalContainerId);
 
-    // --- MODIFIED Check: Skip reload ONLY if it's the same view AND the container is already visible ---
-    // --- AND it's NOT the research tab (which we always reload) ---
     const isTargetVisible = targetPageContainer?.style.display === 'block';
 
     if (isSameView && isTargetVisible && viewType !== 'research') {
         console.log(`[Navigation] View is the same (${viewType}) and visible, skipping reload.`);
         return; // Skip reload
     }
-    // --- END MODIFIED Check ---
 
     console.log(`[Navigation] Proceeding with view switch/load for ${viewType}.`);
+
+    // --- MODIFICATION: Clear prefill state if navigating AWAY from orders ---
+    if (previousViewType === 'orders' && viewType !== 'orders' && state.prefillOrderFromSource) {
+        console.log("[Navigation] Navigating away from Orders, clearing prefill state.");
+        updateState({ prefillOrderFromSource: null });
+    }
+    // --- END MODIFICATION ---
 
     state.currentView = { type: viewType, value: viewValue };
     renderTabs(state.currentView); // Update tab highlighting
@@ -120,7 +134,13 @@ export function initializeNavigationHandlers() {
             const target = /** @type {HTMLSelectElement} */ (e.target);
             const currentType = state.currentView.type;
             const currentValue = state.currentView.value;
+            
+            // --- MODIFICATION: Fetch sources and populate dropdowns ON holder change ---
             state.selectedAccountHolderId = target.value;
+            await fetchAndStoreAdviceSources(); // Fetch sources for the new holder
+            populateAllAdviceSourceDropdowns(); // Populate all dropdowns (incl. Orders page)
+            // --- END MODIFICATION ---
+
             await switchView(currentType, currentValue);
             autosizeAccountSelector(target);
         });

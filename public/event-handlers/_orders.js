@@ -31,59 +31,99 @@ export async function loadOrdersPage() {
     setTimeout(() => {
         console.log("[loadOrdersPage - Delayed] Checking for prefill state:", state.prefillOrderFromSource);
 
-        const adviceSourceSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-advice-source'));
-        const adviceSourceMsg = /** @type {HTMLElement | null} */(document.getElementById('add-tx-source-lock-msg'));
+        // --- MODIFICATION: Get new/updated form elements ---
+        const adviceSourceSelectGroup = /** @type {HTMLElement | null} */(document.getElementById('add-tx-advice-source-group')); // The div containing the dropdown
+        const adviceSourceLockedDisplay = /** @type {HTMLElement | null} */(document.getElementById('add-tx-source-locked-display')); // The new <p> tag
+        const lockedSourceNameSpan = /** @type {HTMLElement | null} */(document.getElementById('locked-source-name')); // Span inside the new <p> tag
         const tickerInput = /** @type {HTMLInputElement | null} */(document.getElementById('ticker'));
         const priceInput = /** @type {HTMLInputElement | null} */(document.getElementById('price'));
         const accountSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-account-holder'));
         const dateInput = /** @type {HTMLInputElement | null} */(document.getElementById('transaction-date'));
+        const adviceSourceSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-advice-source')); // Still need the select itself
+        // --- END MODIFICATION ---
+
 
         console.log("[loadOrdersPage - Delayed] Form elements found:", {
-            adviceSourceSelect: !!adviceSourceSelect, // Should now be true
-            adviceSourceMsg: !!adviceSourceMsg,     // Should now be true
+            // --- MODIFICATION: Update element checks ---
+            adviceSourceSelectGroup: !!adviceSourceSelectGroup,
+            adviceSourceLockedDisplay: !!adviceSourceLockedDisplay,
+            lockedSourceNameSpan: !!lockedSourceNameSpan,
+            // --- END MODIFICATION ---
             tickerInput: !!tickerInput,
             priceInput: !!priceInput,
             accountSelect: !!accountSelect,
-            dateInput: !!dateInput
+            dateInput: !!dateInput,
+            adviceSourceSelect: !!adviceSourceSelect
         });
 
-        if (state.prefillOrderFromSource && adviceSourceSelect && adviceSourceMsg && tickerInput && priceInput && accountSelect && dateInput) {
+        // --- MODIFICATION: Check for all necessary elements ---
+        if (!adviceSourceSelectGroup || !adviceSourceLockedDisplay || !lockedSourceNameSpan || !tickerInput || !priceInput || !accountSelect || !dateInput || !adviceSourceSelect) {
+            console.warn("[loadOrdersPage - Delayed] Could not apply prefill/defaults because some form elements were missing.");
+            // Ensure dropdown group is visible if locked display is missing
+            if(adviceSourceSelectGroup) adviceSourceSelectGroup.style.display = '';
+            if(adviceSourceLockedDisplay) adviceSourceLockedDisplay.style.display = 'none';
+            return;
+        }
+        // --- END MODIFICATION ---
+
+
+        if (state.prefillOrderFromSource) {
             console.log("[loadOrdersPage - Delayed] Applying prefill data...");
             const { sourceId, sourceName, ticker, price } = state.prefillOrderFromSource;
 
+            // --- Populate values ---
             tickerInput.value = ticker;
             console.log(`[loadOrdersPage - Delayed] Set tickerInput.value to: ${tickerInput.value}`);
             priceInput.value = price;
             console.log(`[loadOrdersPage - Delayed] Set priceInput.value to: ${priceInput.value}`);
-            adviceSourceSelect.value = sourceId;
+            adviceSourceSelect.value = sourceId; // Still set the hidden dropdown value for submission
             console.log(`[loadOrdersPage - Delayed] Set adviceSourceSelect.value to: ${adviceSourceSelect.value} (target was ${sourceId})`);
             accountSelect.value = String(state.selectedAccountHolderId);
             console.log(`[loadOrdersPage - Delayed] Set accountSelect.value to: ${accountSelect.value} (target was ${state.selectedAccountHolderId})`);
             dateInput.value = getCurrentESTDateString();
             console.log(`[loadOrdersPage - Delayed] Set dateInput.value to: ${dateInput.value}`);
 
-            adviceSourceSelect.disabled = true;
-            adviceSourceMsg.textContent = `Source locked: ${sourceName}`;
-            adviceSourceMsg.style.display = 'block';
-            console.log("[loadOrdersPage - Delayed] Locked source select and showed message.");
+            // --- Lock fields ---
+            tickerInput.readOnly = true;
+            priceInput.readOnly = true;
+            accountSelect.disabled = true;
+
+            // --- MODIFICATION: Adjust visibility ---
+            adviceSourceSelectGroup.style.display = 'none'; // Hide dropdown group
+            lockedSourceNameSpan.textContent = sourceName; // Set name in dedicated display
+            adviceSourceLockedDisplay.style.display = 'block'; // Show dedicated display
+            // --- END MODIFICATION ---
+
+            console.log("[loadOrdersPage - Delayed] Locked fields and adjusted source display.");
+            
+            // Dispatch change event to trigger limit suggestions (if priceInput isn't readOnly, but good to keep)
             priceInput.dispatchEvent(new Event('change'));
             console.log("[loadOrdersPage - Delayed] Dispatched 'change' event on priceInput.");
+
             document.getElementById('quantity')?.focus();
             console.log("[loadOrdersPage - Delayed] Focused quantity input.");
 
-        } else if (adviceSourceSelect && adviceSourceMsg) {
+        } else {
             console.log("[loadOrdersPage - Delayed] No prefill state, ensuring form defaults.");
-            adviceSourceSelect.disabled = false;
-            adviceSourceSelect.value = '';
-            adviceSourceMsg.style.display = 'none';
+            
+            // --- Unlock fields ---
+            tickerInput.readOnly = false;
+            priceInput.readOnly = false;
+            accountSelect.disabled = false;
+
+            // --- MODIFICATION: Adjust visibility ---
+            adviceSourceSelectGroup.style.display = ''; // Show dropdown group
+            adviceSourceLockedDisplay.style.display = 'none'; // Hide dedicated display
+            // --- END MODIFICATION ---
+
+            // --- Reset values ---
+            adviceSourceSelect.value = ''; // Reset dropdown
             if (dateInput) {
                 dateInput.value = getCurrentESTDateString();
                  console.log("[loadOrdersPage - Delayed] Set default dateInput.value to: " + dateInput.value);
             }
-        } else {
-             console.warn("[loadOrdersPage - Delayed] Could not apply prefill/defaults because some form elements were missing.");
         }
-    }, 0); // Use setTimeout with 0 delay to push execution to the end of the current event loop cycle
+    }, 0); // Use setTimeout with 0 delay
     // --- END MODIFICATION ---
 
     try {
