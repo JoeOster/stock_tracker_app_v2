@@ -39,7 +39,7 @@ const defaultLogo = genericLogoPath;
 export function createAggregatedCardHTML(aggData) {
     const {
         ticker, exchange, totalQuantity, totalCurrentValue, weightedAvgCostBasis,
-        overallUnrealizedPL, overallUnrealizedPercent, priceData, underlyingLots
+        overallUnrealrealizedPL, overallUnrealizedPercent, priceData, underlyingLots
     } = aggData;
 
     // --- Check if this card represents a single lot or multiple ---
@@ -215,18 +215,18 @@ export function createTableRowHTML(lot) {
 
     return `
         <tr data-lot-id="${lot.id}" data-key="lot-${lot.id}">
-            <td class="reconciliation-checkbox-cell center-align sticky-col"><input type="checkbox" class="reconciliation-checkbox"></td>
-            <td class="sticky-col">${lot.ticker}</td>
-            <td><img src="${logoSrc}" alt="${lot.exchange}" title="${lot.exchange}" class="exchange-logo-small"> ${lot.exchange}</td>
-            <td>${lot.purchase_date}</td>
-            <td class="numeric">${formatAccounting(lot.cost_basis)}</td>
-            <td class="numeric">${formatQuantity(lot.quantity_remaining)}</td>
-            <td class="numeric current-price">${currentPriceDisplay}</td>
-            <td class="numeric unrealized-pl-combined ${plClass}">
+            <td class="reconciliation-checkbox-cell center-align sticky-col col-check"><input type="checkbox" class="reconciliation-checkbox"></td>
+            <td class="sticky-col col-ticker">${lot.ticker}</td>
+            <td class="col-exchange"><img src="${logoSrc}" alt="${lot.exchange}" title="${lot.exchange}" class="exchange-logo-small"> ${lot.exchange}</td>
+            <td class="col-date">${lot.purchase_date}</td>
+            <td class="numeric col-price">${formatAccounting(lot.cost_basis)}</td>
+            <td class="numeric col-qty center-align">${formatQuantity(lot.quantity_remaining)}</td>
+            <td class="numeric current-price col-price">${currentPriceDisplay}</td>
+            <td class="numeric unrealized-pl-combined col-pl ${plClass}">
                 ${formatAccounting(unrealizedPL)} | ${unrealizedPercent.toFixed(2)}% ${proximityIndicator}${trendIndicator}
             </td>
-            <td class="numeric">${limitsCombinedText}</td>
-            <td class="center-align actions-cell sticky-col">
+            <td class="numeric col-limits">${limitsCombinedText}</td>
+            <td class="center-align actions-cell sticky-col col-actions">
                 <button class="sell-from-lot-btn" data-buy-id="${lot.id}" data-ticker="${lot.ticker}" data-exchange="${lot.exchange}" data-quantity="${lot.quantity_remaining}">Sell</button>
                 <button class="sales-history-btn" data-buy-id="${lot.id}" title="View Sales History">History</button>
                 <button class="set-limit-btn" data-id="${lot.id}">Limits</button>

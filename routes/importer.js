@@ -231,6 +231,11 @@ const createImporterRouter = (db, log, importSessions) => {
             return res.status(200).json({ message: 'No changes were committed.' });
         }
 
+        // --- ADDED: Map to track tickers and advice IDs for archiving ---
+        /** @type {Map<string, Set<number>>} */
+        const tickerToAdviceIdMap = new Map();
+        // --- END ADDED ---
+
         try {
             await db.exec('BEGIN TRANSACTION');
 
@@ -260,17 +265,39 @@ const createImporterRouter = (db, log, importSessions) => {
                     }
 
                     if (tx.type === 'BUY') {
-                        await db.run(
-                            'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            [tx.date, tx.ticker, tx.exchange, tx.type, quantity, price, accountHolderId, quantity, quantity, 'CSV_IMPORT', createdAt]
+                        // --- START MODIFICATION ---
+                        let adviceSourceIdToLink = null;
+                        
+                        // Find potential open watchlist items for this ticker
+                        const openWatchlistItems = await db.all(
+                            "SELECT * FROM watchlist WHERE account_holder_id = ? AND ticker = ? AND status = 'OPEN'",
+                            [accountHolderId, tx.ticker]
                         );
+
+                        if (openWatchlistItems.length === 1) {
+                            // Only link if there is one, unambiguous match
+                            adviceSourceIdToLink = openWatchlistItems[0].advice_source_id;
+                            log(`[IMPORT] Auto-linking new BUY for ${tx.ticker} to advice source ID: ${adviceSourceIdToLink}`);
+                        } else if (openWatchlistItems.length > 1) {
+                            log(`[IMPORT WARNING] Ambiguous match: Found ${openWatchlistItems.length} open watchlist items for ${tx.ticker}. BUY transaction will not be auto-linked.`);
+                        }
+
+                        // Updated INSERT statement to include advice_source_id
+                        await db.run(
+                            'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining, source, created_at, advice_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            [tx.date, tx.ticker, tx.exchange, tx.type, quantity, price, accountHolderId, quantity, quantity, 'CSV_IMPORT', createdAt, adviceSourceIdToLink] // Pass adviceSourceIdToLink
+                        );
+                        // --- END MODIFICATION ---
+
                     }
                     else if (tx.type === 'SELL') {
                         let sellQuantityRemaining = quantity;
+                        // --- MODIFIED: Query now includes advice_source_id ---
                         const openLots = await db.all(
-                            "SELECT * FROM transactions WHERE ticker = ? AND account_holder_id = ? AND quantity_remaining > 0.00001 AND transaction_type = 'BUY' ORDER BY transaction_date ASC, id ASC",
+                            "SELECT id, quantity_remaining, transaction_date, advice_source_id FROM transactions WHERE ticker = ? AND account_holder_id = ? AND quantity_remaining > 0.00001 AND transaction_type = 'BUY' ORDER BY transaction_date ASC, id ASC",
                             [tx.ticker, accountHolderId]
                         );
+                        // --- END MODIFIED ---
 
                         if (openLots.length === 0) {
                              log(`[IMPORT WARNING] No open BUY lot for SELL of ${tx.ticker} on ${tx.date}. Skipping and creating notification.`);
@@ -282,6 +309,20 @@ const createImporterRouter = (db, log, importSessions) => {
                         for (const lot of openLots) {
                             if (sellQuantityRemaining <= 0.00001) break;
                             const sellableQuantity = Math.min(sellQuantityRemaining, lot.quantity_remaining);
+
+                            // --- ADDED: Collect advice_source_id from the lot being sold ---
+                            if (lot.advice_source_id) {
+                                if (!tickerToAdviceIdMap.has(tx.ticker)) {
+                                    tickerToAdviceIdMap.set(tx.ticker, new Set());
+                                }
+                                // Ensure get returns a Set before calling add
+                                const adviceSet = tickerToAdviceIdMap.get(tx.ticker);
+                                if(adviceSet) {
+                                    adviceSet.add(lot.advice_source_id);
+                                }
+                            }
+                            // --- END ADDED ---
+
                             await db.run(
                                 'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, parent_buy_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                                 [tx.date, tx.ticker, tx.exchange, tx.type, sellableQuantity, price, accountHolderId, lot.id, 'CSV_IMPORT', createdAt]
@@ -301,6 +342,23 @@ const createImporterRouter = (db, log, importSessions) => {
                     }
                 } // End loop
             }
+
+            // --- ADDED: Process the archive map before committing ---
+            if (tickerToAdviceIdMap.size > 0) {
+                log(`[IMPORT] Archiving watchlist items based on SELLs...`);
+                for (const [ticker, adviceIdSet] of tickerToAdviceIdMap.entries()) {
+                    const adviceIds = [...adviceIdSet];
+                    if (adviceIds.length > 0) {
+                        const placeholders = adviceIds.map(() => '?').join(',');
+                        log(`[IMPORT] Archiving for Ticker: ${ticker}, Sources: ${adviceIds.join(', ')}`);
+                        await db.run(
+                            `UPDATE watchlist SET status = 'CLOSED' WHERE account_holder_id = ? AND ticker = ? AND advice_source_id IN (${placeholders})`,
+                            [accountHolderId, ticker, ...adviceIds]
+                        );
+                    }
+                }
+            }
+            // --- END ADDED ---
 
             await db.exec('COMMIT');
             importSessions.delete(sessionId);

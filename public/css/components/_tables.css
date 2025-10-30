@@ -149,3 +149,18 @@ tbody tr:hover .sticky-col {
     font-size: 0.9em;
     margin: 0 2px; /* Add small horizontal margin */
 }
+/* public/css/components/_tables.css */
+/* Contains all general and sticky styles for tables, using a separate border model. */
+
+table {
+    width: 100%;
+    border-collapse: separate; /* Use separate for styling sticky borders */
+    border-spacing: 0;
+    /* min-width: 900px; */ /* REMOVE default min-width, let component CSS define it */
+    table-layout: fixed; /* <-- ADD THIS to standardize the layout model */
+    border: 1px solid var(--container-border);
+    border-radius: 8px;
+    margin-bottom: 1rem; /* Add some space below tables */
+    font-size: 0.95em; /* Slightly smaller font for dense tables */
+}
+/* ... rest of _tables.css ... */

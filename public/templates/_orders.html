@@ -52,16 +52,16 @@
     <hr style="margin: 2rem 0;">
 
     <h3>Open Limit Orders</h3>
-    <table id="pending-orders-table" style="margin-top: 2rem;">
+    <table id="pending-orders-table" style="min-width: 1000px;">
         <thead>
             <tr>
-                <th data-sort="ticker">Ticker</th>
-                <th data-sort="exchange">Exchange</th>
-                <th class="numeric" data-sort="quantity" data-type="numeric">Quantity</th>
-                <th class="numeric" data-sort="limit_price" data-type="numeric">Limit Price</th>
-                <th data-sort="expiration_date" data-type="date">Expiration Date</th>
-                <th data-sort="created_date" data-type="date">Created Date</th>
-                <th class="center-align">Actions</th>
+                <th data-sort="ticker" class="col-ticker">Ticker</th>
+                <th data-sort="exchange" class="col-exchange">Exchange</th>
+                <th class="numeric col-qty" data-sort="quantity" data-type="numeric">Quantity</th>
+                <th class="numeric col-price" data-sort="limit_price" data-type="numeric">Limit Price</th>
+                <th data-sort="expiration_date" data-type="date" class="col-date">Expiration Date</th>
+                <th data-sort="created_date" data-type="date" class="col-date">Created Date</th>
+                <th class="center-align col-actions-lg">Actions</th>
             </tr>
         </thead>
         <tbody>

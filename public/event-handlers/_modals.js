@@ -268,6 +268,10 @@ export function initializeModalHandlers() {
             if (!accountHolderId || !ticker || !exchange) {
                  showToast('Account Holder, Ticker, and Exchange are required.', 'error'); return;
             }
+            
+            // --- START MODIFICATION: Read advice_source_id ---
+            const adviceSourceId = (/** @type {HTMLSelectElement} */(document.getElementById('edit-advice-source'))).value;
+            // --- END MODIFICATION ---
 
             const updatedTransaction = {
                 account_holder_id: accountHolderId,
@@ -281,6 +285,9 @@ export function initializeModalHandlers() {
                 limit_up_expiration: limitUpExp,
                 limit_price_down: limitDown,
                 limit_down_expiration: limitDownExp,
+                // --- START MODIFICATION: Add advice_source_id to payload ---
+                advice_source_id: adviceSourceId || null
+                // --- END MODIFICATION ---
             };
 
             const submitButton = /** @type {HTMLButtonElement | null} */ (editForm.querySelector('button[type="submit"]'));

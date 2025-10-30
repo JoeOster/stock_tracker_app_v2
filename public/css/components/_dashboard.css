@@ -176,27 +176,9 @@
 
 /* --- Table View --- */
 #open-positions-table {
-    table-layout: fixed;
+    /* table-layout: fixed; */ /* <-- REMOVED */
     width: 100%;
     min-width: 1100px;
 }
 
-/* Table View Specific Column Widths */
-#open-positions-table th.reconciliation-checkbox-header,
-#open-positions-table td.reconciliation-checkbox-cell { width: 30px; padding: 5px; } /* Checkbox */
-
-#open-positions-table th:nth-child(2), #open-positions-table td:nth-child(2) { width: 8%; } /* Ticker */
-#open-positions-table th:nth-child(3), #open-positions-table td:nth-child(3) { width: 12%; } /* Exchange + Logo */
-#open-positions-table th:nth-child(4), #open-positions-table td:nth-child(4) { width: 10%; } /* Purchase Date */
-#open-positions-table th:nth-child(5), #open-positions-table td:nth-child(5) { width: 8%; } /* Basis */
-#open-positions-table th:nth-child(6), #open-positions-table td:nth-child(6) { width: 6%; } /* Qty */
-#open-positions-table th:nth-child(7), #open-positions-table td:nth-child(7) { width: 10%; } /* Current Price */
-#open-positions-table th:nth-child(8), #open-positions-table td:nth-child(8) { width: 17%; } /* Unrealized P/L + Trend */
-#open-positions-table th:nth-child(9), #open-positions-table td:nth-child(9) { width: 13%; } /* Combined Limits */
-#open-positions-table th:nth-child(10), #open-positions-table td:nth-child(10) { width: 10%; min-width: 150px; } /* Actions */
-
-/* --- ADDED: Center Qty Column --- */
-#open-positions-table th:nth-child(6),
-#open-positions-table td:nth-child(6) {
-    text-align: center; /* Override numeric right-alignment */
-}
+/* REMOVED ALL th:nth-child, td:nth-child, and text-align rules */

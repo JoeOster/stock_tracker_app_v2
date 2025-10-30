@@ -10,6 +10,7 @@
 @import url('./css/components/_sub-tabs.css'); /* ADDED: Sub-tabs */
 @import url('./css/components/_forms.css');
 @import url('./css/components/_tables.css');
+@import url('./css/components/_table-widths.css');
 @import url('./css/components/_modals.css');
 @import url('./css/components/_charts.css');
 @import url('./css/components/_ledger.css');

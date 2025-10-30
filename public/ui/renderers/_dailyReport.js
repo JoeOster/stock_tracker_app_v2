@@ -45,18 +45,18 @@ export function renderDailyReportPage(date, activityMap, perfData, positionData)
     logHeaderRow.innerHTML = ''; // Clear previous headers
     let logHeaderHTML = '';
     if (isCurrentDay) {
-        logHeaderHTML += `<th class="reconciliation-checkbox-header sticky-col-checkbox"></th>`; // Checkbox
+        logHeaderHTML += `<th class="reconciliation-checkbox-header sticky-col-checkbox col-check"></th>`; // Checkbox
     }
     logHeaderHTML += `
-        <th data-sort="ticker" class="sticky-col-ticker">Ticker</th>
-        <th data-sort="exchange">Exchange</th>
-        <th data-sort="transaction_type" class="center-align">Action</th>
-        <th class="numeric" data-sort="quantity" data-type="numeric">Qty</th>
-        <th class="numeric" data-sort="price" data-type="numeric">Price</th>
-        <th class="numeric" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
+        <th data-sort="ticker" class="sticky-col-ticker col-ticker">Ticker</th>
+        <th data-sort="exchange" class="col-exchange">Exchange</th>
+        <th data-sort="transaction_type" class="center-align col-type">Action</th>
+        <th class="numeric col-qty" data-sort="quantity" data-type="numeric">Qty</th>
+        <th class="numeric col-price" data-sort="price" data-type="numeric">Price</th>
+        <th class="numeric col-pl" data-sort="realizedPL" data-type="numeric">Realized P/L</th>
         `;
     if (isCurrentDay) {
-        logHeaderHTML += `<th class="center-align sticky-col-actions">Actions</th>`; // Actions
+        logHeaderHTML += `<th class="center-align sticky-col-actions col-actions">Actions</th>`; // Actions
     }
     logHeaderRow.innerHTML = logHeaderHTML;
     // Update colspan for the section header row above
@@ -74,19 +74,19 @@ export function renderDailyReportPage(date, activityMap, perfData, positionData)
             const row = logBody.insertRow();
             let rowHTML = '';
             if (isCurrentDay) {
-                rowHTML += `<td class="reconciliation-checkbox-cell center-align sticky-col-checkbox"><input type="checkbox" class="reconciliation-checkbox"></td>`;
+                rowHTML += `<td class="reconciliation-checkbox-cell center-align sticky-col-checkbox col-check"><input type="checkbox" class="reconciliation-checkbox"></td>`;
             }
              rowHTML += `
-                <td class="sticky-col-ticker">${tx.ticker}</td>
-                <td>${tx.exchange}</td>
-                <td class="center-align">${tx.transaction_type}</td>
-                <td class="numeric">${formatQuantity(tx.quantity)}</td>
-                <td class="numeric">${formatAccounting(tx.price)}</td>
-                <td class="numeric ${tx.realizedPL >= 0 ? 'positive' : 'negative'}">${tx.realizedPL ? formatAccounting(tx.realizedPL) : '--'}</td>
+                <td class="sticky-col-ticker col-ticker">${tx.ticker}</td>
+                <td class_exchange="col-exchange">${tx.exchange}</td>
+                <td class="center-align col-type">${tx.transaction_type}</td>
+                <td class="numeric col-qty">${formatQuantity(tx.quantity)}</td>
+                <td class="numeric col-price">${formatAccounting(tx.price)}</td>
+                <td class="numeric col-pl ${tx.realizedPL >= 0 ? 'positive' : 'negative'}">${tx.realizedPL ? formatAccounting(tx.realizedPL) : '--'}</td>
                 `;
              if (isCurrentDay) {
                  // Actions empty for log rows, but cell needs to exist for column count
-                 rowHTML += `<td class="center-align actions-cell sticky-col-actions"></td>`;
+                 rowHTML += `<td class="center-align actions-cell sticky-col-actions col-actions"></td>`;
              }
              row.innerHTML = rowHTML;
         });
@@ -96,20 +96,20 @@ export function renderDailyReportPage(date, activityMap, perfData, positionData)
     summaryHeaderRow.innerHTML = ''; // Clear previous headers
     let summaryHeaderHTML = '';
     if (isCurrentDay) {
-        summaryHeaderHTML += `<th class="reconciliation-checkbox-header sticky-col-checkbox"></th>`; // Checkbox
+        summaryHeaderHTML += `<th class="reconciliation-checkbox-header sticky-col-checkbox col-check"></th>`; // Checkbox
     }
     summaryHeaderHTML += `
-        <th data-sort="ticker" class="sticky-col-ticker">Ticker</th>
-        <th data-sort="exchange">Exchange</th>
-        <th data-sort="purchase_date">Purchase Date</th>
-        <th class="numeric" data-sort="cost_basis" data-type="numeric">Basis</th>
-        <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Qty</th>
-        <th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
-        <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($ | %)</th>
-        <th class="numeric">Limits (Up/Down)</th>
+        <th data-sort="ticker" class="sticky-col-ticker col-ticker">Ticker</th>
+        <th data-sort="exchange" class="col-exchange">Exchange</th>
+        <th data-sort="purchase_date" class="col-date">Purchase Date</th>
+        <th class="numeric col-price" data-sort="cost_basis" data-type="numeric">Basis</th>
+        <th class="numeric col-qty center-align" data-sort="quantity_remaining" data-type="numeric">Qty</th>
+        <th class="numeric col-price" data-sort="current-price" data-type="numeric">Current Price</th>
+        <th class="numeric col-pl" data-sort="unrealized-pl-dollar" data-type="numeric">Unrealized P/L ($ | %)</th>
+        <th class="numeric col-limits">Limits (Up/Down)</th>
     `;
     if (isCurrentDay) {
-        summaryHeaderHTML += `<th class="center-align sticky-col-actions">Actions</th>`; // Actions
+        summaryHeaderHTML += `<th class="center-align sticky-col-actions col-actions-lg">Actions</th>`; // Actions
     }
     summaryHeaderRow.innerHTML = summaryHeaderHTML;
      // Update colspan for the section header row above
@@ -144,7 +144,7 @@ export function renderDailyReportPage(date, activityMap, perfData, positionData)
 
             let rowHTML = '';
             if (isCurrentDay) {
-                 rowHTML += `<td class="reconciliation-checkbox-cell center-align sticky-col-checkbox"><input type="checkbox" class="reconciliation-checkbox"></td>`;
+                 rowHTML += `<td class="reconciliation-checkbox-cell center-align sticky-col-checkbox col-check"><input type="checkbox" class="reconciliation-checkbox"></td>`;
             }
              // Format combined limits
              const limitUpText = pos.limit_price_up ? formatAccounting(pos.limit_price_up, false) : '--';
@@ -152,16 +152,18 @@ export function renderDailyReportPage(date, activityMap, perfData, positionData)
              const limitsCombinedText = `${limitUpText} / ${limitDownText}`;
 
              rowHTML += `
-                <td class="sticky-col-ticker">${pos.ticker}</td>
-                <td>${pos.exchange}</td>
-                <td>${pos.purchase_date}</td>
-                <td class="numeric">${formatAccounting(pos.cost_basis)}</td>
-                <td class="numeric">${formatQuantity(pos.quantity_remaining)}</td>
-                <td class="numeric current-price">--</td> <td class="numeric unrealized-pl-combined">--</td> <td class="numeric">${limitsCombinedText}</td>
+                <td class="sticky-col-ticker col-ticker">${pos.ticker}</td>
+                <td class="col-exchange">${pos.exchange}</td>
+                <td class_date="col-date">${pos.purchase_date}</td>
+                <td class="numeric col-price">${formatAccounting(pos.cost_basis)}</td>
+                <td class="numeric col-qty center-align">${formatQuantity(pos.quantity_remaining)}</td>
+                <td class="numeric current-price col-price">--</td>
+                <td class="numeric unrealized-pl-combined col-pl">--</td>
+                <td class="numeric col-limits">${limitsCombinedText}</td>
             `;
              if (isCurrentDay) {
                  rowHTML += `
-                 <td class="center-align actions-cell sticky-col-actions">
+                 <td class="center-align actions-cell sticky-col-actions col-actions-lg">
                     <button class="sell-from-lot-btn" data-buy-id="${pos.id}" data-ticker="${pos.ticker}" data-exchange="${pos.exchange}" data-quantity="${pos.quantity_remaining}">Sell</button>
                     <button class="set-limit-btn" data-id="${pos.id}">Limits</button>
                     <button class="edit-buy-btn" data-id="${pos.id}">Edit</button>

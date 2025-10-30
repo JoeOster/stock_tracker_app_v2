@@ -167,10 +167,24 @@ module.exports = (db, log, captureEodPrices) => {
                     await db.run(sellQuery, [ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, parent_buy_id, account_holder_id, 'MANUAL', createdAt]);
                     // Update parent BUY lot
                     await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [numQuantity, parent_buy_id]);
+
+                    // --- ADDED: Archive Watchlist Item ---
+                    if (parentBuy.advice_source_id) {
+                        log(`[TRANSACTION] Archiving watchlist item for Ticker: ${ticker}, Source: ${parentBuy.advice_source_id}`);
+                        await db.run(
+                            "UPDATE watchlist SET status = 'CLOSED' WHERE account_holder_id = ? AND ticker = ? AND advice_source_id = ?",
+                            [account_holder_id, ticker.toUpperCase(), parentBuy.advice_source_id]
+                        );
+                    }
+                    // --- END ADDED ---
+
                 }
                 // --- Case 2: Selective Sell ---
                 else if (lots && Array.isArray(lots) && lots.length > 0) {
                     let totalSellQuantityFromLots = 0;
+                    /** @type {Set<number>} */
+                    const adviceSourceIdsToArchive = new Set(); // --- ADDED ---
+
                     for (const lotInfo of lots) {
                         const lotQty = parseFloat(lotInfo.quantity_to_sell);
                         if (isNaN(lotQty) || lotQty <= 0) continue; // Skip invalid or zero
@@ -190,12 +204,32 @@ module.exports = (db, log, captureEodPrices) => {
                              await db.exec('ROLLBACK');
                             return res.status(400).json({ message: `Sell quantity (${internalFormatQuantity(lotQty)}) exceeds remaining quantity (${internalFormatQuantity(parentBuy.quantity_remaining)}) in lot ID ${lotInfo.parent_buy_id}.` });
                         }
+
+                        // --- ADDED: Collect advice_source_id ---
+                        if (parentBuy.advice_source_id) {
+                            adviceSourceIdsToArchive.add(parentBuy.advice_source_id);
+                        }
+                        // --- END ADDED ---
+
                         // Insert a SELL record for this lot
                         const sellQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
                         await db.run(sellQuery, [ticker.toUpperCase(), exchange, transaction_type, lotQty, numPrice, transaction_date, lotInfo.parent_buy_id, account_holder_id, 'MANUAL', createdAt]);
                         // Update parent BUY lot
                         await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [lotQty, lotInfo.parent_buy_id]);
                     }
+
+                    // --- ADDED: Archive Watchlist Items ---
+                    if (adviceSourceIdsToArchive.size > 0) {
+                        const adviceIds = [...adviceSourceIdsToArchive];
+                        const placeholders = adviceIds.map(() => '?').join(',');
+                        log(`[TRANSACTION] Archiving watchlist items for Ticker: ${ticker}, Sources: ${adviceIds.join(', ')}`);
+                        await db.run(
+                            `UPDATE watchlist SET status = 'CLOSED' WHERE account_holder_id = ? AND ticker = ? AND advice_source_id IN (${placeholders})`,
+                            [account_holder_id, ticker.toUpperCase(), ...adviceIds]
+                        );
+                    }
+                    // --- END ADDED ---
+
                     // Final check
                     const expectedTotalQuantity = parseFloat(quantity);
                      if (!isNaN(expectedTotalQuantity) && Math.abs(totalSellQuantityFromLots - expectedTotalQuantity) > 0.00001) {
