@@ -1,92 +1,22 @@
-// routes/importer.js
+﻿// /routes/importer.js
+/**
+ * @file Defines Express routes for handling CSV import uploads and processing.
+ * @module routes/importer
+ */
+
 const express = require('express');
 const Papa = require('papaparse');
 const { v4: uuidv4 } = require('uuid');
 const { brokerageTemplates } = require('../user-settings/importer-templates.js');
 
-/**
- * Simple quantity formatter for error messages (internal to this module).
- * @param {number | string | null | undefined} number - The number to format.
- * @returns {string} The formatted quantity string.
- */
-function internalFormatQuantity(number) {
-     const num = typeof number === 'string' ? parseFloat(number) : number;
-     if (num === null || num === undefined || isNaN(num)) { return ''; }
-     const formatter = new Intl.NumberFormat('en-US', {
-         maximumFractionDigits: 5,
-         minimumFractionDigits: 0,
-         useGrouping: true
-     });
-     return formatter.format(num);
-}
+// --- Import Refactored Helpers ---
+const {
+    internalFormatQuantity,
+    combineFractionalShares,
+    findConflict
+} = require('./importer-helpers.js');
+// --- End Import ---
 
-
-// --- Helper Functions (Moved outside module.exports) ---
-
-/**
- * Combines transactions for the same stock, on the same day, at the same price.
- * @param {Array<object>} transactions - The array of transactions to process.
- * @returns {Array<object>} A new array with the combined transactions.
- */
-function combineFractionalShares(transactions) {
-    const combined = new Map();
-
-    transactions.forEach(tx => {
-        // Ensure price exists and handle potential null/undefined before creating key
-        const priceKey = (tx.price !== null && tx.price !== undefined) ? tx.price.toFixed(5) : 'null_price'; // Use fixed decimal places for key
-        const key = `${tx.date}-${tx.ticker}-${tx.type}-${priceKey}`;
-
-        if (combined.has(key)) {
-            const existing = combined.get(key);
-            existing.quantity += tx.quantity;
-        } else {
-            // Create a new object to avoid mutating the original
-            combined.set(key, { ...tx });
-        }
-    });
-
-    return Array.from(combined.values());
-}
-
-/**
- * Finds a potential conflict between a parsed CSV row and existing transactions.
- * @param {object} parsedRow - The processed data from a single CSV row.
- * @param {Array<object>} existingTransactions - Array of transactions already in the database.
- * @returns {{status: 'Potential Duplicate' | 'New', match: object | null}}
- */
-function findConflict(parsedRow, existingTransactions) {
-    // Price tolerance might need adjustment depending on brokerage rounding
-    const PRICE_TOLERANCE_PERCENT = 1; // 1% tolerance for price matching
-    const QTY_TOLERANCE_ABSOLUTE = 0.0001; // Small absolute tolerance for quantity floats
-
-    for (const tx of existingTransactions) {
-        // Ensure both dates are valid before comparing
-        const parsedDate = new Date(parsedRow.date + 'T12:00:00Z'); // Add time to avoid timezone issues
-        const txDate = new Date(tx.transaction_date + 'T12:00:00Z');
-        if (isNaN(parsedDate.getTime()) || isNaN(txDate.getTime())) continue; // Skip if either date is invalid
-
-        const dateMatch = parsedDate.toDateString() === txDate.toDateString();
-        const tickerMatch = parsedRow.ticker === tx.ticker;
-        const typeMatch = parsedRow.type === tx.transaction_type; // Compare types too
-        const quantityMatch = Math.abs(parsedRow.quantity - tx.quantity) < QTY_TOLERANCE_ABSOLUTE;
-
-        // Price match: Check if both prices are valid numbers before comparing
-        let priceMatch = false;
-        if (typeof parsedRow.price === 'number' && typeof tx.price === 'number' && tx.price !== 0) {
-            priceMatch = (Math.abs(parsedRow.price - tx.price) / tx.price) * 100 < PRICE_TOLERANCE_PERCENT;
-        } else if (parsedRow.price === tx.price) { // Handle cases where both might be null or zero
-            priceMatch = true;
-        }
-
-
-        if (dateMatch && tickerMatch && typeMatch && quantityMatch && priceMatch) {
-            return { status: 'Potential Duplicate', match: tx };
-        }
-    }
-    return { status: 'New', match: null };
-}
-
-// --- Router Definition ---
 /**
  * Creates and returns an Express router for handling CSV import uploads.
  * @param {import('sqlite').Database} db - The database connection object.
@@ -97,6 +27,18 @@ function findConflict(parsedRow, existingTransactions) {
 const createImporterRouter = (db, log, importSessions) => {
     const router = express.Router(); // Require express Router here
 
+    /**
+     * @route POST /api/importer/upload
+     * @group Importer - CSV upload and reconciliation
+     * @description Receives a CSV file, parses it based on a template,
+     * performs conflict detection, and returns a session ID for reconciliation.
+     * @param {string} accountHolderId.body.required - The ID of the account holder.
+     * @param {string} brokerageTemplate.body.required - The key of the template to use (e.g., 'fidelity').
+     * @param {object} csvfile.files.required - The uploaded CSV file.
+     * @returns {object} 200 - JSON object with `importSessionId` and `reconciliationData`.
+     * @returns {object} 400 - Error message for invalid input or file.
+     * @returns {object} 500 - Error message for server errors.
+     */
     router.post('/upload', async (req, res) => {
         if (!req.files || !req.files.csvfile) {
             return res.status(400).json({ message: 'No file was uploaded.' });
@@ -190,9 +132,15 @@ const createImporterRouter = (db, log, importSessions) => {
     });
 
     /**
-     * POST /import
-     * Handles the batch import of reconciled transactions from the CSV importer.
-     * (MOVED FROM routes/transactions.js)
+     * @route POST /api/importer/import
+     * @group Importer - CSV upload and reconciliation
+     * @description Commits the transactions from a reconciliation session
+     * based on user-provided resolutions.
+     * @param {string} sessionId.body.required - The session ID from the /upload response.
+     * @param {Array<object>} resolutions.body.required - An array of resolution objects.
+     * @returns {object} 201 - Success message.
+     * @returns {object} 400 - Error message for invalid session or payload.
+     * @returns {object} 500 - Error message for server errors.
      */
     router.post('/import', async (req, res) => {
         const { sessionId, resolutions } = req.body;
@@ -231,10 +179,8 @@ const createImporterRouter = (db, log, importSessions) => {
             return res.status(200).json({ message: 'No changes were committed.' });
         }
 
-        // --- ADDED: Map to track tickers and advice IDs for archiving ---
         /** @type {Map<string, Set<number>>} */
         const tickerToAdviceIdMap = new Map();
-        // --- END ADDED ---
 
         try {
             await db.exec('BEGIN TRANSACTION');
@@ -265,39 +211,31 @@ const createImporterRouter = (db, log, importSessions) => {
                     }
 
                     if (tx.type === 'BUY') {
-                        // --- START MODIFICATION ---
                         let adviceSourceIdToLink = null;
                         
-                        // Find potential open watchlist items for this ticker
                         const openWatchlistItems = await db.all(
                             "SELECT * FROM watchlist WHERE account_holder_id = ? AND ticker = ? AND status = 'OPEN'",
                             [accountHolderId, tx.ticker]
                         );
 
                         if (openWatchlistItems.length === 1) {
-                            // Only link if there is one, unambiguous match
                             adviceSourceIdToLink = openWatchlistItems[0].advice_source_id;
                             log(`[IMPORT] Auto-linking new BUY for ${tx.ticker} to advice source ID: ${adviceSourceIdToLink}`);
                         } else if (openWatchlistItems.length > 1) {
                             log(`[IMPORT WARNING] Ambiguous match: Found ${openWatchlistItems.length} open watchlist items for ${tx.ticker}. BUY transaction will not be auto-linked.`);
                         }
 
-                        // Updated INSERT statement to include advice_source_id
                         await db.run(
                             'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, original_quantity, quantity_remaining, source, created_at, advice_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            [tx.date, tx.ticker, tx.exchange, tx.type, quantity, price, accountHolderId, quantity, quantity, 'CSV_IMPORT', createdAt, adviceSourceIdToLink] // Pass adviceSourceIdToLink
+                            [tx.date, tx.ticker, tx.exchange, tx.type, quantity, price, accountHolderId, quantity, quantity, 'CSV_IMPORT', createdAt, adviceSourceIdToLink]
                         );
-                        // --- END MODIFICATION ---
-
                     }
                     else if (tx.type === 'SELL') {
                         let sellQuantityRemaining = quantity;
-                        // --- MODIFIED: Query now includes advice_source_id ---
                         const openLots = await db.all(
                             "SELECT id, quantity_remaining, transaction_date, advice_source_id FROM transactions WHERE ticker = ? AND account_holder_id = ? AND quantity_remaining > 0.00001 AND transaction_type = 'BUY' ORDER BY transaction_date ASC, id ASC",
                             [tx.ticker, accountHolderId]
                         );
-                        // --- END MODIFIED ---
 
                         if (openLots.length === 0) {
                              log(`[IMPORT WARNING] No open BUY lot for SELL of ${tx.ticker} on ${tx.date}. Skipping and creating notification.`);
@@ -310,18 +248,15 @@ const createImporterRouter = (db, log, importSessions) => {
                             if (sellQuantityRemaining <= 0.00001) break;
                             const sellableQuantity = Math.min(sellQuantityRemaining, lot.quantity_remaining);
 
-                            // --- ADDED: Collect advice_source_id from the lot being sold ---
                             if (lot.advice_source_id) {
                                 if (!tickerToAdviceIdMap.has(tx.ticker)) {
                                     tickerToAdviceIdMap.set(tx.ticker, new Set());
                                 }
-                                // Ensure get returns a Set before calling add
                                 const adviceSet = tickerToAdviceIdMap.get(tx.ticker);
                                 if(adviceSet) {
                                     adviceSet.add(lot.advice_source_id);
                                 }
                             }
-                            // --- END ADDED ---
 
                             await db.run(
                                 'INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, account_holder_id, parent_buy_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -343,7 +278,6 @@ const createImporterRouter = (db, log, importSessions) => {
                 } // End loop
             }
 
-            // --- ADDED: Process the archive map before committing ---
             if (tickerToAdviceIdMap.size > 0) {
                 log(`[IMPORT] Archiving watchlist items based on SELLs...`);
                 for (const [ticker, adviceIdSet] of tickerToAdviceIdMap.entries()) {
@@ -358,7 +292,6 @@ const createImporterRouter = (db, log, importSessions) => {
                     }
                 }
             }
-            // --- END ADDED ---
 
             await db.exec('COMMIT');
             importSessions.delete(sessionId);
@@ -380,6 +313,6 @@ module.exports = createImporterRouter; // Export the router factory function
 
 // Export helpers only when testing
 if (process.env.NODE_ENV === 'test') {
-    module.exports.combineFractionalShares = combineFractionalShares;
-    module.exports.findConflict = findConflict;
+    // REFACTOR: Point to the new helpers file
+    module.exports.helpers = require('./importer-helpers.js');
 }

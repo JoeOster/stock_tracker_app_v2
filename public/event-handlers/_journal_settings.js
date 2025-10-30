@@ -1,3 +1,5 @@
+﻿import { fetchAdviceSources, addAdviceSource, updateAdviceSource, deleteAdviceSource } from '../api/sources-api.js';
+import { handleResponse } from '../api/api-helpers.js';
 // public/event-handlers/_journal_settings.js
 /**
  * @file Initializes event handlers for journal-related settings within the Settings modal.
@@ -5,17 +7,9 @@
  */
 
 import { state, updateState } from '../state.js';
-import {
-    fetchAdviceSources,
-    addAdviceSource,
-    updateAdviceSource,
-    deleteAdviceSource,
-    handleResponse
-} from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
-
 
 /**
  * Fetches advice sources based on the currently selected account holder and stores them in state.
@@ -212,7 +206,6 @@ export function initializeJournalSettingsHandlers() {
                     contact_app_handle: appHandle || null, // <-- New field
                     image_path: imagePath || null, // <-- New field
                 };
-
 
                 saveBtn.disabled = true;
                 try {

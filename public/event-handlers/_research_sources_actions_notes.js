@@ -1,3 +1,6 @@
+﻿import { addSourceNote, deleteSourceNote, updateSourceNote } from '../api/sources-api.js';
+import { deleteDocument } from '../api/documents-api.js';
+import { deleteWatchlistItem } from '../api/watchlist-api.js';
 // public/event-handlers/_research_sources_actions_notes.js
 /**
  * @file Handles Note and Delete actions triggered from within the Research Source details view.
@@ -5,10 +8,6 @@
  */
 
 import { state } from '../state.js';
-import {
-    addSourceNote, deleteWatchlistItem, deleteDocument,
-    deleteSourceNote, updateSourceNote
-} from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 /**

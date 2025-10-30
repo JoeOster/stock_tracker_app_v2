@@ -1,11 +1,11 @@
-﻿// /public/event-handlers/_orders.js
+﻿import { fetchPendingOrders } from '../api/orders-api.js';
+// /public/event-handlers/_orders.js
 /**
  * @file Initializes all event handlers for the Orders page.
  * @module event-handlers/_orders
  */
 
 import { state, updateState } from '../state.js';
-import { fetchPendingOrders } from '../api.js';
 import { showToast } from '../ui/helpers.js';
 import { renderOpenOrders } from '../ui/renderers/_orders.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
@@ -47,7 +47,6 @@ export async function loadOrdersPage() {
         const limitDownInput = /** @type {HTMLInputElement | null} */(document.getElementById('add-limit-price-down'));
         // --- END ADDED ---
 
-
         console.log("[loadOrdersPage - Delayed] Form elements found:", {
             adviceSourceSelectGroup: !!adviceSourceSelectGroup,
             adviceSourceLockedDisplay: !!adviceSourceLockedDisplay,
@@ -71,7 +70,6 @@ export async function loadOrdersPage() {
             return;
         }
         // --- END MODIFICATION ---
-
 
         if (state.prefillOrderFromSource) {
             console.log("[loadOrdersPage - Delayed] Applying prefill data...");

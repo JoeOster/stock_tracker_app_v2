@@ -1,3 +1,5 @@
+﻿import { refreshLedger } from '../api/transactions-api.js';
+import { updateAllPrices } from '../api/price-api.js';
 // /public/event-handlers/_navigation.js
 /**
  * @file Handles main navigation logic, including tab switching and the global account filter.
@@ -5,7 +7,6 @@
  */
 
 import { state, updateState } from '../state.js';
-import { updateAllPrices, refreshLedger } from '../api.js';
 import { renderTabs } from '../ui/renderers/_tabs.js';
 import { showToast } from '../ui/helpers.js';
 import { loadDailyReportPage } from './_dailyReport.js';

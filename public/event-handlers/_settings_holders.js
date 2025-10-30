@@ -1,3 +1,4 @@
+﻿import { handleResponse } from '../api/api-helpers.js';
 // public/event-handlers/_settings_holders.js
 /**
  * @file Initializes event handlers for Account Holder management within the Settings modal.
@@ -5,7 +6,6 @@
  */
 
 import { state, updateState } from '../state.js';
-import { handleResponse } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAccountHolderManagementList, saveSettings } from '../ui/settings.js'; // Need saveSettings for default change
 
@@ -54,7 +54,6 @@ function populateAllAccountHolderDropdowns() {
     });
 }
 
-
 /**
  * Fetches the list of account holders, stores them in state, and populates dropdowns.
  * @async
@@ -72,7 +71,6 @@ export async function fetchAndPopulateAccountHolders() {
         updateState({ allAccountHolders: [] });
     }
 }
-
 
 /**
  * Initializes event listeners for Account Holder Management.

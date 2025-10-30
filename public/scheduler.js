@@ -1,10 +1,10 @@
+﻿import { updatePricesForView } from './api/price-api.js';
 // public/scheduler.js
 /**
  * @file Manages the application's price update scheduler.
  * @module scheduler
  */
 
-import { updatePricesForView } from './api.js';
 import { populatePricesFromCache } from './ui/helpers.js';
 import { getUSMarketStatus, getCurrentESTDateString } from './ui/datetime.js';
 import { state } from './state.js';

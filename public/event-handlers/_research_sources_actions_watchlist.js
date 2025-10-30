@@ -1,3 +1,5 @@
+﻿import { addPendingOrder } from '../api/orders-api.js';
+import { addWatchlistItem } from '../api/watchlist-api.js';
 // public/event-handlers/_research_sources_actions_watchlist.js
 /**
  * @file Handles Watchlist and Buy actions triggered from within the Research Source details view.
@@ -5,7 +7,6 @@
  */
 
 import { state, updateState } from '../state.js';
-import { addWatchlistItem, addPendingOrder } from '../api.js';
 import { switchView } from './_navigation.js';
 import { showToast } from '../ui/helpers.js';
 import { autosizeAccountSelector } from './_navigation.js';
@@ -64,7 +65,6 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
     if (recTp2 !== null && (isNaN(recTp2) || recTp2 <= 0)) { return showToast('Invalid TP2 (must be positive).', 'error'); }
     if (recStopLoss !== null && (isNaN(recStopLoss) || recStopLoss <= 0)) { return showToast('Invalid Stop Loss (must be positive).', 'error'); }
     // Add cross-validation if needed (e.g., TP > Entry High, Stop < Entry Low)
-
 
     addButton.disabled = true;
     try {

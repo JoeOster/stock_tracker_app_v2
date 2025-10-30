@@ -64,13 +64,19 @@ describe('Importer API', () => {
             resolution: 'REPLACE'
         }];
 
-        // --- 4. Commit Import
+        // --- 4. Commit Import ---
+        // ---
+        // --- THE FIX IS HERE: Changed URL from /api/transactions/import
+        // ---
         const commitRes = await request(app)
-            .post('/api/transactions/import')
+            .post('/api/importer/import') // <-- CORRECTED URL
             .send({
                 sessionId: importSessionId,
                 resolutions: resolutions,
             });
+        // ---
+        // --- END FIX
+        // ---
 
         // Assert the commit response
         expect(commitRes.statusCode).toEqual(201);

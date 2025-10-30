@@ -1,3 +1,5 @@
+﻿import { handleResponse } from '../api/api-helpers.js';
+import { refreshLedger } from '../api/transactions-api.js';
 // public/event-handlers/_settings_exchanges.js
 /**
  * @file Initializes event handlers for Exchange management within the Settings modal.
@@ -5,7 +7,6 @@
  */
 
 import { state, updateState } from '../state.js';
-import { handleResponse, refreshLedger } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderExchangeManagementList } from '../ui/settings.js';
 
@@ -67,7 +68,6 @@ function populateAllExchangeDropdowns() {
     });
 }
 
-
 /**
  * Fetches the list of exchanges, stores them in state, and populates dropdowns.
  * @async
@@ -85,7 +85,6 @@ export async function fetchAndRenderExchanges() {
         updateState({ allExchanges: [] });
     }
 }
-
 
 /**
  * Initializes event listeners for Exchange Management.

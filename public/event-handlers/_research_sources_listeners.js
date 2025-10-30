@@ -1,3 +1,4 @@
+﻿import { fetchSourceDetails } from '../api/sources-api.js';
 // public/event-handlers/_research_sources_listeners.js
 /**
  * @file Initializes listeners for Research Sources cards and modal actions.
@@ -5,7 +6,6 @@
  */
 
 import { state } from '../state.js';
-import { fetchSourceDetails } from '../api.js';
 import { showToast } from '../ui/helpers.js';
 import { generateSourceDetailsHTML } from './_research_sources_modal.js';
 import {
@@ -91,7 +91,6 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
     currentModalActionHandler = newModalHandler;
      console.log("[Modal Actions] Attached new modal action handler.");
 }
-
 
 /**
  * Initializes or re-initializes the event listener for the sources card grid container.

@@ -1,18 +1,12 @@
+﻿import { fetchJournalEntries, addJournalEntry, updateJournalEntry, deleteJournalEntry, executeJournalEntry } from '../api/journal-api.js';
+import { refreshLedger } from '../api/transactions-api.js';
+import { updatePricesForView } from '../api/price-api.js';
 /**
  * @file Initializes event handlers for the Journal page forms and table actions.
  * @module event-handlers/_journal
  */
 
 import { state, updateState } from '../state.js';
-import {
-    fetchJournalEntries,
-    addJournalEntry,
-    updateJournalEntry,
-    deleteJournalEntry,
-    executeJournalEntry,
-    updatePricesForView,
-    refreshLedger
-} from '../api.js';
 import { renderJournalPage } from '../ui/renderers/_journal.js';
 // ADDED: Import sortTableByColumn
 import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
@@ -76,7 +70,6 @@ export async function loadJournalPage() {
                  // Sort combined closed entries by date after fetching all
                  closedEntriesCombined.sort((a, b) => (b.exit_date || b.entry_date).localeCompare(a.exit_date || a.entry_date));
 
-
             } catch (error) { // Catch errors related to Promise.allSettled itself
                  console.error("Error fetching non-open journal entries groups:", error);
                  if (closedTableBody) closedTableBody.innerHTML = '<tr><td colspan="10">Error loading closed/executed entries.</td></tr>';
@@ -102,7 +95,6 @@ export async function loadJournalPage() {
         updateState({ journalEntries: null }); // Clear state
     }
 }
-
 
 /**
  * Initializes event listeners for the Journal page forms and table actions.
@@ -169,7 +161,6 @@ export function initializeJournalHandlers() {
             if (stopLossPrice !== null && (isNaN(stopLossPrice) || stopLossPrice <= 0)) { return showToast('Stop Loss Price must be a valid positive number if entered.', 'error'); }
             if (stopLossPrice !== null && stopLossPrice >= entryPrice && direction === 'BUY') { return showToast('Stop Loss Price must be less than Entry Price for a BUY.', 'error'); }
 
-
             const entryData = {
                 account_holder_id: accountHolderId,
                 entry_date: entryDate, ticker: ticker, exchange: exchange, direction: direction, quantity: quantity, entry_price: entryPrice,
@@ -224,7 +215,6 @@ export function initializeJournalHandlers() {
     addSortListener(openTable); // Add listener to the open table
     addSortListener(closedTable); // Add listener to the closed table
     // --- END ADDED ---
-
 
     // --- Table Actions (using event delegation on the parent container) ---
     if (journalPageContainer) {

@@ -1,3 +1,9 @@
+﻿import { addDocument, deleteDocument } from '../api/documents-api.js';
+import { addJournalEntry, executeJournalEntry } from '../api/journal-api.js';
+import { addWatchlistItem, deleteWatchlistItem } from '../api/watchlist-api.js';
+import { fetchSourceDetails, addSourceNote, deleteSourceNote, updateSourceNote } from '../api/sources-api.js';
+import { refreshLedger } from '../api/transactions-api.js';
+import { updatePricesForView } from '../api/price-api.js';
 // /public/event-handlers/_research_sources_handlers.js
 /**
  * @file Contains event listener logic for the "Sources" sub-tab of the Research page.
@@ -8,12 +14,6 @@ import { state } from '../state.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 // Corrected import path
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
-import {
-    addDocument, addWatchlistItem, fetchSourceDetails, addSourceNote,
-    deleteWatchlistItem, deleteDocument, deleteSourceNote, updateSourceNote,
-    addJournalEntry, executeJournalEntry, updatePricesForView,
-    refreshLedger
-} from '../api.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 // Import the renderer function needed by the refresh helper
 

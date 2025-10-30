@@ -1,3 +1,7 @@
+﻿import { fetchSalesForLot } from '../api/transactions-api.js';
+import { updateAllPrices } from '../api/price-api.js';
+import { fetchSalesForLot } from '../api/transactions-api.js';
+import { updateAllPrices } from '../api/price-api.js';
 // public/event-handlers/_dashboard.js
 // Version Updated (Added Selective Sell Modal Trigger + Manage Lots redirect)
 /**
@@ -13,7 +17,6 @@ import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 // Import switchView if needed for navigation actions (like the Manage Lots redirect)
 import { switchView } from './_navigation.js';
-
 
 /**
  * Helper function to populate the Edit/Limits modal with data from a specific lot.
@@ -82,7 +85,6 @@ function populateEditModal(lotData, limitsOnly = false) {
 
     editModal.classList.add('visible');
 }
-
 
 /**
  * Loads data for the dashboard page (which triggers the renderer).
@@ -412,3 +414,4 @@ export function initializeDashboardHandlers() {
         }
     });
 } // End of initializeDashboardHandlers
+

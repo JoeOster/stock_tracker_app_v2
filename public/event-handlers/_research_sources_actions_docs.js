@@ -1,3 +1,4 @@
+﻿import { addDocument } from '../api/documents-api.js';
 // public/event-handlers/_research_sources_actions_docs.js
 /**
  * @file Handles Document actions triggered from within the Research Source details view.
@@ -5,7 +6,6 @@
  */
 
 import { state } from '../state.js';
-import { addDocument } from '../api.js';
 import { showToast } from '../ui/helpers.js';
 
 /**

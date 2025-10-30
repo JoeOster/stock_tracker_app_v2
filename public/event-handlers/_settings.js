@@ -1,6 +1,6 @@
+﻿import { refreshLedger } from '../api/transactions-api.js';
 // public/event-handlers/_settings.js
 import { state } from '../state.js';
-import { refreshLedger } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { saveSettings, renderExchangeManagementList, renderAccountHolderManagementList, applyAppearanceSettings } from '../ui/settings.js';
 //import { switchView } from '../event-handlers/_navigation.js';
@@ -80,7 +80,6 @@ export async function fetchAndPopulateAccountHolders() {
         showToast('Could not load account holders.', 'error');
     }
 }
-
 
 /**
  * Initializes all event listeners within the Settings modal.

@@ -1,3 +1,11 @@
+﻿import { fetchPositions } from '../api/reporting-api.js';
+import { fetchSalesForLot } from '../api/transactions-api.js';
+import { handleResponse } from '../api/api-helpers.js';
+import { updateAllPrices } from '../api/price-api.js';
+import { fetchPositions } from '../api/reporting-api.js';
+import { fetchSalesForLot } from '../api/transactions-api.js';
+import { handleResponse } from '../api/api-helpers.js';
+import { updateAllPrices } from '../api/price-api.js';
 // public/event-handlers/_dashboard_init.js
 /**
  * @file Initializes event handlers for the Dashboard page.
@@ -14,7 +22,6 @@ import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 // Import modal population functions
 import { populateEditModal, populateManagementModal } from './_dashboard_modals.js';
-
 
 // --- NEW Reusable Function ---
 /**
@@ -85,7 +92,6 @@ async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
 }
 // --- END NEW Reusable Function ---
 
-
 /**
  * Initializes event listeners for Dashboard controls and actions.
  */
@@ -148,7 +154,6 @@ export function initializeDashboardHandlers() {
         // MODIFIED: Changed variable name to managePositionModal
         const managePositionModal = document.getElementById('manage-position-modal'); // Get the new modal
         const salesHistoryModal = document.getElementById('sales-history-modal'); // Keep reference if needed elsewhere
-
 
         // --- Sell Button Logic (Individual Lot) ---
         if (sellBtn && sellModal) {
@@ -357,3 +362,4 @@ export function initializeDashboardHandlers() {
 
 // --- Export the function needed by _modals.js ---
 export { openAndPopulateManageModal }; // Ensure this export exists
+

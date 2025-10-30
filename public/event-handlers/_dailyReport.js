@@ -1,3 +1,5 @@
+﻿import { fetchPositions, fetchDailyPerformance } from '../api/reporting-api.js';
+import { updatePricesForView } from '../api/price-api.js';
 // public/event-handlers/_dailyReport.js
 // Version 0.1.24 (Cleaned up logging)
 /**
@@ -7,7 +9,6 @@
 import { state } from '../state.js';
 import { showToast, sortTableByColumn, populatePricesFromCache } from '../ui/helpers.js';
 import { renderDailyReportPage } from '../ui/renderers/_dailyReport.js';
-import { fetchPositions, fetchDailyPerformance, updatePricesForView } from '../api.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting } from '../ui/formatters.js';
 

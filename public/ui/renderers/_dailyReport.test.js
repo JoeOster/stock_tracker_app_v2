@@ -30,12 +30,21 @@ jest.mock('../datetime.js', () => ({
     getCurrentESTDateString: jest.fn(() => '2025-10-20'), // Mock current date
 }));
 
+// ---
+// --- THE FIX IS HERE: Mock the new API modules instead of the old one.
+// ---
 // Mock API (not strictly needed if renderer doesn't fetch, but good practice)
-jest.mock('../../api.js', () => ({
+jest.mock('../../api/reporting-api.js', () => ({
     fetchPositions: jest.fn(),
     fetchDailyPerformance: jest.fn(),
+}));
+jest.mock('../../api/price-api.js', () => ({
     updatePricesForView: jest.fn(),
 }));
+// ---
+// --- END FIX
+// ---
+
 
 // --- Test Suite ---
 describe('renderDailyReportPage (Historical View)', () => {

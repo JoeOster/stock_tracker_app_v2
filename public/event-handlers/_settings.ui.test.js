@@ -12,15 +12,27 @@ jest.mock('../ui/helpers.js', () => ({
     showConfirmationModal: jest.fn((title, body, callback) => callback()), // Auto-confirm
 }));
 
-// Mock API
-jest.mock('../api.js', () => ({
+// ---
+// --- THE FIX IS HERE: Mock the new API modules instead of the old one.
+// ---
+// Mock API Helpers
+jest.mock('../api/api-helpers.js', () => ({
     handleResponse: jest.fn(res => res.json()),
+}));
+// Mock Transaction API
+jest.mock('../api/transactions-api.js', () => ({
     refreshLedger: jest.fn().mockResolvedValue(undefined),
+}));
+// Mock Sources API
+jest.mock('../api/sources-api.js', () => ({
     fetchAdviceSources: jest.fn().mockResolvedValue([]),
     addAdviceSource: jest.fn().mockResolvedValue({ id: 99, name: 'New Source' }),
     updateAdviceSource: jest.fn().mockResolvedValue({ message: 'Success' }),
     deleteAdviceSource: jest.fn().mockResolvedValue({ message: 'Success' }),
 }));
+// ---
+// --- END FIX
+// ---
 
 // Mock State
 jest.mock('../state.js', () => ({

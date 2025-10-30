@@ -1,3 +1,4 @@
+﻿import { fetchAlerts } from '../api/alerts-api.js';
 // /public/event-handlers/_alerts.js
 // Version 0.1.7 (Added Sorting)
 /**
@@ -8,7 +9,6 @@ import { state } from '../state.js';
 import { switchView } from './_navigation.js';
 // ADDED: Import sortTableByColumn
 import { showToast, sortTableByColumn } from '../ui/helpers.js';
-import { fetchAlerts } from '../api.js';
 import { renderAlerts } from '../ui/renderers/_alerts.js';
 
 /**

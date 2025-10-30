@@ -1,6 +1,6 @@
 # Portfolio Manager V3 - Revised Development Plan
 
-**Last Updated:** 2025-10-24
+**Last Updated:** 2025-10-30
 
 This document outlines the remaining tasks for the Portfolio Tracker application, organized into a logical development pathway.
 
@@ -76,20 +76,23 @@ These are areas to consider for improving the user experience during or after th
   * [ ] Rename/merge "Journal", potentially create new "Sources" tab in `_tabs.js`.
 * **Task 3.2 (Task 5.2 & X.15 Part 1): Database Schema Changes**
   * [ ] Create DB migration script:
-    * Refactor `advice_sources` contact fields (Drop `contact_app`, add `contact_app_type`, `contact_app_handle`).
-    * Add `advice_source_id` to `watchlist`.
+    * **Refactor `advice_sources`:** Add `details TEXT` column for JSON data. (Plan to migrate old `contact_*` fields and drop them later).
+    * **Add `journal_entry_id` to `watchlist` table** (to link Trade Ideas to Techniques).
     * Add `advice_source_id` to `documents`, make `journal_entry_id` nullable.
     * (Optional) Create `source_notes` table.
 * **Task 3.3 (Task 5.3 & X.15 Part 2): Backend API Development**
-  * [ ] Update `routes/advice_sources.js` for new contact fields.
+  * [ ] Update `routes/advice_sources.js` to save and read from the new `details` JSON column.
   * [ ] Create new `/api/sources/*` endpoints (fetch details, notes, linked items).
-  * [ ] Modify `watchlist`, `documents`, `journal` routes as needed.
+  * [ ] Modify `watchlist`, `documents`, `journal` routes as needed for new links.
 * **Task 3.4 (Task 5.4 & X.15 Part 3): Frontend UI Development**
-  * [ ] Create `_sources.html` template.
-  * [ ] Update Settings modal UI for new Advice Source contact fields.
-  * [ ] Develop `_sources.js` (renderer and event handler) for the new tab, including logic for dynamic sub-tabs per source.
-* **Task 3.5 (Task 5.5): Integrate Paper Trading:**
-  * [ ] Decide final location/integration of paper trading functionality and adjust UI/logic.
+  * [ ] Update Settings modal 'Add Source' form to be **dynamic** based on the 'Type' dropdown, showing/hiding fields (e.g., Author/ISBN for 'Book').
+  * [ ] Update 'Source Details' modal to render **dynamically** based on `source.type`.
+  * [ ] For 'Book'/'Service' types, rename 'Paper Trades' table to '**Techniques / Methods**'.
+  * [ ] For 'Book'/'Service' types, **hide** the top "Add Trade Idea" form.
+  * [ ] Add **"Add Idea" buttons** to each row in the "Techniques / Methods" table.
+  * [ ] Update "Add Idea" logic to link to `journal_entry_id` when created from a Technique, and `advice_source_id` when from a 'Person' source.
+* **Task 3.5 (Task 5.5): Integrate Techniques (Journal):**
+  * [ ] Decide final location/integration of "Technique" (Journal) creation UI within the new dynamic modal.
 
 ---
 
