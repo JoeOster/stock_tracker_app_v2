@@ -15,15 +15,11 @@ const router = express.Router();
 module.exports = (db, log = console.log) => {
 
     /**
-     * GET /
-     * Fetches all advice sources for a specific account holder.
-     * Expects `holder` query parameter.
-     * @route GET /api/advice-sources
+     * @route GET /api/advice-sources/
      * @group Advice Sources - Operations about advice sources
+     * @description Fetches all advice sources for a specific account holder.
      * @param {string} holder.query.required - Account holder ID.
-     * @returns {Array<object>} 200 - An array of advice source objects.
-     * @returns {Error} 400 - Missing holder query parameter.
-     * @returns {Error} 500 - Server error.
+     * @returns {Array<object>|object} 200 - An array of advice source objects. 400 - Error message if holder query parameter is missing. 500 - Server error.
      */
     router.get('/', async (req, res) => {
         // @ts-ignore
@@ -39,39 +35,35 @@ module.exports = (db, log = console.log) => {
             );
             res.json(sources);
         } catch (error) {
+            // @ts-ignore
             log(`[ERROR] Failed to fetch advice sources for holder ${holderId}: ${error.message}`);
             res.status(500).json({ message: 'Error fetching advice sources.' });
         }
     });
 
     /**
-     * POST /
-     * Creates a new advice source for a specific account holder.
-     * Now uses contact_app_type, contact_app_handle, and image_path.
-     * @route POST /api/advice-sources
+     * @typedef {object} AdviceSourcePostBody
+     * @property {string|number} account_holder_id
+     * @property {string} name
+     * @property {string} type
+     * @property {string|null} [description]
+     * @property {string|null} [url]
+     * @property {string|null} [contact_person]
+     * @property {string|null} [contact_email]
+     * @property {string|null} [contact_phone]
+     * @property {string|null} [contact_app_type]
+     * @property {string|null} [contact_app_handle]
+     * @property {string|null} [image_path]
+     */
+
+    /**
+     * @route POST /api/advice-sources/
      * @group Advice Sources - Operations about advice sources
-     * @param {AdviceSourcePostBody.model} AdviceSourcePostBody.body.required - The advice source data.
-     * @returns {object} 201 - The newly created advice source object.
-     * @returns {Error} 400 - Missing required fields.
-     * @returns {Error} 409 - Source with the same name and type already exists.
-     * @returns {Error} 500 - Server error.
+     * @description Creates a new advice source for a specific account holder.
+     * @param {AdviceSourcePostBody} req.body.required - The advice source data.
+     * @returns {object} 201 - The newly created advice source object. 400 - Missing required fields. 409 - Source with the same name and type already exists. 500 - Server error.
      */
     router.post('/', async (req, res) => {
-        /**
-         * @typedef {object} AdviceSourcePostBody
-         * @property {string|number} account_holder_id
-         * @property {string} name
-         * @property {string} type
-         * @property {string|null} [description]
-         * @property {string|null} [url]
-         * @property {string|null} [contact_person]
-         * @property {string|null} [contact_email]
-         * @property {string|null} [contact_phone]
-         * @property {string|null} [contact_app_type]
-         * @property {string|null} [contact_app_handle]
-         * @property {string|null} [image_path]
-         */
-
         /** @type {AdviceSourcePostBody} */
         const {
             account_holder_id, name, type, description, url,
@@ -113,35 +105,29 @@ module.exports = (db, log = console.log) => {
     });
 
     /**
-     * PUT /:id
-     * Updates an existing advice source.
-     * Now uses contact_app_type, contact_app_handle, and image_path.
-     * @route PUT /api/advice-sources/{id}
+     * @typedef {object} AdviceSourcePutBody
+     * @property {string} name
+     * @property {string} type
+     * @property {string|null} [description]
+     * @property {string|null} [url]
+     * @property {string|null} [contact_person]
+     * @property {string|null} [contact_email]
+     * @property {string|null} [contact_phone]
+     * @property {string|null} [contact_app_type]
+     * @property {string|null} [contact_app_handle]
+     * @property {string|null} [image_path]
+     */
+
+    /**
+     * @route PUT /api/advice-sources/:id
      * @group Advice Sources - Operations about advice sources
+     * @description Updates an existing advice source.
      * @param {string} id.path.required - The ID of the advice source.
-     * @param {AdviceSourcePutBody.model} AdviceSourcePutBody.body.required - The updated advice source data.
-     * @returns {object} 200 - Success message.
-     * @returns {Error} 400 - Missing required fields.
-     * @returns {Error} 404 - Source not found.
-     * @returns {Error} 409 - Source with the same name and type already exists.
-     * @returns {Error} 500 - Server error.
+     * @param {AdviceSourcePutBody} req.body.required - The updated advice source data.
+     * @returns {object} 200 - Success message. 400 - Missing required fields. 404 - Source not found. 409 - Source with the same name and type already exists. 500 - Server error.
      */
     router.put('/:id', async (req, res) => {
         const { id } = req.params;
-         /**
-         * @typedef {object} AdviceSourcePutBody
-         * @property {string} name
-         * @property {string} type
-         * @property {string|null} [description]
-         * @property {string|null} [url]
-         * @property {string|null} [contact_person]
-         * @property {string|null} [contact_email]
-         * @property {string|null} [contact_phone]
-         * @property {string|null} [contact_app_type]
-         * @property {string|null} [contact_app_handle]
-         * @property {string|null} [image_path]
-         */
-
         /** @type {AdviceSourcePutBody} */
         const {
             name, type, description, url,
@@ -187,15 +173,11 @@ module.exports = (db, log = console.log) => {
     });
 
     /**
-     * DELETE /:id
-     * Deletes an advice source.
-     * @route DELETE /api/advice-sources/{id}
+     * @route DELETE /api/advice-sources/:id
      * @group Advice Sources - Operations about advice sources
+     * @description Deletes an advice source.
      * @param {string} id.path.required - The ID of the advice source.
-     * @returns {object} 200 - Success message.
-     * @returns {Error} 404 - Source not found.
-     * @returns {Error} 400 - Source is in use (if FOREIGN KEY constraint prevents delete).
-     * @returns {Error} 500 - Server error.
+     * @returns {object} 200 - Success message. 404 - Source not found. 400 - Source is in use (if FOREIGN KEY constraint prevents delete). 500 - Server error.
      */
     router.delete('/:id', async (req, res) => {
         const { id } = req.params;
@@ -206,13 +188,13 @@ module.exports = (db, log = console.log) => {
                 return res.status(404).json({ message: 'Advice source not found.' });
             }
 
-            // Note: FOREIGN KEY constraints handle unlinking in other tables
+            // Note: FOREIGN KEY constraints (ON DELETE SET NULL / CASCADE) handle unlinking in other tables
             await db.run('DELETE FROM advice_sources WHERE id = ?', [id]);
             res.json({ message: 'Advice source deleted successfully.' });
         } catch (error) {
             log(`[ERROR] Failed to delete advice source with ID ${id}: ${error.message}`);
             // @ts-ignore
-             if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
+             if (error.code === 'SQLITE_CONSTRAINT' || error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
                  res.status(400).json({ message: 'Cannot delete source as it is referenced by other records. Please handle related entries first.' });
              } else {
                 res.status(500).json({ message: 'Error deleting advice source.' });

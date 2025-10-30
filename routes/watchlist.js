@@ -16,15 +16,11 @@ const router = express.Router();
 module.exports = (db, log = console.log) => {
 
     /**
-     * GET /
-     * Fetches all watchlist items for a given account holder.
-     * Includes all recommended guideline fields.
-     * @route GET /api/watchlist
+     * @route GET /api/watchlist/
      * @group Watchlist - Operations for recommended trades watchlist
+     * @description Fetches all watchlist items for a given account holder.
      * @param {string} holder.query.required - Account holder ID.
-     * @returns {Array<object>|object} 200 - An array of watchlist item objects.
-     * 400 - An object with an error message if the holder ID is missing.
-     * 500 - An object with an error message if the fetch fails.
+     * @returns {Array<object>|object} 200 - An array of watchlist item objects. 400 - An object with an error message if the holder ID is missing. 500 - An object with an error message if the fetch fails.
      */
     router.get('/', async (req, res) => {
         try {
@@ -33,7 +29,7 @@ module.exports = (db, log = console.log) => {
             if (!holderId) {
                 return res.status(400).json({ message: 'Account holder ID is required.' });
             }
-            // <-- Select all columns -->
+            // Select all columns to include new guideline fields
             const items = await db.all(
                 'SELECT * FROM watchlist WHERE account_holder_id = ? ORDER BY ticker',
                 [holderId]
@@ -42,7 +38,8 @@ module.exports = (db, log = console.log) => {
         } catch (error) {
             // @ts-ignore
             log(`[ERROR] Failed to fetch watchlist: ${error.message}`);
-            res.status(500).json({ message: 'Error fetching watchlist.' });
+            // @ts-ignore
+            res.status(500).json({ message: `Error fetching watchlist: ${error.message}` });
         }
     });
 
@@ -59,16 +56,11 @@ module.exports = (db, log = console.log) => {
      */
 
     /**
-     * POST /
-     * Adds a new ticker to the watchlist for a given account holder.
-     * Now accepts an optional advice_source_id and all guideline fields.
-     * @route POST /api/watchlist
+     * @route POST /api/watchlist/
      * @group Watchlist - Operations for recommended trades watchlist
+     * @description Adds a new ticker to the watchlist for a given account holder.
      * @param {WatchlistPostBody} req.body.required - Watchlist item data.
-     * @returns {object} 201 - The newly created watchlist item object.
-     * 400 - An object with an error message for invalid data.
-     * 409 - An object with an error message if the ticker already exists.
-     * 500 - An object with an error message if the insert fails.
+     * @returns {object} 201 - The newly created watchlist item object. 400 - An object with an error message for invalid data. 409 - An object with an error message if the ticker already exists. 500 - An object with an error message if the insert fails.
      */
     router.post('/', async (req, res) => {
         /** @type {WatchlistPostBody} */
@@ -90,7 +82,10 @@ module.exports = (db, log = console.log) => {
 
         try {
             const result = await db.run(
-                'INSERT INTO watchlist (account_holder_id, ticker, advice_source_id, rec_entry_low, rec_entry_high, rec_tp1, rec_tp2, rec_stop_loss) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                `INSERT INTO watchlist (
+                    account_holder_id, ticker, advice_source_id, 
+                    rec_entry_low, rec_entry_high, rec_tp1, rec_tp2, rec_stop_loss
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     account_holder_id,
                     ticker.toUpperCase().trim(),
@@ -118,19 +113,18 @@ module.exports = (db, log = console.log) => {
             if (error.code === 'SQLITE_CONSTRAINT') {
                 res.status(409).json({ message: 'This ticker is already in your watchlist.' });
             } else {
-                res.status(500).json({ message: 'Error adding to watchlist.' });
+                // @ts-ignore
+                res.status(500).json({ message: `Error adding to watchlist: ${error.message}` });
             }
         }
     });
 
     /**
-     * DELETE /:id
-     * Removes a ticker from the watchlist.
-     * @route DELETE /api/watchlist/{id}
+     * @route DELETE /api/watchlist/:id
      * @group Watchlist - Operations for recommended trades watchlist
+     * @description Removes a ticker from the watchlist.
      * @param {string} id.path.required - The ID of the watchlist item.
-     * @returns {object} 200 - An object with a success message.
-     * 500 - An object with an error message if the delete fails.
+     * @returns {object} 200 - An object with a success message. 500 - An object with an error message if the delete fails.
      */
     router.delete('/:id', async (req, res) => {
         try {
@@ -139,7 +133,8 @@ module.exports = (db, log = console.log) => {
         } catch (error) {
             // @ts-ignore
             log(`[ERROR] Failed to delete from watchlist with ID ${req.params.id}: ${error.message}`);
-            res.status(500).json({ message: 'Error removing from watchlist.' });
+            // @ts-ignore
+            res.status(500).json({ message: `Error removing from watchlist: ${error.message}` });
         }
     });
 

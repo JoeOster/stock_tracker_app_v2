@@ -7,22 +7,19 @@
 import { initializeAllEventHandlers } from './event-handlers/_init.js';
 import { showToast } from './ui/helpers.js';
 import { switchView, autosizeAccountSelector } from './event-handlers/_navigation.js';
-// Make sure _settings_holders path is correct if split
 import { fetchAndPopulateAccountHolders } from './event-handlers/_settings_holders.js';
-// Make sure _settings_exchanges path is correct if split
 import { fetchAndRenderExchanges } from './event-handlers/_settings_exchanges.js';
-// --- ADDED IMPORTS ---
 import { fetchAndStoreAdviceSources } from './event-handlers/_journal_settings.js';
 import { populateAllAdviceSourceDropdowns } from './ui/dropdowns.js';
-// --- END ADDED IMPORTS ---
 import { applyAppearanceSettings } from './ui/settings.js';
-import { state } from './state.js';
+import { state, updateState } from './state.js'; // Import updateState
 import { initializeScheduler } from './scheduler.js';
 
 /**
  * Initializes the application after the DOM is fully loaded.
  * Fetches HTML templates, sets up initial state, populates dropdowns,
  * initializes event handlers, and navigates to the default view.
+ * @async
  * @returns {Promise<void>}
  */
 async function initialize() {
@@ -31,22 +28,25 @@ async function initialize() {
     try {
         const storedSettings = JSON.parse(localStorage.getItem('stockTrackerSettings')) || {};
         // Merge defaults with stored settings
-        state.settings = {
+        const newSettings = {
             theme: 'light', font: 'Inter', takeProfitPercent: 10, stopLossPercent: 5, notificationCooldown: 15,
             defaultAccountHolderId: 1, familyName: '', marketHoursInterval: 2, afterHoursInterval: 15,
             defaultView: 'dashboard', numberOfDateTabs: 1, // Ensure defaults exist
             ...storedSettings
         };
+        updateState({ settings: newSettings }); // Use updateState
         console.log("[App Main] Loaded settings:", state.settings);
         applyAppearanceSettings();
     } catch (e) {
         console.error("[App Main] Error loading or applying settings:", e);
         // Fallback to defaults if loading fails
-        state.settings = {
-            theme: 'light', font: 'Inter', takeProfitPercent: 10, stopLossPercent: 5, notificationCooldown: 15,
-            defaultAccountHolderId: 1, familyName: '', marketHoursInterval: 2, afterHoursInterval: 15,
-            defaultView: 'dashboard', numberOfDateTabs: 1
-        };
+        updateState({
+            settings: {
+                theme: 'light', font: 'Inter', takeProfitPercent: 10, stopLossPercent: 5, notificationCooldown: 15,
+                defaultAccountHolderId: 1, familyName: '', marketHoursInterval: 2, afterHoursInterval: 15,
+                defaultView: 'dashboard', numberOfDateTabs: 1
+            }
+        });
         applyAppearanceSettings();
     }
 
@@ -169,7 +169,7 @@ async function initialize() {
              defaultHolderId = 1;
         }
 
-        state.selectedAccountHolderId = defaultHolderId; // Set state
+        updateState({ selectedAccountHolderId: defaultHolderId }); // Set state
 
 
         const globalFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
@@ -183,7 +183,7 @@ async function initialize() {
                 // This case should ideally not happen if validation above works, but as a fallback:
                 console.warn(`[App Main] Option for holder ID ${state.selectedAccountHolderId} not found in dropdown, setting to 1.`);
                 globalFilter.value = '1';
-                state.selectedAccountHolderId = 1; // Ensure state matches UI
+                updateState({ selectedAccountHolderId: 1 }); // Ensure state matches UI
             }
            autosizeAccountSelector(globalFilter); // Adjust width
         } else {
@@ -191,12 +191,12 @@ async function initialize() {
         }
     } catch (e) {
         console.error("[App Main] Error setting default account holder:", e);
-        state.selectedAccountHolderId = 1; // Fallback
+        updateState({ selectedAccountHolderId: 1 }); // Fallback
         const globalFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
         if (globalFilter) globalFilter.value = '1'; // Try to set fallback in UI too
     }
 
-    // --- MODIFICATION: Fetch initial Advice Sources for default holder ---
+    // --- Fetch initial Advice Sources for default holder ---
     try {
         console.log(`[App Main] Fetching initial advice sources for default holder: ${state.selectedAccountHolderId}`);
         await fetchAndStoreAdviceSources(); // Fetches using the new default state.selectedAccountHolderId
@@ -206,7 +206,6 @@ async function initialize() {
          console.error("[App Main] Error fetching initial advice sources:", error);
          showToast('Error loading advice sources for dropdowns.', 'error');
     }
-    // --- END MODIFICATION ---
 
 
     // --- Initialize scheduler ---

@@ -4,20 +4,22 @@
  * @module event-handlers/_journal_settings
  */
 
-import { state } from '../state.js';
+import { state, updateState } from '../state.js';
 import {
     fetchAdviceSources,
     addAdviceSource,
     updateAdviceSource,
-    deleteAdviceSource
+    deleteAdviceSource,
+    handleResponse
 } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
-import { handleResponse } from '../api.js';
+import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
 
 
 /**
  * Fetches advice sources based on the currently selected account holder and stores them in state.
+ * @async
  * @returns {Promise<void>} A promise that resolves when sources are fetched and stored.
  */
 export async function fetchAndStoreAdviceSources() {
@@ -26,16 +28,16 @@ export async function fetchAndStoreAdviceSources() {
 
         if (!holderIdToFetch) {
              console.warn("Cannot fetch advice sources without a specific account holder selected.");
-             state.allAdviceSources = [];
+             updateState({ allAdviceSources: [] });
              return;
         }
 
         const sources = await fetchAdviceSources(holderIdToFetch);
-        state.allAdviceSources = sources; // Update state
+        updateState({ allAdviceSources: sources }); // Update state
     } catch (error) {
         // @ts-ignore
         showToast(`Could not load advice sources: ${error.message}`, 'error'); // Use message
-        state.allAdviceSources = [];
+        updateState({ allAdviceSources: [] });
     }
 }
 
@@ -86,7 +88,7 @@ export function initializeJournalSettingsHandlers() {
              }
             // --- End Validation ---
 
-            /** @type {import('../api.js').AdviceSourcePostBody} */ // Assuming AdviceSourcePostBody type is defined in api.js JSDoc
+            /** @type {import('../api.js').AdviceSourcePostBody} */
             const sourceData = {
                 account_holder_id: accountHolderId,
                 name: name,
@@ -108,6 +110,7 @@ export function initializeJournalSettingsHandlers() {
                 showToast('Advice Source added!', 'success');
                 addAdviceSourceForm.reset(); // Clear form
                 await fetchAndStoreAdviceSources(); // Refresh state
+                populateAllAdviceSourceDropdowns(); // Update all dropdowns
                 renderAdviceSourceManagementList(); // Re-render list
             } catch (error) {
                 // @ts-ignore
@@ -144,7 +147,7 @@ export function initializeJournalSettingsHandlers() {
                 displayDiv.style.display = 'none';
                 editBtn.style.display = 'none';
                 deleteBtn.style.display = 'none';
-                editDiv.style.display = 'grid'; // Use grid as defined in renderer
+                editDiv.style.display = 'flex'; // Use flex as defined in renderer
                 saveBtn.style.display = '';
                 cancelBtn.style.display = '';
                 // Optional: focus the name input
@@ -159,7 +162,8 @@ export function initializeJournalSettingsHandlers() {
                  displayDiv.style.display = 'flex'; // Use flex as defined in renderer
                  editBtn.style.display = '';
                  deleteBtn.style.display = '';
-                 // Optional: Reset edit fields to original values (renderer should handle this on next load)
+                 // Note: Edit fields are *not* reset here, but they will be correct
+                 // on the next render if the modal is re-opened.
             }
             else if (target === saveBtn) {
                 // --- Get Updated Values ---
@@ -195,7 +199,7 @@ export function initializeJournalSettingsHandlers() {
                  }
                 // --- End Validation ---
 
-                /** @type {import('../api.js').AdviceSourcePutBody} */ // Assuming AdviceSourcePutBody type is defined in api.js JSDoc
+                /** @type {import('../api.js').AdviceSourcePutBody} */
                 const updatedData = {
                     name: name,
                     type: type,
@@ -216,6 +220,7 @@ export function initializeJournalSettingsHandlers() {
                     await updateAdviceSource(sourceId, updatedData);
                     showToast('Advice Source updated!', 'success');
                     await fetchAndStoreAdviceSources(); // Refresh state
+                    populateAllAdviceSourceDropdowns(); // Update all dropdowns
                     renderAdviceSourceManagementList(); // Re-render list (which implicitly exits edit mode)
                 } catch (error) {
                     // @ts-ignore
@@ -226,12 +231,13 @@ export function initializeJournalSettingsHandlers() {
             else if (target === deleteBtn) {
                  const sourceNameElement = li.querySelector('.source-name');
                  const sourceName = sourceNameElement ? sourceNameElement.textContent : 'this source';
-                 showConfirmationModal(`Delete Advice Source "${sourceName}"?`, 'This cannot be undone. Associated journal entries, watchlist items, documents, and notes will be unlinked or deleted.', async () => {
+                 showConfirmationModal(`Delete Advice Source "${sourceName}"?`, 'This cannot be undone. Associated journal entries, watchlist items, documents, and notes will be unlinked or deleted (ON DELETE SET NULL / ON DELETE CASCADE).', async () => {
                     try {
                         // Use API function which uses handleResponse
                         await deleteAdviceSource(sourceId);
                         showToast('Advice Source deleted.', 'success');
                         await fetchAndStoreAdviceSources(); // Refresh state
+                        populateAllAdviceSourceDropdowns(); // Update all dropdowns
                         renderAdviceSourceManagementList(); // Re-render list
                     } catch (error) {
                         // @ts-ignore

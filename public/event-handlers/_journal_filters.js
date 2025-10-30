@@ -8,6 +8,7 @@
  * @param {HTMLTableSectionElement} tbody The table body.
  * @param {boolean} hasVisibleRows Whether any data rows are currently visible.
  * @param {number} colSpan The colspan for the message row.
+ * @returns {void}
  */
  function handleNoResultsMessage(tbody, hasVisibleRows, colSpan) {
     const noResultsRowId = `${tbody.id}-no-results`;
@@ -40,6 +41,7 @@
  * @param {string} tbodySelector - CSS selector for the tbody element.
  * @param {string} tickerFilter - The ticker string to filter by (case-insensitive).
  * @param {string | null} statusFilter - The status string to filter by (exact match).
+ * @returns {void}
  */
 function filterTableRows(tbodySelector, tickerFilter, statusFilter) {
     const tbody = /** @type {HTMLTableSectionElement | null} */ (document.querySelector(tbodySelector));
@@ -47,7 +49,11 @@ function filterTableRows(tbodySelector, tickerFilter, statusFilter) {
 
     const rows = tbody.getElementsByTagName('tr');
     let hasVisibleRows = false;
-    let colSpan = 10; // Default colspan
+    let colSpan = 11; // Default colspan for open table
+    if (tbodySelector === '#journal-closed-body') {
+        colSpan = 10; // Colspan for closed table
+    }
+
 
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -101,6 +107,7 @@ function filterTableRows(tbodySelector, tickerFilter, statusFilter) {
 
 /**
  * Initializes the event listeners for the filter inputs on the Journal page.
+ * @returns {void}
  */
 export function initializeJournalFilterHandlers() {
     const openFilterInput = /** @type {HTMLInputElement | null} */ (document.getElementById('journal-open-filter-ticker'));

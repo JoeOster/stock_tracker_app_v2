@@ -5,12 +5,12 @@
  */
 
 // Import the primary functions from the specialized modules
-import { renderSourcesList } from './_research_sources_render.js';
+import { renderSourcesList, generateSourceDetailsHTML } from './_research_sources_render.js';
 import { initializeSourcesListClickListener } from './_research_sources_listeners.js';
 
 // Re-export the necessary functions for use by other modules (like _research.js)
 export {
     renderSourcesList,
+    generateSourceDetailsHTML,
     initializeSourcesListClickListener
 };
-

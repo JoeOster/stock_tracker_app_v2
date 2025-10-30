@@ -1,13 +1,15 @@
 // /public/event-handlers/_journal_tabs.js
 /**
- * @file Initializes event handlers for the Research page's top-level sub-tabs.
+ * @file Initializes event handlers for the Research page's top-level sub-tabs
+ * and the nested sub-tabs within the "Paper Trading" panel.
  * @module event-handlers/_journal_tabs
  */
 
 import { showToast } from '../ui/helpers.js';
 
 /**
- * Initializes the event listeners for switching between the main Research sub-tabs.
+ * Initializes the event listeners for switching between the main Research sub-tabs
+ * (Sources, Paper Trading, Action Plan).
  * @returns {void}
  */
 export function initializeResearchSubTabHandlers() {
@@ -32,7 +34,7 @@ export function initializeResearchSubTabHandlers() {
 
                 // Reload content for the newly activated tab
                 try {
-                    // Dynamically import from the new loader file
+                    // Dynamically import from the main research loader
                     const researchModule = await import('./_research.js');
                     if (researchModule.loadResearchPage && typeof researchModule.loadResearchPage === 'function') {
                         await researchModule.loadResearchPage();
@@ -55,20 +57,14 @@ export function initializeResearchSubTabHandlers() {
     }
 }
 
-// NOTE: initializeJournalSubTabHandlers (for nested tabs in Paper Trading)
-// should remain in this file or potentially move to a _journal_tabs.js file
-// if it becomes complex, but it's fine here for now.
 /**
- * Initializes the event listeners for switching between sub-tabs within the Paper Trading panel.
+ * Initializes the event listeners for switching between sub-tabs *within* the Paper Trading panel
+ * (Add Entry, Open Ideas, Closed Ideas).
  * @returns {void}
  */
 export function initializeJournalSubTabHandlers() {
-    // This listener needs to be attached *after* the paper trading panel content is loaded.
-    // We'll attach it within loadResearchPage when the paper trading tab is selected,
-    // OR potentially delegate from the researchPageContainer if structure allows.
-    // For now, let's keep the function definition here.
-
-    // Get the container dynamically when needed, or use event delegation
+    // This listener is attached *after* the paper trading panel content is loaded
+    // by loadResearchPage().
     const paperTradingPanel = document.getElementById('research-paper-trading-panel');
     const journalSubTabsContainer = paperTradingPanel?.querySelector('.journal-sub-tabs'); // Target nested tabs
 
@@ -91,7 +87,7 @@ export function initializeJournalSubTabHandlers() {
             }
         });
     } else {
-        // This might log during initial setup before paper trading tab is loaded, which is okay
-        // console.warn("Could not find paper trading panel or nested journal sub-tabs container for event listener setup (might be expected during init).");
+        // This log is expected if the paper trading tab hasn't been loaded yet.
+        // console.warn("Could not find paper trading panel or nested journal sub-tabs container (might be expected during init).");
     }
 }

@@ -14,7 +14,7 @@ import { autosizeAccountSelector } from './_navigation.js';
  * Handles submission of the "Add Recommended Trade" form.
  * Adds to watchlist (including guidelines).
  * @param {Event} e - The form submission event.
- * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
 export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
@@ -102,7 +102,7 @@ export async function handleAddWatchlistSubmit(e, refreshDetailsCallback) {
  */
 export async function handleCreateBuyOrderFromIdea(target) {
     const { ticker, price, sourceId } = target.dataset;
-    // Find the source name from the modal title (a bit of a hack, but avoids another data attribute)
+    // Find the source name from the modal title
     const modalTitle = document.getElementById('source-details-modal-title')?.textContent || '';
     const sourceName = modalTitle.replace('Source Details: ', '').trim();
 
@@ -117,7 +117,8 @@ export async function handleCreateBuyOrderFromIdea(target) {
         return showToast('Please select a specific account holder before creating an order.', 'error');
     }
 
-    // --- MODIFICATION: Set price to an empty string ---
+    // Set price to an empty string to allow manual entry,
+    // as the 'price' from the dataset is just a guideline.
     console.log(`Create Buy Order for ${ticker}, Source: ${sourceId}, Holder: ${holderId}. Price field will be empty.`);
     
     updateState({ 
@@ -125,10 +126,9 @@ export async function handleCreateBuyOrderFromIdea(target) {
             sourceId: sourceId, 
             sourceName: sourceName, // Pass the name for the lock message
             ticker: ticker, 
-            price: '' // <-- THIS IS THE FIX: Pass empty string
+            price: '' // Pass empty string to allow manual price entry
         } 
     });
-    // --- END MODIFICATION ---
     
     // Close the source details modal *before* navigating
     const detailsModal = document.getElementById('source-details-modal');

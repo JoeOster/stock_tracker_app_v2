@@ -29,7 +29,6 @@ const escapeHTML = (str) => {
  * @returns {void}
  */
 export function renderSourcesList(panelElement, sources) {
-    // ... (This function remains unchanged) ...
     const gridContainer = /** @type {HTMLDivElement | null} */(panelElement.querySelector('#sources-cards-grid'));
 
     if (!gridContainer) {
@@ -51,7 +50,7 @@ export function renderSourcesList(panelElement, sources) {
 
     sortedSources.forEach(source => {
         // Prepare Image Thumbnail
-        const imagePath = source.image_path ? escapeHTML(source.image_path) : '/images/contacts/default_avatar.png'; // Default path
+        const imagePath = source.image_path ? escapeHTML(source.image_path) : '/images/contacts/default.png'; // Use default.png
         const imageThumbnailHTML = `<img src="${imagePath}" alt="" class="source-list-thumbnail">`;
         const fallbackIconHTML = '<span style="font-size: 1.5em; margin-right: 5px;">ℹ️</span>'; // Simple info icon as fallback
 
@@ -104,10 +103,9 @@ export function generateSourceDetailsHTML(details) {
     detailsHTML += '<div class="source-details-grid">';
 
     // --- Profile Section (Left Column) ---
-    // ... (Profile HTML remains unchanged) ...
     detailsHTML += '<div class="source-profile-section">';
     detailsHTML += `<h4>Profile</h4>`;
-    const imagePath = source.image_path ? escapeHTML(source.image_path) : '/images/contacts/default_avatar.png'; // Default path
+    const imagePath = source.image_path ? escapeHTML(source.image_path) : '/images/contacts/default.png'; // Default path
     detailsHTML += `<img src="${imagePath}" alt="${escapeHTML(source.name)}" class="profile-image">`;
     detailsHTML += `<p><strong>Name:</strong> ${escapeHTML(source.name)}</p>`;
     detailsHTML += `<p><strong>Type:</strong> ${escapeHTML(source.type)}</p>`;
@@ -127,7 +125,6 @@ export function generateSourceDetailsHTML(details) {
     detailsHTML += '</div>';
 
     // --- Add Recommended Ticker Form (Right Column) ---
-    // ... (Add Ticker Form HTML remains unchanged) ...
     detailsHTML += '<div class="add-ticker-section">';
     detailsHTML += `<h5>Add Trade Idea</h5>`;
     detailsHTML += `
@@ -163,12 +160,11 @@ export function generateSourceDetailsHTML(details) {
     // 1. Recommended Trades (Watchlist Items)
     detailsHTML += `<h4 style="margin-top: 1rem;">Trade Ideas (${details.watchlistItems.length})</h4>`;
     if (details.watchlistItems.length > 0) {
-        // ... (Watchlist Table HTML generation remains unchanged) ...
         detailsHTML += `<div style="max-height: 200px; overflow-y: auto;"><table class="recommended-trades-table mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
                 <tr> <th>Ticker</th> <th>Date Added</th> <th class="numeric">Entry Range</th> <th class="numeric">Current $</th> <th class="numeric">Dist. to Entry</th> <th class="numeric">Guidelines (SL/TP1/TP2)</th> <th class="center-align">Actions</th> </tr>
             </thead><tbody>`;
-        details.watchlistItems.forEach(item => { /* ... populate rows ... */
+        details.watchlistItems.forEach(item => {
             const currentPriceData = state.priceCache.get(item.ticker); const currentPrice = (currentPriceData && typeof currentPriceData.price === 'number') ? currentPriceData.price : null;
             let entryRange = '--'; if (item.rec_entry_low !== null && item.rec_entry_high !== null) { entryRange = `${formatAccounting(item.rec_entry_low, false)} - ${formatAccounting(item.rec_entry_high, false)}`; } else if (item.rec_entry_low !== null) { entryRange = `${formatAccounting(item.rec_entry_low, false)}+`; } else if (item.rec_entry_high !== null) { entryRange = `Up to ${formatAccounting(item.rec_entry_high, false)}`; }
             let distance = '--'; let distClass = ''; if (currentPrice !== null && item.rec_entry_low !== null) { const distPercent = ((currentPrice - item.rec_entry_low) / item.rec_entry_low) * 100; distClass = distPercent >= 0 ? 'positive' : 'negative'; if (item.rec_entry_high !== null && currentPrice <= item.rec_entry_high) { distClass = 'positive'; distance = `In Range (${distPercent.toFixed(1)}%)`; } else { distance = `${distPercent > 0 ? '+' : ''}${distPercent.toFixed(1)}%`; } } else if (currentPrice !== null && item.rec_entry_high !== null) { const distPercent = ((currentPrice - item.rec_entry_high) / item.rec_entry_high) * 100; distClass = distPercent > 0 ? 'negative' : 'positive'; distance = `${distPercent > 0 ? '+' : ''}${distPercent.toFixed(1)}%`; }
@@ -185,7 +181,7 @@ export function generateSourceDetailsHTML(details) {
     }
 
     
-    // --- MODIFICATION: Linked Real Trades (MOVED UP) ---
+    // --- Linked Real Trades (MOVED UP) ---
     const allLinkedTrades = details.linkedTransactions || [];
     
     // Find open BUY lots
@@ -287,7 +283,6 @@ export function generateSourceDetailsHTML(details) {
                 </tr>
             </thead><tbody>`;
         openJournalEntries.forEach(entry => {
-            // ... (row generation code remains the same) ...
             const pnl = entry.current_pnl;
             const pnlClass = pnl !== null && pnl !== undefined ? (pnl >= 0 ? 'positive' : 'negative') : '';
             const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
@@ -317,7 +312,6 @@ export function generateSourceDetailsHTML(details) {
                 </tr>
             </thead><tbody>`;
         closedJournalEntries.forEach(entry => {
-            // ... (row generation code remains the same) ...
             const pnl = entry.pnl;
             const pnlClass = pnl !== null && pnl !== undefined ? (pnl >= 0 ? 'positive' : 'negative') : '';
             const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
@@ -335,11 +329,10 @@ export function generateSourceDetailsHTML(details) {
 
 
     // 3. Linked Documents & Add Form
-    // ... (Documents HTML remains unchanged) ...
      detailsHTML += `<h4 style="margin-top: 1rem;">Linked Documents (${details.documents.length})</h4>`;
     if (details.documents.length > 0) {
         detailsHTML += `<ul class="linked-items-list">`;
-         details.documents.forEach(doc => { /* ... populate list items ... */
+         details.documents.forEach(doc => {
             const titleDisplay = escapeHTML(doc.title) || 'Untitled Document'; const typeDisplay = doc.document_type ? `(${escapeHTML(doc.document_type)})` : ''; const descDisplay = doc.description ? `- ${escapeHTML(doc.description)}` : '';
             detailsHTML += `<li style="display: flex; justify-content: space-between; align-items: center;"> <span><a href="${escapeHTML(doc.external_link)}" target="_blank">${titleDisplay}</a> ${typeDisplay} ${descDisplay}</span> <button class="delete-document-button delete-btn" data-doc-id="${doc.id}" title="Delete Document Link" style="padding: 2px 5px; font-size: 0.8em;">X</button> </li>`;
         });
@@ -348,12 +341,11 @@ export function generateSourceDetailsHTML(details) {
     detailsHTML += `<form class="add-document-form" data-source-id="${source.id}" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--container-border);"> <h5>Add New Document Link</h5> <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"> <input type="text" class="add-doc-title-input" placeholder="Title (Optional)" style="grid-column: span 2;"> <input type="text" class="add-doc-type-input" placeholder="Type (e.g., Chart)"> <input type="url" class="add-doc-link-input" placeholder="External Link (http://...)" required> <textarea class="add-doc-desc-input" placeholder="Description (Optional)" rows="2" style="grid-column: span 2;"></textarea> <button type="submit" class="add-document-button" style="grid-column: 2 / 3; justify-self: end;">Add Link</button> </div> </form>`;
 
     // 4. Source Notes & Add Form
-    // ... (Notes HTML remains unchanged) ...
     detailsHTML += `<h4 style="margin-top: 1rem;">Notes (${details.sourceNotes.length})</h4>`;
      if (details.sourceNotes.length > 0) {
         detailsHTML += `<ul class="source-notes-list" style="list-style: none; padding: 0; max-height: 200px; overflow-y: auto;">`;
         const sortedNotes = [...details.sourceNotes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        sortedNotes.forEach(note => { /* ... populate list items with edit/delete ... */
+        sortedNotes.forEach(note => {
             const escapedNoteContent = escapeHTML(note.note_content); const createdDateStr = new Date(note.created_at).toLocaleString(); const updatedDateStr = new Date(note.updated_at).toLocaleString(); const editedMarker = note.updated_at > note.created_at ? ` (edited ${updatedDateStr})` : '';
              detailsHTML += `<li style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--container-border);" data-note-id="${note.id}"> <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;"> <small><i>${createdDateStr}${editedMarker}</i></small> <div class="note-actions"> <button class="edit-source-note-button" title="Edit Note" style="padding: 2px 5px; font-size: 0.8em; margin-left: 5px;">Edit</button> <button class="delete-source-note-button delete-btn" data-note-id="${note.id}" title="Delete Note" style="padding: 2px 5px; font-size: 0.8em; margin-left: 5px;">X</button> </div> </div> <div class="note-content-display">${escapedNoteContent.replace(/\n/g, '<br>')}</div> <div class="note-content-edit" style="display: none;"> <textarea class="edit-note-textarea" rows="3" style="width: 100%; box-sizing: border-box;">${escapedNoteContent}</textarea> <div style="text-align: right; margin-top: 5px;"> <button class="cancel-edit-note-button cancel-btn" style="padding: 3px 6px; font-size: 0.8em; margin-right: 5px;">Cancel</button> <button class="save-edit-note-button" style="padding: 3px 6px; font-size: 0.8em;">Save</button> </div> </div> </li>`;
         });

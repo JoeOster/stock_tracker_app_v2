@@ -16,16 +16,12 @@ const { getPrices } = require('../services/priceService'); // Import price servi
 module.exports = (db, log = console.log) => {
 
     /**
-     * GET /:id/details
-     * Fetches details for a specific advice source, including linked items and calculated summary statistics.
-     * @route GET /api/sources/{id}/details
+     * @route GET /api/sources/:id/details
      * @group Sources - Operations about source details
+     * @description Fetches details for a specific advice source, including linked items and calculated summary statistics.
      * @param {string} id.path.required - The ID of the advice source.
      * @param {string} holder.query.required - Account holder ID.
-     * @returns {object} 200 - An object containing source details, linked items, and summary stats.
-     * 400 - An object with an error message for missing ID or holder.
-     * 404 - An object with an error message if the source is not found.
-     * 500 - An object with an error message for server errors.
+     * @returns {object} 200 - An object containing source details, linked items, and summary stats. 400 - Error message for missing ID or holder. 404 - Error message if the source is not found. 500 - Error message for server errors.
      */
     router.get('/:id/details', async (req, res) => {
         const sourceId = req.params.id;
@@ -36,7 +32,7 @@ module.exports = (db, log = console.log) => {
         }
 
         try {
-            // --- MODIFICATION: Added linkedTransactions query ---
+            // Query for real transactions linked to this source
             const linkedTransactionsQuery = `
                 SELECT 
                     t.*, 
@@ -58,7 +54,6 @@ module.exports = (db, log = console.log) => {
                 db.all('SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC', [sourceId]),
                 db.all(linkedTransactionsQuery, [sourceId, holderId]) // Fetch real transactions
             ]);
-            // --- END MODIFICATION ---
 
             if (!source) {
                 return res.status(404).json({ message: 'Advice source not found for this account holder.' });
@@ -70,17 +65,16 @@ module.exports = (db, log = console.log) => {
             let totalUnrealizedPL = 0;
             let totalRealizedPL = 0;
             
-            // --- MODIFICATION: Use a Set to gather all tickers that need pricing ---
+            // Use a Set to gather all tickers that need pricing
             let tickersToPrice = new Set();
 
             journalEntries.forEach(entry => {
                 if (entry.status === 'OPEN') {
-                    // --- MODIFICATION: Only count "non-general" trades for paper stats ---
+                    // Only count "non-general" trades for paper stats
                     if (entry.ticker.toUpperCase() !== 'GENERAL' && entry.ticker.toUpperCase() !== 'N/A') {
                         totalInvestment += (entry.entry_price * entry.quantity);
                         tickersToPrice.add(entry.ticker); // Add journal ticker
                     }
-                    // --- END MODIFICATION ---
                 } else if (['CLOSED', 'EXECUTED'].includes(entry.status) && entry.pnl !== null) {
                     totalRealizedPL += entry.pnl;
                 }
@@ -92,7 +86,6 @@ module.exports = (db, log = console.log) => {
                     tickersToPrice.add(tx.ticker); // Add real trade ticker
                 }
             });
-            // --- END MODIFICATION ---
 
             // Fetch current prices for open paper trades AND open real trades
             const uniqueTickers = [...tickersToPrice]; // Convert Set to array
@@ -102,12 +95,11 @@ module.exports = (db, log = console.log) => {
                 // Calculate P/L for open journal entries
                 journalEntries.forEach(entry => {
                     if (entry.status === 'OPEN') {
-                        // --- MODIFICATION: Skip "general" trades ---
+                        // Skip "general" trades
                         if (entry.ticker.toUpperCase() === 'GENERAL' || entry.ticker.toUpperCase() === 'N/A') {
                              entry.current_pnl = null;
                              return;
                         }
-                        // --- END MODIFICATION ---
                         
                         const currentPriceInfo = priceData[entry.ticker];
                         if (currentPriceInfo && typeof currentPriceInfo.price === 'number') {
@@ -124,7 +116,7 @@ module.exports = (db, log = console.log) => {
                     }
                 });
 
-                // --- MODIFICATION: Calculate P/L for real transactions ---
+                // Calculate P/L for real transactions
                 linkedTransactions.forEach(tx => {
                     if (tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001) {
                         // It's an open BUY lot
@@ -146,7 +138,6 @@ module.exports = (db, log = console.log) => {
                         }
                     }
                 });
-                // --- END MODIFICATION ---
             }
             // --- End Calculation ---
 
@@ -156,7 +147,7 @@ module.exports = (db, log = console.log) => {
                 watchlistItems,
                 documents,
                 sourceNotes,
-                linkedTransactions, // <-- ADDED: Send real transactions to frontend
+                linkedTransactions, // <-- Send real transactions to frontend
                 summaryStats: { 
                     totalTrades,
                     totalInvestment,
@@ -165,27 +156,30 @@ module.exports = (db, log = console.log) => {
                 }
             });
         } catch (error) {
+            // @ts-ignore
             log(`[ERROR] Failed to fetch details for source ${sourceId}: ${error.message}`);
-            res.status(500).json({ message: 'Error fetching source details.' });
+            // @ts-ignore
+            res.status(500).json({ message: `Error fetching source details: ${error.message}` });
         }
     });
 
-    // ... (rest of the routes: /:id/notes, /:id/notes/:noteId) ...
     /**
-     * POST /:id/notes
-     * Creates a new note linked to a specific advice source.
-     * @route POST /api/sources/{id}/notes
+     * @typedef {object} NotePostBody
+     * @property {string|number} holderId
+     * @property {string} noteContent
+     */
+
+    /**
+     * @route POST /api/sources/:id/notes
      * @group Sources - Operations about source details
+     * @description Creates a new note linked to a specific advice source.
      * @param {string} id.path.required - The ID of the advice source.
-     * @param {object} NotePostBody.body.required - Note data ({ holderId: string|number, noteContent: string }).
-     * @returns {object} 201 - The newly created note object.
-     * 400 - An object with an error message for missing fields.
-     * 404 - An object with an error message if the source is not found.
-     * 500 - An object with an error message for server errors.
+     * @param {NotePostBody} req.body.required - Note data.
+     * @returns {object} 201 - The newly created note object. 400 - Error message for missing fields. 404 - Error message if the source is not found. 500 - Error message for server errors.
      */
     router.post('/:id/notes', async (req, res) => {
         const sourceId = req.params.id;
-        const { holderId, noteContent } = req.body;
+        const { holderId, note_content: noteContent } = req.body; // Match frontend property name
 
         if (!sourceId || !holderId || !noteContent || noteContent.trim() === '') {
             return res.status(400).json({ message: 'Source ID, Account Holder ID, and Note Content are required.' });
@@ -206,28 +200,32 @@ module.exports = (db, log = console.log) => {
             res.status(201).json(newNote);
 
         } catch (error) {
+            // @ts-ignore
             log(`[ERROR] Failed to add note for source ${sourceId}: ${error.message}`);
-            res.status(500).json({ message: 'Error adding source note.' });
+            // @ts-ignore
+            res.status(500).json({ message: `Error adding source note: ${error.message}` });
         }
     });
 
     /**
-     * PUT /:id/notes/:noteId
-     * Updates a specific note linked to an advice source.
-     * @route PUT /api/sources/{id}/notes/{noteId}
+     * @typedef {object} NotePutBody
+     * @property {string|number} holderId
+     * @property {string} note_content
+     */
+
+    /**
+     * @route PUT /api/sources/:id/notes/:noteId
      * @group Sources - Operations about source details
+     * @description Updates a specific note linked to an advice source.
      * @param {string} id.path.required - The ID of the advice source.
      * @param {string} noteId.path.required - The ID of the note.
-     * @param {object} NotePutBody.body.required - Note update data ({ holderId: string|number, noteContent: string }).
-     * @returns {object} 200 - The updated note object.
-     * 400 - An object with an error message for missing fields.
-     * 404 - An object with an error message if the source or note is not found.
-     * 500 - An object with an error message for server errors.
+     * @param {NotePutBody} req.body.required - Note update data.
+     * @returns {object} 200 - The updated note object. 400 - Error message for missing fields. 404 - Error message if the source or note is not found. 500 - Error message for server errors.
      */
     router.put('/:id/notes/:noteId', async (req, res) => {
         const sourceId = req.params.id;
         const noteId = req.params.noteId;
-        const { holderId, noteContent } = req.body; // Expect holderId for validation
+        const { holderId, note_content: noteContent } = req.body; // Match frontend property name
 
         if (!sourceId || !noteId || !holderId || !noteContent || noteContent.trim() === '') {
             return res.status(400).json({ message: 'Source ID, Note ID, Account Holder ID, and Note Content are required.' });
@@ -257,24 +255,26 @@ module.exports = (db, log = console.log) => {
             res.status(200).json(updatedNote); // Return the updated note
 
         } catch (error) {
+            // @ts-ignore
             log(`[ERROR] Failed to update note ${noteId} for source ${sourceId}: ${error.message}`);
-            res.status(500).json({ message: 'Error updating source note.' });
+            // @ts-ignore
+            res.status(500).json({ message: `Error updating source note: ${error.message}` });
         }
     });
 
+    /**
+     * @typedef {object} NoteDeleteBody
+     * @property {string|number} holderId
+     */
 
     /**
-     * DELETE /:id/notes/:noteId
-     * Deletes a specific note linked to an advice source.
-     * @route DELETE /api/sources/{id}/notes/{noteId}
+     * @route DELETE /api/sources/:id/notes/:noteId
      * @group Sources - Operations about source details
+     * @description Deletes a specific note linked to an advice source.
      * @param {string} id.path.required - The ID of the advice source.
      * @param {string} noteId.path.required - The ID of the note.
-     * @param {object} NoteDeleteBody.body.required - Body containing holderId ({ holderId: string|number }).
-     * @returns {object} 200 - An object with a success message.
-     * 400 - An object with an error message for missing fields.
-     * 404 - An object with an error message if the source or note is not found.
-     * 500 - An object with an error message for server errors.
+     * @param {NoteDeleteBody} req.body.required - Body containing holderId.
+     * @returns {object} 200 - Success message. 400 - Error message for missing fields. 404 - Error message if the source or note is not found. 500 - Error message for server errors.
      */
     router.delete('/:id/notes/:noteId', async (req, res) => {
         const sourceId = req.params.id;
@@ -306,8 +306,10 @@ module.exports = (db, log = console.log) => {
             res.status(200).json({ message: 'Note deleted successfully.' });
 
         } catch (error) {
+            // @ts-ignore
             log(`[ERROR] Failed to delete note ${noteId} for source ${sourceId}: ${error.message}`);
-            res.status(500).json({ message: 'Error deleting source note.' });
+            // @ts-ignore
+            res.status(500).json({ message: `Error deleting source note: ${error.message}` });
         }
     });
 

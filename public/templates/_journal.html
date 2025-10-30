@@ -37,7 +37,7 @@
                     <div class="form-group"> <label for="journal-ticker">Ticker*</label> <input type="text" id="journal-ticker" placeholder="e.g., AAPL" required> </div>
                     <div class="form-group"> <label for="journal-exchange">Exchange*</label> <select id="journal-exchange" required></select> </div>
                     <div class="form-group"> <label for="journal-direction">Direction*</label> <select id="journal-direction" required> <option value="BUY" selected>BUY</option> </select> </div>
-                    <div class="form-group"> <label for="journal-quantity">Quantity*</label> <input type="number" id="journal-quantity" step="any" min="0.00001" placeholder="e.g., 10" required> </div>
+                    <div class="form-group"> <label for="journal-quantity">Quantity*</label> <input type="number" id="journal-quantity" step="any" min="0" placeholder="e.g., 10" required> </div>
                     <div class="form-group"> <label for="journal-entry-price">Entry Price*</label> <input type="number" id="journal-entry-price" step="any" min="0.01" placeholder="e.g., 150.25" required> </div>
 
                     <div class="form-group">
@@ -53,7 +53,7 @@
                         <input type="number" id="journal-stop-loss-price" step="any" min="0.01" placeholder="Optional">
                     </div>
 
-                    <div class="form-group"> <label for="journal-advice-source">Advice Source</label> <select id="journal-advice-source"> <option value="">(None/Manual Entry)</option> </select> </div>
+                    <div class="form-group"> <label for="journal-advice-source">Advice Source</label> <select id="journal-advice-source" class="advice-source-select"> <option value="">(None/Manual Entry)</option> </select> </div>
                     <div class="form-group"> <label for="journal-advice-details">Quick Source Notes</label> <input type="text" id="journal-advice-details" placeholder="Brief note if no source selected"> </div>
                     <div class="form-group form-group-span-2"> <label for="journal-entry-reason">Entry Reason</label> <input type="text" id="journal-entry-reason" placeholder="e.g., Bullish signal, News catalyst"> </div>
                     <div class="form-group form-group-span-2"> <label for="journal-notes">General Notes</label> <textarea id="journal-notes" rows="2" placeholder="Additional thoughts or observations..."></textarea> </div>
@@ -70,10 +70,10 @@
             </div>
             <table id="journal-open-table" class="journal-table">
                 <thead>
-                   <tr> <th data-sort="entry_date">Entry Date</th> <th data-sort="ticker">Ticker</th> <th class="numeric" data-sort="entry_price" data-type="numeric">Entry Price</th> <th class="numeric" data-sort="quantity" data-type="numeric">Qty</th> <th class="numeric" data-sort="target_price" data-type="numeric">Target</th> <th class="numeric" data-sort="stop_loss_price" data-type="numeric">Stop Loss</th> <th class="numeric" data-sort="current_price" data-type="numeric">Current Price</th> <th class="numeric" data-sort="current_pnl" data-type="numeric">Current P/L</th> <th data-sort="advice_source_id">Source</th> <th class="center-align">Actions</th> </tr>
+                   <tr> <th data-sort="entry_date">Entry Date</th> <th data-sort="ticker">Ticker</th> <th class="numeric" data-sort="entry_price" data-type="numeric">Entry Price</th> <th class="numeric" data-sort="quantity" data-type="numeric">Qty</th> <th class="numeric" data-sort="target_price" data-type="numeric">Target 1</th> <th class="numeric" data-sort="target_price_2" data-type="numeric">Target 2</th> <th class="numeric" data-sort="stop_loss_price" data-type="numeric">Stop Loss</th> <th class="numeric" data-sort="current_price" data-type="numeric">Current Price</th> <th class="numeric" data-sort="current_pnl" data-type="numeric">Current P/L</th> <th data-sort="advice_source_id">Source</th> <th class="center-align">Actions</th> </tr>
                 </thead>
                 <tbody id="journal-open-body">
-                    <tr><td colspan="10">Loading open journal entries...</td></tr>
+                    <tr><td colspan="11">Loading open journal entries...</td></tr>
                 </tbody>
             </table>
         </div>

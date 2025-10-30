@@ -4,13 +4,14 @@
  * @module event-handlers/_settings_holders
  */
 
-import { state } from '../state.js';
+import { state, updateState } from '../state.js';
 import { handleResponse } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAccountHolderManagementList, saveSettings } from '../ui/settings.js'; // Need saveSettings for default change
 
 /**
  * Populates all account holder dropdowns on the page with the latest data from the state.
+ * @returns {void}
  */
 function populateAllAccountHolderDropdowns() {
     const holderSelects = document.querySelectorAll('.account-holder-select');
@@ -56,22 +57,26 @@ function populateAllAccountHolderDropdowns() {
 
 /**
  * Fetches the list of account holders, stores them in state, and populates dropdowns.
+ * @async
  * @returns {Promise<void>}
  */
 export async function fetchAndPopulateAccountHolders() {
     try {
         const response = await fetch('/api/accounts/holders');
-        state.allAccountHolders = await handleResponse(response);
+        const holders = await handleResponse(response);
+        updateState({ allAccountHolders: holders }); // Update state
         populateAllAccountHolderDropdowns();
     } catch (error) {
+        // @ts-ignore
         showToast(`Could not load account holders: ${error.message}`, 'error');
-        state.allAccountHolders = [];
+        updateState({ allAccountHolders: [] });
     }
 }
 
 
 /**
  * Initializes event listeners for Account Holder Management.
+ * @returns {void}
  */
 export function initializeHolderManagementHandlers() {
     const accountHolderList = document.getElementById('account-holder-list');
@@ -96,6 +101,7 @@ export function initializeHolderManagementHandlers() {
                 renderAccountHolderManagementList(); // Re-render list in modal
                 showToast('Account holder added!', 'success');
             } catch (error) {
+                // @ts-ignore
                 showToast(`Error adding account holder: ${error.message}`, 'error');
             } finally {
                 addAccountHolderBtn.disabled = false;
@@ -167,6 +173,7 @@ export function initializeHolderManagementHandlers() {
                 // Validation
                  if (!newName) return showToast('Name cannot be empty.', 'error');
                  if (newName.toLowerCase() === nameLabel.textContent?.toLowerCase()) {
+                     // @ts-ignore
                      cancelBtn.click(); // No change
                      return;
                  }
@@ -182,6 +189,7 @@ export function initializeHolderManagementHandlers() {
                     renderAccountHolderManagementList(); // Re-render this list
                     showToast('Account holder updated!', 'success');
                 } catch (error) {
+                    // @ts-ignore
                     showToast(`Error updating account holder: ${error.message}`, 'error');
                      saveBtn.disabled = false;
                 }
@@ -200,15 +208,17 @@ export function initializeHolderManagementHandlers() {
 
                         // If the deleted holder *was* the default, reset default to Primary (ID 1)
                         if (isDefault) {
-                             state.settings.defaultAccountHolderId = 1; // Reset to Primary
-                             // No need to call saveSettings() here, let the main Save button handle it
+                             updateState({ settings: { ...state.settings, defaultAccountHolderId: 1 } }); // Reset to Primary
                              showToast('Default account holder was deleted, default reset to Primary (will save on close).', 'info');
                         }
 
                         await fetchAndPopulateAccountHolders(); // Refetch state and update dropdowns
                         renderAccountHolderManagementList(); // Re-render list in modal
                         showToast('Account holder deleted.', 'success');
-                    } catch (error) { showToast(`Error deleting account holder: ${error.message}`, 'error'); }
+                    } catch (error) { 
+                        // @ts-ignore
+                        showToast(`Error deleting account holder: ${error.message}`, 'error'); 
+                    }
                 });
             }
         });

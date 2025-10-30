@@ -1,4 +1,3 @@
- 
 // public/event-handlers/_research_sources_actions_docs.js
 /**
  * @file Handles Document actions triggered from within the Research Source details view.
@@ -12,7 +11,7 @@ import { showToast } from '../ui/helpers.js';
 /**
  * Handles submission of the "Add Document Link" form.
  * @param {Event} e - The form submission event.
- * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
 export async function handleAddDocumentSubmit(e, refreshDetailsCallback) {

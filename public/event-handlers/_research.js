@@ -1,6 +1,9 @@
 // /public/event-handlers/_research.js
+/**
+ * @file Manages the "Research" page, including sub-tab switching and content loading.
+ * @module event-handlers/_research
+ */
 
-// --- Keep ALL existing imports ---
 import { state } from '../state.js';
 import { initializeJournalHandlers, loadJournalPage } from './_journal.js';
 import { initializeJournalSubTabHandlers, initializeResearchSubTabHandlers } from './_journal_tabs.js';
@@ -10,6 +13,7 @@ import { showToast } from '../ui/helpers.js';
 
 /**
  * Loads data and renders content based on the active sub-tab for the Research page.
+ * @async
  * @returns {Promise<void>}
  */
 async function loadResearchPage() {
@@ -43,7 +47,8 @@ async function loadResearchPage() {
         } else if (activeSubTabId === 'research-paper-trading-panel') {
             targetPanel = paperTradingPanel;
             if (targetPanel) {
-                // *** KEY CHANGE: Inject the full HTML from _journal.html ***
+                // Inject the full HTML from _journal.html
+                // This ensures all required DOM elements for the journal are present.
                 targetPanel.innerHTML = `
                     <h2>Trading Journal & Idea Tracker</h2>
                     <p class="subtitle">Log paper trades, track advice, and analyze strategy performance.</p>
@@ -82,11 +87,12 @@ async function loadResearchPage() {
                                     <div class="form-group"> <label for="journal-ticker">Ticker*</label> <input type="text" id="journal-ticker" placeholder="e.g., AAPL" required> </div>
                                     <div class="form-group"> <label for="journal-exchange">Exchange*</label> <select id="journal-exchange" required></select> </div>
                                     <div class="form-group"> <label for="journal-direction">Direction*</label> <select id="journal-direction" required> <option value="BUY" selected>BUY</option> </select> </div>
-                                    <div class="form-group"> <label for="journal-quantity">Quantity*</label> <input type="number" id="journal-quantity" step="any" min="0.00001" placeholder="e.g., 10" required> </div>
+                                    <div class="form-group"> <label for="journal-quantity">Quantity*</label> <input type="number" id="journal-quantity" step="any" min="0" placeholder="e.g., 10" required> </div>
                                     <div class="form-group"> <label for="journal-entry-price">Entry Price*</label> <input type="number" id="journal-entry-price" step="any" min="0.01" placeholder="e.g., 150.25" required> </div>
-                                    <div class="form-group"> <label for="journal-target-price">Target Price (Take Profit)</label> <input type="number" id="journal-target-price" step="any" min="0.01" placeholder="Optional"> </div>
-                                    <div class="form-group"> <label for="journal-stop-loss-price">Stop Loss Price</label> <input type="number" id="journal-stop-loss-price" step="any" min="0.01" placeholder="Optional"> </div>
-                                    <div class="form-group"> <label for="journal-advice-source">Advice Source</label> <select id="journal-advice-source"> <option value="">(None/Manual Entry)</option> </select> </div>
+                                    <div class="form-group"> <label for="journal-target-price">Target Price 1 (Take Profit)</label> <input type="number" id="journal-target-price" step="any" min="0.01" placeholder="Optional"> </div>
+                                    <div class="form-group"> <label for="journal-target-price-2">Target Price 2 (Optional)</label> <input type="number" id="journal-target-price-2" step="any" min="0.01" placeholder="Optional 2nd target"> </div>
+                                    <div class="form-group form-group-span-2"> <label for="journal-stop-loss-price">Stop Loss Price</label> <input type="number" id="journal-stop-loss-price" step="any" min="0.01" placeholder="Optional"> </div>
+                                    <div class="form-group"> <label for="journal-advice-source" class="advice-source-select">Advice Source</label> <select id="journal-advice-source" class="advice-source-select"> <option value="">(None/Manual Entry)</option> </select> </div>
                                     <div class="form-group"> <label for="journal-advice-details">Quick Source Notes</label> <input type="text" id="journal-advice-details" placeholder="Brief note if no source selected"> </div>
                                     <div class="form-group form-group-span-2"> <label for="journal-entry-reason">Entry Reason</label> <input type="text" id="journal-entry-reason" placeholder="e.g., Bullish signal, News catalyst"> </div>
                                     <div class="form-group form-group-span-2"> <label for="journal-notes">General Notes</label> <textarea id="journal-notes" rows="2" placeholder="Additional thoughts or observations..."></textarea> </div>
@@ -102,10 +108,10 @@ async function loadResearchPage() {
                             </div>
                             <table id="journal-open-table" class="journal-table">
                                 <thead>
-                                   <tr> <th data-sort="entry_date">Entry Date</th> <th data-sort="ticker">Ticker</th> <th class="numeric" data-sort="entry_price" data-type="numeric">Entry Price</th> <th class="numeric" data-sort="quantity" data-type="numeric">Qty</th> <th class="numeric" data-sort="target_price" data-type="numeric">Target</th> <th class="numeric" data-sort="stop_loss_price" data-type="numeric">Stop Loss</th> <th class="numeric" data-sort="current_price" data-type="numeric">Current Price</th> <th class="numeric" data-sort="current_pnl" data-type="numeric">Current P/L</th> <th data-sort="advice_source_id">Source</th> <th class="center-align">Actions</th> </tr>
+                                   <tr> <th data-sort="entry_date">Entry Date</th> <th data-sort="ticker">Ticker</th> <th class="numeric" data-sort="entry_price" data-type="numeric">Entry Price</th> <th class="numeric" data-sort="quantity" data-type="numeric">Qty</th> <th class="numeric" data-sort="target_price" data-type="numeric">Target 1</th> <th class="numeric" data-sort="target_price_2" data-type="numeric">Target 2</th> <th class="numeric" data-sort="stop_loss_price" data-type="numeric">Stop Loss</th> <th class="numeric" data-sort="current_price" data-type="numeric">Current Price</th> <th class="numeric" data-sort="current_pnl" data-type="numeric">Current P/L</th> <th data-sort="advice_source_id">Source</th> <th class="center-align">Actions</th> </tr>
                                 </thead>
                                 <tbody id="journal-open-body">
-                                    <tr><td colspan="10">Loading open journal entries...</td></tr>
+                                    <tr><td colspan="11">Loading open journal entries...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -133,7 +139,6 @@ async function loadResearchPage() {
                         </div>
                     </div>
                 `;
-                // *** END INJECTION ***
             }
         } else if (activeSubTabId === 'research-action-plan-panel') {
             targetPanel = actionPlanPanel;
@@ -175,7 +180,7 @@ async function loadResearchPage() {
                      // The structure is now guaranteed to exist from the step above
                      await loadJournalPage(); // Fetches data AND renders into the structure
                      initializeJournalSubTabHandlers(); // Initialize nested handlers
-                     initializeJournalHandlers();
+                     initializeJournalHandlers(); // Initialize journal actions (forms, buttons)
                  }
                  break;
 
@@ -183,7 +188,7 @@ async function loadResearchPage() {
                  // Content already set
                  break;
 
-             // Default case handled during panel preparation
+             // Default case (no tab) handled during panel preparation
         }
     } catch (error) {
         console.error(`[Research Loader] Error loading content for ${activeSubTabId || 'default'}:`, error);
@@ -196,14 +201,15 @@ async function loadResearchPage() {
 }
 
 /**
- * Initializes event handlers for the Research page.
+ * Initializes event handlers for the Research page's top-level sub-tabs.
  * @returns {void}
  */
 export function initializeResearchHandlers() {
     console.log("[Research Init] Initializing Research page handlers...");
-    initializeResearchSubTabHandlers(); // Handles Sources/Paper Trading/Action Plan switching
-    // Journal handlers are now initialized *dynamically* within loadResearchPage
-    // when the paper trading tab is active, because its content is dynamic.
+    // This initializes the click handler for the main "Sources" / "Paper Trading" / "Action Plan" tabs
+    initializeResearchSubTabHandlers();
+    // Handlers for content *within* the sub-tabs (like the journal)
+    // are now initialized dynamically within loadResearchPage when that sub-tab is activated.
     console.log("[Research Init] Research page handlers initialized.");
 }
 

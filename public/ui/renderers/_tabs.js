@@ -1,28 +1,34 @@
 // /public/ui/renderers/_tabs.js
-// Version Updated (Renamed Journal Tab to Research)
 /**
  * @file Renderer for the main navigation tabs.
  * @module renderers/_tabs
  */
 import { getTradingDays, getActivePersistentDates } from '../datetime.js';
 
-// MODIFIED: Renamed 'Journal' to 'Research'
+/**
+ * @typedef {object} TabInfo
+ * @property {string} viewType - The view type this tab navigates to.
+ * @property {string} textContent - The display text for the tab.
+ */
+
+/**
+ * The list of static (non-date) tabs.
+ * @type {TabInfo[]}
+ */
 export const staticTabs = [
     { viewType: 'dashboard', textContent: 'Dashboard' },
-    { viewType: 'research', textContent: 'Research' }, // <-- Changed viewType and textContent
+    { viewType: 'research', textContent: 'Research' }, // <-- Changed from Journal
     { viewType: 'ledger', textContent: 'Ledger' },
     { viewType: 'orders', textContent: 'Orders' },
     { viewType: 'alerts', textContent: 'Alerts' },
     { viewType: 'imports', textContent: 'Imports' },
     { viewType: 'charts', textContent: 'Charts' },
 ];
-// END MODIFICATION
-
-// ... rest of the file (_tabs.js) remains the same ...
 
 /**
  * Sets the 'active' class on the currently selected tab.
  * @param {{type: string, value: string|null}} currentView - The current view state.
+ * @returns {void}
  */
 export function styleActiveTab(currentView) {
     const tabs = document.querySelectorAll('.tab');
@@ -48,6 +54,7 @@ export function styleActiveTab(currentView) {
 /**
  * Renders the main navigation tabs, including dynamic date tabs and static tabs.
  * @param {{type: string, value: string|null}} currentView - An object representing the current active view.
+ * @returns {void}
  */
 export function renderTabs(currentView) {
     const tabsContainer = document.getElementById('tabs-container');

@@ -18,6 +18,21 @@
  */
 
 /**
+ * @typedef {object} AppSettings
+ * @property {number} takeProfitPercent
+ * @property {number} stopLossPercent
+ * @property {string} theme
+ * @property {string} font
+ * @property {number} notificationCooldown
+ * @property {string} familyName
+ * @property {string|number|null} defaultAccountHolderId
+ * @property {number} marketHoursInterval
+ * @property {number} afterHoursInterval
+ * @property {string} [defaultView]
+ * @property {number} [numberOfDateTabs]
+ */
+
+/**
  * @typedef {object} AppState
  * @property {Array<object>} transactions - All transactions for the selected account.
  * @property {Array<object>} openOrders - Deprecated? (Consider removing or clarifying usage)
@@ -40,20 +55,10 @@
  * @property {any[]} allAdviceSources - All advice sources for the selected account.
  * @property {JournalEntriesState | null} journalEntries - Holds fetched journal entries (open and closed).
  * @property {any[]} dashboardOpenLots - Raw array of open lots fetched for the dashboard view.
+ *Setting
  * @property {any[]} researchWatchlistItems - Raw array of watchlist items fetched for the source details modal.
  * @property {{sourceId: string, sourceName: string, ticker: string, price: string}|null} prefillOrderFromSource - Temp state for pre-filling the order form.
- * @property {object} settings - The user's application settings.
- * @property {number} settings.takeProfitPercent
- * @property {number} settings.stopLossPercent
- * @property {string} settings.theme
- * @property {string} settings.font
- * @property {number} settings.notificationCooldown
- * @property {string} settings.familyName
- * @property {string|number|null} settings.defaultAccountHolderId
- * @property {number} settings.marketHoursInterval
- * @property {number} settings.afterHoursInterval
- * @property {string} [settings.defaultView]
- * @property {number} [settings.numberOfDateTabs]
+ * @property {AppSettings} settings - The user's application settings.
  */
 
 /**
@@ -81,7 +86,7 @@ export let state = {
     journalEntries: null,
     dashboardOpenLots: [],
     researchWatchlistItems: [],
-    prefillOrderFromSource: null, // This line was already here
+    prefillOrderFromSource: null,
     settings: {
         takeProfitPercent: 10,
         stopLossPercent: 5,

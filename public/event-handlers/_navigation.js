@@ -1,8 +1,10 @@
 // /public/event-handlers/_navigation.js
+/**
+ * @file Handles main navigation logic, including tab switching and the global account filter.
+ * @module event-handlers/_navigation
+ */
 
-// --- MODIFICATION: Added updateState ---
 import { state, updateState } from '../state.js';
-// --- END MODIFICATION ---
 import { updateAllPrices, refreshLedger } from '../api.js';
 import { renderTabs } from '../ui/renderers/_tabs.js';
 import { showToast } from '../ui/helpers.js';
@@ -12,22 +14,31 @@ import { loadAlertsPage } from './_alerts.js';
 import { loadChartsPage } from './_charts.js';
 import { loadResearchPage } from './_research.js';
 import { loadDashboardPage } from './_dashboard_loader.js';
-// --- ADDED IMPORTS ---
 import { fetchAndStoreAdviceSources } from './_journal_settings.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
-// --- END ADDED IMPORTS ---
 
-
-// --- Keep autosizeAccountSelector function ---
+/**
+ * Autosizes a <select> element based on the width of its selected option.
+ * @param {HTMLSelectElement} selectElement - The select element to autosize.
+ * @returns {void}
+ */
 export function autosizeAccountSelector(selectElement) {
     if (!selectElement || selectElement.options.length === 0) return;
     const tempSpan = document.createElement('span');
-    tempSpan.style.visibility = 'hidden'; tempSpan.style.position = 'absolute'; tempSpan.style.whiteSpace = 'pre';
+    // Hide span visually but keep it in layout for measurement
+    tempSpan.style.visibility = 'hidden'; 
+    tempSpan.style.position = 'absolute'; 
+    tempSpan.style.whiteSpace = 'pre';
+    // Copy relevant styles
     const style = window.getComputedStyle(selectElement);
-    tempSpan.style.fontSize = style.fontSize; tempSpan.style.fontFamily = style.fontFamily;
-    tempSpan.style.fontWeight = style.fontWeight; tempSpan.style.letterSpacing = style.letterSpacing;
+    tempSpan.style.fontSize = style.fontSize; 
+    tempSpan.style.fontFamily = style.fontFamily;
+    tempSpan.style.fontWeight = style.fontWeight; 
+    tempSpan.style.letterSpacing = style.letterSpacing;
+    // Set content to selected option's text
     tempSpan.textContent = selectElement.options[selectElement.selectedIndex]?.text || 'All Accounts';
     document.body.appendChild(tempSpan);
+    // Set width with padding
     selectElement.style.width = `${tempSpan.offsetWidth + 30}px`;
     document.body.removeChild(tempSpan);
 }
@@ -35,6 +46,7 @@ export function autosizeAccountSelector(selectElement) {
 /**
  * Switches the main view of the application, rendering the appropriate page.
  * Always reloads content for the 'research' tab or if the target container isn't visible.
+ * @async
  * @param {string} viewType - The type of view to switch to.
  * @param {string|null} [viewValue=null] - The value associated with the view (e.g., date).
  * @returns {Promise<void>}
@@ -42,10 +54,7 @@ export function autosizeAccountSelector(selectElement) {
 export async function switchView(viewType, viewValue = null) {
     console.log(`[Navigation] Attempting switch view to: ${viewType} ${viewValue || ''}`);
 
-    // --- MODIFICATION: Store previous view type ---
     const previousViewType = state.currentView.type;
-    // --- END MODIFICATION ---
-
     const isSameViewType = state.currentView.type === viewType;
     const isSameViewValue = state.currentView.value === viewValue;
     const isSameView = isSameViewType && isSameViewValue;
@@ -63,6 +72,7 @@ export async function switchView(viewType, viewValue = null) {
 
     const isTargetVisible = targetPageContainer?.style.display === 'block';
 
+    // Reload 'research' tab every time it's clicked to ensure dynamic content is fresh
     if (isSameView && isTargetVisible && viewType !== 'research') {
         console.log(`[Navigation] View is the same (${viewType}) and visible, skipping reload.`);
         return; // Skip reload
@@ -70,14 +80,13 @@ export async function switchView(viewType, viewValue = null) {
 
     console.log(`[Navigation] Proceeding with view switch/load for ${viewType}.`);
 
-    // --- MODIFICATION: Clear prefill state if navigating AWAY from orders ---
+    // Clear prefill state if navigating AWAY from orders
     if (previousViewType === 'orders' && viewType !== 'orders' && state.prefillOrderFromSource) {
         console.log("[Navigation] Navigating away from Orders, clearing prefill state.");
         updateState({ prefillOrderFromSource: null });
     }
-    // --- END MODIFICATION ---
 
-    state.currentView = { type: viewType, value: viewValue };
+    updateState({ currentView: { type: viewType, value: viewValue } });
     renderTabs(state.currentView); // Update tab highlighting
 
     // Hide all page containers
@@ -106,7 +115,7 @@ export async function switchView(viewType, viewValue = null) {
             case 'ledger': await refreshLedger(); break;
             case 'orders': await loadOrdersPage(); break;
             case 'alerts': await loadAlertsPage(); break;
-            case 'research': await loadResearchPage(); break; // Always called now
+            case 'research': await loadResearchPage(); break; // Load the main research page orchestrator
             case 'imports': console.log("[Navigation] Imports tab selected."); break;
             case 'watchlist': console.log("[Navigation] Watchlist tab selected."); break;
             default: console.warn(`[Navigation] No specific load function defined for view type: ${viewType}`);
@@ -121,9 +130,11 @@ export async function switchView(viewType, viewValue = null) {
     }
 }
 
-// --- Keep initializeNavigationHandlers function ---
+/**
+ * Initializes all core navigation event handlers (tabs, global filter).
+ * @returns {void}
+ */
 export function initializeNavigationHandlers() {
-    // ... (function content remains the same) ...
     const tabsContainer = document.getElementById('tabs-container');
     const globalHolderFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
     const customDatePicker = /** @type {HTMLInputElement} */ (document.getElementById('custom-date-picker'));
@@ -135,12 +146,15 @@ export function initializeNavigationHandlers() {
             const currentType = state.currentView.type;
             const currentValue = state.currentView.value;
             
-            // --- MODIFICATION: Fetch sources and populate dropdowns ON holder change ---
-            state.selectedAccountHolderId = target.value;
-            await fetchAndStoreAdviceSources(); // Fetch sources for the new holder
-            populateAllAdviceSourceDropdowns(); // Populate all dropdowns (incl. Orders page)
-            // --- END MODIFICATION ---
+            // Update state with new holder ID
+            updateState({ selectedAccountHolderId: target.value });
+            
+            // Fetch sources for the new holder
+            await fetchAndStoreAdviceSources(); 
+            // Repopulate all advice source dropdowns across the app
+            populateAllAdviceSourceDropdowns(); 
 
+            // Reload the current view with the new holder's data
             await switchView(currentType, currentValue);
             autosizeAccountSelector(target);
         });

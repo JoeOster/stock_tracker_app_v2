@@ -61,9 +61,8 @@ export function renderAdviceSourceManagementList() {
         }
 
         // --- Prepare Image Thumbnail ---
-        const imageThumbnailHTML = source.image_path
-            ? `<img src="${escapeHTML(source.image_path)}" alt="Image" class="source-list-thumbnail">`
-            : ''; // No fallback icon needed here, just empty string
+        const imagePath = escapeHTML(source.image_path) || '/images/contacts/default.png'; // Use default.png as fallback
+        const imageThumbnailHTML = `<img src="${imagePath}" alt="Image" class="source-list-thumbnail">`;
 
         // --- Prepare Edit Form App Type Options ---
         const appTypeOptions = [

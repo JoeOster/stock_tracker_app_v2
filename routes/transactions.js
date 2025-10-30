@@ -18,8 +18,27 @@ module.exports = (db, log, captureEodPrices) => {
     // The base path for these routes is '/api/transactions'
 
     /**
-     * GET /
-     * Fetches all transactions, optionally filtered by account holder.
+     * Simple quantity formatter for error messages (internal to this module).
+     * @param {number | string | null | undefined} number - The number to format.
+     * @returns {string} The formatted quantity string.
+     */
+    function internalFormatQuantity(number) {
+         const num = typeof number === 'string' ? parseFloat(number) : number;
+         if (num === null || num === undefined || isNaN(num)) { return ''; }
+         const formatter = new Intl.NumberFormat('en-US', {
+             maximumFractionDigits: 5,
+             minimumFractionDigits: 0,
+             useGrouping: true
+         });
+         return formatter.format(num);
+    }
+
+    /**
+     * @route GET /api/transactions/
+     * @group Transactions - Operations for transactions
+     * @description Fetches all transactions, optionally filtered by account holder.
+     * @param {string} [holder.query] - Optional Account holder ID ('all' or specific ID).
+     * @returns {Array<object>|object} 200 - An array of transaction objects. 500 - Error message for server errors.
      */
     router.get('/', async (req, res) => {
         try {
@@ -40,21 +59,45 @@ module.exports = (db, log, captureEodPrices) => {
     });
 
     /**
-     * POST /
-     * Adds a single manual BUY/SELL transaction or a selective SELL transaction.
+     * @typedef {object} TransactionPostBody
+     * @property {string} ticker
+     * @property {string} exchange
+     * @property {'BUY'|'SELL'} transaction_type
+     * @property {number} price
+     * @property {string} transaction_date - Format YYYY-MM-DD
+     * @property {string|number} account_holder_id
+     * @property {number} [quantity] - Required for BUY or single SELL.
+     * @property {number|null} [limit_price_up]
+     * @property {string|null} [limit_up_expiration]
+     * @property {number|null} [limit_price_down]
+     * @property {string|null} [limit_down_expiration]
+     * @property {number|null} [limit_price_up_2]
+     * @property {string|null} [limit_up_expiration_2]
+     * @property {string|number|null} [parent_buy_id] - Required for single lot SELL.
+     * @property {Array<{parent_buy_id: string|number, quantity_to_sell: number}>|null} [lots] - Required for selective SELL.
+     * @property {string|number|null} [advice_source_id]
+     * @property {string|number|null} [linked_journal_id] - *** ADDED ***
+     */
+
+    /**
+     * @route POST /api/transactions/
+     * @group Transactions - Operations for transactions
+     * @description Adds a single manual BUY/SELL transaction or a selective SELL transaction.
+     * @param {TransactionPostBody} req.body.required - The transaction data.
+     * @returns {object} 201 - Success message. 400 - Error message for invalid input. 404 - Error message if parent BUY lot not found for a SELL. 500 - Error message for server errors.
      */
     router.post('/', async (req, res) => {
-        // --- Destructure ALL possible fields (including new TP2 fields) ---
+        // --- Destructure ALL possible fields (including new TP2 and journal link) ---
         const {
             ticker, exchange, transaction_type, quantity, price, transaction_date,
             limit_price_up, limit_up_expiration,
             limit_price_down, limit_down_expiration,
-            limit_price_up_2, limit_up_expiration_2, // *** ADDED TP2 FIELDS ***
+            limit_price_up_2, limit_up_expiration_2,
             parent_buy_id, // For single lot sell
             lots, // For selective sell: Array of { parent_buy_id, quantity_to_sell }
             account_holder_id,
-            advice_source_id, // *** ADDED ADVICE SOURCE ID ***
-            linked_journal_id // --- ADDED ---
+            advice_source_id,
+            linked_journal_id // *** ADDED ***
         } = req.body;
 
         const numPrice = parseFloat(price);
@@ -78,21 +121,21 @@ module.exports = (db, log, captureEodPrices) => {
                 const original_quantity = numQuantity;
                 const quantity_remaining = numQuantity;
 
-                // *** ADDED TP2 AND ADVICE_SOURCE_ID COLUMNS TO INSERT ***
+                // *** ADDED linked_journal_id TO INSERT ***
                 const query = `INSERT INTO transactions (
                                 ticker, exchange, transaction_type, quantity, price, transaction_date,
                                 limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration,
                                 limit_price_up_2, limit_up_expiration_2,
                                 parent_buy_id, original_quantity, quantity_remaining, account_holder_id, source, created_at,
                                 advice_source_id, linked_journal_id
-                               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`; // Added ?, ?
+                               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`; // Added last ?
                 await db.run(query, [
                     ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date,
                     limit_price_up || null, limit_up_expiration || null, limit_price_down || null, limit_down_expiration || null,
-                    limit_price_up_2 || null, limit_up_expiration_2 || null, // *** ADDED TP2 VALUES ***
+                    limit_price_up_2 || null, limit_up_expiration_2 || null,
                     null, original_quantity, quantity_remaining, account_holder_id, 'MANUAL', createdAt,
-                    advice_source_id || null, // *** ADDED ADVICE SOURCE ID VALUE ***
-                    linked_journal_id || null // --- ADDED ---
+                    advice_source_id || null,
+                    linked_journal_id || null // *** ADDED ***
                 ]);
             }
             // --- Handle SELL (Single Lot OR Selective) ---
@@ -114,10 +157,10 @@ module.exports = (db, log, captureEodPrices) => {
                         await db.exec('ROLLBACK');
                         return res.status(400).json({ message: 'Sell date cannot be before the buy date.' });
                     }
+                    // Fix: Use internalFormatQuantity for error message
                     if (parentBuy.quantity_remaining < numQuantity - 0.00001) {
                          await db.exec('ROLLBACK');
-                         // Use .toLocaleString() for basic formatting in the error message
-                        return res.status(400).json({ message: `Sell quantity (${numQuantity.toLocaleString()}) exceeds remaining quantity (${parentBuy.quantity_remaining.toLocaleString()}) in the selected lot.` });
+                        return res.status(400).json({ message: `Sell quantity (${internalFormatQuantity(numQuantity)}) exceeds remaining quantity (${internalFormatQuantity(parentBuy.quantity_remaining)}) in the selected lot.` });
                     }
                     // Insert the single SELL record
                     const sellQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -142,9 +185,10 @@ module.exports = (db, log, captureEodPrices) => {
                              await db.exec('ROLLBACK');
                              return res.status(400).json({ message: `Sell date cannot be before the buy date of lot ID ${lotInfo.parent_buy_id}.` });
                         }
+                        // Fix: Use internalFormatQuantity for error message
                         if (parentBuy.quantity_remaining < lotQty - 0.00001) {
                              await db.exec('ROLLBACK');
-                            return res.status(400).json({ message: `Sell quantity (${lotQty.toLocaleString()}) exceeds remaining quantity (${parentBuy.quantity_remaining.toLocaleString()}) in lot ID ${lotInfo.parent_buy_id}.` });
+                            return res.status(400).json({ message: `Sell quantity (${internalFormatQuantity(lotQty)}) exceeds remaining quantity (${internalFormatQuantity(parentBuy.quantity_remaining)}) in lot ID ${lotInfo.parent_buy_id}.` });
                         }
                         // Insert a SELL record for this lot
                         const sellQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -185,20 +229,24 @@ module.exports = (db, log, captureEodPrices) => {
     });
 
      /**
-      * PUT /:id
-      * Updates an existing transaction (e.g., from Edit Modal).
+      * @route PUT /api/transactions/:id
+      * @group Transactions - Operations for transactions
+      * @description Updates an existing transaction.
+      * @param {string} id.path.required - The ID of the transaction to update.
+      * @param {object} req.body.required - A partial or full transaction object with fields to update.
+      * @returns {object} 200 - Success message. 400 - Error message for invalid input. 404 - Error message if transaction not found. 500 - Error message for server errors.
       */
      router.put('/:id', async (req, res) => {
+        const { id } = req.params;
         try {
-            const { id } = req.params;
-            // --- ADDED TP2 FIELDS ---
+            // *** ADDED linked_journal_id ***
             const {
                 ticker, exchange, quantity, price, transaction_date,
                 limit_price_up, limit_up_expiration,
                 limit_price_down, limit_down_expiration,
-                limit_price_up_2, limit_up_expiration_2, // *** ADDED ***
+                limit_price_up_2, limit_up_expiration_2,
                 account_holder_id,
-                linked_journal_id // --- ADDED ---
+                linked_journal_id // *** ADDED ***
             } = req.body;
             // --- END DESTRUCTURE ---
 
@@ -216,16 +264,23 @@ module.exports = (db, log, captureEodPrices) => {
 
             // Adjust quantity_remaining if original_quantity of a BUY lot is changed
             if (originalTx.transaction_type === 'BUY') {
-                 // Only adjust remaining if it was untouched (equal to original)
-                 if (Math.abs(originalTx.quantity_remaining - originalTx.original_quantity) < 0.00001) {
-                     await db.run('UPDATE transactions SET original_quantity = ?, quantity_remaining = ? WHERE id = ?', [numQuantity, numQuantity, id]);
+                 // Check if quantity_remaining was equal to original_quantity
+                 const qtyMatch = Math.abs(originalTx.quantity_remaining - originalTx.original_quantity) < 0.00001;
+                 // Calculate the difference if the original quantity is changing
+                 const qtyDifference = numQuantity - originalTx.original_quantity;
+
+                 // Only auto-update quantity_remaining if it was untouched OR if the change is positive
+                 if (qtyMatch || qtyDifference > 0) {
+                     // Adjust quantity_remaining by the same amount the original_quantity changed
+                     const newQuantityRemaining = originalTx.quantity_remaining + qtyDifference;
+                     await db.run('UPDATE transactions SET original_quantity = ?, quantity_remaining = ? WHERE id = ?', [numQuantity, newQuantityRemaining, id]);
                  } else {
-                     // Quantity has been sold, only update original_quantity
+                     // quantity_remaining was already modified by a sale, only update original_quantity
                       await db.run('UPDATE transactions SET original_quantity = ? WHERE id = ?', [numQuantity, id]);
                  }
             }
 
-            // *** ADDED TP2 and linked_journal_id COLUMNS TO UPDATE ***
+            // *** ADDED linked_journal_id TO UPDATE ***
             const query = `UPDATE transactions SET
                 ticker = ?, exchange = ?, quantity = ?, price = ?, transaction_date = ?,
                 limit_price_up = ?, limit_up_expiration = ?,
@@ -239,7 +294,7 @@ module.exports = (db, log, captureEodPrices) => {
                 limit_price_down || null, limit_down_expiration || null,
                 limit_price_up_2 || null, limit_up_expiration_2 || null, // *** ADDED ***
                 account_holder_id,
-                linked_journal_id || null, // --- ADDED ---
+                linked_journal_id || null, // *** ADDED ***
                 id
             ]);
             // *** END UPDATE ---
@@ -253,12 +308,15 @@ module.exports = (db, log, captureEodPrices) => {
     });
 
     /**
-     * DELETE /:id
-     * Deletes a transaction.
+     * @route DELETE /api/transactions/:id
+     * @group Transactions - Operations for transactions
+     * @description Deletes a transaction. If it's a SELL, restores quantity to the parent BUY.
+     * @param {string} id.path.required - The ID of the transaction to delete.
+     * @returns {object} 200 - Success message. 400 - Error message if deleting a BUY that has child SELLs. 404 - Error message if transaction not found. 500 - Error message for server errors.
      */
     router.delete('/:id', async (req, res) => {
+        const { id } = req.params;
         try {
-            const { id } = req.params;
             const transaction = await db.get('SELECT * FROM transactions WHERE id = ?', id);
 
             if (!transaction) {
@@ -300,8 +358,12 @@ module.exports = (db, log, captureEodPrices) => {
     });
 
     /**
-     * GET /sales/:buyId
-     * Fetches all SELL transactions linked to a specific parent BUY transaction ID.
+     * @route GET /api/transactions/sales/:buyId
+     * @group Transactions - Operations for transactions
+     * @description Fetches all SELL transactions linked to a specific parent BUY transaction ID.
+     * @param {string} buyId.path.required - The ID of the parent BUY transaction.
+     * @param {string} holder.query.required - Account holder ID.
+     * @returns {Array<object>|object} 200 - An array of SELL transaction objects, each with a `realizedPL` property. 400 - Error message for missing IDs. 500 - Error message for server errors.
      */
     router.get('/sales/:buyId', async (req, res) => {
         const { buyId } = req.params;

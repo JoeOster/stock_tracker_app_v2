@@ -30,7 +30,7 @@ let currentModalActionHandler = null;
  * Attaches event listeners specifically for actions *within* the source details modal content area.
  * Ensures only one listener is active at a time.
  * @param {HTMLElement} modalContentArea - The content area element (`#source-details-modal-content`).
- * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {void}
  */
 function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback) {
@@ -44,11 +44,9 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
     /** @param {Event} e */
     const newModalHandler = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
-        // --- FIX: Cast detailsModal ---
         const detailsModal = /** @type {HTMLElement | null} */(target.closest('#source-details-modal'));
-        // --- END FIX ---
-        const modalSourceId = detailsModal?.dataset.sourceId; // Now valid
-        const modalHolderId = detailsModal?.dataset.holderId; // Now valid
+        const modalSourceId = detailsModal?.dataset.sourceId;
+        const modalHolderId = detailsModal?.dataset.holderId;
 
         if (!modalSourceId || !modalHolderId || modalHolderId === 'all') {
              console.warn("[Modal Actions] Click handler: Missing sourceId or holderId on modal dataset.");
@@ -102,33 +100,34 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
             ? 'all'
             : state.selectedAccountHolderId;
         const sourceCardElement = /** @type {HTMLElement | null} */ (target.closest('.source-card[data-source-id]'));
-        const sourceId = sourceCardElement?.dataset.sourceId; // Now valid
+        const sourceId = sourceCardElement?.dataset.sourceId;
 
-        const detailsModal = /** @type {HTMLElement | null} */(document.getElementById('source-details-modal')); // --- FIX: Cast detailsModal ---
+        const detailsModal = /** @type {HTMLElement | null} */(document.getElementById('source-details-modal'));
         const modalTitle = document.getElementById('source-details-modal-title');
         const modalContentArea = /** @type {HTMLElement | null} */ (document.getElementById('source-details-modal-content'));
 
-        /** @async @returns {Promise<void>} */
+        /** * Refreshes the details content within the modal.
+         * @async 
+         * @returns {Promise<void>} 
+         */
         const refreshDetails = async () => {
              console.log("[refreshDetails - inner] Attempting refresh...");
             if (!detailsModal || !detailsModal.classList.contains('visible') || !modalContentArea) { return; }
-            const modalSourceId = detailsModal.dataset.sourceId; // Now valid
-            const modalHolderId = detailsModal.dataset.holderId; // Now valid
+            const modalSourceId = detailsModal.dataset.sourceId;
+            const modalHolderId = detailsModal.dataset.holderId;
             if (!modalSourceId || !modalHolderId || modalHolderId === 'all') { return; }
 
             console.log(`[refreshDetails - inner] Source ID: ${modalSourceId}, Holder ID: ${modalHolderId}`);
             modalContentArea.innerHTML = '<p><i>Refreshing details...</i></p>';
             try {
                 console.log("[refreshDetails - inner] Calling fetchSourceDetails...");
-                // --- FIX: Ensure fetchSourceDetails returns the summaryStats ---
+                // fetchSourceDetails returns the full details object, including summaryStats
                 const refreshedDetails = await fetchSourceDetails(modalSourceId, modalHolderId);
-                // --- END FIX ---
                 console.log("[refreshDetails - inner] fetchSourceDetails returned:", refreshedDetails);
                 console.log("[refreshDetails - inner] Watchlist items:", refreshedDetails?.watchlistItems);
 
-                // --- FIX: Pass refreshedDetails which now includes summaryStats ---
+                // Pass the full details object to the renderer
                 modalContentArea.innerHTML = generateSourceDetailsHTML(refreshedDetails);
-                // --- END FIX ---
                 initializeModalActionHandlers(modalContentArea, refreshDetails);
                 console.log("[refreshDetails - inner] Refreshed details rendered and listeners re-attached.");
             } catch (err) {
@@ -154,23 +153,19 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
 
             modalTitle.textContent = `Source Details: Loading...`;
             modalContentArea.innerHTML = '<p><i>Loading details...</i></p>';
-            detailsModal.dataset.sourceId = sourceId; // Now valid
-            detailsModal.dataset.holderId = String(holderId); // Now valid
+            detailsModal.dataset.sourceId = sourceId;
+            detailsModal.dataset.holderId = String(holderId);
             detailsModal.classList.add('visible');
 
             try {
                 const holderIdParam = typeof holderId === 'number' ? String(holderId) : holderId;
                 console.log(`[Grid Listener] Calling fetchSourceDetails. ID: ${sourceId}, Holder: ${holderIdParam}`);
-                // --- FIX: Ensure fetchSourceDetails returns the summaryStats ---
                 const details = await fetchSourceDetails(sourceId, holderIdParam);
-                // --- END FIX ---
                 console.log("[Grid Listener] Fetched details for modal:", details);
 
                 const sourceName = details?.source?.name || 'Unknown';
                 modalTitle.textContent = `Source Details: ${sourceName}`;
-                // --- FIX: Pass details which now includes summaryStats ---
                 modalContentArea.innerHTML = generateSourceDetailsHTML(details);
-                // --- END FIX ---
                 console.log("[Grid Listener] Details rendered in modal.");
 
                 initializeModalActionHandlers(modalContentArea, refreshDetails);

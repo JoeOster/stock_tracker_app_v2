@@ -6,52 +6,26 @@
 
 import { state } from '../../state.js';
 import { formatAccounting, formatQuantity } from '../formatters.js';
-
-/**
- * Populates the advice source dropdown in the add journal entry form.
- */
-function populateAdviceSourceDropdown() {
-    const select = /** @type {HTMLSelectElement} */ (document.getElementById('journal-advice-source'));
-    if (!select) return;
-
-    // Preserve the current selection if possible
-    const currentValue = select.value;
-    select.innerHTML = '<option value="">(None/Manual Entry)</option>'; // Default option
-
-    if (state.allAdviceSources && state.allAdviceSources.length > 0) {
-        // Sort sources alphabetically by name
-        const sortedSources = [...state.allAdviceSources].sort((a, b) => a.name.localeCompare(b.name));
-
-        sortedSources.forEach(source => {
-            const option = document.createElement('option');
-            option.value = source.id;
-            // Display name and type for clarity
-            option.textContent = `${source.name} (${source.type})`;
-            select.appendChild(option);
-        });
-    }
-
-    // Try to restore the previous selection
-    select.value = currentValue;
-}
-
+import { populateAllAdviceSourceDropdowns } from '../dropdowns.js';
+import { getCurrentESTDateString } from '../datetime.js';
 
 /**
  * Renders the rows for the open journal entries table.
  * @param {HTMLTableSectionElement} tbody The table body element to populate.
  * @param {any[]} openEntries Array of open journal entry objects.
+ * @returns {void}
  */
 function renderOpenEntriesTable(tbody, openEntries) {
     tbody.innerHTML = ''; // Clear existing rows
 
     if (!openEntries || openEntries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10">No open journal entries found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11">No open journal entries found.</td></tr>'; // Updated colspan
         return;
     }
 
     openEntries.forEach(entry => {
         const row = tbody.insertRow();
-        row.dataset.entryId = entry.id; // Add ID for event handling
+        row.dataset.entryId = String(entry.id); // Add ID for event handling
 
         // Calculate potential gain/loss based on targets vs entry
         const potentialGain = entry.target_price ? (entry.target_price - entry.entry_price) * entry.quantity : null;
@@ -70,6 +44,7 @@ function renderOpenEntriesTable(tbody, openEntries) {
             <td class="numeric">${formatAccounting(entry.entry_price)}</td>
             <td class="numeric">${formatQuantity(entry.quantity)}</td>
             <td class="numeric ${potentialGain !== null && potentialGain >= 0 ? 'positive' : 'negative'}">${entry.target_price ? formatAccounting(entry.target_price) : '--'}</td>
+            <td class="numeric ${potentialGain !== null && potentialGain >= 0 ? 'positive' : 'negative'}">${entry.target_price_2 ? formatAccounting(entry.target_price_2) : '--'}</td>
             <td class="numeric ${potentialLoss !== null && potentialLoss < 0 ? 'negative' : 'positive'}">${entry.stop_loss_price ? formatAccounting(entry.stop_loss_price) : '--'}</td>
             <td class="numeric">${entry.current_price ? formatAccounting(entry.current_price) : '--'}</td>
             <td class="numeric ${pnlClass}">${currentPnl !== null ? formatAccounting(currentPnl) : '--'}</td>
@@ -88,6 +63,7 @@ function renderOpenEntriesTable(tbody, openEntries) {
  * Renders the rows for the closed/executed journal entries table.
  * @param {HTMLTableSectionElement} tbody The table body element to populate.
  * @param {any[]} closedEntries Array of closed/executed journal entry objects.
+ * @returns {void}
  */
 function renderClosedEntriesTable(tbody, closedEntries) {
     tbody.innerHTML = ''; // Clear existing rows
@@ -99,7 +75,7 @@ function renderClosedEntriesTable(tbody, closedEntries) {
 
     closedEntries.forEach(entry => {
         const row = tbody.insertRow();
-        row.dataset.entryId = entry.id;
+        row.dataset.entryId = String(entry.id);
 
         const pnlClass = entry.pnl >= 0 ? 'positive' : 'negative';
         let statusDisplay = entry.status;
@@ -131,6 +107,7 @@ function renderClosedEntriesTable(tbody, closedEntries) {
  * Calculates and renders summary statistics for the journal page.
  * @param {any[]} openEntries Array of open journal entry objects.
  * @param {any[]} closedEntries Array of closed/executed journal entry objects.
+ * @returns {void}
  */
 function renderJournalSummary(openEntries, closedEntries) {
     const openCountEl = document.getElementById('journal-open-count');
@@ -152,7 +129,7 @@ function renderJournalSummary(openEntries, closedEntries) {
     // Closed Entries Summary
     const closedForStats = closedEntries.filter(e => ['CLOSED', 'EXECUTED'].includes(e.status) && e.pnl !== null && e.pnl !== undefined);
     const winners = closedForStats.filter(e => e.pnl > 0);
-    const losers = closedForStats.filter(e => e.pnl < 0); // Exclude break-even trades from win rate denominator if desired
+    const losers = closedForStats.filter(e => e.pnl < 0); // Exclude break-even trades
 
     const winRate = closedForStats.length > 0 ? (winners.length / closedForStats.length) * 100 : 0;
     const totalGain = winners.reduce((sum, entry) => sum + entry.pnl, 0);
@@ -174,6 +151,7 @@ function renderJournalSummary(openEntries, closedEntries) {
  * @param {object} journalData - Object containing arrays of journal entries.
  * @param {any[]} journalData.openEntries - Array of open journal entries.
  * @param {any[]} journalData.closedEntries - Array of closed/executed/cancelled entries.
+ * @returns {void}
  */
 export function renderJournalPage(journalData) {
     const { openEntries = [], closedEntries = [] } = journalData || {};
@@ -184,7 +162,7 @@ export function renderJournalPage(journalData) {
     const exchangeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('journal-exchange'));
 
     // Populate dropdowns that rely on global state
-    populateAdviceSourceDropdown();
+    populateAllAdviceSourceDropdowns();
 
     // Populate exchange dropdown (using existing state if available)
     if (exchangeSelect && state.allExchanges) {
@@ -220,9 +198,7 @@ export function renderJournalPage(journalData) {
     // Set default entry date
     const entryDateInput = /** @type {HTMLInputElement} */ (document.getElementById('journal-entry-date'));
     if (entryDateInput && !entryDateInput.value) {
-       // Requires datetime helper: import { getCurrentESTDateString } from '../ui/datetime.js';
-       // entryDateInput.value = getCurrentESTDateString();
-       entryDateInput.valueAsDate = new Date(); // Simple alternative using local time zone
+       entryDateInput.value = getCurrentESTDateString();
     }
 
 }

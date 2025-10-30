@@ -102,6 +102,7 @@ export async function handleResponse(response) {
 
 /**
  * Fetches the latest transactions and re-renders the ledger view.
+ * @async
  * @returns {Promise<void>}
  */
 export async function refreshLedger() {
@@ -123,6 +124,7 @@ export async function refreshLedger() {
 
 /**
  * Fetches the latest market prices for a given list of tickers and updates the price cache.
+ * @async
  * @param {string} viewDate - The date for which to fetch prices (YYYY-MM-DD).
  * @param {string[]} tickersToUpdate - The specific list of tickers to fetch.
  * @returns {Promise<void>}
@@ -192,6 +194,7 @@ export async function updatePricesForView(viewDate, tickersToUpdate) {
 
 /**
  * Manually triggers a price update for the current view and then re-renders the price-dependent UI elements.
+ * @async
  * @returns {Promise<void>}
  */
 export async function updateAllPrices() {
@@ -206,7 +209,7 @@ export async function updateAllPrices() {
         tickersToUpdate = [...new Set(Array.from(state.activityMap.values()).map(lot => lot.ticker))];
         // dateForUpdate is already set to state.currentView.value for 'date' type
     } else if (state.currentView.type === 'research') {
-        // <-- MODIFIED: Combine tickers from journal AND recommended trades -->
+        // Combine tickers from journal AND recommended trades
         const journalTickers = state.journalEntries?.openEntries ? state.journalEntries.openEntries.map(entry => entry.ticker) : [];
         const recommendedTickers = state.researchWatchlistItems ? state.researchWatchlistItems.map(item => item.ticker) : [];
         tickersToUpdate = [...new Set([...journalTickers, ...recommendedTickers])];
@@ -242,6 +245,7 @@ export async function updateAllPrices() {
 
 /**
  * Fetches all active pending orders for a given account holder.
+ * @async
  * @param {string|number} holderId - The ID of the account holder ('all' for everyone).
  * @returns {Promise<any[]>} A promise that resolves to an array of pending order objects.
  */
@@ -252,6 +256,7 @@ export async function fetchPendingOrders(holderId) {
 
 /**
  * Fetches all 'UNREAD' notifications for a given account holder.
+ * @async
  * @param {string|number} holderId - The ID of the account holder ('all' for everyone).
  * @returns {Promise<any[]>} A promise that resolves to an array of notification objects.
  */
@@ -262,6 +267,7 @@ export async function fetchAlerts(holderId) {
 
 /**
  * Fetches the daily performance summary for a given date and account holder.
+ * @async
  * @param {string} date - The date for the report in 'YYYY-MM-DD' format.
  * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<object>} A promise that resolves to the performance data.
@@ -273,6 +279,7 @@ export async function fetchDailyPerformance(date, holderId) {
 
 /**
  * Fetches the daily transactions and end-of-day positions for a given date and account holder.
+ * @async
  * @param {string} date - The date for the report in 'YYYY-MM-DD' format.
  * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<{dailyTransactions: any[], endOfDayPositions: any[]}>} A promise that resolves to an object containing dailyTransactions and endOfDayPositions.
@@ -290,6 +297,7 @@ export async function fetchPositions(date, holderId) {
 
 /**
  * Fetches all account value snapshots for a given account holder.
+ * @async
  * @param {string|number} holderId - The ID of the account holder ('all' for everyone).
  * @returns {Promise<any[]>} A promise that resolves to an array of snapshot objects.
  */
@@ -302,6 +310,7 @@ export async function fetchSnapshots(holderId) {
 
 /**
  * Fetches all advice sources for a given account holder.
+ * @async
  * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<any[]>} A promise that resolves to an array of advice source objects.
  */
@@ -315,6 +324,7 @@ export async function fetchAdviceSources(holderId) {
 
 /**
  * Adds a new advice source to the database.
+ * @async
  * @param {AdviceSourcePostBody} sourceData - The data for the new advice source.
  * @returns {Promise<any>} A promise that resolves to the newly created advice source object.
  */
@@ -329,6 +339,7 @@ export async function addAdviceSource(sourceData) {
 
 /**
  * Updates an existing advice source.
+ * @async
  * @param {string|number} id - The ID of the advice source to update.
  * @param {AdviceSourcePutBody} sourceData - The updated data for the advice source.
  * @returns {Promise<any>} A promise that resolves to the server's response message.
@@ -344,6 +355,7 @@ export async function updateAdviceSource(id, sourceData) {
 
 /**
  * Deletes an advice source.
+ * @async
  * @param {string|number} id - The ID of the advice source to delete.
  * @returns {Promise<any>} A promise that resolves to the server's response message.
  */
@@ -358,6 +370,7 @@ export async function deleteAdviceSource(id) {
 
 /**
  * Fetches journal entries for a given account holder, optionally filtering by status.
+ * @async
  * @param {string|number} holderId - The ID of the account holder ('all' not recommended here).
  * @param {'OPEN' | 'CLOSED' | 'EXECUTED' | 'CANCELLED' | null} [status=null] - Optional status to filter by.
  * @returns {Promise<any[]>} A promise that resolves to an array of journal entry objects.
@@ -377,7 +390,8 @@ export async function fetchJournalEntries(holderId, status = null) {
 
 /**
  * Adds a new journal entry to the database.
- * @param {object} entryData - The data for the new journal entry.
+ * @async
+ * @param {object} entryData - The data for the new journal entry. (Should match JournalEntryPostBody)
  * @returns {Promise<any>} A promise that resolves to the newly created journal entry object.
  */
 export async function addJournalEntry(entryData) {
@@ -391,6 +405,7 @@ export async function addJournalEntry(entryData) {
 
 /**
  * Updates an existing journal entry.
+ * @async
  * @param {string|number} id - The ID of the journal entry to update.
  * @param {object} updateData - An object containing the fields to update.
  * @returns {Promise<any>} A promise that resolves to the server's response message.
@@ -406,12 +421,14 @@ export async function updateJournalEntry(id, updateData) {
 
 /**
  * Executes an open journal entry, creating a real transaction.
+ * @async
  * @param {string|number} id - The ID of the journal entry to execute.
  * @param {object} executionData - Details of the execution (date, price, account_holder_id).
  * @param {string} executionData.execution_date - The actual date the trade was executed (YYYY-MM-DD).
  * @param {number} executionData.execution_price - The actual price the trade was executed at.
  * @param {string|number} executionData.account_holder_id - The account holder performing the execution.
- * @returns {Promise<any>} A promise that resolves to the server's response (including the new transaction ID). */
+ * @returns {Promise<any>} A promise that resolves to the server's response (including the new transaction ID).
+ */
 export async function executeJournalEntry(id, executionData) {
      const response = await fetch(`/api/journal/${id}/execute`, {
         method: 'PUT',
@@ -424,6 +441,7 @@ export async function executeJournalEntry(id, executionData) {
 
 /**
  * Deletes a journal entry.
+ * @async
  * @param {string|number} id - The ID of the journal entry to delete.
  * @returns {Promise<any>} A promise that resolves to the server's response message.
  */
@@ -436,6 +454,7 @@ export async function deleteJournalEntry(id) {
 
 /**
  * Fetches the sales history for a specific parent BUY lot ID.
+ * @async
  * @param {string|number} buyId - The ID of the parent BUY transaction.
  * @param {string|number} holderId - The ID of the account holder.
  * @returns {Promise<any[]>} A promise resolving to an array of sales transaction objects with calculated P/L.
@@ -452,9 +471,10 @@ export async function fetchSalesForLot(buyId, holderId) {
 
 /**
  * Fetches detailed information about an advice source, including linked items.
+ * @async
  * @param {string|number} sourceId - The ID of the advice source.
  * @param {string|number} holderId - The ID of the account holder.
- * @returns {Promise<{source: object, journalEntries: any[], watchlistItems: any[], documents: any[], sourceNotes: any[]}>}
+ * @returns {Promise<{source: object, journalEntries: any[], watchlistItems: any[], linkedTransactions: any[], documents: any[], sourceNotes: any[], summaryStats: object}>} A promise resolving to the complete details object.
  */
 export async function fetchSourceDetails(sourceId, holderId) {
     if (!sourceId || !holderId || holderId === 'all') {
@@ -462,7 +482,7 @@ export async function fetchSourceDetails(sourceId, holderId) {
     }
     const response = await fetch(`/api/sources/${sourceId}/details?holder=${holderId}`);
     const data = await handleResponse(response);
-    // <-- MODIFIED: Store watchlist items in state -->
+    // Store watchlist items in state for price updates
     if (data && data.watchlistItems) {
         updateState({ researchWatchlistItems: data.watchlistItems });
     } else {
@@ -475,6 +495,7 @@ export async function fetchSourceDetails(sourceId, holderId) {
 
 /**
  * Adds a ticker to the watchlist, optionally linking it to an advice source and guidelines.
+ * @async
  * @param {string|number} accountHolderId - The account holder ID.
  * @param {string} ticker - The ticker symbol to add.
  * @param {string|number|null} [adviceSourceId=null] - Optional ID of the advice source to link.
@@ -508,6 +529,7 @@ export async function addWatchlistItem(accountHolderId, ticker, adviceSourceId =
 
 /**
  * Deletes a watchlist item by its ID.
+ * @async
  * @param {string|number} itemId - The ID of the watchlist item to delete.
  * @returns {Promise<any>} The response from the server.
  */
@@ -523,6 +545,7 @@ export async function deleteWatchlistItem(itemId) {
 
 /**
  * Adds a document link, associating it with either a journal entry or an advice source.
+ * @async
  * @param {DocumentData} documentData - The document data.
  * @returns {Promise<any>} The response from the server.
  */
@@ -541,6 +564,7 @@ export async function addDocument(documentData) {
 
 /**
  * Deletes a document link by its ID.
+ * @async
  * @param {string|number} documentId - The ID of the document link to delete.
  * @returns {Promise<any>} The response from the server.
  */
@@ -555,6 +579,7 @@ export async function deleteDocument(documentId) {
 
 /**
  * Adds a note to a specific advice source.
+ * @async
  * @param {string|number} sourceId - The ID of the advice source.
  * @param {string|number} holderId - The ID of the account holder.
  * @param {string} noteContent - The text content of the note.
@@ -574,6 +599,7 @@ export async function addSourceNote(sourceId, holderId, noteContent) {
 
 /**
  * Deletes a specific note associated with an advice source.
+ * @async
  * @param {string|number} sourceId - The ID of the advice source.
  * @param {string|number} noteId - The ID of the note to delete.
  * @param {string|number} holderId - The ID of the account holder (for verification).
@@ -594,6 +620,7 @@ export async function deleteSourceNote(sourceId, noteId, holderId) {
 
 /**
  * Updates the content of a specific note.
+ * @async
  * @param {string|number} sourceId - The ID of the advice source the note belongs to.
  * @param {string|number} noteId - The ID of the note to update.
  * @param {string|number} holderId - The ID of the account holder (for verification).
@@ -614,6 +641,7 @@ export async function updateSourceNote(sourceId, noteId, holderId, noteContent) 
 
 /**
  * Adds a new pending order to the database.
+ * @async
  * @param {object} orderData - The data for the new pending order.
  * @param {string|number} orderData.account_holder_id - The account holder ID.
  * @param {string} orderData.ticker - The ticker symbol.

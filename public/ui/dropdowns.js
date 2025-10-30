@@ -9,9 +9,11 @@ import { state } from '../state.js';
 /**
  * Populates all <select> elements with class 'advice-source-select'
  * with the sources from state.allAdviceSources.
+ * @returns {void}
  */
 export function populateAllAdviceSourceDropdowns() {
     // Selects ALL elements with this class, including the one in _orders.html
+    // and the one in _journal.html (inside the research tab)
     const selects = document.querySelectorAll('.advice-source-select');
     if (selects.length === 0) {
         console.log("[Dropdowns] No '.advice-source-select' elements found to populate.");
@@ -42,7 +44,7 @@ export function populateAllAdviceSourceDropdowns() {
             select.appendChild(option);
         });
 
-        // Try to restore the previously selected value (for settings modal, etc.)
+        // Try to restore the previously selected value
         if (select.querySelector(`option[value="${currentVal}"]`)) {
             (/** @type {HTMLSelectElement} */(select)).value = currentVal;
         } else {

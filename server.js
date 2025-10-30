@@ -46,35 +46,38 @@ app.use(fileUpload()); // Middleware for handling file uploads
 
 /**
  * Main asynchronous function to set up database connection, cron jobs, and API routes.
+ * @async
  * @returns {Promise<{app: express.Application, db: import('sqlite').Database, importSessions: Map<string, any>}>}
  */
 async function setupApp() {
     const db = await initializeDatabase();
 
-    // Simple logger function
+    /**
+     * Simple logger function.
+     * @param {string} message - The message to log.
+     * @returns {void}
+     */
     const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
 
-    // --- FIX: Pass the 'log' function to setupCronJobs ---
+    // --- Pass the 'log' function to setupCronJobs ---
     setupCronJobs(db, log); // Pass both db and log
-    // --- END FIX ---
 
     // --- API Routes ---
     const apiRouter = express.Router();
 
     // Mount various API modules, passing database connection, logger, and other dependencies
-    // *** MODIFIED: Removed importSessions from transactions.js ***
     apiRouter.use('/transactions', require('./routes/transactions.js')(db, log, captureEodPrices));
     apiRouter.use('/orders', require('./routes/orders.js')(db, log));
     apiRouter.use('/reporting', require('./routes/reporting.js')(db, log));
     apiRouter.use('/accounts', require('./routes/accounts.js')(db, log));
     apiRouter.use('/utility', require('./routes/utility.js')(db, log));
-    // *** importer.js call remains the same, it already gets what it needs ***
     apiRouter.use('/importer', require('./routes/importer.js')(db, log, importSessions));
     apiRouter.use('/watchlist', require('./routes/watchlist.js')(db, log));
     apiRouter.use('/advice-sources', require('./routes/advice_sources.js')(db, log));
     apiRouter.use('/journal', require('./routes/journal.js')(db, log));
-    // --- ADDED: Mount the new sources router ---
     apiRouter.use('/sources', require('./routes/sources.js')(db, log));
+    // --- ADDED: Mount the new documents router ---
+    apiRouter.use('/documents', require('./routes/documents.js')(db, log));
     // --- END ADDITION ---
 
     // Use the '/api' prefix for all API routes
@@ -100,6 +103,7 @@ async function setupApp() {
 /**
  * Starts the Express server listener.
  * @param {express.Application} appInstance - The configured Express application instance.
+ * @returns {void}
  */
 function startServer(appInstance) {
     // Avoid starting the server listener during automated tests

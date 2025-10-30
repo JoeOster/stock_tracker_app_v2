@@ -4,7 +4,7 @@
  * @module event-handlers/_settings_exchanges
  */
 
-import { state } from '../state.js';
+import { state, updateState } from '../state.js';
 import { handleResponse, refreshLedger } from '../api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderExchangeManagementList } from '../ui/settings.js';
@@ -70,22 +70,26 @@ function populateAllExchangeDropdowns() {
 
 /**
  * Fetches the list of exchanges, stores them in state, and populates dropdowns.
+ * @async
  * @returns {Promise<void>}
  */
 export async function fetchAndRenderExchanges() {
     try {
         const response = await fetch('/api/accounts/exchanges');
-        state.allExchanges = await handleResponse(response);
+        const exchanges = await handleResponse(response);
+        updateState({ allExchanges: exchanges }); // Update state
         populateAllExchangeDropdowns(); // Update dropdowns everywhere using the new sorted logic
     } catch (error) {
+        // @ts-ignore
         showToast(`Could not load exchanges: ${error.message}`, 'error');
-        state.allExchanges = [];
+        updateState({ allExchanges: [] });
     }
 }
 
 
 /**
  * Initializes event listeners for Exchange Management.
+ * @returns {void}
  */
 export function initializeExchangeManagementHandlers() {
     const exchangeList = document.getElementById('exchange-list');
@@ -110,6 +114,7 @@ export function initializeExchangeManagementHandlers() {
                 renderExchangeManagementList(); // Re-render the list in the modal
                 showToast('Exchange added!', 'success');
             } catch (error) {
+                // @ts-ignore
                 showToast(`Error adding exchange: ${error.message}`, 'error');
             } finally {
                 addExchangeBtn.disabled = false;
@@ -120,7 +125,6 @@ export function initializeExchangeManagementHandlers() {
     // --- Edit/Save/Cancel/Delete Exchange ---
     if (exchangeList) {
         exchangeList.addEventListener('click', async (e) => {
-            // ... (rest of the edit/save/cancel/delete logic remains the same) ...
             const target = /** @type {HTMLElement} */ (e.target);
             const li = /** @type {HTMLElement | null} */ (target.closest('li[data-id]'));
             if (!li) return;
@@ -154,7 +158,10 @@ export function initializeExchangeManagementHandlers() {
             else if (target === saveBtn) {
                 const newName = nameInput.value.trim();
                 if (!newName) return showToast('Exchange name cannot be empty.', 'error');
-                if (newName.toLowerCase() === nameSpan.textContent?.toLowerCase()) { cancelBtn.click(); return; }
+                if (newName.toLowerCase() === nameSpan.textContent?.toLowerCase()) {
+                    // @ts-ignore
+                    cancelBtn.click(); return; 
+                }
                  if (state.allExchanges.some(ex => String(ex.id) !== id && ex.name.toLowerCase() === newName.toLowerCase())) {
                     return showToast(`Another exchange named "${newName}" already exists.`, 'error');
                  }
@@ -167,6 +174,7 @@ export function initializeExchangeManagementHandlers() {
                     showToast('Exchange updated!', 'success');
                     await refreshLedger();
                 } catch (error) {
+                    // @ts-ignore
                     showToast(`Error updating exchange: ${error.message}`, 'error');
                     saveBtn.disabled = false;
                 }
@@ -179,7 +187,10 @@ export function initializeExchangeManagementHandlers() {
                         await fetchAndRenderExchanges();
                         renderExchangeManagementList();
                         showToast('Exchange deleted.', 'success');
-                    } catch (error) { showToast(`Error deleting exchange: ${error.message}`, 'error'); }
+                    } catch (error) { 
+                        // @ts-ignore
+                        showToast(`Error deleting exchange: ${error.message}`, 'error'); 
+                    }
                 });
             }
         });

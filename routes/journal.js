@@ -10,16 +10,21 @@ const { getPrices } = require('../services/priceService'); // Import price servi
 /**
  * Creates and returns an Express router for handling journal entry endpoints.
  * @param {import('sqlite').Database} db - The database connection object.
- * @param {function(string): void} log - The logging function (optional).
+ * @param {function(string): void} [log=console.log] - The logging function (optional).
  * @returns {express.Router} The configured Express router.
  */
 module.exports = (db, log = console.log) => {
 
     /**
-     * GET /
-     * Fetches journal entries for a specific account holder, optionally filtered by status.
+     * @route GET /api/journal/
+     * @group Journal - Operations for journal entries
+     * @description Fetches journal entries for a specific account holder, optionally filtered by status.
      * Also fetches current prices for 'OPEN' entries to calculate current P/L.
-     * Expects `holder` query parameter. Optional `status` query parameter ('OPEN', 'CLOSED', 'EXECUTED', 'CANCELLED').
+     * @param {string} holder.query.required - Account holder ID.
+     * @param {'OPEN' | 'CLOSED' | 'EXECUTED' | 'CANCELLED'} [status.query] - Optional status filter.
+     * @returns {Array<object>} 200 - An array of journal entry objects.
+     * 400 - Error message if holder ID is missing.
+     * 500 - Error message for server errors.
      */
     router.get('/', async (req, res) => {
         const holderId = req.query.holder;
@@ -88,15 +93,42 @@ module.exports = (db, log = console.log) => {
     });
 
     /**
-     * POST /
-     * Creates a new journal entry.
+     * @typedef {object} JournalEntryPostBody
+     * @property {string|number} account_holder_id
+     * @property {string|number|null} [advice_source_id]
+     * @property {string} entry_date
+     * @property {string} ticker
+     * @property {string} exchange
+     * @property {'BUY'|'SELL'} direction
+     * @property {string|number} quantity
+     * @property {string|number} entry_price
+     * @property {string|number|null} [target_price]
+     * @property {string|number|null} [target_price_2] - *** ADDED ***
+     * @property {string|number|null} [stop_loss_price]
+     * @property {string|null} [advice_source_details]
+     * @property {string|null} [entry_reason]
+     * @property {string|null} [notes]
+     * @property {string|null} [tags]
+     * @property {string|null} [chart_type]
+     */
+
+    /**
+     * @route POST /api/journal/
+     * @group Journal - Operations for journal entries
+     * @description Creates a new journal entry.
+     * @param {JournalEntryPostBody.model} req.body.required - The journal entry data.
+     * @returns {object} 201 - The newly created journal entry object.
+     * 400 - Error message for missing or invalid fields.
+     * 500 - Error message for server errors.
      */
     router.post('/', async (req, res) => {
         const {
             account_holder_id, advice_source_id, entry_date, ticker, exchange,
-            direction, quantity, entry_price, target_price, stop_loss_price,
+            direction, quantity, entry_price, target_price,
+            target_price_2, // *** ADDED ***
+            stop_loss_price,
             advice_source_details, entry_reason, notes, tags,
-            chart_type // --- ADDED ---
+            chart_type
         } = req.body;
 
         // Basic validation
@@ -118,15 +150,19 @@ module.exports = (db, log = console.log) => {
             const result = await db.run(`
                 INSERT INTO journal_entries (
                     account_holder_id, advice_source_id, entry_date, ticker, exchange,
-                    direction, quantity, entry_price, target_price, stop_loss_price,
+                    direction, quantity, entry_price, target_price,
+                    target_price_2, -- *** ADDED ***
+                    stop_loss_price,
                     advice_source_details, entry_reason, notes, tags, status,
                     chart_type
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 account_holder_id, advice_source_id || null, entry_date, ticker.toUpperCase().trim(), exchange,
-                direction, numQuantity, numEntryPrice, target_price || null, stop_loss_price || null,
+                direction, numQuantity, numEntryPrice, target_price || null,
+                target_price_2 || null, // *** ADDED ***
+                stop_loss_price || null,
                 advice_source_details || null, entry_reason || null, notes || null, tags || null, 'OPEN', // Default status
-                chart_type || null // --- ADDED ---
+                chart_type || null
             ]);
 
              const newEntry = await db.get('SELECT * FROM journal_entries WHERE id = ?', result.lastID);
@@ -139,19 +175,28 @@ module.exports = (db, log = console.log) => {
     });
 
     /**
-     * PUT /:id
-     * Updates an existing journal entry (e.g., closing a trade, changing status, updating notes).
+     * @route PUT /api/journal/:id
+     * @group Journal - Operations for journal entries
+     * @description Updates an existing journal entry (e.g., closing a trade, changing status, updating notes).
+     * @param {string} id.path.required - The ID of the journal entry.
+     * @param {object} req.body.required - The fields to update. Can be a partial object.
+     * @returns {object} 200 - Success message.
+     * @returns {object} 400 - Error message for invalid data (e.g., missing exit price on close).
+     * @returns {object} 404 - Error message if entry not found.
+     * @returns {object} 500 - Error message for server errors.
      */
     router.put('/:id', async (req, res) => {
         const { id } = req.params;
         const {
             // Fields that might be updated directly
-            target_price, stop_loss_price, notes, tags, entry_reason, advice_source_details, advice_source_id,
+            target_price,
+            target_price_2, // *** ADDED ***
+            stop_loss_price, notes, tags, entry_reason, advice_source_details, advice_source_id,
             // Fields for closing a trade
             status, exit_date, exit_price, exit_reason,
             // Fields less likely to change but could technically (ticker, exchange, etc.) - decide if allowed
              entry_date, ticker, exchange, direction, quantity, entry_price,
-             chart_type // --- ADDED ---
+             chart_type
         } = req.body;
 
         // Basic check for required update fields if closing/executing
@@ -189,7 +234,9 @@ module.exports = (db, log = console.log) => {
             // Simple approach: update most fields based on request body, ensure crucial ones like ID/account holder aren't changed easily.
             await db.run(`
                 UPDATE journal_entries SET
-                    target_price = ?, stop_loss_price = ?, notes = ?, tags = ?, entry_reason = ?,
+                    target_price = ?,
+                    target_price_2 = ?, -- *** ADDED ***
+                    stop_loss_price = ?, notes = ?, tags = ?, entry_reason = ?,
                     advice_source_details = ?, advice_source_id = ?, status = ?, exit_date = ?,
                     exit_price = ?, exit_reason = ?, pnl = ?,
                     -- Potentially allow updating core details if needed, carefully consider implications
@@ -198,6 +245,7 @@ module.exports = (db, log = console.log) => {
                 WHERE id = ? AND account_holder_id = ?
             `, [
                 target_price !== undefined ? target_price : entry.target_price,
+                target_price_2 !== undefined ? target_price_2 : entry.target_price_2, // *** ADDED ***
                 stop_loss_price !== undefined ? stop_loss_price : entry.stop_loss_price,
                 notes !== undefined ? notes : entry.notes,
                 tags !== undefined ? tags : entry.tags,
@@ -216,7 +264,7 @@ module.exports = (db, log = console.log) => {
                 direction || entry.direction,
                 quantity !== undefined ? parseFloat(quantity) : entry.quantity,
                 entry_price !== undefined ? parseFloat(entry_price) : entry.entry_price,
-                chart_type !== undefined ? chart_type : entry.chart_type, // --- ADDED ---
+                chart_type !== undefined ? chart_type : entry.chart_type,
                 id,
                 entry.account_holder_id // Ensure user can only update their own entries
             ]);
@@ -230,9 +278,19 @@ module.exports = (db, log = console.log) => {
 
 
      /**
-     * PUT /:id/execute
-     * Special endpoint to handle executing a journal entry and creating a real transaction.
+     * @route PUT /api/journal/:id/execute
+     * @group Journal - Operations for journal entries
+     * @description Special endpoint to execute a journal entry and create a real transaction.
      * This links the journal entry to the transaction and updates the journal status.
+     * @param {string} id.path.required - The ID of the journal entry.
+     * @param {object} req.body.required - Execution details.
+     * @param {string} req.body.execution_date - Actual execution date (YYYY-MM-DD).
+     * @param {number} req.body.execution_price - Actual execution price.
+     * @param {string|number} req.body.account_holder_id - Account holder ID.
+     * @returns {object} 200 - Success message and new transaction ID.
+     * @returns {object} 400 - Error message for invalid data or if entry is not OPEN/BUY.
+     * @returns {object} 404 - Error message if entry not found.
+     * @returns {object} 500 - Error message for server errors.
      */
     router.put('/:id/execute', async (req, res) => {
         const { id } = req.params;
@@ -265,14 +323,18 @@ module.exports = (db, log = console.log) => {
              }
 
             // 2. Create the actual transaction record
+            // *** ADDED linked_journal_id ***
             const txResult = await db.run(`
                 INSERT INTO transactions (
                     ticker, exchange, transaction_type, quantity, price, transaction_date,
-                    original_quantity, quantity_remaining, account_holder_id, source, advice_source_id, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    original_quantity, quantity_remaining, account_holder_id, source,
+                    advice_source_id, linked_journal_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 entry.ticker, entry.exchange, entry.direction, entry.quantity, numExecutionPrice, execution_date,
-                entry.quantity, entry.quantity, account_holder_id, 'JOURNAL_EXECUTE', entry.advice_source_id, // Link advice source
+                entry.quantity, entry.quantity, account_holder_id, 'JOURNAL_EXECUTE',
+                entry.advice_source_id, // Link advice source
+                id, // *** ADDED: Link back to this journal entry ***
                  new Date().toISOString()
             ]);
              const newTransactionId = txResult.lastID;
@@ -301,8 +363,13 @@ module.exports = (db, log = console.log) => {
 
 
     /**
-     * DELETE /:id
-     * Deletes a journal entry.
+     * @route DELETE /api/journal/:id
+     * @group Journal - Operations for journal entries
+     * @description Deletes a journal entry.
+     * @param {string} id.path.required - The ID of the journal entry.
+     * @returns {object} 200 - Success message.
+     * @returns {object} 404 - Error message if entry not found.
+     * @returns {object} 500 - Error message for server errors.
      */
     router.delete('/:id', async (req, res) => {
         const { id } = req.params;

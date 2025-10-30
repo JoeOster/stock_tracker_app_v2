@@ -1,7 +1,7 @@
 /* public/css/components/_journal.css */
 /* Contains styles specific to the Journal page. */
 
-/* #journal-summary-container { ... } REMOVED - Using generic .summary-container */
+/* .journal-summary-container { ... } REMOVED - Using generic .summary-container */
 
 .journal-table th, .journal-table td {
     padding: 10px 12px;

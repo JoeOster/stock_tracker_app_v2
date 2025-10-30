@@ -1,4 +1,3 @@
- 
 // public/event-handlers/_research_sources_actions_notes.js
 /**
  * @file Handles Note and Delete actions triggered from within the Research Source details view.
@@ -15,7 +14,7 @@ import { showToast, showConfirmationModal } from '../ui/helpers.js';
 /**
  * Handles submission of the "Add Note" form.
  * @param {Event} e - The form submission event.
- * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
 export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
@@ -53,7 +52,7 @@ export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
  * @param {HTMLElement} target - The clicked element.
  * @param {string} sourceId - The ID of the source context (from modal dataset).
  * @param {string|number} holderId - The current account holder ID (from modal dataset).
- * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
 export async function handleDeleteClick(target, sourceId, holderId, refreshDetailsCallback) {
@@ -108,7 +107,7 @@ export async function handleDeleteClick(target, sourceId, holderId, refreshDetai
  * @param {HTMLElement} target - The clicked element.
  * @param {string} sourceId - The ID of the source context (from modal dataset).
  * @param {string|number} holderId - The current account holder ID (from modal dataset).
- * @param {() => Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
 export async function handleNoteEditActions(target, sourceId, holderId, refreshDetailsCallback) {

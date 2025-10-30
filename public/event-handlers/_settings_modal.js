@@ -20,14 +20,14 @@ import { fetchAndStoreAdviceSources } from './_journal_settings.js';
 
 /**
  * Helper function to set the active tab and panel within a tab group.
- * (Copied from the previous _settings.js refactor)
  * @param {Element} containerElement - The container holding the tab buttons.
  * @param {HTMLElement} clickedTabElement - The specific tab button clicked.
- * @param {Element} scopeElement - The element to search for panels within.
+ * @param {Element | null} scopeElement - The element to search for panels within.
  * @param {string} panelSelector - CSS selector for the panels.
  * @param {string} tabAttribute - The data attribute on the tab button (e.g., 'data-tab').
  * @param {string} [panelIdPrefix='#'] - Prefix for the panel ID selector.
  * @param {string} [panelIdSuffix=''] - Suffix for the panel ID selector.
+ * @returns {void}
  */
 export function setActiveTab(containerElement, clickedTabElement, scopeElement, panelSelector, tabAttribute, panelIdPrefix = '#', panelIdSuffix = '') {
     const tabId = clickedTabElement.getAttribute(tabAttribute);
@@ -35,6 +35,10 @@ export function setActiveTab(containerElement, clickedTabElement, scopeElement, 
 
     if (!tabId) {
         console.error("setActiveTab: Clicked tab is missing the required data attribute:", tabAttribute);
+        return;
+    }
+    if (!scopeElement) {
+        console.error("setActiveTab: Scope element is null.");
         return;
     }
 
@@ -62,6 +66,7 @@ export function setActiveTab(containerElement, clickedTabElement, scopeElement, 
 
 /**
  * Initializes core event listeners for the Settings modal.
+ * @returns {void}
  */
 export function initializeSettingsModalHandlers() {
     const settingsBtn = document.getElementById('settings-btn');
@@ -79,7 +84,6 @@ export function initializeSettingsModalHandlers() {
             console.log("Settings button clicked - opening modal...");
             try {
                 // Fetch all necessary data before showing/rendering lists
-                // Show a temporary loading state?
                 showToast('Loading settings data...', 'info', 2000);
                 await Promise.all([
                     fetchAndRenderExchanges(), // Fetch data needed for exchange list & dropdowns
@@ -111,9 +115,8 @@ export function initializeSettingsModalHandlers() {
 
             } catch (error) {
                  console.error("Error opening settings modal:", error);
+                 // @ts-ignore
                  showToast(`Could not load settings data: ${error.message}`, "error");
-                 // Optionally hide modal if loading failed critically
-                 // settingsModal.classList.remove('visible');
             }
         });
     } else {
@@ -162,7 +165,6 @@ export function initializeSettingsModalHandlers() {
     }
 
     // --- Sub-Tab Switching within Data Management ---
-    // Moved the setActiveTab call here, ensuring dataManagementPanel exists
     if (dataManagementPanel) {
         const subTabsContainer = dataManagementPanel.querySelector('.sub-tabs');
         if (subTabsContainer) {

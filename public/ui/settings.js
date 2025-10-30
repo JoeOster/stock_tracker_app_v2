@@ -1,10 +1,9 @@
 // public/ui/settings.js
-// Version Updated (Apply standard button classes in lists)
 /**
  * @file Contains general UI functions related to the settings modal (non-journal specific).
  * @module ui/settings
  */
-import { state } from '../state.js';
+import { state, updateState } from '../state.js';
 import { switchView } from '../event-handlers/_navigation.js';
 
 /**
@@ -12,21 +11,28 @@ import { switchView } from '../event-handlers/_navigation.js';
  * @returns {void}
  */
 export function saveSettings() {
-    // ... (saveSettings function remains the same) ...
     const oldTheme = state.settings.theme;
-    state.settings.takeProfitPercent = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value) || 0;
-    state.settings.stopLossPercent = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'))).value) || 0;
-    state.settings.theme = (/** @type {HTMLSelectElement} */(document.getElementById('theme-selector'))).value;
-    state.settings.font = (/** @type {HTMLSelectElement} */(document.getElementById('font-selector'))).value;
-    state.settings.notificationCooldown = parseInt((/** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'))).value, 10) || 16;
-    state.settings.familyName = (/** @type {HTMLInputElement} */(document.getElementById('family-name'))).value.trim();
+    
+    const newSettings = {
+        ...state.settings, // Start with existing settings
+        takeProfitPercent: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value) || 0,
+        stopLossPercent: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'))).value) || 0,
+        theme: (/** @type {HTMLSelectElement} */(document.getElementById('theme-selector'))).value,
+        font: (/** @type {HTMLSelectElement} */(document.getElementById('font-selector'))).value,
+        notificationCooldown: parseInt((/** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'))).value, 10) || 16,
+        familyName: (/** @type {HTMLInputElement} */(document.getElementById('family-name'))).value.trim()
+    };
 
     const selectedDefaultHolder = /** @type {HTMLInputElement} */ (document.querySelector('input[name="default-holder-radio"]:checked'));
     if (selectedDefaultHolder) {
-        state.settings.defaultAccountHolderId = selectedDefaultHolder.value;
+        newSettings.defaultAccountHolderId = selectedDefaultHolder.value;
     } else {
-         state.settings.defaultAccountHolderId = state.settings.defaultAccountHolderId || 1;
+         // Keep the existing one if none is selected (shouldn't happen if list is populated)
+         newSettings.defaultAccountHolderId = state.settings.defaultAccountHolderId || 1;
     }
+    
+    updateState({ settings: newSettings }); // Update the state
+    
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
 
     applyAppearanceSettings();
@@ -41,7 +47,6 @@ export function saveSettings() {
  * @returns {void}
  */
 export function applyAppearanceSettings() {
-    // ... (applyAppearanceSettings function remains the same) ...
     document.body.dataset.theme = state.settings.theme;
     const fontToUse = state.settings.font || 'Inter';
     const fontVar = fontToUse === 'System' ? 'var(--font-system)' : `var(--font-${fontToUse.toLowerCase().replace(' ', '-')})`;
@@ -116,9 +121,7 @@ export function renderAccountHolderManagementList() {
     sortedHolders.forEach(holder => {
         const isDefault = state.settings.defaultAccountHolderId == holder.id;
         const isProtected = holder.id == 1;
-        // *** START MODIFICATION: Add .delete-btn class ***
         const deleteButton = isProtected ? '' : `<button class="delete-holder-btn delete-btn" data-id="${holder.id}">Delete</button>`;
-        // *** END MODIFICATION ***
         const escapeHTML = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') : '';
         const escapedName = escapeHTML(holder.name);
 
@@ -126,9 +129,9 @@ export function renderAccountHolderManagementList() {
         li.dataset.id = String(holder.id);
         li.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1;"> <input type="radio" id="holder_radio_${holder.id}" name="default-holder-radio" value="${holder.id}" ${isDefault ? 'checked' : ''} style="flex-shrink: 0;">
-                <label for="holder_radio_${holder.id}" class="holder-name">${escapedName}</label>
+                <label for="holder_radio_${holder.id}" class="holder-name" style="cursor: pointer;">${escapedName}</label>
                 <input type="text" class="edit-holder-input" value="${escapedName}" style="display: none; width: 100%;"> </div>
-            <div style="flex-shrink: 0;"> <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
+            <div style="flex-shrink: 0; display: flex; gap: 5px;"> <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
                 <button class="save-holder-btn" data-id="${holder.id}" style="display: none;">Save</button>
                 <button class="cancel-holder-btn cancel-btn" data-id="${holder.id}" style="display: none;">Cancel</button>                
                 ${deleteButton}
