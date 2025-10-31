@@ -96,9 +96,6 @@
                                         <option value="Group">Group</option>
                                         <option value="Book">Book</option>
                                         <option value="Website">Website</option>
-                                        <option value="Newsletter">Newsletter</option>
-                                        <option value="Service">Service</option>
-                                        <option value="Other">Other</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -110,10 +107,12 @@
                                     <textarea id="new-source-description" rows="2"></textarea>
                                 </div>
                                 
-                                    <div id="new-source-panel-person" class="dynamic-source-panel">                                    <div class="form-group">
-                                        <label for="new-source-contact-person">Contact Person (Optional)</label>
-                                        <input type="text" id="new-source-contact-person">
-                                    </div>
+                                <div class="form-group form-group-span-2">
+                                    <label for="new-source-image-path">Image Path (Optional)</label>
+                                    <input type="text" id="new-source-image-path" placeholder="e.g., /images/contacts/default.png">
+                                </div>
+
+                                <div id="new-source-panel-person" class="dynamic-source-panel">
                                     <div class="form-group">
                                         <label for="new-source-contact-email">Contact Email (Optional)</label>
                                         <input type="email" id="new-source-contact-email">
@@ -138,7 +137,35 @@
                                         <input type="text" id="new-source-contact-app-handle" placeholder="e.g., @username or +1234567890">
                                     </div>
                                 </div>
-                                
+                                <div id="new-source-panel-group" class="dynamic-source-panel">
+                                    <div class="form-group">
+                                        <label for="new-source-group-person">Primary Contact (Optional)</label>
+                                        <input type="text" id="new-source-group-person">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="new-source-group-email">Contact Email (Optional)</label>
+                                        <input type="email" id="new-source-group-email">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="new-source-group-phone">Contact Phone (Optional)</label>
+                                        <input type="tel" id="new-source-group-phone">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="new-source-group-app-type">Contact App (Optional)</label>
+                                        <select id="new-source-group-app-type">
+                                            <option value="">-- None --</option>
+                                            <option value="Signal">Signal</option>
+                                            <option value="WhatsApp">WhatsApp</option>
+                                            <option value="Telegram">Telegram</option>
+                                            <option value="Discord">Discord</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group form-group-span-2">
+                                        <label for="new-source-group-app-handle">App Handle (Optional)</label>
+                                        <input type="text" id="new-source-group-app-handle" placeholder="e.g., @username or +1234567890">
+                                    </div>
+                                </div>
                                 <div id="new-source-panel-book" class="dynamic-source-panel">
                                     <div class="form-group">
                                         <label for="new-source-book-author">Author (Optional)</label>
@@ -159,7 +186,15 @@
                                 </div>
 
                                 <div id="new-source-panel-website" class="dynamic-source-panel">
+                                    <div class="form-group form-group-span-2">
+                                        <label for="new-source-website-websites">Relevant Links (Optional, one per line)</label>
+                                        <textarea id="new-source-website-websites" rows="3" placeholder="e.g., Specific articles, tools..."></textarea>
                                     </div>
+                                    <div class="form-group form-group-span-2">
+                                        <label for="new-source-website-pdfs">Saved Documents (Optional, one per line)</label>
+                                        <textarea id="new-source-website-pdfs" rows="3" placeholder="e.g., Links to saved charts, reports..."></textarea>
+                                    </div>
+                                </div>
                                 <div class="form-group form-group-span-2" style="text-align: right; margin-top: 1rem;">
                                     <button type="submit">Add Source</button>
                                 </div>
@@ -197,9 +232,6 @@
                     <option value="Group">Group</option>
                     <option value="Book">Book</option>
                     <option value="Website">Website</option>
-                    <option value="Newsletter">Newsletter</option>
-                    <option value="Service">Service</option>
-                    <option value="Other">Other</option>
                 </select>
             </div>
             <div class="form-group">
@@ -210,12 +242,13 @@
                 <label for="edit-source-description">Description (Optional)</label>
                 <textarea id="edit-source-description" rows="2"></textarea>
             </div>
+
+            <div class="form-group form-group-span-2">
+                <label for="edit-source-image-path">Image Path (Optional)</label>
+                <input type="text" id="edit-source-image-path" placeholder="e.g., /images/contacts/default.png">
+            </div>
             
             <div id="edit-source-panel-person" class="dynamic-source-panel">
-                <div class="form-group">
-                    <label for="edit-source-contact-person">Contact Person (Optional)</label>
-                    <input type="text" id="edit-source-contact-person">
-                </div>
                 <div class="form-group">
                     <label for="edit-source-contact-email">Contact Email (Optional)</label>
                     <input type="email" id="edit-source-contact-email">
@@ -240,7 +273,35 @@
                     <input type="text" id="edit-source-contact-app-handle" placeholder="e.g., @username or +1234567890">
                 </div>
             </div>
-            
+            <div id="edit-source-panel-group" class="dynamic-source-panel">
+                <div class="form-group">
+                    <label for="edit-source-group-person">Primary Contact (Optional)</label>
+                    <input type="text" id="edit-source-group-person">
+                </div>
+                <div class="form-group">
+                    <label for="edit-source-group-email">Contact Email (Optional)</label>
+                    <input type="email" id="edit-source-group-email">
+                </div>
+                <div class="form-group">
+                    <label for="edit-source-group-phone">Contact Phone (Optional)</label>
+                    <input type="tel" id="edit-source-group-phone">
+                </div>
+                <div class="form-group">
+                    <label for="edit-source-group-app-type">Contact App (Optional)</label>
+                    <select id="edit-source-group-app-type">
+                        <option value="">-- None --</option>
+                        <option value="Signal">Signal</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Telegram">Telegram</option>
+                        <option value="Discord">Discord</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group form-group-span-2">
+                    <label for="edit-source-group-app-handle">App Handle (Optional)</label>
+                    <input type="text" id="edit-source-group-app-handle" placeholder="e.g., @username or +1234567890">
+                </div>
+            </div>
 <div id="edit-source-panel-book" class="dynamic-source-panel">
     <div class="form-group">
         <label for="edit-source-book-author">Author (Optional)</label>
@@ -261,6 +322,14 @@
 </div>
 
             <div id="edit-source-panel-website" class="dynamic-source-panel">
+                <div class="form-group form-group-span-2">
+                    <label for="edit-source-website-websites">Relevant Links (Optional, one per line)</label>
+                    <textarea id="edit-source-website-websites" rows="3"></textarea>
+                </div>
+                <div class="form-group form-group-span-2">
+                    <label for="edit-source-website-pdfs">Saved Documents (Optional, one per line)</label>
+                    <textarea id="edit-source-website-pdfs" rows="3"></textarea>
+                </div>
             </div>
             <div class="modal-actions form-group-span-2">
                 <button type="button" class="cancel-btn close-modal-btn">Cancel</button>

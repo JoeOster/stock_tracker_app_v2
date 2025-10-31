@@ -37,13 +37,11 @@ async function loadResearchPage() {
         let targetPanel = null;
         if (activeSubTabId === 'research-sources-panel') {
             targetPanel = sourcesPanel;
-            if (targetPanel && !targetPanel.querySelector('#sources-cards-grid')) {
-                console.log("[Research Loader] Sources panel active, ensuring grid container exists.");
-                targetPanel.innerHTML = `<h3>Advice Sources</h3><div id="sources-cards-grid" class="cards-grid"><p>Loading sources...</p></div>`;
-            } else if (targetPanel) {
-                 const grid = targetPanel.querySelector('#sources-cards-grid');
-                 if (grid) grid.innerHTML = '<p>Loading sources...</p>';
+            // --- MODIFIED: Simplified the logic for this panel ---
+            if (targetPanel) {
+                targetPanel.innerHTML = '<p>Loading sources...</p>';
             }
+            // --- END MODIFICATION ---
         } else if (activeSubTabId === 'research-paper-trading-panel') {
             targetPanel = paperTradingPanel;
             if (targetPanel) {
@@ -164,14 +162,10 @@ async function loadResearchPage() {
             case 'research-sources-panel':
                 if (sourcesPanel) {
                     await fetchAndStoreAdviceSources();
+                    // --- MODIFIED: Pass panel, not grid. Listener is now attached to the panel. ---
                     renderSourcesList(sourcesPanel, state.allAdviceSources);
-                    const sourcesGridContainer = document.getElementById('sources-cards-grid');
-                    if (sourcesGridContainer) {
-                        initializeSourcesListClickListener(sourcesGridContainer);
-                    } else {
-                        console.error("[Research Loader] CRITICAL: #sources-cards-grid not found even after ensuring structure.");
-                        sourcesPanel.innerHTML += '<p style="color: var(--negative-color);">Critical Error: Failed to initialize source card area.</p>';
-                    }
+                    initializeSourcesListClickListener(sourcesPanel); 
+                    // --- END MODIFICATION ---
                 }
                 break;
 

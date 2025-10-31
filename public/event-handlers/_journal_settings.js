@@ -12,9 +12,9 @@ import {
     addAdviceSource,
     updateAdviceSource,
     deleteAdviceSource,
-    toggleAdviceSourceActive // --- IMPORT NEW FUNCTION ---
+    toggleAdviceSourceActive 
 } from '../api/sources-api.js';
-import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js'; // --- IMPORT DROPDOWN POPULATOR ---
+import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js'; 
 
 /**
  * Fetches *active* advice sources from the API and stores them in the global state
@@ -69,25 +69,30 @@ export async function fetchAllAdviceSourcesForSettings(holderId) {
  */
 function toggleSourceDetailPanels(type, formPrefix) {
     const personPanel = document.getElementById(`${formPrefix}-panel-person`);
+    const groupPanel = document.getElementById(`${formPrefix}-panel-group`);
     const bookPanel = document.getElementById(`${formPrefix}-panel-book`);
     const websitePanel = document.getElementById(`${formPrefix}-panel-website`);
 
     // Hide all panels first
     if (personPanel) personPanel.style.display = 'none';
+    if (groupPanel) groupPanel.style.display = 'none';
     if (bookPanel) bookPanel.style.display = 'none';
     if (websitePanel) websitePanel.style.display = 'none';
 
     // Show the correct panel
     switch (type) {
         case 'Person':
-        case 'Group':
             if (personPanel) personPanel.style.display = 'grid';
+            break;
+        case 'Group':
+            if (groupPanel) groupPanel.style.display = 'grid';
             break;
         case 'Book':
             if (bookPanel) bookPanel.style.display = 'grid';
             break;
         case 'Website':
-            if (websitePanel) websitePanel.style.display = 'grid'; // Show (empty)
+            // --- MODIFIED: This panel now has content, but this logic is still correct ---
+            if (websitePanel) websitePanel.style.display = 'grid';
             break;
         // Default: all remain hidden
     }
@@ -101,28 +106,40 @@ function toggleSourceDetailPanels(type, formPrefix) {
  */
 function getSourceDetailsFromForm(type, formPrefix) {
     const details = {};
+    let websites, pdfs; // --- Declare vars ---
+
     switch (type) {
         case 'Person':
-        case 'Group':
-            details.contact_person = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-person`))).value;
             details.contact_email = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-email`))).value;
             details.contact_phone = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-phone`))).value;
             details.contact_app_type = (/** @type {HTMLSelectElement} */(document.getElementById(`${formPrefix}-contact-app-type`))).value;
             details.contact_app_handle = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-app-handle`))).value;
             break;
+        case 'Group':
+            details.contact_person = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-group-person`))).value;
+            details.contact_email = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-group-email`))).value;
+            details.contact_phone = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-group-phone`))).value;
+            details.contact_app_type = (/** @type {HTMLSelectElement} */(document.getElementById(`${formPrefix}-group-app-type`))).value;
+            details.contact_app_handle = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-group-app-handle`))).value;
+            break;
         case 'Book':
             details.author = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-book-author`))).value;
             details.isbn = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-book-isbn`))).value;
             
-            // Read, split, trim, and filter new fields
-            const websites = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-book-websites`))).value;
-            const pdfs = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-book-pdfs`))).value;
+            websites = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-book-websites`))).value;
+            pdfs = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-book-pdfs`))).value;
             details.websites = websites ? websites.split('\n').map(s => s.trim()).filter(Boolean) : [];
             details.pdfs = pdfs ? pdfs.split('\n').map(s => s.trim()).filter(Boolean) : [];
             break;
+        
+        // --- MODIFIED: Add case for 'Website' ---
         case 'Website':
-            // No specific fields, details object remains empty.
+            websites = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-website-websites`))).value;
+            pdfs = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-website-pdfs`))).value;
+            details.websites = websites ? websites.split('\n').map(s => s.trim()).filter(Boolean) : [];
+            details.pdfs = pdfs ? pdfs.split('\n').map(s => s.trim()).filter(Boolean) : [];
             break;
+        // --- END MODIFICATION ---
     }
     return details;
 }
@@ -136,24 +153,32 @@ function populateEditFormDetails(details, type) {
     const d = details || {};
     switch (type) {
         case 'Person':
-        case 'Group':
-            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-person'))).value = d.contact_person || '';
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-email'))).value = d.contact_email || '';
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-phone'))).value = d.contact_phone || '';
             (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-contact-app-type'))).value = d.contact_app_type || '';
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-app-handle'))).value = d.contact_app_handle || '';
             break;
+        case 'Group':
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-group-person'))).value = d.contact_person || '';
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-group-email'))).value = d.contact_email || '';
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-group-phone'))).value = d.contact_phone || '';
+            (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-group-app-type'))).value = d.contact_app_type || '';
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-group-app-handle'))).value = d.contact_app_handle || '';
+            break;
         case 'Book':
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-book-author'))).value = d.author || '';
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-book-isbn'))).value = d.isbn || '';
             
-            // Join arrays back into newline-separated strings for the textareas
             (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-book-websites'))).value = (d.websites && Array.isArray(d.websites)) ? d.websites.join('\n') : '';
             (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-book-pdfs'))).value = (d.pdfs && Array.isArray(d.pdfs)) ? d.pdfs.join('\n') : '';
             break;
+
+        // --- MODIFIED: Add case for 'Website' ---
         case 'Website':
-            // No fields to populate
+            (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-website-websites'))).value = (d.websites && Array.isArray(d.websites)) ? d.websites.join('\n') : '';
+            (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-website-pdfs'))).value = (d.pdfs && Array.isArray(d.pdfs)) ? d.pdfs.join('\n') : '';
             break;
+        // --- END MODIFICATION ---
     }
 }
 
@@ -199,8 +224,10 @@ export function initializeJournalSettingsHandlers() {
             const typeInput = /** @type {HTMLSelectElement} */(document.getElementById('new-source-type'));
             const urlInput = /** @type {HTMLInputElement} */(document.getElementById('new-source-url'));
             const descriptionInput = /** @type {HTMLTextAreaElement} */(document.getElementById('new-source-description'));
+            const imagePathInput = /** @type {HTMLInputElement} */(document.getElementById('new-source-image-path'));
             
             const type = typeInput.value;
+            // --- MODIFIED: This function now correctly gets details for 'Website' type ---
             const details = getSourceDetailsFromForm(type, 'new-source');
 
             const newSourceData = {
@@ -209,7 +236,7 @@ export function initializeJournalSettingsHandlers() {
                 type: type,
                 url: urlInput.value,
                 description: descriptionInput.value,
-                image_path: null, // Image upload not implemented yet
+                image_path: imagePathInput.value.trim() || null,
                 details: details, // Add the dynamic details object
                 is_active: true // New sources are active by default
             };
@@ -255,9 +282,9 @@ export function initializeJournalSettingsHandlers() {
                     (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-type'))).value = source.type;
                     (/** @type {HTMLInputElement} */(document.getElementById('edit-source-url'))).value = source.url || '';
                     (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-description'))).value = source.description || '';
-                    // Note: is_active is handled by the checkbox, not this form
+                    (/** @type {HTMLInputElement} */(document.getElementById('edit-source-image-path'))).value = source.image_path || '';
 
-                    // Populate dynamic fields
+                    // --- MODIFIED: This function now correctly populates 'Website' fields ---
                     populateEditFormDetails(source.details, source.type);
                     
                     // Show the correct dynamic panel
@@ -346,6 +373,7 @@ export function initializeJournalSettingsHandlers() {
             const activeCheckbox = /** @type {HTMLInputElement} */(document.getElementById(`active-toggle-${id}`));
             const isActive = activeCheckbox ? activeCheckbox.checked : true; // Default to true if not found
 
+            // --- MODIFIED: This function now correctly gets details for 'Website' type ---
             const details = getSourceDetailsFromForm(type, 'edit-source');
 
             const updatedSourceData = {
@@ -353,7 +381,7 @@ export function initializeJournalSettingsHandlers() {
                 type: type,
                 url: (/** @type {HTMLInputElement} */(document.getElementById('edit-source-url'))).value,
                 description: (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-description'))).value,
-                image_path: null, // Image upload not implemented yet
+                image_path: (/** @type {HTMLInputElement} */(document.getElementById('edit-source-image-path'))).value.trim() || null,
                 details: details, // Add the dynamic details object
                 is_active: isActive // Pass the current active status
             };

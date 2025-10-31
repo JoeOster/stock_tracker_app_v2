@@ -37,12 +37,22 @@ export function _renderModalProfile(source) {
     html += `<p><strong>Description:</strong> ${escapeHTML(source.description) || 'N/A'}</p>`;
     if (source.url) html += `<p><strong>URL:</strong> <a href="${escapeHTML(source.url)}" target="_blank" class="source-url-link">${escapeHTML(source.url)}</a></p>`;
 
-    // --- FIX: Conditionally show contact info ---
-    if (source.type === 'Person' || source.type === 'Group') {
+    // --- MODIFIED: Split 'Person' and 'Group' contact info display ---
+    if (source.type === 'Person') {
         html += `<h5 style="margin-top: 1rem;">Contact Info</h5>`;
-        if (source.details?.contact_person) html += `<p><strong>Person:</strong> ${escapeHTML(source.details.contact_person)}</p>`;
+        // --- REMOVED: Redundant 'Person:' display ---
         if (source.details?.contact_email) html += `<p><strong>Email:</strong> ${escapeHTML(source.details.contact_email)}</p>`;
         if (source.details?.contact_phone) html += `<p><strong>Phone:</strong> ${escapeHTML(source.details.contact_phone)}</p>`;
+    } else if (source.type === 'Group') {
+        html += `<h5 style="margin-top: 1rem;">Contact Info</h5>`;
+        // Use "Primary Contact" label for groups
+        if (source.details?.contact_person) html += `<p><strong>Primary Contact:</strong> ${escapeHTML(source.details.contact_person)}</p>`;
+        if (source.details?.contact_email) html += `<p><strong>Email:</strong> ${escapeHTML(source.details.contact_email)}</p>`;
+        if (source.details?.contact_phone) html += `<p><strong>Phone:</strong> ${escapeHTML(source.details.contact_phone)}</p>`;
+    }
+
+    // This part remains common for both Person and Group
+    if (source.type === 'Person' || source.type === 'Group') {
         let appIconHTML = '';
         const appType = source.details?.contact_app_type?.toLowerCase();
         const appHandle = escapeHTML(source.details?.contact_app_handle);
@@ -50,7 +60,7 @@ export function _renderModalProfile(source) {
         else if (appType === 'whatsapp') { appIconHTML = `<img src="/images/logos/whatsapp.jpeg" alt="WhatsApp" class="contact-app-icon"> `; }
         if (source.details?.contact_app_type) { html += `<p><strong>App:</strong> ${appIconHTML}${escapeHTML(source.details.contact_app_type)}: ${appHandle || 'N/A'}</p>`; }
     }
-    // --- END FIX ---
+    // --- END MODIFICATION ---
 
     // --- ADD: Display links from Book type ---
     if (source.type === 'Book') {
