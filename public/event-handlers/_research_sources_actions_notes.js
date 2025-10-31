@@ -113,7 +113,7 @@ export async function handleDeleteClick(target, sourceId, holderId, refreshDetai
  * @param {HTMLElement} target - The clicked element.
  * @param {string} sourceId - The ID of the source context (from modal dataset).
  * @param {string|number} holderId - The current account holder ID (from modal dataset).
- *@param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
 export async function handleNoteEditActions(target, sourceId, holderId, refreshDetailsCallback) {

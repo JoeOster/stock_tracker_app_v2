@@ -42,3 +42,28 @@
 .add-item-form-grid .form-group-span-2 {
     grid-column: span 2;
 }
+/* --- Dynamic Source Form Panels (in Settings) --- */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group-span-2 {
+    grid-column: 1 / -1;
+}
+
+.dynamic-source-panel {
+    display: none; /* Hidden by default */
+    grid-column: 1 / -1; /* Span both columns */
+    
+    /* Layout for the panel's internal fields */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    
+    /* Visual separator */
+    border-top: 1px solid var(--container-border);
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}

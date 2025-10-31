@@ -5,7 +5,8 @@
  */
 
 import { state, updateState } from '../../state.js';
-import { fetchPositions, updatePricesForView } from '../../api.js';
+import { fetchPositions } from '../../api/reporting-api.js';
+import { updatePricesForView } from '../../api/price-api.js';
 import { getCurrentESTDateString } from '../datetime.js';
 import { showToast } from '../helpers.js';
 

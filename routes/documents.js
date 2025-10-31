@@ -33,20 +33,18 @@ module.exports = (db, log = console.log) => {
      */
     router.post('/', async (req, res) => {
         const {
-            journal_entry_id, // Nullable
-            advice_source_id, // Nullable
-            title,            // Optional
-            document_type,    // Optional
-            external_link,    // Required
-            description       // Optional
-            // account_holder_id might be needed if security rules change, but FKs handle ownership currently
+            journal_entry_id,
+            advice_source_id,
+            title,
+            document_type,
+            external_link,
+            description
         } = req.body;
 
         // --- Validation ---
         if (!external_link || external_link.trim() === '') {
             return res.status(400).json({ message: 'External link is required.' });
         }
-        // Ensure at least one, but not both, foreign keys are provided
         const journalIdProvided = journal_entry_id !== null && journal_entry_id !== undefined;
         const sourceIdProvided = advice_source_id !== null && advice_source_id !== undefined;
 
@@ -55,10 +53,6 @@ module.exports = (db, log = console.log) => {
         }
         if (journalIdProvided && sourceIdProvided) {
             return res.status(400).json({ message: 'Document cannot be linked to both a Journal Entry ID and an Advice Source ID simultaneously.' });
-        }
-        // Basic URL validation (optional, can be stricter)
-        if (!external_link.startsWith('http://') && !external_link.startsWith('https://')) {
-            // Allow flexibility for now
         }
         // --- End Validation ---
 
@@ -69,8 +63,8 @@ module.exports = (db, log = console.log) => {
                     external_link, description
                 ) VALUES (?, ?, ?, ?, ?, ?)
             `, [
-                journal_entry_id || null, // Ensure NULL is inserted if not provided
-                advice_source_id || null, // Ensure NULL is inserted if not provided
+                journal_entry_id || null,
+                advice_source_id || null,
                 title || null,
                 document_type || null,
                 external_link.trim(),
@@ -78,7 +72,7 @@ module.exports = (db, log = console.log) => {
             ]);
 
             const newDocument = await db.get('SELECT * FROM documents WHERE id = ?', result.lastID);
-            res.status(201).json(newDocument); // Respond with the created document
+            res.status(201).json(newDocument);
 
         } catch (error) {
             log(`[ERROR] Failed to add document: ${error.message}`);
@@ -104,7 +98,6 @@ module.exports = (db, log = console.log) => {
      */
     router.delete('/:id', async (req, res) => {
         const { id } = req.params;
-        // Optional: Check ownership based on linked journal/source and account holder if auth is added
 
         try {
             const result = await db.run('DELETE FROM documents WHERE id = ?', [id]);

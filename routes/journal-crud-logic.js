@@ -16,34 +16,41 @@ async function handleCreateJournalEntry(db, body) {
         account_holder_id,
         advice_source_id,
         ticker,
-        strategy_id,
         entry_date,
         entry_price,
         quantity,
-        stop_loss,
+        stop_loss_price, // Schema-correct name
         target_price,
-        target_price_2, // Added
+        target_price_2,
         notes,
         status = 'OPEN',
-        linked_document_urls = [] // Array of { title, url, type, description }
+        exchange,
+        direction,
+        advice_source_details,
+        entry_reason,
+        linked_document_urls = []
     } = body;
 
     const createdAt = new Date().toISOString();
 
-    if (!account_holder_id || !advice_source_id || !ticker || !strategy_id || !entry_date || !entry_price || !quantity) {
-        throw new Error('Missing required fields for journal entry.');
+    if (!account_holder_id || !ticker || !entry_date || !entry_price || !quantity || !exchange || !direction) {
+        throw new Error('Missing required fields for journal entry (holder, ticker, date, price, qty, exchange, direction).');
     }
 
     const result = await db.run(
         `INSERT INTO journal_entries (
-            account_holder_id, advice_source_id, ticker, strategy_id, entry_date, 
-            entry_price, quantity, stop_loss, target_price, target_price_2, 
-            notes, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            account_holder_id, advice_source_id, ticker, entry_date, 
+            entry_price, quantity, stop_loss_price, target_price, target_price_2, 
+            notes, status, created_at,
+            exchange, direction, advice_source_details, entry_reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-            account_holder_id, advice_source_id, ticker.toUpperCase(), strategy_id, entry_date,
-            entry_price, quantity, stop_loss || null, target_price || null, target_price_2 || null,
-            notes || null, status, createdAt
+            account_holder_id, advice_source_id || null, ticker.toUpperCase(), entry_date,
+            entry_price, quantity, stop_loss_price || null, target_price || null, target_price_2 || null,
+            notes || null, status, createdAt,
+            exchange, direction,
+            advice_source_details || null,
+            entry_reason || null
         ]
     );
 
@@ -53,13 +60,13 @@ async function handleCreateJournalEntry(db, body) {
     if (Array.isArray(linked_document_urls) && linked_document_urls.length > 0) {
         const docStmt = await db.prepare(
             `INSERT INTO documents (
-                journal_entry_id, account_holder_id, external_link, title, document_type, description, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+                journal_entry_id, external_link, title, document_type, description, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)`
         );
         for (const doc of linked_document_urls) {
             if (doc.url) {
                 await docStmt.run(
-                    newEntryId, account_holder_id, doc.url,
+                    newEntryId, doc.url,
                     doc.title || null, doc.type || null, doc.description || null, createdAt
                 );
             }
@@ -67,7 +74,6 @@ async function handleCreateJournalEntry(db, body) {
         await docStmt.finalize();
     }
 
-    // Fetch and return the newly created entry
     const newEntry = await db.get('SELECT * FROM journal_entries WHERE id = ?', newEntryId);
     return newEntry;
 }
@@ -84,15 +90,21 @@ async function handleUpdateJournalEntry(db, id, body) {
     const {
         advice_source_id,
         ticker,
-        strategy_id,
         entry_date,
         entry_price,
         quantity,
-        stop_loss,
+        stop_loss_price, // Schema-correct name
         target_price,
-        target_price_2, // Added
+        target_price_2,
         notes,
-        status
+        status,
+        exchange,
+        direction,
+        advice_source_details,
+        entry_reason,
+        exit_date,
+        exit_price,
+        pnl
     } = body;
 
     const existingEntry = await db.get('SELECT * FROM journal_entries WHERE id = ?', id);
@@ -100,20 +112,20 @@ async function handleUpdateJournalEntry(db, id, body) {
         throw new Error('Journal entry not found.');
     }
 
-    // Do not allow editing of 'EXECUTED' entries (or others, if desired)
-    if (existingEntry.status === 'EXECUTED') {
+    if (existingEntry.status === 'EXECUTED' && status !== 'EXECUTED') {
         throw new Error('Cannot modify an executed journal entry.');
     }
     
-    // Do not allow status to be changed *to* EXECUTED via this endpoint
-    if (status === 'EXECUTED') {
+    if (status === 'EXECUTED' && existingEntry.status !== 'EXECUTED') {
         throw new Error("Cannot set status to 'EXECUTED' via the update endpoint. Use the /execute endpoint.");
     }
 
-    // Construct update query dynamically based on provided fields
     const fieldsToUpdate = {
-        advice_source_id, ticker, strategy_id, entry_date, entry_price, quantity,
-        stop_loss, target_price, target_price_2, notes, status
+        advice_source_id, ticker, entry_date, entry_price, quantity,
+        stop_loss_price,
+        target_price, target_price_2, notes, status,
+        exchange, direction, advice_source_details, entry_reason,
+        exit_date, exit_price, pnl
     };
 
     const updates = [];
@@ -122,7 +134,7 @@ async function handleUpdateJournalEntry(db, id, body) {
     for (const [key, value] of Object.entries(fieldsToUpdate)) {
         if (value !== undefined) {
             updates.push(`${key} = ?`);
-            params.push(value === '' ? null : value); // Allow setting fields to null
+            params.push(value === '' ? null : value);
         }
     }
 
@@ -130,9 +142,8 @@ async function handleUpdateJournalEntry(db, id, body) {
         throw new Error('No fields provided to update.');
     }
 
-    params.push(id); // Add the ID for the WHERE clause
+    params.push(id);
     const query = `UPDATE journal_entries SET ${updates.join(', ')} WHERE id = ?`;
-
     await db.run(query, params);
 }
 
@@ -152,12 +163,8 @@ async function handleDeleteJournalEntry(db, id) {
         throw new Error('Cannot delete an executed journal entry.');
     }
     
-    // Also delete associated documents
-    await db.run('DELETE FROM documents WHERE journal_entry_id = ?', id);
-    // Delete the entry itself
     await db.run('DELETE FROM journal_entries WHERE id = ?', id);
 }
-
 
 module.exports = {
     handleCreateJournalEntry,

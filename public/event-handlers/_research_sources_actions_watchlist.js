@@ -110,10 +110,10 @@ export async function handleCreateBuyOrderFromIdea(target) {
     }
     
     // Ensure holderId is a number for this action
-    if (typeof holderId !== 'number') {
+    if (typeof holderId !== 'number' && typeof holderId !== 'string') { // Allow string ID
         return showToast('Please select a specific account holder before creating an order.', 'error');
     }
-
+    
     // Set price to an empty string to allow manual entry,
     console.log(`Create Buy Order for ${ticker}, Source: ${sourceId}, Holder: ${holderId}.`);
     

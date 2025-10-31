@@ -16,6 +16,7 @@ import { handleResponse } from './api-helpers.js';
  * @property {number|null} [rec_tp1]
  * @property {number|null} [rec_tp2]
  * @property {number|null} [rec_stop_loss]
+ * @property {string|number|null} [journal_entry_id] - New field
  */
 
 /**
@@ -29,14 +30,26 @@ import { handleResponse } from './api-helpers.js';
  * @param {number|null} [recTp1=null] - Optional recommended take profit 1.
  * @param {number|null} [recTp2=null] - Optional recommended take profit 2.
  * @param {number|null} [recStopLoss=null] - Optional recommended stop loss.
+ * @param {string|number|null} [journalEntryId=null] - Optional ID of the journal entry to link.
  * @returns {Promise<any>} The response from the server.
  */
-export async function addWatchlistItem(accountHolderId, ticker, adviceSourceId = null, recEntryLow = null, recEntryHigh = null, recTp1 = null, recTp2 = null, recStopLoss = null) {
+export async function addWatchlistItem(
+    accountHolderId,
+    ticker,
+    adviceSourceId = null,
+    recEntryLow = null,
+    recEntryHigh = null,
+    recTp1 = null,
+    recTp2 = null,
+    recStopLoss = null,
+    journalEntryId = null // --- FIX: Added 9th argument ---
+) {
     /** @type {WatchlistPostBody} */
     const body = {
         account_holder_id: accountHolderId,
         ticker: ticker,
         advice_source_id: adviceSourceId,
+        journal_entry_id: journalEntryId, // --- FIX: Added field to body ---
         rec_entry_low: recEntryLow,
         rec_entry_high: recEntryHigh,
         rec_tp1: recTp1,

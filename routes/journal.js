@@ -43,10 +43,12 @@ module.exports = (db, log) => {
                 return res.status(400).json({ message: "A specific account holder ID is required." });
             }
 
-            let query = `SELECT j.*, s.name as strategy_name 
+            // --- FIX: Join advice_sources instead of strategies ---
+            let query = `SELECT j.*, a.name as advice_source_name 
                          FROM journal_entries j
-                         LEFT JOIN strategies s ON j.strategy_id = s.id
+                         LEFT JOIN advice_sources a ON j.advice_source_id = a.id
                          WHERE j.account_holder_id = ?`;
+            // --- END FIX ---
             const params = [holderId];
 
             if (status) {
@@ -69,15 +71,18 @@ module.exports = (db, log) => {
      * @property {string|number} account_holder_id
      * @property {string|number} advice_source_id
      * @property {string} ticker
-     * @property {string|number} strategy_id
+     * @property {string} exchange
+     * @property {string} direction
      * @property {string} entry_date - Format YYYY-MM-DD
      * @property {number} entry_price
      * @property {number} quantity
-     * @property {number|null} [stop_loss]
+     * @property {number|null} [stop_loss_price]
      * @property {number|null} [target_price]
      * @property {number|null} [target_price_2]
      * @property {string|null} [notes]
      * @property {'OPEN'|'CLOSED'|'CANCELLED'} [status='OPEN']
+     * @property {string|null} [advice_source_details]
+     * @property {string|null} [entry_reason]
      * @property {Array<object>} [linked_document_urls] - e.g., [{title: "Chart", url: "http://..."}]
      */
 
@@ -116,8 +121,6 @@ module.exports = (db, log) => {
     router.put('/:id', async (req, res) => {
         const { id } = req.params;
         try {
-            // Note: This update does not run in a transaction,
-            // as it's typically a single UPDATE statement.
             await handleUpdateJournalEntry(db, id, req.body);
             res.json({ message: 'Journal entry updated successfully.' });
         } catch (error) {

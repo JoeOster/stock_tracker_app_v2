@@ -31,14 +31,25 @@ export function initializeAllEventHandlers() {
         initializeNavigationHandlers();
         initializeModalHandlers();
         initializeSettingsModalHandlers();
-        initializeExchangeManagementHandlers();
-        initializeHolderManagementHandlers();
-        initializeJournalSettingsHandlers(); // Handles Advice Sources in Settings
+        
+        // --- FIX: Move these modal initializers into the setTimeout ---
+        // These elements don't exist until the modal template is parsed.
+        // initializeExchangeManagementHandlers();
+        // initializeHolderManagementHandlers();
+        // initializeJournalSettingsHandlers(); 
+        // --- END FIX ---
 
         // Defer page-specific handlers slightly
         setTimeout(() => {
             try {
                 console.log("Initializing page-specific event handlers (Deferred)...");
+                
+                // --- FIX: Add modal initializers here ---
+                initializeExchangeManagementHandlers();
+                initializeHolderManagementHandlers();
+                initializeJournalSettingsHandlers(); // Handles Advice Sources in Settings
+                // --- END FIX ---
+
                 initializeOrdersHandlers();
                 initializeLedgerHandlers();
                 initializeAlertsHandlers();

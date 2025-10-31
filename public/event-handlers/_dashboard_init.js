@@ -1,11 +1,10 @@
-﻿import { fetchPositions } from '../api/reporting-api.js';
-import { fetchSalesForLot } from '../api/transactions-api.js';
-import { handleResponse } from '../api/api-helpers.js';
-import { updateAllPrices } from '../api/price-api.js';
+﻿// --- FIX: Removed duplicate imports and old 'api.js' import ---
 import { fetchPositions } from '../api/reporting-api.js';
 import { fetchSalesForLot } from '../api/transactions-api.js';
 import { handleResponse } from '../api/api-helpers.js';
 import { updateAllPrices } from '../api/price-api.js';
+// --- END FIX ---
+
 // public/event-handlers/_dashboard_init.js
 /**
  * @file Initializes event handlers for the Dashboard page.
@@ -17,7 +16,7 @@ import { state } from '../state.js';
 import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
 import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
 // UPDATED: Import handleResponse for potential future batch fetch
-import { fetchSalesForLot, updateAllPrices, handleResponse, fetchPositions } from '../api.js'; // Added fetchPositions
+// (Imports from old api.js were removed)
 import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 // Import modal population functions
@@ -29,6 +28,7 @@ import { populateEditModal, populateManagementModal } from './_dashboard_modals.
  * @param {string} ticker
  * @param {string} exchange
  * @param {string|number} accountHolderId
+ * @returns {Promise<void>}
  */
 async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
     const managePositionModal = document.getElementById('manage-position-modal');
@@ -86,6 +86,7 @@ async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
         populateManagementModal(ticker, exchange, relevantBuyLots, salesByLotId);
 
     } catch (error) {
+        // @ts-ignore
         showToast(`Error refreshing position details: ${error.message}`, 'error');
         if(tbody) tbody.innerHTML = '<tr><td colspan="8">Error loading details.</td></tr>';
     }
@@ -94,6 +95,7 @@ async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
 
 /**
  * Initializes event listeners for Dashboard controls and actions.
+ * @returns {void}
  */
 export function initializeDashboardHandlers() {
     const dashboardContainer = document.getElementById('dashboard-page-container');
@@ -135,6 +137,11 @@ export function initializeDashboardHandlers() {
     });
 
     // --- Action Buttons (Event Delegation on Card Grid and Table Body) ---
+    /**
+     * Handles clicks on various action buttons within the dashboard.
+     * @param {Event} e - The click event.
+     * @returns {Promise<void>}
+     */
     const handleActionClick = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
 
@@ -158,15 +165,15 @@ export function initializeDashboardHandlers() {
         // --- Sell Button Logic (Individual Lot) ---
         if (sellBtn && sellModal) {
             console.log("Sell button clicked (individual lot)"); // Debug log
-            const { ticker, exchange, buyId, quantity } = sellBtn.dataset;
+            const { ticker, exchange, buyId, quantity } = /** @type {HTMLElement} */(sellBtn).dataset;
             // Find lot data - could be from table row (state.dashboardOpenLots) or single lot card (state.dashboardOpenLots)
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
             if (!lotData) { return showToast('Error: Could not find original lot data.', 'error'); }
 
             (/** @type {HTMLInputElement} */(document.getElementById('sell-parent-buy-id'))).value = buyId;
             (/** @type {HTMLInputElement} */(document.getElementById('sell-account-holder-id'))).value = String(lotData.account_holder_id);
-            document.getElementById('sell-ticker-display').textContent = ticker;
-            document.getElementById('sell-exchange-display').textContent = exchange;
+            (/** @type {HTMLElement} */(document.getElementById('sell-ticker-display'))).textContent = ticker;
+            (/** @type {HTMLElement} */(document.getElementById('sell-exchange-display'))).textContent = exchange;
             const sellQuantityInput = /** @type {HTMLInputElement} */ (document.getElementById('sell-quantity'));
             sellQuantityInput.value = quantity; // Use remaining quantity
             sellQuantityInput.max = quantity;
@@ -177,7 +184,7 @@ export function initializeDashboardHandlers() {
         // --- Selective Sell Button Logic (Aggregated Card) ---
         else if (selectiveSellBtn && selectiveSellModal) {
             console.log("Selective Sell button clicked (aggregated)"); // Debug log
-            const { ticker, exchange, totalQuantity, lots: encodedLots } = selectiveSellBtn.dataset;
+            const { ticker, exchange, totalQuantity, lots: encodedLots } = /** @type {HTMLElement} */(selectiveSellBtn).dataset;
             if (!ticker || !exchange || !totalQuantity || !encodedLots) { /* ... error handling ... */ return; }
             if (state.selectedAccountHolderId === 'all') { /* ... error handling ... */ return; }
 
@@ -187,24 +194,24 @@ export function initializeDashboardHandlers() {
             } catch (err) { /* ... error handling ... */ return; }
 
             // --- Populate Modal ---
-            document.getElementById('selective-sell-title').textContent = `Sell ${ticker} (${exchange})`;
+            (/** @type {HTMLElement} */(document.getElementById('selective-sell-title'))).textContent = `Sell ${ticker} (${exchange})`;
             (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-ticker'))).value = ticker;
             (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-exchange'))).value = exchange;
             (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-account-holder-id'))).value = String(state.selectedAccountHolderId);
-            document.getElementById('selective-sell-available-qty').textContent = formatQuantity(totalQuantity);
+            (/** @type {HTMLElement} */(document.getElementById('selective-sell-available-qty'))).textContent = formatQuantity(totalQuantity);
             (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-total-quantity'))).value = ''; // Clear previous total
             (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-total-quantity'))).max = totalQuantity; // Set max based on available
             (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-price'))).value = '';
             (/** @type {HTMLInputElement} */(document.getElementById('selective-sell-date'))).value = getCurrentESTDateString();
-            document.getElementById('selective-sell-selected-total').textContent = '0'; // Reset selected total
-            document.getElementById('selective-sell-validation-message').style.display = 'none'; // Hide validation
+            (/** @type {HTMLElement} */(document.getElementById('selective-sell-selected-total'))).textContent = '0'; // Reset selected total
+            (/** @type {HTMLElement} */(document.getElementById('selective-sell-validation-message'))).style.display = 'none'; // Hide validation
 
             // --- Populate Lots Table ---
-            const lotsBody = document.getElementById('selective-sell-lots-body');
+            const lotsBody = /** @type {HTMLTableSectionElement} */(document.getElementById('selective-sell-lots-body'));
             lotsBody.innerHTML = ''; // Clear previous lots
             underlyingLots.forEach(lot => {
                 const row = lotsBody.insertRow();
-                row.dataset.lotId = lot.id; // Store lot ID
+                row.dataset.lotId = String(lot.id); // Store lot ID
                 row.innerHTML = `
                     <td>${lot.purchase_date}</td>
                     <td class="numeric">${formatAccounting(lot.cost_basis)}</td>
@@ -221,8 +228,8 @@ export function initializeDashboardHandlers() {
             // --- Add Input Listeners for Validation ---
             const totalQtyInput = /** @type {HTMLInputElement} */(document.getElementById('selective-sell-total-quantity'));
             const lotQtyInputs = /** @type {HTMLInputElement[]} */(Array.from(lotsBody.querySelectorAll('.selective-sell-lot-qty')));
-            const selectedTotalSpan = document.getElementById('selective-sell-selected-total');
-            const validationMessage = document.getElementById('selective-sell-validation-message');
+            const selectedTotalSpan = /** @type {HTMLElement} */(document.getElementById('selective-sell-selected-total'));
+            const validationMessage = /** @type {HTMLElement} */(document.getElementById('selective-sell-validation-message'));
             const submitButton = /** @type {HTMLButtonElement} */(document.getElementById('selective-sell-submit-btn'));
 
             const validateQuantities = () => {
@@ -257,19 +264,19 @@ export function initializeDashboardHandlers() {
         }
         // --- Limits Button Logic (Single Lot Card or Table Row) ---
         else if (limitBtn && editModal) {
-            const lotId = limitBtn.dataset.id;
+            const lotId = /** @type {HTMLElement} */(limitBtn).dataset.id;
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
             populateEditModal(lotData, true); // True for limitsOnly
         }
         // --- Edit Button Logic (Single Lot Card or Table Row) ---
         else if (editBtn && editModal) {
-            const lotId = editBtn.dataset.id;
+            const lotId = /** @type {HTMLElement} */(editBtn).dataset.id;
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
             populateEditModal(lotData, false); // False for full edit
         }
         // --- Sales History Button Logic (Single Lot Card or Table Row) ---
          else if (historyBtn && salesHistoryModal) {
-            const buyId = historyBtn.dataset.buyId; // Use data-buy-id
+            const buyId = /** @type {HTMLElement} */(historyBtn).dataset.buyId; // Use data-buy-id
             if (!buyId) return;
             // Find lot data - could be from table row or single lot card
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
@@ -277,13 +284,13 @@ export function initializeDashboardHandlers() {
             if (state.selectedAccountHolderId === 'all') { showToast('Please select a specific account holder to view history.', 'error'); return; }
 
             // Populate static details
-            document.getElementById('sales-history-title').textContent = `Sales History for ${lotData.ticker} Lot`; // Specific Lot Title
-            document.getElementById('sales-history-ticker').textContent = lotData.ticker;
-            document.getElementById('sales-history-buy-date').textContent = lotData.purchase_date;
-            document.getElementById('sales-history-buy-qty').textContent = formatQuantity(lotData.original_quantity ?? lotData.quantity);
-            document.getElementById('sales-history-buy-price').textContent = formatAccounting(lotData.cost_basis);
+            (/** @type {HTMLElement} */(document.getElementById('sales-history-title'))).textContent = `Sales History for ${lotData.ticker} Lot`; // Specific Lot Title
+            (/** @type {HTMLElement} */(document.getElementById('sales-history-ticker'))).textContent = lotData.ticker;
+            (/** @type {HTMLElement} */(document.getElementById('sales-history-buy-date'))).textContent = lotData.purchase_date;
+            (/** @type {HTMLElement} */(document.getElementById('sales-history-buy-qty'))).textContent = formatQuantity(lotData.original_quantity ?? lotData.quantity);
+            (/** @type {HTMLElement} */(document.getElementById('sales-history-buy-price'))).textContent = formatAccounting(lotData.cost_basis);
 
-            const salesBody = document.getElementById('sales-history-body');
+            const salesBody = /** @type {HTMLTableSectionElement} */(document.getElementById('sales-history-body'));
             salesBody.innerHTML = '<tr><td colspan="4">Loading sales history...</td></tr>';
             salesHistoryModal.classList.add('visible'); // Make visible BEFORE fetch
 
@@ -303,13 +310,14 @@ export function initializeDashboardHandlers() {
                     `).join('');
                 }
             } catch (error) {
+                // @ts-ignore
                 showToast(`Error fetching sales history: ${error.message}`, 'error');
                 salesBody.innerHTML = '<tr><td colspan="4">Error loading sales history.</td></tr>';
             }
         }
         // --- UPDATED: Manage Position Button Logic ---
         else if (manageLotsBtn && managePositionModal) {
-            const button = manageLotsBtn;
+            const button = /** @type {HTMLElement} */(manageLotsBtn);
             const { ticker, exchange } = button.dataset; // Only need ticker/exchange now
              const accountHolderId = state.selectedAccountHolderId;
 
@@ -362,4 +370,3 @@ export function initializeDashboardHandlers() {
 
 // --- Export the function needed by _modals.js ---
 export { openAndPopulateManageModal }; // Ensure this export exists
-

@@ -59,6 +59,11 @@ async function initialize() {
     }
 
     console.log("[App Main] Fetching HTML templates...");
+    
+    // --- FIX: Add a cache-busting query string ---
+    const cacheBust = '?v=3.0.9'; // Use the same version as your script
+    // --- END FIX ---
+
     try {
         // Fetch all templates concurrently
         const [
@@ -70,32 +75,30 @@ async function initialize() {
             modal_sales_history,
             modal_selective_sell,
             modal_manage_position,
-            // *** ADDED: Fetch new source details modal ***
             modal_source_details
         ] = await Promise.all([
             // Page fetches
-            fetch('./templates/_alerts.html').then(res => res.ok ? res.text() : Promise.reject(`_alerts.html: ${res.statusText}`)),
-            fetch('./templates/_charts.html').then(res => res.ok ? res.text() : Promise.reject(`_charts.html: ${res.statusText}`)),
-            fetch('./templates/_dailyReport.html').then(res => res.ok ? res.text() : Promise.reject(`_dailyReport.html: ${res.statusText}`)),
-            fetch('./templates/_imports.html').then(res => res.ok ? res.text() : Promise.reject(`_imports.html: ${res.statusText}`)),
-            fetch('./templates/_ledger.html').then(res => res.ok ? res.text() : Promise.reject(`_ledger.html: ${res.statusText}`)),
-            fetch('./templates/_orders.html').then(res => res.ok ? res.text() : Promise.reject(`_orders.html: ${res.statusText}`)),
-            fetch('./templates/_watchlist.html').then(res => res.ok ? res.text() : Promise.reject(`_watchlist.html: ${res.statusText}`)),
-            fetch('./templates/_research.html').then(res => res.ok ? res.text() : Promise.reject(`_research.html: ${res.statusText}`)),
-            fetch('./templates/_dashboard.html').then(res => res.ok ? res.text() : Promise.reject(`_dashboard.html: ${res.statusText}`)),
+            fetch('./templates/_alerts.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_alerts.html: ${res.statusText}`)),
+            fetch('./templates/_charts.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_charts.html: ${res.statusText}`)),
+            fetch('./templates/_dailyReport.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_dailyReport.html: ${res.statusText}`)),
+            fetch('./templates/_imports.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_imports.html: ${res.statusText}`)),
+            fetch('./templates/_ledger.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_ledger.html: ${res.statusText}`)),
+            fetch('./templates/_orders.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_orders.html: ${res.statusText}`)),
+            fetch('./templates/_watchlist.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_watchlist.html: ${res.statusText}`)),
+            fetch('./templates/_research.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_research.html: ${res.statusText}`)),
+            fetch('./templates/_dashboard.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_dashboard.html: ${res.statusText}`)),
             // Modal fetches
-            fetch('./templates/_modal_advice.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_advice.html: ${res.statusText}`)),
-            fetch('./templates/_modal_settings.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_settings.html: ${res.statusText}`)),
-            fetch('./templates/_modal_edit_transaction.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_edit_transaction.html: ${res.statusText}`)),
-            fetch('./templates/_modal_confirm.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_confirm.html: ${res.statusText}`)),
-            fetch('./templates/_modal_sell_from_position.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_sell_from_position.html: ${res.statusText}`)),
-            fetch('./templates/_modal_confirm_fill.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_confirm_fill.html: ${res.statusText}`)),
-            fetch('./templates/_modal_chart_zoom.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_chart_zoom.html: ${res.statusText}`)),
-            fetch('./templates/_modal_sales_history.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_sales_history.html: ${res.statusText}`)),
-            fetch('./templates/_modal_selective_sell.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_selective_sell.html: ${res.statusText}`)),
-            fetch('./templates/_modal_manage_position.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_manage_position.html: ${res.statusText}`)),
-            // *** ADDED: Fetch new source details modal ***
-            fetch('./templates/_modal_source_details.html').then(res => res.ok ? res.text() : Promise.reject(`_modal_source_details.html: ${res.statusText}`))
+            fetch('./templates/_modal_advice.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_advice.html: ${res.statusText}`)),
+            fetch('./templates/_modal_settings.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_settings.html: ${res.statusText}`)),
+            fetch('./templates/_modal_edit_transaction.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_edit_transaction.html: ${res.statusText}`)),
+            fetch('./templates/_modal_confirm.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_confirm.html: ${res.statusText}`)),
+            fetch('./templates/_modal_sell_from_position.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_sell_from_position.html: ${res.statusText}`)),
+            fetch('./templates/_modal_confirm_fill.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_confirm_fill.html: ${res.statusText}`)),
+            fetch('./templates/_modal_chart_zoom.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_chart_zoom.html: ${res.statusText}`)),
+            fetch('./templates/_modal_sales_history.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_sales_history.html: ${res.statusText}`)),
+            fetch('./templates/_modal_selective_sell.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_selective_sell.html: ${res.statusText}`)),
+            fetch('./templates/_modal_manage_position.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_manage_position.html: ${res.statusText}`)),
+            fetch('./templates/_modal_source_details.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_source_details.html: ${res.statusText}`))
        ]);
 
         // Inject page templates
@@ -114,7 +117,6 @@ async function initialize() {
             modal_sales_history +
             modal_selective_sell +
             modal_manage_position +
-            // *** ADDED: Inject new source details modal ***
             modal_source_details;
         console.log("[App Main] Modal templates injected.");
 

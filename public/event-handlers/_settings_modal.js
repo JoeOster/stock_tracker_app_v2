@@ -91,13 +91,28 @@ export function initializeSettingsModalHandlers() {
                     fetchAndStoreAdviceSources() // Fetch data needed for advice source list
                 ]);
 
+                // --- FIX: Add checks for all elements before setting values ---
+                const takeProfitInput = /** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'));
+                const stopLossInput = /** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'));
+                const themeSelect = /** @type {HTMLSelectElement} */(document.getElementById('theme-selector'));
+                const fontSelect = /** @type {HTMLSelectElement} */(document.getElementById('font-selector'));
+                const cooldownInput = /** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'));
+                const familyNameInput = /** @type {HTMLInputElement} */(document.getElementById('family-name'));
+
+                if (!takeProfitInput || !stopLossInput || !themeSelect || !fontSelect || !cooldownInput || !familyNameInput) {
+                    console.error("Error populating settings: One or more form elements are missing from _modal_settings.html.");
+                    throw new Error("Modal UI elements are missing. Check browser cache or template file.");
+                }
+
                 // Load current settings values into the form fields
-                (/** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'))).value = String(state.settings.takeProfitPercent || 0);
-                (/** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'))).value = String(state.settings.stopLossPercent || 0);
-                (/** @type {HTMLSelectElement} */(document.getElementById('theme-selector'))).value = state.settings.theme || 'light';
-                (/** @type {HTMLSelectElement} */(document.getElementById('font-selector'))).value = state.settings.font || 'Inter';
-                (/** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'))).value = String(state.settings.notificationCooldown || 16);
-                (/** @type {HTMLInputElement} */(document.getElementById('family-name'))).value = state.settings.familyName || '';
+                takeProfitInput.value = String(state.settings.takeProfitPercent || 0);
+                stopLossInput.value = String(state.settings.stopLossPercent || 0);
+                themeSelect.value = state.settings.theme || 'light';
+                fontSelect.value = state.settings.font || 'Inter';
+                cooldownInput.value = String(state.settings.notificationCooldown || 16);
+                familyNameInput.value = state.settings.familyName || '';
+                // --- END FIX ---
+
 
                 // Render management lists now that data is fetched and stored in state
                 renderExchangeManagementList();

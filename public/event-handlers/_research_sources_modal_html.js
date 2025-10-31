@@ -1,4 +1,4 @@
-// public/event-handlers/_research_sources_modal_html.js
+﻿// public/event-handlers/_research_sources_modal_html.js
 /**
  * @file Contains all "partial" HTML helper functions for building the Source Details modal.
  * @module event-handlers/_research_sources_modal_html
@@ -58,6 +58,7 @@ export function _renderModalProfile(source) {
  */
 export function _renderModalAddIdeaForm(source) {
     const now = new Date();
+    // Creates a local datetime string in YYYY-MM-DDTHH:MM format
     const localDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 
     let html = '<div class="add-ticker-section">';
@@ -191,20 +192,12 @@ export function _renderModalTradeIdeas(watchlistItems, linkedTxTickers, paperTra
  * @param {any[]} linkedTransactions - Array of transaction objects.
  * @returns {string} HTML string.
  */
-// public/event-handlers/_research_sources_modal_html.js
-
-/**
- * Renders the "Linked Real Trades" (Open and History) tables.
- * @param {any[]} linkedTransactions - Array of transaction objects.
- * @returns {string} HTML string.
- */
 export function _renderModalRealTrades(linkedTransactions) {
     let html = '';
     const openRealTrades = linkedTransactions
         .filter(tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001)
         .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
 
-    // --- FIX: Filter for SELL transactions ONLY for history ---
     const closedRealTrades = linkedTransactions
         .filter(tx => tx.transaction_type === 'SELL')
         .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
@@ -246,7 +239,6 @@ export function _renderModalRealTrades(linkedTransactions) {
                     <th>Date</th> <th>Ticker</th> <th>Type</th> <th class="numeric">Price</th> <th class="numeric">Qty</th> <th class="numeric">Realized P/L</th> <th>Status</th>
                 </tr>
             </thead><tbody>`;
-        // --- FIX: Logic now only iterates over SELLs ---
         closedRealTrades.forEach(entry => {
             let pnl = entry.realized_pnl; // This comes from the backend calculation
             let statusDisplay = 'SELL';
@@ -264,7 +256,6 @@ export function _renderModalRealTrades(linkedTransactions) {
                     <td>Sold</td>
                 </tr>`;
         });
-        // --- END FIX ---
         html += `</tbody></table></div>`;
     } else {
         html += `<p>No closed or sold real-money trades linked to this source.</p>`;
@@ -325,7 +316,7 @@ export function _renderModalPaperTrades(journalEntries) {
             const statusDisplay = entry.status === 'EXECUTED' && entry.linked_trade_id ? `Executed (Tx #${entry.linked_trade_id})` : escapeHTML(entry.status);
             html += `
                 <tr class="text-muted">
-                    <td>${escapeHTML(entry.entry_date) || 'N/A'}</td> <td>${escapeHTML(entry.exit_date) || '--'}</td> <td>${escapeHTML(entry.ticker) || 'N/A'}</td> <td class="numeric">${formatAccounting(entry.entry_price)}</td> <td class="numeric">${entry.exit_price ? formatAccounting(entry.exit_price) : '--'}</td> <td class="numeric">${formatQuantity(entry.quantity)}</td> <td class="numeric ${pnlClass}">${pnlDisplay}</td> <td>${statusDisplay}</td>
+                    <td>${escapeHTML(entry.entry_date) || 'N/A'}</td> <td>${escapeHTML(entry.exit_date) || '--'}</td> <td>${escapeHTML(entry.ticker) || 'N/A'}</td> <td class="numeric">${formatAccounting(entry.entry_price)}</td> <td class="numeric">${entry.exit_price ? formatAccounting(entry.exit_price) : '--'}</td> <td class="numeric">${formatQuantity(entry.quantity)}</td> <td class="numeric ${pnlClass}">${pnlDisplay}</td> KA<td>${statusDisplay}</td>
                 </tr>`;
         });
         html += `</tbody></table></div>`;

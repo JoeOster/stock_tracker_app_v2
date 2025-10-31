@@ -43,7 +43,11 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
         console.log("[Modal Actions] Removed previous modal action handler.");
     }
 
-    /** @param {Event} e */
+    /**
+     * Handles clicks inside the modal.
+     * @param {Event} e - The click event.
+     * @returns {Promise<void>}
+     */
     const newModalHandler = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         const detailsModal = /** @type {HTMLElement | null} */(target.closest('#source-details-modal'));
@@ -57,7 +61,6 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
 
         // console.log(`[Modal Actions] Click detected inside modal content. Target:`, target); // Keep for debugging
 
-        // --- FIX: Check for specific submit buttons first ---
         if (target.matches('.add-watchlist-ticker-button')) {
             console.log("[Modal Actions] Delegating to handleAddWatchlistSubmit");
             await handleAddWatchlistSubmit(e, refreshDetailsCallback);
@@ -68,12 +71,10 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
             console.log("[Modal Actions] Delegating to handleAddNoteSubmit");
             await handleAddNoteSubmit(e, refreshDetailsCallback);
         
-        // --- FIX: Explicitly check for *each* type of delete/action button ---
         } else if (target.closest('.delete-watchlist-item-button, .delete-document-button, .delete-source-note-button')) {
             console.log("[Modal Actions] Delegating to handleDeleteClick");
             // Pass the *target* that was clicked
             await handleDeleteClick(target, modalSourceId, modalHolderId, refreshDetailsCallback);
-        // --- END FIX ---
         
         } else if (target.closest('.note-actions button, .note-content-edit button')) {
             console.log("[Modal Actions] Delegating to handleNoteEditActions");
@@ -103,7 +104,11 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
          console.log("[Grid Listener] Removed previous grid click handler.");
     }
 
-    /** @param {Event} e */
+    /**
+     * Handles clicks on the sources grid.
+     * @param {Event} e - The click event.
+     * @returns {Promise<void>}
+     */
     const newGridClickHandler = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         const holderId = (typeof state.selectedAccountHolderId === 'string' && state.selectedAccountHolderId.toLowerCase() === 'all')
@@ -116,7 +121,8 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
         const modalTitle = document.getElementById('source-details-modal-title');
         const modalContentArea = /** @type {HTMLElement | null} */ (document.getElementById('source-details-modal-content'));
 
-        /** * Refreshes the details content within the modal.
+        /**
+         * Refreshes the details content within the modal.
          * @async 
          * @returns {Promise<void>} 
          */
@@ -180,12 +186,14 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
 
                 initializeModalActionHandlers(modalContentArea, refreshDetails);
 
-            } catch (error) {
-                 const err = /** @type {Error} */ (err);
-                 console.error("[Grid Listener] Error fetching source details:", err);
-                 showToast(`Error loading details: ${err.message}`, 'error');
-                 modalTitle.textContent = `Source Details: Error`;
-                 modalContentArea.innerHTML = '<p style="color: var(--negative-color);">Error loading details.</p>';
+            // --- THIS IS THE FIX for TS2448 ---
+            } catch (err) { // Catch as 'err'
+                 const error = /** @type {Error} */ (err); // Cast 'err' to 'error'
+                 console.error("[Grid Listener] Error fetching source details:", error);
+                 showToast(`Error loading details: ${error.message}`, 'error');
+                 if (modalTitle) modalTitle.textContent = `Source Details: Error`;
+                 if (modalContentArea) modalContentArea.innerHTML = '<p style="color: var(--negative-color);">Error loading details.</p>';
+            // --- END FIX ---
             }
         }
     };

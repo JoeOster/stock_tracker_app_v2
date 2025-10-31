@@ -36,7 +36,7 @@ export async function handleAddDocumentSubmit(e, refreshDetailsCallback) {
         console.warn("Adding document link that doesn't start with http/https:", link);
     }
 
-    /** @type {import('../api.js').DocumentData} */
+    /** @type {import('../api/documents-api.js').DocumentData} */
     const documentData = {
         advice_source_id: formSourceId,
         external_link: link,

@@ -1,21 +1,18 @@
-﻿import { handleResponse } from '../api/api-helpers.js';
-import { refreshLedger } from '../api/transactions-api.js';
-import { handleResponse } from '../api/api-helpers.js';
-import { refreshLedger } from '../api/transactions-api.js';
-// /public/event-handlers/_ledger.js
-// Version 0.1.13 (Fixed TypeScript type error, Improved delete error toast)
+﻿// /public/event-handlers/_ledger.js
 /**
  * @file Initializes all event listeners for the Transaction Ledger page.
  * @module event-handlers/_ledger
  */
+import { handleResponse } from '../api/api-helpers.js';
+import { refreshLedger } from '../api/transactions-api.js';
 import { state } from '../state.js';
-// FIX: Import handleResponse from api.js
-import { refreshLedger, handleResponse } from '../api.js'; // <-- Import handleResponse
 import { renderLedgerPage } from '../ui/renderers/_ledger.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 /**
  * Initializes all event listeners for the Transaction Ledger page.
+ * Handles filtering, sorting, and modal triggers for edit/delete.
+ * @returns {void}
  */
 export function initializeLedgerHandlers() {
     const ledgerTable = document.querySelector('#ledger-table');
@@ -25,7 +22,12 @@ export function initializeLedgerHandlers() {
     const ledgerClearFiltersBtn = document.getElementById('ledger-clear-filters-btn');
     const editModal = document.getElementById('edit-modal');
 
+    /**
+     * Applies the current filter values and re-renders the ledger.
+     * @returns {void}
+     */
     const applyLedgerFilters = () => renderLedgerPage(state.transactions, state.ledgerSort);
+    
     if(ledgerFilterTicker) ledgerFilterTicker.addEventListener('input', applyLedgerFilters);
     if(ledgerFilterStart) ledgerFilterStart.addEventListener('input', applyLedgerFilters);
     if(ledgerFilterEnd) ledgerFilterEnd.addEventListener('input', applyLedgerFilters);
@@ -53,13 +55,11 @@ export function initializeLedgerHandlers() {
                     newDirection = 'desc';
                 }
 
-                // --- FIX: Explicitly cast the type for TypeScript ---
                 state.ledgerSort = {
                     column: newColumn,
-                    direction: /** @type {'asc' | 'desc'} */ (newDirection) // Cast here
+                    direction: /** @type {'asc' | 'desc'} */ (newDirection)
                 };
-                // --- END FIX ---
-
+                
                 renderLedgerPage(state.transactions, state.ledgerSort);
             });
         }
@@ -77,7 +77,7 @@ export function initializeLedgerHandlers() {
                         try {
                             const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
                             // handleResponse will throw on error, extracting server message
-                            await handleResponse(res); // Use handleResponse from api.js
+                            await handleResponse(res);
                             showToast('Transaction deleted.', 'success');
                             await refreshLedger(); // Refresh data after successful delete
                         } catch (err) {
@@ -134,4 +134,3 @@ export function initializeLedgerHandlers() {
         }
     }
 }
-

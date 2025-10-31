@@ -113,11 +113,13 @@ export async function switchView(viewType, viewValue = null) {
                 else console.warn("[Navigation] Date view selected without a date value.");
                 break;
             case 'charts': await loadChartsPage(); break;
+            // This is the fix for Error 1: Call refreshLedger()
             case 'ledger': await refreshLedger(); break;
             case 'orders': await loadOrdersPage(); break;
             case 'alerts': await loadAlertsPage(); break;
             case 'research': await loadResearchPage(); break; // Load the main research page orchestrator
-            case 'imports': console.log("[Navigation] Imports tab selected."); break;
+            // This is the fix for Error 2: No import function is needed here
+            case 'imports': console.log("[Navigation] Imports tab selected."); break; 
             case 'watchlist': console.log("[Navigation] Watchlist tab selected."); break;
             default: console.warn(`[Navigation] No specific load function defined for view type: ${viewType}`);
         }
@@ -166,7 +168,11 @@ export function initializeNavigationHandlers() {
         tabsContainer.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             const tabElement = target.closest('.master-tab');
-            if (tabElement instanceof HTMLElement) {
+            
+            // This is the fix for Errors 3 & 4:
+            // The 'if' check narrows 'tabElement' from 'Element | null' to 'HTMLElement',
+            // which correctly informs TypeScript that '.dataset' exists.
+            if (tabElement instanceof HTMLElement) { 
                 const viewType = tabElement.dataset.viewType;
                 const viewValue = tabElement.dataset.viewValue || null;
                 if (viewType) {

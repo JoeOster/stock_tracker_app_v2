@@ -1,242 +1,275 @@
-﻿import { fetchAdviceSources, addAdviceSource, updateAdviceSource, deleteAdviceSource } from '../api/sources-api.js';
-import { handleResponse } from '../api/api-helpers.js';
-// public/event-handlers/_journal_settings.js
+﻿// /public/event-handlers/_journal_settings.js
 /**
- * @file Initializes event handlers for journal-related settings within the Settings modal.
+ * @file Initializes event handlers for the "Advice Sources" panel in Settings.
  * @module event-handlers/_journal_settings
  */
 
 import { state, updateState } from '../state.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
-import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
+import {
+    fetchAdviceSources,
+    addAdviceSource,
+    updateAdviceSource,
+    deleteAdviceSource
+} from '../api/sources-api.js';
 
 /**
- * Fetches advice sources based on the currently selected account holder and stores them in state.
+ * Fetches advice sources from the API and stores them in the state.
  * @async
- * @returns {Promise<void>} A promise that resolves when sources are fetched and stored.
+ * @returns {Promise<void>}
  */
 export async function fetchAndStoreAdviceSources() {
+    if (!state.selectedAccountHolderId || state.selectedAccountHolderId === 'all') {
+        updateState({ allAdviceSources: [] });
+        return;
+    }
     try {
-        const holderIdToFetch = state.selectedAccountHolderId === 'all' ? null : String(state.selectedAccountHolderId);
-
-        if (!holderIdToFetch) {
-             console.warn("Cannot fetch advice sources without a specific account holder selected.");
-             updateState({ allAdviceSources: [] });
-             return;
-        }
-
-        const sources = await fetchAdviceSources(holderIdToFetch);
-        updateState({ allAdviceSources: sources }); // Update state
+        const sources = await fetchAdviceSources(state.selectedAccountHolderId);
+        updateState({ allAdviceSources: sources });
     } catch (error) {
+        console.error("Failed to fetch advice sources:", error);
         // @ts-ignore
-        showToast(`Could not load advice sources: ${error.message}`, 'error'); // Use message
+        showToast(`Error fetching advice sources: ${error.message}`, 'error');
         updateState({ allAdviceSources: [] });
     }
 }
 
 /**
- * Initializes event listeners for the Advice Sources management section in the Settings modal.
- * Handles adding, editing, saving, canceling, and deleting advice sources.
+ * Shows or hides dynamic panels in a source form based on the selected type.
+ * @param {string} type - The selected source type (e.g., 'Person', 'Book').
+ * @param {string} formPrefix - The prefix for the form elements (e.g., 'new-source' or 'edit-source').
+ */
+function toggleSourceDetailPanels(type, formPrefix) {
+    const personPanel = document.getElementById(`${formPrefix}-panel-person`);
+    const bookPanel = document.getElementById(`${formPrefix}-panel-book`);
+    const websitePanel = document.getElementById(`${formPrefix}-panel-website`);
+
+    // Hide all panels first
+    if (personPanel) personPanel.style.display = 'none';
+    if (bookPanel) bookPanel.style.display = 'none';
+    if (websitePanel) websitePanel.style.display = 'none';
+
+    // Show the correct panel
+    switch (type) {
+        case 'Person':
+        case 'Group':
+            if (personPanel) personPanel.style.display = 'grid';
+            break;
+        case 'Book':
+            if (bookPanel) bookPanel.style.display = 'grid';
+            break;
+        case 'Website':
+            if (websitePanel) websitePanel.style.display = 'grid'; // Show (empty)
+            break;
+        // Default: all remain hidden
+    }
+}
+
+/**
+ * Gathers the dynamic 'details' object from the form based on the selected type.
+ * @param {string} type - The selected source type (e.g., 'Person', 'Book').
+ * @param {string} formPrefix - The prefix for the form elements (e.g., 'new-source' or 'edit-source').
+ * @returns {object} The details object.
+ */
+function getSourceDetailsFromForm(type, formPrefix) {
+    const details = {};
+    switch (type) {
+        case 'Person':
+        case 'Group':
+            details.contact_person = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-person`))).value;
+            details.contact_email = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-email`))).value;
+            details.contact_phone = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-phone`))).value;
+            details.contact_app_type = (/** @type {HTMLSelectElement} */(document.getElementById(`${formPrefix}-contact-app-type`))).value;
+            details.contact_app_handle = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-app-handle`))).value;
+            break;
+        case 'Book':
+            details.author = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-book-author`))).value;
+            details.isbn = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-book-isbn`))).value;
+            break;
+        case 'Website':
+            // No specific fields, details object remains empty.
+            break;
+    }
+    return details;
+}
+
+/**
+ * Populates the dynamic fields in the 'Edit Source' form from a source's 'details' object.
+ * @param {object | null | undefined} details - The details object.
+ * @param {string} type - The source type.
+ */
+function populateEditFormDetails(details, type) {
+    const d = details || {};
+    switch (type) {
+        case 'Person':
+        case 'Group':
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-person'))).value = d.contact_person || '';
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-email'))).value = d.contact_email || '';
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-phone'))).value = d.contact_phone || '';
+            (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-contact-app-type'))).value = d.contact_app_type || '';
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-app-handle'))).value = d.contact_app_handle || '';
+            break;
+        case 'Book':
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-book-author'))).value = d.author || '';
+            (/** @type {HTMLInputElement} */(document.getElementById('edit-source-book-isbn'))).value = d.isbn || '';
+            break;
+        case 'Website':
+            // No fields to populate
+            break;
+    }
+}
+
+/**
+ * Initializes all event handlers for the Advice Sources management panel.
  * @returns {void}
  */
 export function initializeJournalSettingsHandlers() {
-    const addAdviceSourceForm = /** @type {HTMLFormElement | null} */ (document.getElementById('add-advice-source-form'));
-    const adviceSourceList = document.getElementById('advice-source-list');
+    const addSourceForm = /** @type {HTMLFormElement} */ (document.getElementById('add-new-source-form'));
+    const sourceListContainer = document.getElementById('advice-source-list-container');
+    const editSourceModal = document.getElementById('edit-source-modal');
+    const editSourceForm = /** @type {HTMLFormElement} */ (document.getElementById('edit-source-form'));
+    const newSourceTypeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('new-source-type'));
+    const editSourceTypeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('edit-source-type'));
 
-    // --- Handle "Add Source" Form Submission ---
-    if (addAdviceSourceForm) {
-        addAdviceSourceForm.addEventListener('submit', async (e) => {
+    // --- Dynamic Panel Toggling ---
+    if (newSourceTypeSelect) {
+        newSourceTypeSelect.addEventListener('change', () => {
+            toggleSourceDetailPanels(newSourceTypeSelect.value, 'new-source');
+        });
+        // Set initial state
+        toggleSourceDetailPanels(newSourceTypeSelect.value, 'new-source');
+    }
+    if (editSourceTypeSelect) {
+        editSourceTypeSelect.addEventListener('change', () => {
+            toggleSourceDetailPanels(editSourceTypeSelect.value, 'edit-source');
+        });
+        // Set initial state (will be reset when modal opens)
+        toggleSourceDetailPanels(editSourceTypeSelect.value, 'edit-source');
+    }
+
+    // --- Add New Source ---
+    if (addSourceForm) {
+        addSourceForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const addButton = /** @type {HTMLButtonElement | null} */ (addAdviceSourceForm.querySelector('#add-advice-source-btn'));
-            if (!addButton) return;
-
-            // --- Get Form Values ---
-            const accountHolderId = state.selectedAccountHolderId === 'all' ? null : state.selectedAccountHolderId;
-            const name = (/** @type {HTMLInputElement} */(document.getElementById('new-source-name'))).value.trim();
-            const type = (/** @type {HTMLSelectElement} */(document.getElementById('new-source-type'))).value;
-            const url = (/** @type {HTMLInputElement} */(document.getElementById('new-source-url'))).value.trim();
-            const email = (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-email'))).value.trim();
-            const appType = (/** @type {HTMLSelectElement} */(document.getElementById('new-source-contact-app-type'))).value;
-            const appHandle = (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-app-handle'))).value.trim();
-            const imagePath = (/** @type {HTMLInputElement} */(document.getElementById('new-source-image-path'))).value.trim();
-
-            // --- Client-Side Validation ---
-            if (!accountHolderId) {
-                return showToast('Please select a specific account holder before adding a source.', 'error');
+            if (state.selectedAccountHolderId === 'all') {
+                showToast('Please select a specific account holder first.', 'error');
+                return;
             }
-            if (!name || !type) {
-                return showToast('Source Name and Type are required.', 'error');
-            }
-            // Optional: Basic URL validation
-            if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-                 // return showToast('Please enter a valid URL starting with http:// or https://', 'error');
-            }
-             // Optional: Basic Email validation
-             if (email && !email.includes('@')) {
-                 // return showToast('Please enter a valid email address.', 'error');
-             }
-             // Check for duplicate name/type combination for this user
-             if (state.allAdviceSources.some(s => s.name.toLowerCase() === name.toLowerCase() && s.type.toLowerCase() === type.toLowerCase())) {
-                 return showToast(`An advice source named "${name}" with type "${type}" already exists for this account holder.`, 'error');
-             }
-            // --- End Validation ---
 
-            /** @type {import('../api.js').AdviceSourcePostBody} */
-            const sourceData = {
-                account_holder_id: accountHolderId,
-                name: name,
+            const nameInput = /** @type {HTMLInputElement} */(document.getElementById('new-source-name'));
+            const typeInput = /** @type {HTMLSelectElement} */(document.getElementById('new-source-type'));
+            const urlInput = /** @type {HTMLInputElement} */(document.getElementById('new-source-url'));
+            const descriptionInput = /** @type {HTMLTextAreaElement} */(document.getElementById('new-source-description'));
+            
+            const type = typeInput.value;
+            const details = getSourceDetailsFromForm(type, 'new-source');
+
+            const newSourceData = {
+                account_holder_id: state.selectedAccountHolderId,
+                name: nameInput.value,
                 type: type,
-                description: (/** @type {HTMLInputElement} */(document.getElementById('new-source-description'))).value.trim() || null,
-                url: url || null,
-                contact_person: (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-person'))).value.trim() || null,
-                contact_email: email || null,
-                contact_phone: (/** @type {HTMLInputElement} */(document.getElementById('new-source-contact-phone'))).value.trim() || null,
-                contact_app_type: appType || null, // <-- New field
-                contact_app_handle: appHandle || null, // <-- New field
-                image_path: imagePath || null, // <-- New field
+                url: urlInput.value,
+                description: descriptionInput.value,
+                image_path: null, // Image upload not implemented yet
+                details: details // Add the dynamic details object
             };
 
-            addButton.disabled = true;
             try {
-                // Use API function which uses handleResponse
-                await addAdviceSource(sourceData);
-                showToast('Advice Source added!', 'success');
-                addAdviceSourceForm.reset(); // Clear form
-                await fetchAndStoreAdviceSources(); // Refresh state
-                populateAllAdviceSourceDropdowns(); // Update all dropdowns
-                renderAdviceSourceManagementList(); // Re-render list
-            } catch (error) {
+                const newSource = await addAdviceSource(newSourceData);
                 // @ts-ignore
-                showToast(`Error adding source: ${error.message}`, 'error'); // Use message
-            } finally {
-                addButton.disabled = false;
+                updateState({ allAdviceSources: [...state.allAdviceSources, newSource] });
+                renderAdviceSourceManagementList(state.allAdviceSources);
+                addSourceForm.reset();
+                toggleSourceDetailPanels('', 'new-source'); // Reset dynamic form
+                showToast('Advice Source added successfully!', 'success');
+            } catch (error) {
+                console.error("Failed to add advice source:", error);
+                // @ts-ignore
+                showToast(`Error adding source: ${error.message}`, 'error');
             }
         });
     }
 
-    // --- Handle List Button Clicks (Advice Sources) ---
-    if (adviceSourceList) {
-        adviceSourceList.addEventListener('click', async (e) => {
+    // --- Edit/Delete Source (via event delegation) ---
+    if (sourceListContainer) {
+        sourceListContainer.addEventListener('click', async (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
-            const li = /** @type {HTMLElement | null} */ (target.closest('li[data-id]'));
-            if (!li) return;
-            const sourceId = li.dataset.id;
-            if (!sourceId) return;
+            const editButton = target.closest('.edit-source-btn');
+            const deleteButton = target.closest('.delete-source-btn');
 
-            const displayDiv = /** @type {HTMLElement | null} */ (li.querySelector('.source-display'));
-            const editDiv = /** @type {HTMLElement | null} */ (li.querySelector('.source-edit'));
-            const editBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.edit-source-btn'));
-            const saveBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.save-source-btn'));
-            const cancelBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.cancel-source-btn'));
-            const deleteBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.delete-source-btn'));
+            if (editButton) {
+                const sourceId = editButton.dataset.id;
+                const source = state.allAdviceSources.find(s => String(s.id) === sourceId);
+                if (source && editSourceModal) {
+                    // Populate common fields
+                    (/** @type {HTMLInputElement} */(document.getElementById('edit-source-id'))).value = String(source.id);
+                    (/** @type {HTMLInputElement} */(document.getElementById('edit-source-name'))).value = source.name;
+                    (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-type'))).value = source.type;
+                    (/** @type {HTMLInputElement} */(document.getElementById('edit-source-url'))).value = source.url || '';
+                    (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-description'))).value = source.description || '';
 
-            if (!displayDiv || !editDiv || !editBtn || !saveBtn || !cancelBtn || !deleteBtn) {
-                console.error("Could not find necessary elements in list item for source ID:", sourceId);
-                return;
-            }
-
-            if (target === editBtn) {
-                // Toggle to edit mode
-                displayDiv.style.display = 'none';
-                editBtn.style.display = 'none';
-                deleteBtn.style.display = 'none';
-                editDiv.style.display = 'flex'; // Use flex as defined in renderer
-                saveBtn.style.display = '';
-                cancelBtn.style.display = '';
-                // Optional: focus the name input
-                const nameInput = /** @type {HTMLInputElement | null} */(editDiv.querySelector('.edit-source-name'));
-                if (nameInput) nameInput.focus();
-            }
-            else if (target === cancelBtn) {
-                 // Toggle back to display mode
-                 editDiv.style.display = 'none';
-                 saveBtn.style.display = 'none';
-                 cancelBtn.style.display = 'none';
-                 displayDiv.style.display = 'flex'; // Use flex as defined in renderer
-                 editBtn.style.display = '';
-                 deleteBtn.style.display = '';
-                 // Note: Edit fields are *not* reset here, but they will be correct
-                 // on the next render if the modal is re-opened.
-            }
-            else if (target === saveBtn) {
-                // --- Get Updated Values ---
-                const nameInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-name'));
-                const typeSelect = /** @type {HTMLSelectElement} */(editDiv.querySelector('.edit-source-type'));
-                const urlInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-url'));
-                const emailInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-email'));
-                const appTypeSelect = /** @type {HTMLSelectElement} */(editDiv.querySelector('.edit-source-contact-app-type'));
-                const appHandleInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-app-handle'));
-                const imagePathInput = /** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-image-path'));
-
-                const name = nameInput.value.trim();
-                const type = typeSelect.value;
-                const url = urlInput.value.trim();
-                const email = emailInput.value.trim();
-                const appType = appTypeSelect.value;
-                const appHandle = appHandleInput.value.trim();
-                const imagePath = imagePathInput.value.trim();
-
-                // --- Validation ---
-                if (!name || !type) {
-                    return showToast('Source Name and Type are required.', 'error');
-                }
-                if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-                    // return showToast('Please enter a valid URL starting with http:// or https://', 'error');
-                }
-                 if (email && !email.includes('@')) {
-                    // return showToast('Please enter a valid email address.', 'error');
-                 }
-                 // Check for duplicate name/type combination *excluding self*
-                 if (state.allAdviceSources.some(s => String(s.id) !== sourceId && s.name.toLowerCase() === name.toLowerCase() && s.type.toLowerCase() === type.toLowerCase())) {
-                     return showToast(`Another advice source named "${name}" with type "${type}" already exists.`, 'error');
-                 }
-                // --- End Validation ---
-
-                /** @type {import('../api.js').AdviceSourcePutBody} */
-                const updatedData = {
-                    name: name,
-                    type: type,
-                    description: (/** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-description'))).value.trim() || null,
-                    url: url || null,
-                    contact_person: (/** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-person'))).value.trim() || null,
-                    contact_email: email || null,
-                    contact_phone: (/** @type {HTMLInputElement} */(editDiv.querySelector('.edit-source-contact-phone'))).value.trim() || null,
-                    contact_app_type: appType || null, // <-- New field
-                    contact_app_handle: appHandle || null, // <-- New field
-                    image_path: imagePath || null, // <-- New field
-                };
-
-                saveBtn.disabled = true;
-                try {
-                    // Use API function which uses handleResponse
-                    await updateAdviceSource(sourceId, updatedData);
-                    showToast('Advice Source updated!', 'success');
-                    await fetchAndStoreAdviceSources(); // Refresh state
-                    populateAllAdviceSourceDropdowns(); // Update all dropdowns
-                    renderAdviceSourceManagementList(); // Re-render list (which implicitly exits edit mode)
-                } catch (error) {
-                    // @ts-ignore
-                    showToast(`Error updating source: ${error.message}`, 'error'); // Use message
-                    saveBtn.disabled = false; // Re-enable only on error
+                    // Populate dynamic fields
+                    populateEditFormDetails(source.details, source.type);
+                    
+                    // Show the correct dynamic panel
+                    toggleSourceDetailPanels(source.type, 'edit-source');
+                    
+                    editSourceModal.classList.add('visible');
                 }
             }
-            else if (target === deleteBtn) {
-                 const sourceNameElement = li.querySelector('.source-name');
-                 const sourceName = sourceNameElement ? sourceNameElement.textContent : 'this source';
-                 showConfirmationModal(`Delete Advice Source "${sourceName}"?`, 'This cannot be undone. Associated journal entries, watchlist items, documents, and notes will be unlinked or deleted (ON DELETE SET NULL / ON DELETE CASCADE).', async () => {
+
+            if (deleteButton) {
+                const sourceId = deleteButton.dataset.id;
+                showConfirmationModal('Delete Source?', 'This cannot be undone. Are you sure?', async () => {
                     try {
-                        // Use API function which uses handleResponse
                         await deleteAdviceSource(sourceId);
-                        showToast('Advice Source deleted.', 'success');
-                        await fetchAndStoreAdviceSources(); // Refresh state
-                        populateAllAdviceSourceDropdowns(); // Update all dropdowns
-                        renderAdviceSourceManagementList(); // Re-render list
-                    } catch (error) {
                         // @ts-ignore
-                        showToast(`Error deleting source: ${error.message}`, 'error'); // Use message
+                        updateState({ allAdviceSources: state.allAdviceSources.filter(s => String(s.id) !== sourceId) });
+                        renderAdviceSourceManagementList(state.allAdviceSources);
+                        showToast('Advice Source deleted.', 'success');
+                    } catch (error) {
+                        console.error("Failed to delete advice source:", error);
+                        // @ts-ignore
+                        showToast(`Error deleting source: ${error.message}`, 'error');
                     }
                 });
+            }
+        });
+    }
+
+    // --- Save Edited Source ---
+    if (editSourceForm && editSourceModal) {
+        editSourceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = (/** @type {HTMLInputElement} */(document.getElementById('edit-source-id'))).value;
+            const type = (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-type'))).value;
+            
+            const details = getSourceDetailsFromForm(type, 'edit-source');
+
+            const updatedSourceData = {
+                name: (/** @type {HTMLInputElement} */(document.getElementById('edit-source-name'))).value,
+                type: type,
+                url: (/** @type {HTMLInputElement} */(document.getElementById('edit-source-url'))).value,
+                description: (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-description'))).value,
+                image_path: null, // Image upload not implemented yet
+                details: details // Add the dynamic details object
+            };
+
+            try {
+                await updateAdviceSource(id, updatedSourceData);
+                // @ts-ignore
+                const updatedSources = state.allAdviceSources.map(s =>
+                    String(s.id) === id ? { ...s, ...updatedSourceData, id: parseInt(id) } : s
+                );
+                updateState({ allAdviceSources: updatedSources });
+                renderAdviceSourceManagementList(state.allAdviceSources);
+                editSourceModal.classList.remove('visible');
+                showToast('Advice Source updated successfully!', 'success');
+            } catch (error) {
+                console.error("Failed to update advice source:", error);
+                // @ts-ignore
+                showToast(`Error updating source: ${error.message}`, 'error');
             }
         });
     }

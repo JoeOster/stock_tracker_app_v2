@@ -356,3 +356,128 @@
     padding: 3px 6px !important;
     font-size: 0.8em !important;
 }
+/* --- Source Modal Dynamic Elements --- */
+.source-modal-profile {
+    font-size: 0.9em;
+    color: var(--text-muted-color);
+}
+.source-modal-profile p {
+    margin: 0.25rem 0;
+}
+.source-modal-profile strong {
+    color: var(--text-color-medium);
+}
+
+.source-modal-stats {
+    display: flex;
+    justify-content: space-around;
+    background-color: var(--info-panel-bg);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.stat-item {
+    text-align: center;
+}
+.stat-value {
+    display: block;
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--heading-color);
+}
+.stat-label {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    color: var(--text-muted-color);
+}
+
+/* Actions column for journal/techniques table */
+.data-table th.col-actions,
+.data-table td.col-actions {
+    width: 100px; /* Give a fixed width for the new actions column */
+    min-width: 100px;
+}
+
+/* --- Source Modal Dynamic Elements --- */
+.source-modal-profile {
+    font-size: 0.9em;
+    color: var(--text-muted-color);
+}
+.source-modal-profile p {
+    margin: 0.25rem 0;
+}
+.source-modal-profile strong {
+    color: var(--text-color-medium);
+}
+
+.source-modal-stats {
+    display: flex;
+    justify-content: space-around;
+    background-color: var(--info-panel-bg);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.stat-item {
+    text-align: center;
+}
+.stat-value {
+    display: block;
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--heading-color);
+}
+.stat-label {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    color: var(--text-muted-color);
+}
+
+/* Actions column for journal/techniques table */
+.data-table th.col-actions,
+.data-table td.col-actions {
+    width: 100px; /* Give a fixed width for the new actions column */
+    min-width: 100px;
+}
+
+/* --- Source Modal Dynamic Elements --- */
+.source-modal-profile {
+    font-size: 0.9em;
+    color: var(--text-muted-color);
+}
+.source-modal-profile p {
+    margin: 0.25rem 0;
+}
+.source-modal-profile strong {
+    color: var(--text-color-medium);
+}
+
+.source-modal-stats {
+    display: flex;
+    justify-content: space-around;
+    background-color: var(--info-panel-bg);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.stat-item {
+    text-align: center;
+}
+.stat-value {
+    display: block;
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--heading-color);
+}
+.stat-label {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    color: var(--text-muted-color);
+}
+
+/* Actions column for journal/techniques table */
+.data-table th.col-actions,
+.data-table td.col-actions {
+    width: 100px; /* Give a fixed width for the new actions column */
+    min-width: 100px;
+}
