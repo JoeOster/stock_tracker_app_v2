@@ -10,6 +10,42 @@ import { initializeSellFromPositionModalHandler } from './_modal_sell_from_posit
 import { initializeEditTransactionModalHandler } from './_modal_edit_transaction.js';
 
 /**
+ * --- NEW: Helper function to save settings on modal close ---
+ * Dynamically imports and runs the saveSettings function.
+ */
+function saveSettingsOnClose() {
+    try {
+        // Dynamically import and run saveSettings
+        import('../ui/settings.js').then(settingsModule => {
+            settingsModule.saveSettings();
+            // Dynamically import and run showToast
+            import('../ui/helpers.js').then(helpersModule => {
+                helpersModule.showToast('Settings saved!', 'success');
+            });
+        });
+    } catch (err) {
+        console.error("Error saving settings on close:", err);
+        import('../ui/helpers.js').then(helpersModule => {
+            helpersModule.showToast('Error saving settings.', 'error');
+        });
+    }
+}
+
+/**
+ * --- NEW: Helper function to clear source details modal ---
+ * @param {HTMLElement} modal
+ */
+function clearSourceDetailsModal(modal) {
+    if (modal.id === 'source-details-modal') {
+        const contentArea = modal.querySelector('#source-details-modal-content');
+        if (contentArea) contentArea.innerHTML = '<p><i>Loading details...</i></p>'; // Reset content
+        const titleArea = modal.querySelector('#source-details-modal-title');
+            if (titleArea) titleArea.textContent = 'Source Details: --'; // Reset title
+    }
+}
+
+
+/**
  * Initializes all event listeners for modal dialogs.
  * This function handles generic "close" events and delegates
  * form-specific logic to imported initializers.
@@ -24,14 +60,14 @@ export function initializeModalHandlers() {
         btn.addEventListener('click', e => {
             const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
             if (modal) {
-                modal.classList.remove('visible');
-                // Clear content of source details modal when closed via 'X'
-                if (modal.id === 'source-details-modal') {
-                    const contentArea = modal.querySelector('#source-details-modal-content');
-                    if (contentArea) contentArea.innerHTML = '<p><i>Loading details...</i></p>'; // Reset content
-                    const titleArea = modal.querySelector('#source-details-modal-title');
-                     if (titleArea) titleArea.textContent = 'Source Details: --'; // Reset title
+                // --- MODIFIED: Handle modal-specific close actions ---
+                if (modal.id === 'settings-modal') {
+                    saveSettingsOnClose();
                 }
+                clearSourceDetailsModal(modal);
+                // --- END MODIFICATION ---
+                
+                modal.classList.remove('visible');
             }
         })
     );
@@ -41,14 +77,12 @@ export function initializeModalHandlers() {
         btn.addEventListener('click', e => {
              const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
              if (modal) {
+                // --- MODIFIED: Handle modal-specific close actions ---
+                // Do NOT save settings if 'Cancel' is clicked in the settings modal
+                clearSourceDetailsModal(modal);
+                // --- END MODIFICATION ---
+
                  modal.classList.remove('visible');
-                 // Clear content of source details modal when closed via bottom button
-                if (modal.id === 'source-details-modal') {
-                    const contentArea = modal.querySelector('#source-details-modal-content');
-                    if (contentArea) contentArea.innerHTML = '<p><i>Loading details...</i></p>'; // Reset content
-                    const titleArea = modal.querySelector('#source-details-modal-title');
-                     if (titleArea) titleArea.textContent = 'Source Details: --'; // Reset title
-                }
              }
         })
     );
@@ -58,14 +92,14 @@ export function initializeModalHandlers() {
          modal.addEventListener('click', e => {
             // Close if clicking on the background overlay
             if (e.target === modal) {
-                modal.classList.remove('visible');
-                 // Clear content of source details modal when closed via background click
-                if (modal.id === 'source-details-modal') {
-                    const contentArea = modal.querySelector('#source-details-modal-content');
-                    if (contentArea) contentArea.innerHTML = '<p><i>Loading details...</i></p>'; // Reset content
-                     const titleArea = modal.querySelector('#source-details-modal-title');
-                     if (titleArea) titleArea.textContent = 'Source Details: --'; // Reset title
+                // --- MODIFIED: Handle modal-specific close actions ---
+                if (modal.id === 'settings-modal') {
+                    saveSettingsOnClose();
                 }
+                clearSourceDetailsModal(modal);
+                // --- END MODIFICATION ---
+                
+                modal.classList.remove('visible');
             }
         });
     });

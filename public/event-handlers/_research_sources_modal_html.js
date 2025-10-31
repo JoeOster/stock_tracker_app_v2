@@ -268,12 +268,27 @@ export function _renderModalRealTrades(linkedTransactions) {
  * @param {any[]} journalEntries - Array of journal entry objects.
  * @returns {string} HTML string.
  */
-export function _renderModalPaperTrades(journalEntries) {
+/**
+ * Renders the "Tracked Paper Trades" (Open and Closed) tables.
+ * Title changes to "Techniques / Methods" for non-person source types.
+ * @param {any[]} journalEntries - Array of journal entry objects.
+ * @param {string} [sourceType='Person'] - The type of the source.
+ * @returns {string} HTML string.
+ */
+export function _renderModalPaperTrades(journalEntries, sourceType = 'Person') {
     let html = '';
+
+    // --- FIX: Add conditional titles ---
+    const isPersonOrGroup = (sourceType === 'Person' || sourceType === 'Group');
+    const paperTradeTitle = isPersonOrGroup ? 'Tracked Paper Trades' : 'Techniques / Methods';
+    const completedTradeTitle = isPersonOrGroup ? 'Completed Paper Trades' : 'Completed Techniques';
+    // --- END FIX ---
+
     const openJournalEntries = journalEntries.filter(entry => entry.status === 'OPEN');
     const closedJournalEntries = journalEntries.filter(entry => ['CLOSED', 'EXECUTED'].includes(entry.status));
 
-    html += `<h4 style="margin-top: 1rem;">Tracked Paper Trades (${openJournalEntries.length})</h4>`;
+    // Use the new title
+    html += `<h4 style="margin-top: 1rem;">${paperTradeTitle} (${openJournalEntries.length})</h4>`;
     if (openJournalEntries.length > 0) {
         html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
@@ -287,9 +302,9 @@ export function _renderModalPaperTrades(journalEntries) {
             const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
             const currentPriceDisplay = entry.current_price ? formatAccounting(entry.current_price) : '--';
             const recLimits = [
-                entry.stop_loss_price ? `SL: ${formatAccounting(entry.stop_loss_price, false)}` : null,
-                entry.target_price ? `TP1: ${formatAccounting(entry.target_price, false)}` : null,
-                entry.target_price_2 ? `TP2: ${formatAccounting(entry.target_price_2, false)}` : null
+                entry.stop_loss_price ? `SL: ${formatAccounting(entry.stop_loss_price)}` : null,
+                entry.target_price ? `TP1: ${formatAccounting(entry.target_price)}` : null,
+                entry.target_price_2 ? `TP2: ${formatAccounting(entry.target_price_2)}` : null
             ].filter(Boolean).join(' / ') || '--';
             html += `
                 <tr>
@@ -298,10 +313,12 @@ export function _renderModalPaperTrades(journalEntries) {
         });
         html += `</tbody></table></div>`;
     } else {
-        html += `<p>No paper trades are being tracked for this source.</p>`;
+        // Use new title in "no data" message
+        html += `<p>No ${isPersonOrGroup ? 'paper trades' : 'techniques'} are being tracked for this source.</p>`;
     }
 
-    html += `<h4 style="margin-top: 1rem;">Completed Paper Trades (${closedJournalEntries.length})</h4>`;
+    // Use the new title
+    html += `<h4 style="margin-top: 1rem;">${completedTradeTitle} (${closedJournalEntries.length})</h4>`;
     if (closedJournalEntries.length > 0) {
         html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
@@ -316,12 +333,13 @@ export function _renderModalPaperTrades(journalEntries) {
             const statusDisplay = entry.status === 'EXECUTED' && entry.linked_trade_id ? `Executed (Tx #${entry.linked_trade_id})` : escapeHTML(entry.status);
             html += `
                 <tr class="text-muted">
-                    <td>${escapeHTML(entry.entry_date) || 'N/A'}</td> <td>${escapeHTML(entry.exit_date) || '--'}</td> <td>${escapeHTML(entry.ticker) || 'N/A'}</td> <td class="numeric">${formatAccounting(entry.entry_price)}</td> <td class="numeric">${entry.exit_price ? formatAccounting(entry.exit_price) : '--'}</td> <td class="numeric">${formatQuantity(entry.quantity)}</td> <td class="numeric ${pnlClass}">${pnlDisplay}</td> KA<td>${statusDisplay}</td>
+                    <td>${escapeHTML(entry.entry_date) || 'N/A'}</td> <td>${escapeHTML(entry.exit_date) || '--'}</td> <td>${escapeHTML(entry.ticker) || 'N/A'}</td> <td class="numeric">${formatAccounting(entry.entry_price)}</td> <td class="numeric">${entry.exit_price ? formatAccounting(entry.exit_price) : '--'}</td> <td class="numeric">${formatQuantity(entry.quantity)}</td> <td class="numeric ${pnlClass}">${pnlDisplay}</td> <td>${statusDisplay}</td>
                 </tr>`;
         });
         html += `</tbody></table></div>`;
     } else {
-        html += `<p>No completed paper trades linked to this source.</p>`;
+        // Use new title in "no data" message
+        html += `<p>No completed ${isPersonOrGroup ? 'paper trades' : 'techniques'} linked to this source.</p>`;
     }
     return html;
 }

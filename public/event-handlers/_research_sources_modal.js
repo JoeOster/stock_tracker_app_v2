@@ -21,6 +21,12 @@ import {
  * @param {object} details - The fetched details object.
  * @returns {string} The HTML string for the details content.
  */
+/**
+ * Renders the detailed view HTML for a selected advice source inside the modal.
+ * Assembles partial HTML strings from _research_sources_modal_html.js
+ * @param {object} details - The fetched details object.
+ * @returns {string} The HTML string for the details content.
+ */
 export function generateSourceDetailsHTML(details) {
     const {
         source, journalEntries, watchlistItems,
@@ -28,15 +34,25 @@ export function generateSourceDetailsHTML(details) {
     } = details;
 
     // --- Create Sets for checking links ---
-    const linkedTxTickers = new Set(linkedTransactions.map(tx => tx.ticker));
+    // Only consider a trade "Live" if there is an OPEN BUY lot.
+    const openBuyTransactions = (linkedTransactions || []).filter(
+        tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001
+    );
+    const linkedTxTickers = new Set(openBuyTransactions.map(tx => tx.ticker));
     const paperTradeTickers = new Set(journalEntries.map(entry => entry.ticker));
 
     // --- Assemble HTML Sections ---
     let detailsHTML = '<div class="source-details-grid">';
     
-    // Top Grid: Profile and Add Idea Form
+    // Top Grid: Profile and (Conditional) Add Idea Form
     detailsHTML += _renderModalProfile(source);
-    detailsHTML += _renderModalAddIdeaForm(source);
+
+    // --- FIX: Only show the "Add Trade Idea" form for Person or Group ---
+    if (source.type === 'Person' || source.type === 'Group') {
+        detailsHTML += _renderModalAddIdeaForm(source);
+    }
+    // --- END FIX ---
+
     detailsHTML += '</div>'; // End source-details-grid
 
     // Summary Stats
@@ -46,7 +62,11 @@ export function generateSourceDetailsHTML(details) {
     // Linked Sections
     detailsHTML += _renderModalTradeIdeas(watchlistItems, linkedTxTickers, paperTradeTickers, source);
     detailsHTML += _renderModalRealTrades(linkedTransactions);
-    detailsHTML += _renderModalPaperTrades(journalEntries);
+    
+    // --- FIX: Pass the source.type to the paper trades renderer ---
+    detailsHTML += _renderModalPaperTrades(journalEntries, source.type);
+    // --- END FIX ---
+
     detailsHTML += _renderModalDocuments(documents, source);
     detailsHTML += _renderModalNotes(sourceNotes, source);
 

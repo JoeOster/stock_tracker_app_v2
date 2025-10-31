@@ -3,7 +3,7 @@
  * @file Initializes event handler for the Edit Transaction modal.
  * @module event-handlers/_modal_edit_transaction
  */
-
+import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
 import { state } from '../state.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 // UPDATED IMPORTS
@@ -157,9 +157,15 @@ export function initializeEditTransactionModalHandler() {
                          editModal?.classList.remove('visible'); // Close edit modal
 
                          // Refresh underlying view
-                         if (state.currentView.type === 'ledger') { await refreshLedger(); }
-                         else { await switchView(state.currentView.type, state.currentView.value); }
-
+                    if (state.currentView.type === 'ledger') {
+                        await refreshLedger();
+                    } else if (state.currentView.type === 'dashboard') {
+                        // Call the dashboard renderer directly to force a reload
+                        await renderDashboardPage();
+                    } else {
+                        // Use switchView for other cases (like 'date' view)
+                        await switchView(state.currentView.type, state.currentView.value);
+                    }
                      } catch (err) {
                          const error = /** @type {Error} */ (err);
                          showToast(`Failed to delete: ${error.message}`, 'error');

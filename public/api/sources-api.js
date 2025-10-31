@@ -4,6 +4,11 @@
  * @module api/sources-api
  */
 
+// --- ADD THESE IMPORTS (if they are missing) ---
+import { updatePricesForView } from './price-api.js';
+import { getCurrentESTDateString } from '../ui/datetime.js';
+// --- END ADD ---
+
 import { updateState } from '../state.js';
 import { handleResponse } from './api-helpers.js';
 
@@ -107,12 +112,30 @@ export async function fetchSourceDetails(sourceId, holderId) {
     }
     const response = await fetch(`/api/sources/${sourceId}/details?holder=${holderId}`);
     const data = await handleResponse(response);
+    
     // Store watchlist items in state for price updates
     if (data && data.watchlistItems) {
         updateState({ researchWatchlistItems: data.watchlistItems });
     } else {
         updateState({ researchWatchlistItems: [] }); // Clear if none found
     }
+
+    // --- ADD THIS BLOCK TO FETCH PRICES ---
+    if (data) {
+        const journalTickers = data.journalEntries ? data.journalEntries.map(j => j.ticker) : [];
+        const watchlistTickers = data.watchlistItems ? data.watchlistItems.map(w => w.ticker) : [];
+        const openLots = data.linkedTransactions ? data.linkedTransactions.filter(tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001) : [];
+        const openLotTickers = openLots.map(lot => lot.ticker);
+
+        const allTickers = [...new Set([...journalTickers, ...watchlistTickers, ...openLotTickers])];
+
+        if (allTickers.length > 0) {
+            // This will populate state.priceCache before the modal renders
+            await updatePricesForView(getCurrentESTDateString(), allTickers);
+        }
+    }
+    // --- END ADD ---
+
     return data;
 }
 

@@ -57,10 +57,17 @@ async function handleSingleLotSell(db, log, txData, createdAt) {
         throw new Error(`Sell quantity (${internalFormatQuantity(numQuantity)}) exceeds remaining quantity (${internalFormatQuantity(parentBuy.quantity_remaining)}) in the selected lot.`);
     }
 
-    // Insert the single SELL record
-    const sellQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    await db.run(sellQuery, [ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, parent_buy_id, account_holder_id, 'MANUAL', createdAt]);
-
+// Insert the single SELL record, copying source/journal links from parent
+const sellQuery = `INSERT INTO transactions (
+                       ticker, exchange, transaction_type, quantity, price, transaction_date, 
+                       parent_buy_id, account_holder_id, source, created_at,
+                       advice_source_id, linked_journal_id
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+await db.run(sellQuery, [
+    ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date, 
+    parent_buy_id, account_holder_id, 'MANUAL', createdAt,
+    parentBuy.advice_source_id, parentBuy.linked_journal_id
+]);
     // Update parent BUY lot
     await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [numQuantity, parent_buy_id]);
 
@@ -108,10 +115,17 @@ async function handleSelectiveSell(db, log, txData, createdAt) {
             adviceSourceIdsToArchive.add(parentBuy.advice_source_id);
         }
 
-        // Insert a SELL record for this lot
-        const sellQuery = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        await db.run(sellQuery, [ticker.toUpperCase(), exchange, transaction_type, lotQty, numPrice, transaction_date, lotInfo.parent_buy_id, account_holder_id, 'MANUAL', createdAt]);
-        
+        // Insert a SELL record for this lot, copying source/journal links from parent
+        const sellQuery = `INSERT INTO transactions (
+                                ticker, exchange, transaction_type, quantity, price, transaction_date, 
+                                parent_buy_id, account_holder_id, source, created_at,
+                                advice_source_id, linked_journal_id
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        await db.run(sellQuery, [
+            ticker.toUpperCase(), exchange, transaction_type, lotQty, numPrice, transaction_date, 
+            lotInfo.parent_buy_id, account_holder_id, 'MANUAL', createdAt,
+            parentBuy.advice_source_id, parentBuy.linked_journal_id
+        ]); 
         // Update parent BUY lot
         await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [lotQty, lotInfo.parent_buy_id]);
     }

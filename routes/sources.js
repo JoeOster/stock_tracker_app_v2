@@ -6,6 +6,8 @@
 
 const express = require('express');
 const router = express.Router();
+// --- ADD THIS IMPORT ---
+const { getPrices } = require('../services/priceService');
 
 /**
  * Creates and returns an Express router for aggregated source details.
@@ -52,14 +54,29 @@ module.exports = (db, log) => {
 
             // 2. Get all journal entries (techniques/strategies) linked to this source
             const journalEntries = await db.all(
-                `SELECT j.*, s.name as strategy_name 
-                 FROM journal_entries j
-                 LEFT JOIN strategies s ON j.strategy_id = s.id
-                 WHERE j.advice_source_id = ? AND j.account_holder_id = ?
-                 ORDER BY j.entry_date DESC`,
+                `SELECT * FROM journal_entries
+                 WHERE advice_source_id = ? AND account_holder_id = ?
+                 ORDER BY entry_date DESC`,
                 [id, holderId]
             );
             
+            // --- ADDED: Fetch prices for OPEN journal entries ---
+            const openJournalEntries = journalEntries.filter(j => j.status === 'OPEN');
+            const journalTickers = [...new Set(openJournalEntries.map(j => j.ticker))];
+            const journalPriceData = journalTickers.length > 0 ? await getPrices(journalTickers, 5) : {};
+
+            openJournalEntries.forEach(entry => {
+                const priceInfo = journalPriceData[entry.ticker];
+                if (priceInfo && typeof priceInfo.price === 'number') {
+                    entry.current_price = priceInfo.price;
+                    entry.current_pnl = (priceInfo.price - entry.entry_price) * entry.quantity;
+                } else {
+                    entry.current_price = null;
+                    entry.current_pnl = null;
+                }
+            });
+            // --- END ADD ---
+
             // --- MIGRATE: Get IDs of all journal entries for the next query ---
             const journalEntryIds = journalEntries.map(j => j.id);
             // --- END MIGRATE ---
@@ -95,43 +112,79 @@ module.exports = (db, log) => {
                 [id, holderId]
             );
 
+            // --- ADDED: Fetch prices for OPEN linked transactions ---
+            const openLots = linkedTransactions.filter(tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001);
+            const openLotTickers = [...new Set(openLots.map(lot => lot.ticker))];
+            const lotPriceData = openLotTickers.length > 0 ? await getPrices(openLotTickers, 5) : {};
+            
+            openLots.forEach(lot => {
+                const priceInfo = lotPriceData[lot.ticker];
+                if (priceInfo && typeof priceInfo.price === 'number') {
+                    lot.current_price = priceInfo.price;
+                    // FIX: Use 'price' (the cost basis) from the transaction, not 'cost_basis'
+                    lot.unrealized_pnl = (priceInfo.price - lot.price) * lot.quantity_remaining;
+                } else {
+                    lot.current_price = null;
+                    lot.unrealized_pnl = null;
+                }
+            });
+            // --- END ADD ---
+
             // 5. Get all documents linked to this source
             const documents = await db.all(
-                'SELECT * FROM documents WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY created_at DESC',
-                [id, holderId]
+                'SELECT * FROM documents WHERE advice_source_id = ? ORDER BY created_at DESC',
+                [id] // <-- FIX: Removed holderId
             );
 
             // 6. Get all notes for this source
             const sourceNotes = await db.all(
-                'SELECT * FROM source_notes WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY created_at DESC',
-                [id, holderId]
+                'SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC',
+                [id] // <-- FIX: Removed holderId
             );
             
-            // 7. Calculate summary stats
-            // Note: This only counts *direct* links. We may want to expand this.
-            const stats = await db.get(
-                `SELECT 
-                    COUNT(DISTINCT id) as total_journal_entries,
-                    (SELECT COUNT(*) FROM watchlist WHERE advice_source_id = j.advice_source_id AND status = 'OPEN') as open_watchlist_items,
-                    (SELECT COUNT(*) FROM transactions WHERE advice_source_id = j.advice_source_id) as total_transactions
-                 FROM journal_entries j
-                 WHERE j.advice_source_id = ? AND j.account_holder_id = ?`,
-                [id, holderId]
-            );
-            
-            // Handle case where there are no journal entries but other links exist
-            if (stats.total_journal_entries === 0) {
-                 stats.open_watchlist_items = watchlistItems.length;
-                 stats.total_transactions = linkedTransactions.length;
-            }
+// --- REPLACEMENT: Calculate full summary stats ---
+        // 7. Calculate summary stats
 
-            const summaryStats = {
-                totalJournalEntries: stats.total_journal_entries || 0,
-                openWatchlistItems: stats.open_watchlist_items || 0,
-                totalTransactions: stats.total_transactions || 0,
-                totalDocuments: documents.length || 0,
-                totalNotes: sourceNotes.length || 0
-            };
+        // --- Paper Trade Calculations ---
+        const closedJournalEntries = journalEntries.filter(j => ['CLOSED', 'EXECUTED'].includes(j.status) && j.pnl != null);
+        // 'openJournalEntries' was already calculated above and has 'current_pnl'
+        const paperInvestment = openJournalEntries.reduce((sum, j) => sum + (j.entry_price * j.quantity), 0);
+        const paperUnrealizedPL = openJournalEntries.reduce((sum, j) => sum + (j.current_pnl || 0), 0);
+        const paperRealizedPL = closedJournalEntries.reduce((sum, j) => sum + (j.pnl || 0), 0);
+
+        // --- Real Trade Calculations ---
+        // 'openLots' was already calculated above and has 'unrealized_pnl'
+        const realInvestment = openLots.reduce((sum, lot) => sum + (lot.price * lot.quantity_remaining), 0);
+        const realUnrealizedPL = openLots.reduce((sum, lot) => sum + (lot.unrealized_pnl || 0), 0);
+
+        // Get realized P/L from SELL transactions linked to this source
+        const closedRealTrades = linkedTransactions.filter(tx => tx.transaction_type === 'SELL');
+        let realRealizedPL = 0;
+        // We must loop and query for the parent buy price for each sell
+        for (const sellTx of closedRealTrades) {
+            if (sellTx.parent_buy_id) {
+                const parentBuy = await db.get('SELECT price FROM transactions WHERE id = ?', sellTx.parent_buy_id);
+                if (parentBuy) {
+                    realRealizedPL += (sellTx.price - parentBuy.price) * sellTx.quantity;
+                }
+            }
+        }
+
+        // --- Combine Stats ---
+        const summaryStats = {
+            totalJournalEntries: journalEntries.length || 0,
+            openWatchlistItems: watchlistItems.length || 0,
+            totalTransactions: linkedTransactions.length || 0,
+            totalDocuments: documents.length || 0,
+            totalNotes: sourceNotes.length || 0,
+
+            // Combine paper and real stats for the header
+            totalTrades: (journalEntries.length || 0) + (watchlistItems.length || 0),
+            totalInvestment: paperInvestment + realInvestment,
+            totalUnrealizedPL: paperUnrealizedPL + realUnrealizedPL,
+            totalRealizedPL: paperRealizedPL + realRealizedPL
+        };
+        // --- END REPLACEMENT ---
 
             res.json({
                 source,
@@ -168,12 +221,14 @@ module.exports = (db, log) => {
         }
 
         try {
+            // --- FIX: Add account_holder_id to the INSERT ---
             const createdAt = new Date().toISOString();
             const query = `
-                INSERT INTO source_notes (advice_source_id, account_holder_id, note_content, created_at)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO source_notes (advice_source_id, account_holder_id, note_content, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
             `;
-            const result = await db.run(query, [id, holderId, note_content, createdAt]);
+            const result = await db.run(query, [id, holderId, note_content, createdAt, createdAt]);
+            // --- END FIX ---
             
             const newNoteId = result.lastID;
             const newNote = await db.get('SELECT * FROM source_notes WHERE id = ?', newNoteId);
@@ -205,12 +260,15 @@ module.exports = (db, log) => {
         }
 
         try {
+            // --- FIX: Add updated_at ---
+            const updatedAt = new Date().toISOString();
             const query = `
                 UPDATE source_notes 
-                SET note_content = ?
+                SET note_content = ?, updated_at = ?
                 WHERE id = ? AND advice_source_id = ? AND account_holder_id = ?
             `;
-            const result = await db.run(query, [note_content, noteId, id, holderId]);
+            const result = await db.run(query, [note_content, updatedAt, noteId, id, holderId]);
+            // --- END FIX ---
 
             if (result.changes === 0) {
                 return res.status(404).json({ message: 'Note not found or you do not have permission to edit it.' });

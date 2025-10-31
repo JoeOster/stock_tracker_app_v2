@@ -86,6 +86,12 @@ function getSourceDetailsFromForm(type, formPrefix) {
         case 'Book':
             details.author = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-book-author`))).value;
             details.isbn = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-book-isbn`))).value;
+            
+            // Read, split, trim, and filter new fields
+            const websites = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-book-websites`))).value;
+            const pdfs = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-book-pdfs`))).value;
+            details.websites = websites ? websites.split('\n').map(s => s.trim()).filter(Boolean) : [];
+            details.pdfs = pdfs ? pdfs.split('\n').map(s => s.trim()).filter(Boolean) : [];
             break;
         case 'Website':
             // No specific fields, details object remains empty.
@@ -113,6 +119,10 @@ function populateEditFormDetails(details, type) {
         case 'Book':
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-book-author'))).value = d.author || '';
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-book-isbn'))).value = d.isbn || '';
+            
+            // Join arrays back into newline-separated strings for the textareas
+            (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-book-websites'))).value = (d.websites && Array.isArray(d.websites)) ? d.websites.join('\n') : '';
+            (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-book-pdfs'))).value = (d.pdfs && Array.isArray(d.pdfs)) ? d.pdfs.join('\n') : '';
             break;
         case 'Website':
             // No fields to populate
