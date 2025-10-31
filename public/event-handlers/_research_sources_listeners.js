@@ -1,17 +1,18 @@
-﻿import { fetchSourceDetails } from '../api/sources-api.js';
-// public/event-handlers/_research_sources_listeners.js
+﻿// public/event-handlers/_research_sources_listeners.js
 /**
  * @file Initializes listeners for Research Sources cards and modal actions.
  * @module event-handlers/_research_sources_listeners
  */
 
+import { fetchSourceDetails } from '../api/sources-api.js'; // <-- THIS IS THE IMPORT THAT FAILS IF A SUB-IMPORT BREAKS
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
 import { generateSourceDetailsHTML } from './_research_sources_modal.js';
 import {
     handleAddWatchlistSubmit,
     handleCreateBuyOrderFromIdea,
-    handleCreatePaperTradeFromIdea
+    handleCreatePaperTradeFromIdea,
+    handleCreateTradeIdeaFromTechnique
 } from './_research_sources_actions_watchlist.js';
 import {
     handleAddDocumentSubmit
@@ -21,6 +22,8 @@ import {
     handleDeleteClick,
     handleNoteEditActions
 } from './_research_sources_actions_notes.js';
+import { handleAddTechniqueSubmit } from './_research_sources_actions_journal.js'; // <-- THIS IMPORT WAS FAILING
+
 
 /** @type {EventListener | null} */
 let currentSourcesListClickHandler = null;
@@ -59,11 +62,15 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
              return;
         }
 
-        // console.log(`[Modal Actions] Click detected inside modal content. Target:`, target); // Keep for debugging
-
         if (target.matches('.add-watchlist-ticker-button')) {
-            console.log("[Modal Actions] Delegating to handleAddWatchlistSubmit");
+            console.log("[Modal Actions] Delegating to handleAddWatchlistSubmit (Person/Group)");
             await handleAddWatchlistSubmit(e, refreshDetailsCallback);
+        } else if (target.matches('.add-technique-button')) {
+            console.log("[Modal Actions] Delegating to handleAddTechniqueSubmit (Book/Etc)");
+            await handleAddTechniqueSubmit(e, refreshDetailsCallback);
+        } else if (target.matches('.develop-trade-idea-btn')) {
+            console.log("[Modal Actions] Delegating to handleCreateTradeIdeaFromTechnique");
+            await handleCreateTradeIdeaFromTechnique(target, refreshDetailsCallback);
         } else if (target.matches('.add-document-button')) {
             console.log("[Modal Actions] Delegating to handleAddDocumentSubmit");
             await handleAddDocumentSubmit(e, refreshDetailsCallback);
@@ -71,7 +78,7 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
             console.log("[Modal Actions] Delegating to handleAddNoteSubmit");
             await handleAddNoteSubmit(e, refreshDetailsCallback);
         
-        } else if (target.closest('.delete-watchlist-item-button, .delete-document-button, .delete-source-note-button')) {
+        } else if (target.closest('.delete-watchlist-item-button, .delete-document-button, .delete-source-note-button, .delete-journal-btn')) {
             console.log("[Modal Actions] Delegating to handleDeleteClick");
             // Pass the *target* that was clicked
             await handleDeleteClick(target, modalSourceId, modalHolderId, refreshDetailsCallback);
@@ -186,14 +193,12 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
 
                 initializeModalActionHandlers(modalContentArea, refreshDetails);
 
-            // --- THIS IS THE FIX for TS2448 ---
             } catch (err) { // Catch as 'err'
                  const error = /** @type {Error} */ (err); // Cast 'err' to 'error'
                  console.error("[Grid Listener] Error fetching source details:", error);
                  showToast(`Error loading details: ${error.message}`, 'error');
                  if (modalTitle) modalTitle.textContent = `Source Details: Error`;
                  if (modalContentArea) modalContentArea.innerHTML = '<p style="color: var(--negative-color);">Error loading details.</p>';
-            // --- END FIX ---
             }
         }
     };

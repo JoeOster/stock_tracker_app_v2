@@ -7,6 +7,7 @@
 import {
     _renderModalProfile,
     _renderModalAddIdeaForm,
+    _renderModalAddTechniqueForm, // <-- ADDED IMPORT
     _renderModalSummaryStats,
     _renderModalTradeIdeas,
     _renderModalRealTrades,
@@ -15,12 +16,6 @@ import {
     _renderModalNotes
 } from './_research_sources_modal_html.js';
 
-/**
- * Renders the detailed view HTML for a selected advice source inside the modal.
- * Assembles partial HTML strings from _research_sources_modal_html.js
- * @param {object} details - The fetched details object.
- * @returns {string} The HTML string for the details content.
- */
 /**
  * Renders the detailed view HTML for a selected advice source inside the modal.
  * Assembles partial HTML strings from _research_sources_modal_html.js
@@ -44,12 +39,15 @@ export function generateSourceDetailsHTML(details) {
     // --- Assemble HTML Sections ---
     let detailsHTML = '<div class="source-details-grid">';
     
-    // Top Grid: Profile and (Conditional) Add Idea Form
+    // Top Grid: Profile and (Conditional) Add Idea/Technique Form
     detailsHTML += _renderModalProfile(source);
 
-    // --- FIX: Only show the "Add Trade Idea" form for Person or Group ---
+    // --- FIX: Show the correct form based on type ---
     if (source.type === 'Person' || source.type === 'Group') {
         detailsHTML += _renderModalAddIdeaForm(source);
+    } else {
+        // For Book, Website, Service, etc.
+        detailsHTML += _renderModalAddTechniqueForm(source);
     }
     // --- END FIX ---
 
@@ -62,11 +60,7 @@ export function generateSourceDetailsHTML(details) {
     // Linked Sections
     detailsHTML += _renderModalTradeIdeas(watchlistItems, linkedTxTickers, paperTradeTickers, source);
     detailsHTML += _renderModalRealTrades(linkedTransactions);
-    
-    // --- FIX: Pass the source.type to the paper trades renderer ---
     detailsHTML += _renderModalPaperTrades(journalEntries, source.type);
-    // --- END FIX ---
-
     detailsHTML += _renderModalDocuments(documents, source);
     detailsHTML += _renderModalNotes(sourceNotes, source);
 

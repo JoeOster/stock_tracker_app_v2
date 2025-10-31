@@ -1,118 +1,90 @@
-﻿// /public/event-handlers/_research_sources_actions_watchlist.js
+﻿// /public/event-handlers/_research_sources_actions_journal.js
 /**
- * @file Contains action handlers for the Watchlist (Trade Ideas) panel in the Source Details modal.
- * @module event-handlers/_research_sources_actions_watchlist
+ * @file Contains action handlers for the Journal (Techniques) panel in the Source Details modal.
+ * @module event-handlers/_research_sources_actions_journal
  */
 
 import { state } from '../state.js';
-import { showToast, showConfirmationModal } from '../ui/helpers.js';
-import { addWatchlistItem, deleteWatchlistItem } from '../api/watchlist-api.js';
-import { switchView } from './_navigation.js';
+import { showToast } from '../ui/helpers.js';
+import { addJournalEntry } from '../api/journal-api.js';
 
 /**
- * Initializes the "Add Trade Idea" form (for 'Person'/'Group' types).
- * @param {HTMLFormElement} form - The form element.
- * @param {object} source - The advice source object.
+ * Handles submission of the "Add Technique" (Journal Entry) form.
+ * @param {Event} e - The form submission event.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
+ * @returns {Promise<void>}
  */
-export function initializeWatchlistForm(form, source) {
-    // --- FIX: Add async to the event listener ---
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const tickerInput = /** @type {HTMLInputElement} */(document.getElementById('source-watchlist-ticker'));
-        const entryLowInput = /** @type {HTMLInputElement} */(document.getElementById('source-watchlist-entry-low'));
-        const entryHighInput = /** @type {HTMLInputElement} */(document.getElementById('source-watchlist-entry-high'));
-        const tp1Input = /** @type {HTMLInputElement} */(document.getElementById('source-watchlist-tp1'));
-        const slInput = /** @type {HTMLInputElement} */(document.getElementById('source-watchlist-sl'));
+export async function handleAddTechniqueSubmit(e, refreshDetailsCallback) {
+    e.preventDefault();
+    const form = /** @type {HTMLFormElement} */ (e.target.closest('form'));
+    if (!form) return;
+    const addButton = /** @type {HTMLButtonElement | null} */ (form.querySelector('.add-technique-button'));
+    if (!addButton) return;
 
-        const ticker = tickerInput.value.toUpperCase();
-        if (!ticker) {
-            showToast('Ticker is required.', 'error');
-            return;
-        }
+    const holderId = state.selectedAccountHolderId;
+    const formSourceId = form.dataset.sourceId;
 
-        try {
-            await addWatchlistItem(
-                // @ts-ignore
-                state.selectedAccountHolderId,
-                ticker,
-                source.id, // Link to the advice_source_id
-                entryLowInput.value ? parseFloat(entryLowInput.value) : null,
-                entryHighInput.value ? parseFloat(entryHighInput.value) : null,
-                tp1Input.value ? parseFloat(tp1Input.value) : null,
-                null, // tp2 - not in this form
-                slInput.value ? parseFloat(slInput.value) : null,
-                null // journal_entry_id (null)
-            );
-            showToast('Trade Idea added!', 'success');
-            form.reset();
-            // Refresh the modal to show the new item
-            // --- FIX: Add @ts-ignore for linter bug ---
-            // @ts-ignore
-            const { openSourceDetailsModal } = await import('./_research_sources_modal.js');
-            await openSourceDetailsModal(source.id);
-        } catch (error) {
-            console.error('Failed to add watchlist item:', error);
-            // @ts-ignore
-            showToast(`Error: ${error.message}`, 'error');
-        }
-    });
-}
+    // Get form values
+    const entryDate = (/** @type {HTMLInputElement} */(form.querySelector('.tech-entry-date-input'))).value;
+    const ticker = (/** @type {HTMLInputElement} */(form.querySelector('.tech-ticker-input'))).value.toUpperCase().trim();
+    const entryReason = (/** @type {HTMLInputElement} */(form.querySelector('.tech-entry-reason-input'))).value.trim();
+    const quantityStr = (/** @type {HTMLInputElement} */(form.querySelector('.tech-quantity-input'))).value;
+    const entryPriceStr = (/** @type {HTMLInputElement} */(form.querySelector('.tech-entry-price-input'))).value;
+    const targetPriceStr = (/** @type {HTMLInputElement} */(form.querySelector('.tech-tp1-input'))).value;
+    const stopLossPriceStr = (/** @type {HTMLInputElement} */(form.querySelector('.tech-sl-input'))).value;
+    const notes = (/** @type {HTMLTextAreaElement} */(form.querySelector('.tech-notes-input'))).value.trim();
 
-/**
- * Handles the click event for the "Delete" button on a watchlist item.
- * @param {HTMLElement} button - The button that was clicked.
- * @param {object} source - The advice source object (for refreshing).
- */
-export function handleWatchlistDelete(button, source) {
-    const watchlistId = button.dataset.id;
-    if (!watchlistId) return;
+    // --- Validation ---
+    if (holderId === 'all' || !formSourceId) { return showToast('Error: Account or Source ID is missing.', 'error'); }
+    if (!entryDate || !ticker || !entryReason || !quantityStr || !entryPriceStr) {
+        return showToast('Date, Ticker, Technique/Reason, Quantity, and Entry Price are required.', 'error');
+    }
+    const quantity = parseFloat(quantityStr);
+    const entryPrice = parseFloat(entryPriceStr);
+    if (isNaN(quantity) || quantity <= 0) { return showToast('Quantity must be a valid positive number.', 'error'); }
+    if (isNaN(entryPrice) || entryPrice <= 0) { return showToast('Entry Price must be a valid positive number.', 'error'); }
 
-    showConfirmationModal('Archive Trade Idea?', 'This will move the idea to archives. This cannot be undone.', async () => {
-        try {
-            await deleteWatchlistItem(watchlistId);
-            showToast('Trade Idea archived.', 'success');
-            // Refresh the modal to remove the item from the list
-            // --- FIX: Add @ts-ignore for linter bug ---
-            // @ts-ignore
-            const { openSourceDetailsModal } = await import('./_research_sources_modal.js');
-            await openSourceDetailsModal(source.id);
-        } catch (error) {
-            console.error('Failed to delete watchlist item:', error);
-            // @ts-ignore
-            showToast(`Error: ${error.message}`, 'error');
-        }
-    });
-}
+    const targetPrice = targetPriceStr ? parseFloat(targetPriceStr) : null;
+    const stopLossPrice = stopLossPriceStr ? parseFloat(stopLossPriceStr) : null;
+    if (targetPrice !== null && (isNaN(targetPrice) || targetPrice <= entryPrice)) { return showToast('Target Price must be greater than Entry Price.', 'error'); }
+    if (stopLossPrice !== null && (isNaN(stopLossPrice) || stopLossPrice >= entryPrice)) { return showToast('Stop Loss must be less than Entry Price.', 'error'); }
 
-/**
- * Handles the click event for the "Buy" button on a watchlist item.
- * Navigates to the Orders tab and pre-fills the form.
- * @param {HTMLElement} button - The button that was clicked.
- * @param {object} source - The advice source object.
- */
-export function handleWatchlistBuyClick(button, source) {
-    const row = button.closest('tr');
-    if (!row) return;
-
-    const ticker = row.dataset.ticker;
-    const watchlistId = button.dataset.watchlistId;
-    
-    // Find the item details from state to get entry prices
-    // @ts-ignore
-    const item = state.researchWatchlistItems.find(i => String(i.id) === watchlistId);
-    
-    const prefillData = {
+    const entryData = {
+        account_holder_id: holderId,
+        advice_source_id: formSourceId,
+        entry_date: entryDate,
         ticker: ticker,
-        advice_source_id: source.id, // Link to the source
-        price: item?.rec_entry_low || '',
-        limit_price_up: item?.rec_tp1 || '',
-        limit_price_down: item?.rec_stop_loss || ''
+        exchange: 'Paper', // Default for techniques
+        direction: 'BUY',   // Default for techniques
+        quantity: quantity,
+        entry_price: entryPrice,
+        target_price: targetPrice,
+        target_price_2: null, // Not in this form
+        stop_loss_price: stopLossPrice,
+        entry_reason: entryReason,
+        notes: notes || null,
+        status: 'OPEN',
+        linked_document_urls: []
     };
 
-    // Close the modal
-    const modal = document.getElementById('source-details-modal');
-    if (modal) modal.classList.remove('visible');
-
-    // Switch to the Orders tab and pass prefill data
-    switchView('orders', prefillData);
+    addButton.disabled = true;
+    try {
+        await addJournalEntry(entryData);
+        showToast('New technique added!', 'success');
+        form.reset();
+        // Reset date
+        const dateInput = /** @type {HTMLInputElement} */(form.querySelector('.tech-entry-date-input'));
+        if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
+        
+        // --- THIS IS THE FIX ---
+        // Call the callback function passed in, instead of re-importing the modal
+        await refreshDetailsCallback();
+        // --- END FIX ---
+    } catch (error) {
+        console.error('Failed to add journal entry (technique):', error);
+        const err = /** @type {Error} */ (error);
+        showToast(`Error: ${err.message}`, 'error');
+    } finally {
+        addButton.disabled = false;
+    }
 }
