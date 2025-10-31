@@ -19,12 +19,9 @@ import { handleResponse } from './api-helpers.js';
  * @property {string} type
  * @property {string|null} [description]
  * @property {string|null} [url]
- * @property {string|null} [contact_person]
- * @property {string|null} [contact_email]
- * @property {string|null} [contact_phone]
- * @property {string|null} [contact_app_type]
- * @property {string|null} [contact_app_handle]
  * @property {string|null} [image_path]
+ * @property {object|null} [details] - JSON blob for dynamic fields (e.g., { "author": "..." })
+ * @property {boolean} [is_active] - Whether the source is active
  */
 
  /**
@@ -33,25 +30,27 @@ import { handleResponse } from './api-helpers.js';
  * @property {string} type
  * @property {string|null} [description]
  * @property {string|null} [url]
- * @property {string|null} [contact_person]
- * @property {string|null} [contact_email]
- * @property {string|null} [contact_phone]
- * @property {string|null} [contact_app_type]
- * @property {string|null} [contact_app_handle]
  * @property {string|null} [image_path]
+ * @property {object|null} [details] - JSON blob for dynamic fields
+ * @property {boolean} [is_active] - Whether the source is active
  */
 
 /**
  * Fetches all advice sources for a given account holder.
  * @async
  * @param {string|number} holderId - The ID of the account holder.
+ * @param {boolean} [includeInactive=false] - Whether to include inactive sources.
  * @returns {Promise<any[]>} A promise that resolves to an array of advice source objects.
  */
-export async function fetchAdviceSources(holderId) {
+export async function fetchAdviceSources(holderId, includeInactive = false) {
     if (!holderId || holderId === 'all') {
         return [];
     }
-    const response = await fetch(`/api/advice-sources?holder=${holderId}`);
+    let url = `/api/advice-sources?holder=${holderId}`;
+    if (includeInactive) {
+        url += '&include_inactive=true';
+    }
+    const response = await fetch(url);
     return handleResponse(response);
 }
 
@@ -85,6 +84,24 @@ export async function updateAdviceSource(id, sourceData) {
     });
     return handleResponse(response);
 }
+
+// --- NEW FUNCTION ---
+/**
+ * Toggles the active status of an advice source.
+ * @async
+ * @param {string|number} id - The ID of the advice source to update.
+ * @param {boolean} isActive - The new active state.
+ * @returns {Promise<any>} A promise that resolves to the server's response message.
+ */
+export async function toggleAdviceSourceActive(id, isActive) {
+    const response = await fetch(`/api/advice-sources/${id}/toggle-active`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: isActive })
+    });
+    return handleResponse(response);
+}
+// --- END NEW FUNCTION ---
 
 /**
  * Deletes an advice source.

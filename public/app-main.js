@@ -61,7 +61,7 @@ async function initialize() {
     console.log("[App Main] Fetching HTML templates...");
     
     // --- FIX: Add a cache-busting query string ---
-    const cacheBust = '?v=3.0.9'; // Use the same version as your script
+    const cacheBust = '?v=3.0.14'; // Incremented version
     // --- END FIX ---
 
     try {
@@ -76,7 +76,9 @@ async function initialize() {
             modal_selective_sell,
             modal_manage_position,
             modal_source_details,
-            modal_image_zoom // --- ADDED ---
+            modal_image_zoom,
+            modal_add_trade_idea,
+            modal_add_technique // --- ADDED ---
         ] = await Promise.all([
             // Page fetches
             fetch('./templates/_alerts.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_alerts.html: ${res.statusText}`)),
@@ -100,7 +102,9 @@ async function initialize() {
             fetch('./templates/_modal_selective_sell.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_selective_sell.html: ${res.statusText}`)),
             fetch('./templates/_modal_manage_position.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_manage_position.html: ${res.statusText}`)),
             fetch('./templates/_modal_source_details.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_source_details.html: ${res.statusText}`)),
-            fetch('./templates/_modal_image_zoom.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_image_zoom.html: ${res.statusText}`)) // --- ADDED ---
+            fetch('./templates/_modal_image_zoom.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_image_zoom.html: ${res.statusText}`)),
+            fetch('./templates/_modal_add_trade_idea.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_add_trade_idea.html: ${res.statusText}`)),
+            fetch('./templates/_modal_add_technique.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_add_technique.html: ${res.statusText}`)) // --- ADDED ---
        ]);
 
         // Inject page templates
@@ -120,7 +124,9 @@ async function initialize() {
             modal_selective_sell +
             modal_manage_position +
             modal_source_details +
-            modal_image_zoom; // --- ADDED ---
+            modal_image_zoom +
+            modal_add_trade_idea +
+            modal_add_technique; // --- ADDED ---
         console.log("[App Main] Modal templates injected.");
 
     } catch (error) {

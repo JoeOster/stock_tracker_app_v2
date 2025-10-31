@@ -1,6 +1,6 @@
 # Database Schema
 
-**Last Updated:** 2025-10-30
+**Last Updated:** 2025-10-31
 
 This document outlines the final, consolidated schema for the Portfolio Tracker application, based on the initial setup and all applied migrations.
 
@@ -109,10 +109,12 @@ Stores sources of trading advice (people, books, groups, etc.).
 | `contact_app_type` | TEXT | | Dropdown value (e.g., 'WhatsApp', 'Signal', 'email'). |
 | `contact_app_handle`| TEXT | | Corresponding handle/ID/address. |
 | `image_path` | TEXT | | Local path to an avatar/image for the source. |
+| `details` | TEXT | | JSON blob for dynamic fields (author, ISBN, etc.). |
+| `is_active` | INTEGER | NOT NULL DEFAULT 1 | 1 for active (true), 0 for inactive (false). |
 | `created_at` | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | |
 | | | UNIQUE (account_holder_id, name, type) | Combination should be unique per user. |
 
-**Indexes:** `idx_advice_sources_account_holder`, `idx_advice_sources_type`
+**Indexes:** `idx_advice_sources_account_holder`, `idx_advice_sources_type`, `idx_advice_sources_is_active`
 
 ---
 
@@ -138,6 +140,7 @@ Stores journal entries (paper trades / tracked advice).
 | `advice_source_details`| TEXT | | Quick notes if no formal source linked. |
 | `entry_reason` | TEXT | | Justification for the trade idea. |
 | `notes` | TEXT | | General notes. |
+| `image_path` | TEXT | | Local path to an image for the technique. |
 | `exit_date` | TEXT | | Date closed, executed, or cancelled. |
 | `exit_price` | REAL | | Price at exit. |
 | `exit_reason` | TEXT | | Reason for closing. |
@@ -238,15 +241,16 @@ Stores tickers the user wants to monitor (now includes guideline fields).
 | `account_holder_id` | INTEGER | NOT NULL, FOREIGN KEY | |
 | `ticker` | TEXT | NOT NULL | |
 | `advice_source_id` | INTEGER | FOREIGN KEY (advice_sources.id) SET NULL | Link to source if added via Source tab. |
+| `journal_entry_id` | INTEGER | FOREIGN KEY (journal_entries.id) SET NULL | Link to a specific technique/journal entry. |
 | `rec_entry_low` | REAL | | Recommended entry price (low end). |
 | `rec_entry_high` | REAL | | Recommended entry price (high end). |
 | `rec_tp1` | REAL | | Recommended take profit 1. |
 | `rec_tp2` | REAL | | Recommended take profit 2. |
 | `rec_stop_loss` | REAL | | Recommended stop loss. |
+| `status` | TEXT | NOT NULL DEFAULT 'OPEN' | 'OPEN' or 'CLOSED' (archived). |
 | `created_at` | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | |
-| | | UNIQUE (account_holder_id, ticker) | |
 
-**Indexes:** `idx_watchlist_advice_source`
+**Indexes:** `idx_watchlist_advice_source`, `idx_watchlist_journal_entry_id`, `idx_watchlist_status`
 
 ---
 

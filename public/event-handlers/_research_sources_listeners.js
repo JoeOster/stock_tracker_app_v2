@@ -4,15 +4,17 @@
  * @module event-handlers/_research_sources_listeners
  */
 
-import { fetchSourceDetails } from '../api/sources-api.js'; // <-- THIS IS THE IMPORT THAT FAILS IF A SUB-IMPORT BREAKS
+import { fetchSourceDetails } from '../api/sources-api.js';
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
 import { generateSourceDetailsHTML } from './_research_sources_modal.js';
 import {
-    handleAddWatchlistSubmit,
     handleCreateBuyOrderFromIdea,
     handleCreatePaperTradeFromIdea,
-    handleCreateTradeIdeaFromTechnique
+    handleCreateTradeIdeaFromTechnique,
+    initializeAddTradeIdeaModalHandler, 
+    handleCreateTradeIdeaFromSource,
+    handleCreateTradeIdeaFromBook // --- ADDED ---
 } from './_research_sources_actions_watchlist.js';
 import {
     handleAddDocumentSubmit
@@ -22,29 +24,47 @@ import {
     handleDeleteClick,
     handleNoteEditActions
 } from './_research_sources_actions_notes.js';
-import { handleAddTechniqueSubmit } from './_research_sources_actions_journal.js'; // <-- THIS IMPORT WAS FAILING
+import { 
+    initializeAddTechniqueModalHandler, // --- ADDED ---
+    handleOpenAddTechniqueModal // --- ADDED ---
+} from './_research_sources_actions_journal.js';
 
 
 /** @type {EventListener | null} */
 let currentSourcesListClickHandler = null;
 /** @type {EventListener | null} */
 let currentModalActionHandler = null;
+/** @type {boolean} */
+let isAddTradeIdeaModalHandlerInitialized = false;
+/** @type {boolean} */
+let isAddTechniqueModalHandlerInitialized = false; // --- ADDED ---
 
 /**
  * Attaches event listeners specifically for actions *within* the source details modal content area.
  * Ensures only one listener is active at a time.
  * @param {HTMLElement} modalContentArea - The content area element (`#source-details-modal-content`).
- *
+ * @param {object} details - The full details object (needed to pass journalEntries to handlers).
  * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {void}
  */
-function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback) {
+function initializeModalActionHandlers(modalContentArea, details, refreshDetailsCallback) { // --- ADDED 'details' param ---
     console.log("[Modal Actions] Initializing listeners for modal content area.");
 
     if (currentModalActionHandler) {
         modalContentArea.removeEventListener('click', currentModalActionHandler);
         console.log("[Modal Actions] Removed previous modal action handler.");
     }
+    
+    // --- Initialize modal submit handlers (if not already done) ---
+    if (!isAddTradeIdeaModalHandlerInitialized) {
+        initializeAddTradeIdeaModalHandler(refreshDetailsCallback);
+        isAddTradeIdeaModalHandlerInitialized = true;
+    }
+    if (!isAddTechniqueModalHandlerInitialized) { // --- ADDED ---
+        initializeAddTechniqueModalHandler(refreshDetailsCallback);
+        isAddTechniqueModalHandlerInitialized = true;
+    }
+    // --- END ---
 
     /**
      * Handles clicks inside the modal.
@@ -62,15 +82,25 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
              return;
         }
 
-        if (target.matches('.add-watchlist-ticker-button')) {
-            console.log("[Modal Actions] Delegating to handleAddWatchlistSubmit (Person/Group)");
-            await handleAddWatchlistSubmit(e, refreshDetailsCallback);
-        } else if (target.matches('.add-technique-button')) {
-            console.log("[Modal Actions] Delegating to handleAddTechniqueSubmit (Book/Etc)");
-            await handleAddTechniqueSubmit(e, refreshDetailsCallback);
+        // --- MODIFIED: Handle all 3 "Add Idea" paths ---
+        if (target.matches('#add-idea-from-source-btn')) {
+            if (details.source.type === 'Person' || details.source.type === 'Group') {
+                console.log("[Modal Actions] Delegating to handleCreateTradeIdeaFromSource (Person/Group)");
+                await handleCreateTradeIdeaFromSource(target);
+            } else {
+                console.log("[Modal Actions] Delegating to handleCreateTradeIdeaFromBook (Book/Etc)");
+                await handleCreateTradeIdeaFromBook(target, details.journalEntries);
+            }
         } else if (target.matches('.develop-trade-idea-btn')) {
-            console.log("[Modal Actions] Delegating to handleCreateTradeIdeaFromTechnique");
-            await handleCreateTradeIdeaFromTechnique(target, refreshDetailsCallback);
+            console.log("[Modal Actions] Delegating to handleCreateTradeIdeaFromTechnique (Technique Row)");
+            await handleCreateTradeIdeaFromTechnique(target, details.journalEntries);
+        
+        // --- ADDED: Handle "Add Technique" button ---
+        } else if (target.matches('#add-technique-btn')) {
+            console.log("[Modal Actions] Delegating to handleOpenAddTechniqueModal (Book/Etc)");
+            await handleOpenAddTechniqueModal(target);
+
+        // --- All other handlers ---
         } else if (target.matches('.add-document-button')) {
             console.log("[Modal Actions] Delegating to handleAddDocumentSubmit");
             await handleAddDocumentSubmit(e, refreshDetailsCallback);
@@ -80,7 +110,6 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
         
         } else if (target.closest('.delete-watchlist-item-button, .delete-document-button, .delete-source-note-button, .delete-journal-btn')) {
             console.log("[Modal Actions] Delegating to handleDeleteClick");
-            // Pass the *target* that was clicked
             await handleDeleteClick(target, modalSourceId, modalHolderId, refreshDetailsCallback);
         
         } else if (target.closest('.note-actions button, .note-content-edit button')) {
@@ -93,7 +122,6 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
             console.log("[Modal Actions] Delegating to handleCreatePaperTradeFromIdea");
             await handleCreatePaperTradeFromIdea(target);
         
-        // --- ADDED: Handle thumbnail click ---
         } else if (target.closest('.technique-image-thumbnail')) {
             console.log("[Modal Actions] Opening Image Zoom Modal");
             const imgElement = target.closest('.technique-image-thumbnail');
@@ -104,7 +132,6 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
                 (/** @type {HTMLImageElement} */(zoomImage)).src = imgSrc;
                 zoomModal.classList.add('visible');
             }
-        // --- END ADDED ---
         }
     };
 
@@ -160,11 +187,11 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
                 // fetchSourceDetails returns the full details object, including summaryStats
                 const refreshedDetails = await fetchSourceDetails(modalSourceId, modalHolderId);
                 console.log("[refreshDetails - inner] fetchSourceDetails returned:", refreshedDetails);
-                console.log("[refreshDetails - inner] Watchlist items:", refreshedDetails?.watchlistItems);
 
                 // Pass the full details object to the renderer
                 modalContentArea.innerHTML = generateSourceDetailsHTML(refreshedDetails);
-                initializeModalActionHandlers(modalContentArea, refreshDetails);
+                // --- MODIFIED: Pass 'refreshedDetails' to the listener setup ---
+                initializeModalActionHandlers(modalContentArea, refreshedDetails, refreshDetails);
                 console.log("[refreshDetails - inner] Refreshed details rendered and listeners re-attached.");
             } catch (err) {
                  const error = /** @type {Error} */ (err);
@@ -204,7 +231,8 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
                 modalContentArea.innerHTML = generateSourceDetailsHTML(details);
                 console.log("[Grid Listener] Details rendered in modal.");
 
-                initializeModalActionHandlers(modalContentArea, refreshDetails);
+                // --- MODIFIED: Pass 'details' to the listener setup ---
+                initializeModalActionHandlers(modalContentArea, details, refreshDetails);
 
             } catch (err) { // Catch as 'err'
                  const error = /** @type {Error} */ (err); // Cast 'err' to 'error'

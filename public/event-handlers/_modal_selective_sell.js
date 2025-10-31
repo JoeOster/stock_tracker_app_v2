@@ -6,11 +6,13 @@
 
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
-// UPDATED IMPORT
+// --- MODIFIED IMPORTS ---
 import { handleResponse } from '../api/api-helpers.js';
 import { refreshLedger } from '../api/transactions-api.js';
-// END UPDATED IMPORT
-import { switchView } from './_navigation.js';
+// import { switchView } from './_navigation.js'; // No longer needed
+import { loadDashboardPage } from './_dashboard_loader.js'; // <-- ADDED
+import { loadDailyReportPage } from './_dailyReport.js'; // <-- ADDED
+// --- END MODIFIED IMPORTS ---
 
 /**
  * Initializes the event listener for the Selective Sell modal form submission.
@@ -75,12 +77,18 @@ export function initializeSelectiveSellModalHandler() {
                 await handleResponse(response);
                 showToast('Selective sale logged successfully!', 'success');
                 selectiveSellModal.classList.remove('visible'); // Close modal
-                // Refresh the underlying view (likely Dashboard)
-                if (state.currentView.type === 'dashboard' || state.currentView.type === 'date') {
-                     await switchView(state.currentView.type, state.currentView.value);
+                
+                // --- THIS IS THE FIX ---
+                // Refresh underlying view by calling its specific loader
+                if (state.currentView.type === 'dashboard') {
+                    await loadDashboardPage(); // <-- Call dashboard loader directly
+                } else if (state.currentView.type === 'date') {
+                    await loadDailyReportPage(state.currentView.value); // <-- Call daily report loader
                 } else if (state.currentView.type === 'ledger') {
-                     await refreshLedger(); // Or ledger if somehow opened from there
+                    await refreshLedger();
                 }
+                // --- END FIX ---
+
             } catch (error) {
                 // Assert error as Error type for message access
                 const err = /** @type {Error} */ (error);

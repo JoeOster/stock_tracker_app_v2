@@ -10,23 +10,25 @@ import { initializeSellFromPositionModalHandler } from './_modal_sell_from_posit
 import { initializeEditTransactionModalHandler } from './_modal_edit_transaction.js';
 
 /**
- * --- NEW: Helper function to save settings on modal close ---
+ * --- MODIFIED: Helper function to save settings on modal close ---
  * Dynamically imports and runs the saveSettings function.
+ * Now async with proper error handling.
  */
-function saveSettingsOnClose() {
+async function saveSettingsOnClose() {
     try {
         // Dynamically import and run saveSettings
-        import('../ui/settings.js').then(settingsModule => {
-            settingsModule.saveSettings();
-            // Dynamically import and run showToast
-            import('../ui/helpers.js').then(helpersModule => {
-                helpersModule.showToast('Settings saved!', 'success');
-            });
-        });
+        const settingsModule = await import('../ui/settings.js');
+        settingsModule.saveSettings();
+        
+        // Dynamically import and run showToast
+        const helpersModule = await import('../ui/helpers.js');
+        helpersModule.showToast('Settings saved!', 'success');
     } catch (err) {
         console.error("Error saving settings on close:", err);
+        // Don't await this, just fire and forget
         import('../ui/helpers.js').then(helpersModule => {
-            helpersModule.showToast('Error saving settings.', 'error');
+            // @ts-ignore
+            helpersModule.showToast(`Error saving settings: ${err.message}`, 'error');
         });
     }
 }
@@ -57,17 +59,19 @@ export function initializeModalHandlers() {
     
     // Top-right 'X' button
     document.querySelectorAll('.modal .close-button').forEach(btn =>
-        btn.addEventListener('click', e => {
+        // --- MODIFIED: Made the event listener async ---
+        btn.addEventListener('click', async (e) => {
             const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
             if (modal) {
-                // --- MODIFIED: Handle modal-specific close actions ---
+                
                 if (modal.id === 'settings-modal') {
-                    saveSettingsOnClose();
+                    // --- MODIFIED: Await the save function ---
+                    await saveSettingsOnClose();
                 }
                 clearSourceDetailsModal(modal);
                 // --- END MODIFICATION ---
                 
-                modal.classList.remove('visible');
+                modal.classList.remove('visible'); // <-- This will now run
             }
         })
     );
@@ -77,24 +81,23 @@ export function initializeModalHandlers() {
         btn.addEventListener('click', e => {
              const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
              if (modal) {
-                // --- MODIFIED: Handle modal-specific close actions ---
                 // Do NOT save settings if 'Cancel' is clicked in the settings modal
                 clearSourceDetailsModal(modal);
-                // --- END MODIFICATION ---
-
-                 modal.classList.remove('visible');
+                modal.classList.remove('visible');
              }
         })
     );
     
     // Background click
     document.querySelectorAll('.modal').forEach(modal => {
-         modal.addEventListener('click', e => {
+         // --- MODIFIED: Made the event listener async ---
+         modal.addEventListener('click', async (e) => {
             // Close if clicking on the background overlay
             if (e.target === modal) {
-                // --- MODIFIED: Handle modal-specific close actions ---
+                
                 if (modal.id === 'settings-modal') {
-                    saveSettingsOnClose();
+                    // --- MODIFIED: Await the save function ---
+                    await saveSettingsOnClose();
                 }
                 clearSourceDetailsModal(modal);
                 // --- END MODIFICATION ---

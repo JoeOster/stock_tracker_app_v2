@@ -21,35 +21,44 @@ module.exports = (db, log) => {
      * @group AdviceSources - Operations for advice sources
      * @description Fetches all advice sources for a specific account holder.
      * @param {string} holder.query.required - The account holder ID.
+     * @param {boolean} [include_inactive.query] - If true, returns all sources. Defaults to false.
      * @returns {Array<object>|object} 200 - An array of advice sources. 500 - Server error.
      */
     router.get('/', async (req, res) => {
         try {
             const holderId = req.query.holder;
+            const includeInactive = req.query.include_inactive === 'true'; // Check for the new flag
+
             if (!holderId || holderId === 'all') {
                 log('[WARN] Attempted to fetch advice sources without a specific holder ID.');
                 return res.status(400).json({ message: "A specific account holder ID is required." });
             }
             
-            // Fetch all sources for the holder
-            const sources = await db.all(
-                'SELECT * FROM advice_sources WHERE account_holder_id = ? ORDER BY name ASC',
-                [holderId]
-            );
+            let query = 'SELECT * FROM advice_sources WHERE account_holder_id = ?';
+            const params = [holderId];
+
+            // --- THIS IS THE FIX ---
+            // By default, only fetch active sources
+            if (!includeInactive) {
+                query += ' AND is_active = 1';
+            }
+            // --- END FIX ---
             
-            // --- MIGRATE: Parse 'details' JSON string back into an object ---
+            query += ' ORDER BY name ASC';
+            const sources = await db.all(query, params);
+            
+            // Parse 'details' JSON string back into an object
             const sourcesWithDetails = sources.map(source => {
                 if (source.details) {
                     try {
                         source.details = JSON.parse(source.details);
                     } catch (e) {
                         log(`[ERROR] Failed to parse details JSON for source ID ${source.id}: ${e.message}`);
-                        source.details = null; // Set to null if parsing fails
+                        source.details = null;
                     }
                 }
                 return source;
             });
-            // --- END MIGRATE ---
 
             res.json(sourcesWithDetails);
         } catch (e) {
@@ -67,6 +76,7 @@ module.exports = (db, log) => {
      * @property {string|null} [url]
      * @property {string|null} [image_path]
      * @property {object|null} [details] - JSON blob for dynamic fields (e.g., { "author": "..." })
+     * @property {boolean} [is_active] - Whether the source is active
      */
 
     /**
@@ -84,7 +94,8 @@ module.exports = (db, log) => {
             description,
             url,
             image_path,
-            details // New JSON details object
+            details,
+            is_active = 1 // Default new sources to active
         } = req.body;
 
         if (!account_holder_id || !name || !type) {
@@ -92,17 +103,13 @@ module.exports = (db, log) => {
         }
 
         try {
-            // --- MIGRATE: Stringify the 'details' object for storage ---
             const detailsJson = details ? JSON.stringify(details) : null;
-            // --- END MIGRATE ---
-
             const createdAt = new Date().toISOString();
             
-            // --- MIGRATE: Insert 'details' column, remove old contact_* columns ---
             const query = `
                 INSERT INTO advice_sources (
-                    account_holder_id, name, type, description, url, image_path, details, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    account_holder_id, name, type, description, url, image_path, details, created_at, is_active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             const result = await db.run(query, [
                 account_holder_id,
@@ -111,15 +118,14 @@ module.exports = (db, log) => {
                 description || null,
                 url || null,
                 image_path || null,
-                detailsJson, // Save the stringified JSON
-                createdAt
+                detailsJson,
+                createdAt,
+                is_active ? 1 : 0 // Ensure it's 1 or 0
             ]);
-            // --- END MIGRATE ---
 
             const newSourceId = result.lastID;
             const newSource = await db.get('SELECT * FROM advice_sources WHERE id = ?', newSourceId);
             
-            // Parse details back for the response
             if (newSource.details) {
                  newSource.details = JSON.parse(newSource.details);
             }
@@ -139,6 +145,7 @@ module.exports = (db, log) => {
      * @property {string|null} [url]
      * @property {string|null} [image_path]
      * @property {object|null} [details] - JSON blob for dynamic fields
+     * @property {boolean} [is_active] - Whether the source is active
      */
 
     /**
@@ -157,7 +164,8 @@ module.exports = (db, log) => {
             description,
             url,
             image_path,
-            details // New JSON details object
+            details,
+            is_active
         } = req.body;
 
         if (!name || !type) {
@@ -165,11 +173,11 @@ module.exports = (db, log) => {
         }
 
         try {
-            // --- MIGRATE: Stringify the 'details' object for storage ---
             const detailsJson = details ? JSON.stringify(details) : null;
-            // --- END MIGRATE ---
+            
+            // --- FIX: Check if is_active was provided ---
+            const isActiveValue = (is_active === undefined || is_active === null) ? 1 : (is_active ? 1 : 0);
 
-            // --- MIGRATE: Update 'details' column, remove old contact_* columns ---
             const query = `
                 UPDATE advice_sources SET
                     name = ?,
@@ -177,7 +185,8 @@ module.exports = (db, log) => {
                     description = ?,
                     url = ?,
                     image_path = ?,
-                    details = ?
+                    details = ?,
+                    is_active = ?
                 WHERE id = ?
             `;
             const result = await db.run(query, [
@@ -186,10 +195,11 @@ module.exports = (db, log) => {
                 description || null,
                 url || null,
                 image_path || null,
-                detailsJson, // Save the stringified JSON
+                detailsJson,
+                isActiveValue, // Save the active status
                 id
             ]);
-            // --- END MIGRATE ---
+            // --- END FIX ---
 
             if (result.changes === 0) {
                 return res.status(404).json({ message: 'Advice source not found.' });
@@ -201,6 +211,44 @@ module.exports = (db, log) => {
             res.status(500).json({ message: 'Server error while updating advice source.' });
         }
     });
+
+    // --- NEW ROUTE ---
+    /**
+     * @route PUT /api/advice-sources/:id/toggle-active
+     * @group AdviceSources - Operations for advice sources
+     * @description Toggles the 'is_active' status of an advice source.
+     * @param {string} id.path.required - The ID of the advice source to update.
+     * @param {object} req.body.required - The data to update.
+     * @param {boolean} req.body.is_active - The new active state (true/false).
+     * @returns {object} 200 - Success message. 400/404/500 - Error message.
+     */
+    router.put('/:id/toggle-active', async (req, res) => {
+        const { id } = req.params;
+        const { is_active } = req.body;
+
+        if (is_active === undefined || is_active === null) {
+            return res.status(400).json({ message: 'is_active (true/false) is required.' });
+        }
+
+        try {
+            const isActiveValue = is_active ? 1 : 0;
+            const result = await db.run(
+                'UPDATE advice_sources SET is_active = ? WHERE id = ?',
+                [isActiveValue, id]
+            );
+
+            if (result.changes === 0) {
+                return res.status(404).json({ message: 'Advice source not found.' });
+            }
+
+            res.json({ message: 'Source active status updated.' });
+        } catch (e) {
+            log(`[ERROR] Failed to toggle active status for source ${id}: ${e.message}\n${e.stack}`);
+            res.status(500).json({ message: 'Server error while updating status.' });
+        }
+    });
+    // --- END NEW ROUTE ---
+
 
     /**
      * @route DELETE /api/advice-sources/:id

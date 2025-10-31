@@ -79,14 +79,13 @@ module.exports = (db, log) => {
             return res.status(400).json({ message: 'Account Holder ID and Ticker are required.' });
         }
         
-        // --- MIGRATE: Ensure only one link (source or journal) is provided ---
-        if (advice_source_id && journal_entry_id) {
-             return res.status(400).json({ message: 'A trade idea can be linked to a source OR a journal entry, not both.' });
+        // --- FIX: Validation updated ---
+        // A trade idea MUST have an advice_source_id.
+        // It can OPTIONALLY have a journal_entry_id.
+        if (!advice_source_id) {
+             return res.status(400).json({ message: 'A trade idea must be linked to an advice source.' });
         }
-        if (!advice_source_id && !journal_entry_id) {
-             return res.status(400).json({ message: 'A trade idea must be linked to either a source or a journal entry.' });
-        }
-        // --- END MIGRATE ---
+        // --- END FIX ---
 
         try {
             const createdAt = new Date().toISOString();

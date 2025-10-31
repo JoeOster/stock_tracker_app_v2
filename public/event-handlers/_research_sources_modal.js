@@ -6,13 +6,12 @@
 
 import {
     _renderModalProfile,
-    _renderModalAddIdeaForm,
-    _renderModalAddTechniqueForm,
+    _renderModalActionsPanel, // --- MODIFIED ---
     _renderModalSummaryStats,
     _renderModalTradeIdeas,
     _renderModalRealTrades,
-    _renderModalPaperTrades_Open, // <-- MODIFIED IMPORT
-    _renderModalPaperTrades_Closed, // <-- MODIFIED IMPORT
+    _renderModalPaperTrades_Open,
+    _renderModalPaperTrades_Closed,
     _renderModalDocuments,
     _renderModalNotes
 } from './_research_sources_modal_html.js';
@@ -43,14 +42,9 @@ export function generateSourceDetailsHTML(details) {
     // Top Grid: Profile and (Conditional) Add Idea/Technique Form
     detailsHTML += _renderModalProfile(source);
 
-    // --- FIX: Show the correct form based on type ---
-    if (source.type === 'Person' || source.type === 'Group') {
-        detailsHTML += _renderModalAddIdeaForm(source);
-    } else {
-        // For Book, Website, Service, etc.
-        detailsHTML += _renderModalAddTechniqueForm(source);
-    }
-    // --- END FIX ---
+    // --- MODIFIED: Render the new universal actions panel ---
+    detailsHTML += _renderModalActionsPanel(source);
+    // --- END MODIFIED ---
 
     detailsHTML += '</div>'; // End source-details-grid
 

@@ -63,6 +63,7 @@ module.exports = (db, log) => {
             // --- ADDED: Fetch prices for OPEN journal entries ---
             const openJournalEntries = journalEntries.filter(j => j.status === 'OPEN');
             const journalTickers = [...new Set(openJournalEntries.map(j => j.ticker))];
+            // --- FIX: Use priority 5 for background modal load ---
             const journalPriceData = journalTickers.length > 0 ? await getPrices(journalTickers, 5) : {};
 
             openJournalEntries.forEach(entry => {
@@ -105,16 +106,33 @@ module.exports = (db, log) => {
             // --- END MIGRATE ---
 
             // 4. Get all transactions (real trades) linked to this source
-            const linkedTransactions = await db.all(
-                `SELECT * FROM transactions 
-                 WHERE advice_source_id = ? AND account_holder_id = ?
-                 ORDER BY transaction_date DESC`,
-                [id, holderId]
-            );
+            // --- FIX: Also get transactions linked to this source's JOURNAL ENTRIES ---
+            let linkedTransactions = [];
+            if (journalEntryIds.length > 0) {
+                const placeholders = journalEntryIds.map(() => '?').join(',');
+                linkedTransactions = await db.all(
+                    `SELECT * FROM transactions 
+                     WHERE account_holder_id = ?
+                     AND (advice_source_id = ? OR linked_journal_id IN (${placeholders}))
+                     ORDER BY transaction_date DESC`,
+                    [holderId, id, ...journalEntryIds]
+                );
+            } else {
+                // No journal entries, just fetch items linked to the source
+                linkedTransactions = await db.all(
+                    `SELECT * FROM transactions 
+                     WHERE advice_source_id = ? AND account_holder_id = ?
+                     ORDER BY transaction_date DESC`,
+                    [id, holderId]
+                );
+            }
+            // --- END FIX ---
+
 
             // --- ADDED: Fetch prices for OPEN linked transactions ---
             const openLots = linkedTransactions.filter(tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001);
             const openLotTickers = [...new Set(openLots.map(lot => lot.ticker))];
+             // --- FIX: Use priority 5 for background modal load ---
             const lotPriceData = openLotTickers.length > 0 ? await getPrices(openLotTickers, 5) : {};
             
             openLots.forEach(lot => {
@@ -131,15 +149,33 @@ module.exports = (db, log) => {
             // --- END ADD ---
 
             // 5. Get all documents linked to this source
-            const documents = await db.all(
-                'SELECT * FROM documents WHERE advice_source_id = ? ORDER BY created_at DESC',
-                [id] // <-- FIX: Removed holderId
-            );
+            // --- FIX: Also get documents linked to this source's JOURNAL ENTRIES ---
+            let documents = [];
+            if (journalEntryIds.length > 0) {
+                 const placeholders = journalEntryIds.map(() => '?').join(',');
+                 documents = await db.all(
+                    `SELECT * FROM documents 
+                     WHERE advice_source_id = ? OR journal_entry_id IN (${placeholders})
+                     ORDER BY created_at DESC`,
+                    [id, ...journalEntryIds]
+                 );
+            } else {
+                 documents = await db.all(
+                    'SELECT * FROM documents WHERE advice_source_id = ? ORDER BY created_at DESC',
+                    [id]
+                 );
+            }
+            // --- END FIX ---
+
 
             // 6. Get all notes for this source
+            // ---
+            // --- THIS IS THE FIX ---
+            // Removed `account_holder_id = ?` from the query
+            // ---
             const sourceNotes = await db.all(
                 'SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC',
-                [id] // <-- FIX: Removed holderId
+                [id]
             );
             
 // --- REPLACEMENT: Calculate full summary stats ---
@@ -163,9 +199,16 @@ module.exports = (db, log) => {
         // We must loop and query for the parent buy price for each sell
         for (const sellTx of closedRealTrades) {
             if (sellTx.parent_buy_id) {
-                const parentBuy = await db.get('SELECT price FROM transactions WHERE id = ?', sellTx.parent_buy_id);
+                // Find the parent buy, which MUST be in the linkedTransactions
+                const parentBuy = linkedTransactions.find(tx => tx.id === sellTx.parent_buy_id);
                 if (parentBuy) {
                     realRealizedPL += (sellTx.price - parentBuy.price) * sellTx.quantity;
+                } else {
+                    // Fallback: query DB if not in list (should be rare)
+                    const dbParentBuy = await db.get('SELECT price FROM transactions WHERE id = ?', sellTx.parent_buy_id);
+                    if (dbParentBuy) {
+                         realRealizedPL += (sellTx.price - dbParentBuy.price) * sellTx.quantity;
+                    }
                 }
             }
         }
@@ -179,7 +222,7 @@ module.exports = (db, log) => {
             totalNotes: sourceNotes.length || 0,
 
             // Combine paper and real stats for the header
-            totalTrades: (journalEntries.length || 0) + (watchlistItems.length || 0),
+            totalTrades: watchlistItems.length || 0, // Correctly only counts trade ideas
             totalInvestment: paperInvestment + realInvestment,
             totalUnrealizedPL: paperUnrealizedPL + realUnrealizedPL,
             totalRealizedPL: paperRealizedPL + realRealizedPL
@@ -208,7 +251,7 @@ module.exports = (db, log) => {
      * @description Adds a new note to a specific advice source.
      * @param {string} id.path.required - The ID of the advice source.
      * @param {object} req.body.required - The note data.
-     * @param {string|number} req.body.holderId - The account holder ID.
+     * @param {string|number} req.body.holderId - The account holder ID (used for validation).
      * @param {string} req.body.note_content - The content of the note.
      * @returns {object} 201 - The newly created note. 400/500 - Error message.
      */
@@ -221,13 +264,20 @@ module.exports = (db, log) => {
         }
 
         try {
-            // --- FIX: Add account_holder_id to the INSERT ---
+            // --- FIX: Verify holderId owns the source ---
+            const source = await db.get('SELECT id FROM advice_sources WHERE id = ? AND account_holder_id = ?', [id, holderId]);
+            if (!source) {
+                return res.status(404).json({ message: 'Advice source not found for this account holder.' });
+            }
+            // --- END FIX ---
+
             const createdAt = new Date().toISOString();
+            // --- FIX: Remove account_holder_id from INSERT ---
             const query = `
-                INSERT INTO source_notes (advice_source_id, account_holder_id, note_content, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO source_notes (advice_source_id, note_content, created_at, updated_at)
+                VALUES (?, ?, ?, ?)
             `;
-            const result = await db.run(query, [id, holderId, note_content, createdAt, createdAt]);
+            const result = await db.run(query, [id, note_content, createdAt, createdAt]);
             // --- END FIX ---
             
             const newNoteId = result.lastID;
@@ -260,18 +310,25 @@ module.exports = (db, log) => {
         }
 
         try {
-            // --- FIX: Add updated_at ---
+            // --- FIX: Verify holderId owns the source ---
+            const source = await db.get('SELECT id FROM advice_sources WHERE id = ? AND account_holder_id = ?', [id, holderId]);
+            if (!source) {
+                return res.status(404).json({ message: 'Advice source not found for this account holder.' });
+            }
+            // --- END FIX ---
+
             const updatedAt = new Date().toISOString();
+            // --- FIX: Remove account_holder_id from query ---
             const query = `
                 UPDATE source_notes 
                 SET note_content = ?, updated_at = ?
-                WHERE id = ? AND advice_source_id = ? AND account_holder_id = ?
+                WHERE id = ? AND advice_source_id = ?
             `;
-            const result = await db.run(query, [note_content, updatedAt, noteId, id, holderId]);
+            const result = await db.run(query, [note_content, updatedAt, noteId, id]);
             // --- END FIX ---
 
             if (result.changes === 0) {
-                return res.status(404).json({ message: 'Note not found or you do not have permission to edit it.' });
+                return res.status(404).json({ message: 'Note not found.' });
             }
 
             res.json({ message: 'Note updated successfully.' });
@@ -300,14 +357,23 @@ module.exports = (db, log) => {
         }
 
         try {
+            // --- FIX: Verify holderId owns the source ---
+            const source = await db.get('SELECT id FROM advice_sources WHERE id = ? AND account_holder_id = ?', [id, holderId]);
+            if (!source) {
+                return res.status(404).json({ message: 'Advice source not found for this account holder.' });
+            }
+            // --- END FIX ---
+
+            // --- FIX: Remove account_holder_id from query ---
             const query = `
                 DELETE FROM source_notes
-                WHERE id = ? AND advice_source_id = ? AND account_holder_id = ?
+                WHERE id = ? AND advice_source_id = ?
             `;
-            const result = await db.run(query, [noteId, id, holderId]);
+            const result = await db.run(query, [noteId, id]);
+            // --- END FIX ---
 
             if (result.changes === 0) {
-                return res.status(404).json({ message: 'Note not found or you do not have permission to delete it.' });
+                return res.status(404).json({ message: 'Note not found.' });
             }
 
             res.json({ message: 'Note deleted successfully.' });

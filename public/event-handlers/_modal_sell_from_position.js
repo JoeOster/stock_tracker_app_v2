@@ -6,12 +6,14 @@
 
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
-// UPDATED IMPORTS
+// --- MODIFIED IMPORTS ---
 import { handleResponse } from '../api/api-helpers.js';
 import { refreshLedger } from '../api/transactions-api.js';
-// END UPDATED IMPORTS
-import { switchView } from './_navigation.js';
+// import { switchView } from './_navigation.js'; // No longer needed
+import { loadDashboardPage } from './_dashboard_loader.js'; // <-- ADDED
+import { loadDailyReportPage } from './_dailyReport.js'; // <-- ADDED
 import { openAndPopulateManageModal } from './_dashboard_init.js';
+// --- END MODIFIED IMPORTS ---
 
 /**
  * Initializes the event listener for the Sell From Position modal form submission.
@@ -76,12 +78,17 @@ export function initializeSellFromPositionModalHandler() {
                 }
 
                 sellFromPositionModal?.classList.remove('visible'); // Close sell modal
-                // Refresh underlying view
-                if (state.currentView.type === 'dashboard' || state.currentView.type === 'date') {
-                     await switchView(state.currentView.type, state.currentView.value);
+                
+                // --- THIS IS THE FIX ---
+                // Refresh underlying view by calling its specific loader
+                if (state.currentView.type === 'dashboard') {
+                    await loadDashboardPage(); // <-- Call dashboard loader directly
+                } else if (state.currentView.type === 'date') {
+                    await loadDailyReportPage(state.currentView.value); // <-- Call daily report loader
                 } else if (state.currentView.type === 'ledger') {
-                     await refreshLedger();
+                    await refreshLedger();
                 }
+                // --- END FIX ---
 
             } catch (error) {
                  const err = /** @type {Error} */ (error);

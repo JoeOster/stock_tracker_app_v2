@@ -16,7 +16,8 @@ import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
 // Import fetching functions needed *before* opening the modal
 import { fetchAndRenderExchanges } from './_settings_exchanges.js';
 import { fetchAndPopulateAccountHolders } from './_settings_holders.js';
-import { fetchAndStoreAdviceSources } from './_journal_settings.js';
+// --- MODIFIED: Import the NEW settings-specific fetcher ---
+import { fetchAllAdviceSourcesForSettings } from './_journal_settings.js';
 
 /**
  * Helper function to set the active tab and panel within a tab group.
@@ -85,11 +86,13 @@ export function initializeSettingsModalHandlers() {
             try {
                 // Fetch all necessary data before showing/rendering lists
                 showToast('Loading settings data...', 'info', 2000);
-                await Promise.all([
+                // --- MODIFIED: Fetch ALL sources (active/inactive) for the modal ---
+                const [_, __, allSources] = await Promise.all([
                     fetchAndRenderExchanges(), // Fetch data needed for exchange list & dropdowns
                     fetchAndPopulateAccountHolders(), // Fetch data needed for holder list & dropdowns
-                    fetchAndStoreAdviceSources() // Fetch data needed for advice source list
+                    fetchAllAdviceSourcesForSettings(state.selectedAccountHolderId) // Fetch ALL sources for settings
                 ]);
+                // --- END MODIFIED ---
 
                 // --- FIX: Add checks for all elements before setting values ---
                 const takeProfitInput = /** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'));
@@ -114,10 +117,11 @@ export function initializeSettingsModalHandlers() {
                 // --- END FIX ---
 
 
-                // Render management lists now that data is fetched and stored in state
+                // Render management lists now that data is fetched
                 renderExchangeManagementList();
                 renderAccountHolderManagementList();
-                renderAdviceSourceManagementList();
+                // --- MODIFIED: Pass the full list of sources to the renderer ---
+                renderAdviceSourceManagementList(allSources);
 
                 // Reset tabs and panels to default state (first tab active)
                 settingsTabsContainer?.querySelectorAll('.settings-tab').forEach((tab, index) => tab.classList.toggle('active', index === 0));
