@@ -92,6 +92,19 @@ function initializeModalActionHandlers(modalContentArea, refreshDetailsCallback)
         } else if (target.closest('.create-paper-trade-btn')) {
             console.log("[Modal Actions] Delegating to handleCreatePaperTradeFromIdea");
             await handleCreatePaperTradeFromIdea(target);
+        
+        // --- ADDED: Handle thumbnail click ---
+        } else if (target.closest('.technique-image-thumbnail')) {
+            console.log("[Modal Actions] Opening Image Zoom Modal");
+            const imgElement = target.closest('.technique-image-thumbnail');
+            const imgSrc = imgElement.getAttribute('src');
+            const zoomModal = document.getElementById('image-zoom-modal');
+            const zoomImage = document.getElementById('zoomed-image-content');
+            if (zoomModal && zoomImage && imgSrc) {
+                (/** @type {HTMLImageElement} */(zoomImage)).src = imgSrc;
+                zoomModal.classList.add('visible');
+            }
+        // --- END ADDED ---
         }
     };
 

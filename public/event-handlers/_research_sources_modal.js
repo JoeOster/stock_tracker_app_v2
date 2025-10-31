@@ -7,11 +7,12 @@
 import {
     _renderModalProfile,
     _renderModalAddIdeaForm,
-    _renderModalAddTechniqueForm, // <-- ADDED IMPORT
+    _renderModalAddTechniqueForm,
     _renderModalSummaryStats,
     _renderModalTradeIdeas,
     _renderModalRealTrades,
-    _renderModalPaperTrades,
+    _renderModalPaperTrades_Open, // <-- MODIFIED IMPORT
+    _renderModalPaperTrades_Closed, // <-- MODIFIED IMPORT
     _renderModalDocuments,
     _renderModalNotes
 } from './_research_sources_modal_html.js';
@@ -57,12 +58,18 @@ export function generateSourceDetailsHTML(details) {
     detailsHTML += _renderModalSummaryStats(summaryStats);
     detailsHTML += '<hr style="margin: 1.5rem 0;">';
 
-    // Linked Sections
-    detailsHTML += _renderModalTradeIdeas(watchlistItems, linkedTxTickers, paperTradeTickers, source);
-    detailsHTML += _renderModalRealTrades(linkedTransactions);
-    detailsHTML += _renderModalPaperTrades(journalEntries, source.type);
-    detailsHTML += _renderModalDocuments(documents, source);
-    detailsHTML += _renderModalNotes(sourceNotes, source);
+    // --- REORDERED LINKED SECTIONS ---
+    detailsHTML += _renderModalPaperTrades_Open(journalEntries, source.type); // Techniques / Methods
+    detailsHTML += _renderModalTradeIdeas(watchlistItems, linkedTxTickers, paperTradeTickers, source); // Trade Ideas
+    detailsHTML += _renderModalRealTrades(linkedTransactions); // Linked Real Trades (Open & History)
+    
+    detailsHTML += '<hr style="margin: 1.5rem 0;">';
+    detailsHTML += _renderModalPaperTrades_Closed(journalEntries, source.type); // Completed Techniques
+    
+    detailsHTML += '<hr style="margin: 1.5rem 0;">';
+    detailsHTML += _renderModalDocuments(documents, source); // Documents
+    detailsHTML += _renderModalNotes(sourceNotes, source); // Notes
+    // --- END REORDER ---
 
     return detailsHTML;
 }

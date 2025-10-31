@@ -75,7 +75,8 @@ async function initialize() {
             modal_sales_history,
             modal_selective_sell,
             modal_manage_position,
-            modal_source_details
+            modal_source_details,
+            modal_image_zoom // --- ADDED ---
         ] = await Promise.all([
             // Page fetches
             fetch('./templates/_alerts.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_alerts.html: ${res.statusText}`)),
@@ -98,7 +99,8 @@ async function initialize() {
             fetch('./templates/_modal_sales_history.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_sales_history.html: ${res.statusText}`)),
             fetch('./templates/_modal_selective_sell.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_selective_sell.html: ${res.statusText}`)),
             fetch('./templates/_modal_manage_position.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_manage_position.html: ${res.statusText}`)),
-            fetch('./templates/_modal_source_details.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_source_details.html: ${res.statusText}`))
+            fetch('./templates/_modal_source_details.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_source_details.html: ${res.statusText}`)),
+            fetch('./templates/_modal_image_zoom.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_image_zoom.html: ${res.statusText}`)) // --- ADDED ---
        ]);
 
         // Inject page templates
@@ -117,7 +119,8 @@ async function initialize() {
             modal_sales_history +
             modal_selective_sell +
             modal_manage_position +
-            modal_source_details;
+            modal_source_details +
+            modal_image_zoom; // --- ADDED ---
         console.log("[App Main] Modal templates injected.");
 
     } catch (error) {

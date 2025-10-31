@@ -258,6 +258,23 @@
 #source-details-modal-content .mini-journal-table .text-muted { color: var(--text-muted-color); }
 
 
+/* --- ADDED: Styles for Technique Image Thumbnail --- */
+.technique-image-thumbnail {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid var(--container-border);
+    transition: border-color 0.2s, opacity 0.2s;
+}
+.technique-image-thumbnail:hover {
+    border-color: var(--primary-color);
+    opacity: 0.8;
+}
+/* --- END ADDED --- */
+
+
 /* --- ADDED: Styles for Trade Idea Actions --- */
 #source-details-modal-content .recommended-trades-table .actions-cell button,
 #source-details-modal-content .recommended-trades-table .actions-cell span[class*="marker-"] {

@@ -101,49 +101,31 @@ export function _renderModalAddIdeaForm(source) {
 }
 
 /**
- * --- NEW FUNCTION ---
+ * --- MODIFIED FUNCTION ---
  * Renders the "Add Technique" (Journal Entry) form for Book/Website types.
  * @param {object} source - The advice source data.
  * @returns {string} HTML string.
  */
 export function _renderModalAddTechniqueForm(source) {
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
     let html = `<div class="add-ticker-section">`; // Use same styling as the other form
     html += `<h5>Add Technique / Method</h5>`;
     html += `
         <form class="add-technique-form" data-source-id="${source.id}">
              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 15px; align-items: end;">
                 
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="tech-entry-date-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Date*</label>
-                    <input type="date" id="tech-entry-date-${source.id}" class="tech-entry-date-input" value="${today}" required>
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="tech-ticker-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Ticker*</label>
-                    <input type="text" id="tech-ticker-${source.id}" class="tech-ticker-input" placeholder="e.g., AAPL" required>
-                </div>
-
                 <div class="form-group" style="grid-column: span 2; margin-bottom: 0;">
-                    <label for="tech-entry-reason-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Technique / Reason*</label>
+                    <label for="tech-entry-reason-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Description*</label>
                     <input type="text" id="tech-entry-reason-${source.id}" class="tech-entry-reason-input" placeholder="e.g., 'Chapter 5 Breakout Strategy'" required>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="tech-entry-price-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Entry Price*</label>
-                    <input type="number" id="tech-entry-price-${source.id}" class="tech-entry-price-input" step="any" min="0.01" placeholder="e.g., 150.25" required>
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="tech-quantity-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Quantity*</label>
-                    <input type="number" id="tech-quantity-${source.id}" class="tech-quantity-input" step="any" min="0.01" placeholder="e.g., 10" required>
+                    <label for="tech-chart-type-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Chart Type (Optional)</label>
+                    <input type="text" id="tech-chart-type-${source.id}" class="tech-chart-type-input" placeholder="e.g., '5-min Heikin Ashi'">
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="tech-tp1-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Target 1</label>
-                    <input type="number" id="tech-tp1-${source.id}" class="tech-tp1-input" step="any" min="0.01" placeholder="Optional">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="tech-sl-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Stop Loss</label>
-                    <input type="number" id="tech-sl-${source.id}" class="tech-sl-input" step="any" min="0.01" placeholder="Optional">
+                    <label for="tech-image-path-${source.id}" style="font-size: 0.8em; margin-bottom: 2px; font-weight: bold;">Image Path (Optional)</label>
+                    <input type="text" id="tech-image-path-${source.id}" class="tech-image-path-input" placeholder="e.g., /images/book/chart1.png">
                 </div>
                 
                  <div class="form-group form-group-span-2" style="margin-bottom: 0;">
@@ -204,13 +186,11 @@ export function _renderModalTradeIdeas(watchlistItems, linkedTxTickers, paperTra
             let entryRange = '--'; if (item.rec_entry_low !== null && item.rec_entry_high !== null) { entryRange = `${formatAccounting(item.rec_entry_low, false)} - ${formatAccounting(item.rec_entry_high, false)}`; } else if (item.rec_entry_low !== null) { entryRange = `${formatAccounting(item.rec_entry_low, false)}+`; } else if (item.rec_entry_high !== null) { entryRange = `Up to ${formatAccounting(item.rec_entry_high, false)}`; }
             let distance = '--'; let distClass = ''; if (currentPrice !== null && item.rec_entry_low !== null) { const distPercent = ((currentPrice - item.rec_entry_low) / item.rec_entry_low) * 100; distClass = distPercent >= 0 ? 'positive' : 'negative'; if (item.rec_entry_high !== null && currentPrice <= item.rec_entry_high) { distClass = 'positive'; distance = `In Range (${distPercent.toFixed(1)}%)`; } else { distance = `${distPercent > 0 ? '+' : ''}${distPercent.toFixed(1)}%`; } } else if (currentPrice !== null && item.rec_entry_high !== null) { const distPercent = ((currentPrice - item.rec_entry_high) / item.rec_entry_high) * 100; distClass = distPercent > 0 ? 'negative' : 'positive'; distance = `${distPercent > 0 ? '+' : ''}${distPercent.toFixed(1)}%`; }
             
-            // --- FIX: Use formatAccounting (with currency) ---
             const recLimits = [
                 item.rec_stop_loss ? `SL: ${formatAccounting(item.rec_stop_loss)}` : null,
                 item.rec_tp1 ? `TP1: ${formatAccounting(item.rec_tp1)}` : null,
                 item.rec_tp2 ? `TP2: ${formatAccounting(item.rec_tp2)}` : null
             ].filter(Boolean).join(' / ') || '--';
-            // --- END FIX ---
             
             const isLinkedToRealTrade = linkedTxTickers.has(item.ticker);
             const isLinkedToPaperTrade = paperTradeTickers.has(item.ticker);
@@ -353,32 +333,34 @@ export function _renderModalRealTrades(linkedTransactions) {
 }
 
 /**
- * Renders the "Tracked Paper Trades" (Open and Closed) tables.
+ * --- MODIFIED FUNCTION ---
+ * Renders the "Tracked Paper Trades" (Open) table.
  * Title changes to "Techniques / Methods" for non-person source types.
  * @param {any[]} journalEntries - Array of journal entry objects.
  * @param {string} [sourceType='Person'] - The type of the source.
  * @returns {string} HTML string.
  */
-export function _renderModalPaperTrades(journalEntries, sourceType = 'Person') {
+export function _renderModalPaperTrades_Open(journalEntries, sourceType = 'Person') {
     let html = '';
-
-    // --- FIX: Add conditional titles ---
     const isPersonOrGroup = (sourceType === 'Person' || sourceType === 'Group');
     const paperTradeTitle = isPersonOrGroup ? 'Tracked Paper Trades' : 'Techniques / Methods';
-    const completedTradeTitle = isPersonOrGroup ? 'Completed Paper Trades' : 'Completed Techniques';
-    // --- END FIX ---
-
+    
     const openJournalEntries = journalEntries.filter(entry => entry.status === 'OPEN');
-    const closedJournalEntries = journalEntries.filter(entry => ['CLOSED', 'EXECUTED'].includes(entry.status));
 
-    // Use the new title
     html += `<h4 style="margin-top: 1rem;">${paperTradeTitle} (${openJournalEntries.length})</h4>`;
     if (openJournalEntries.length > 0) {
         html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
                 <tr>
-                    <th>Entry Date</th> <th>Ticker</th> <th class="numeric">Entry $</th> <th class="numeric">Qty</th> <th class="numeric">Current $</th> <th class="numeric">Unrealized P/L</th> <th class="numeric">Guidelines (SL/TP1/TP2)</th> 
-                    <th>Reason</th>
+                    <th>Entry Date</th> 
+                    <th>Ticker</th>
+                    <th class="center-align">Chart</th>
+                    <th class="numeric">Entry $</th> 
+                    <th class="numeric">Qty</th> 
+                    <th class="numeric">Current $</th> 
+                    <th class="numeric">Unrealized P/L</th> 
+                    <th class="numeric">Guidelines (SL/TP1/TP2)</th> 
+                    <th>Description</th>
                     <th class="center-align">Actions</th>
                 </tr>
             </thead><tbody>`;
@@ -393,17 +375,23 @@ export function _renderModalPaperTrades(journalEntries, sourceType = 'Person') {
                 entry.target_price_2 ? `TP2: ${formatAccounting(entry.target_price_2)}` : null
             ].filter(Boolean).join(' / ') || '--';
             
-            // --- ADDED: Action Buttons ---
+            // --- ADDED: Chart Thumbnail ---
+            let chartThumbnail = '--';
+            if (entry.image_path) {
+                chartThumbnail = `<img src="${escapeHTML(entry.image_path)}" alt="Technique Chart" class="technique-image-thumbnail">`;
+            }
+            // --- END ADDED ---
+
             const actionButtons = `
                 <button class="develop-trade-idea-btn" data-journal-id="${entry.id}" data-ticker="${escapeHTML(entry.ticker)}" data-entry="${entry.entry_price}" data-tp1="${entry.target_price || ''}" data-tp2="${entry.target_price_2 || ''}" data-sl="${entry.stop_loss_price || ''}" title="Develop Trade Idea from this Technique">Add Idea</button>
                 <button class="delete-journal-btn delete-btn" data-journal-id="${entry.id}" title="Delete Technique">X</button>
             `;
-            // --- END ADDED ---
 
             html += `
                 <tr>
                     <td>${escapeHTML(entry.entry_date) || 'N/A'}</td> 
-                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td> 
+                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td>
+                    <td class="center-align">${chartThumbnail}</td> 
                     <td class="numeric">${formatAccounting(entry.entry_price)}</td> 
                     <td class="numeric">${formatQuantity(entry.quantity)}</td> 
                     <td class="numeric">${currentPriceDisplay}</td> 
@@ -415,18 +403,40 @@ export function _renderModalPaperTrades(journalEntries, sourceType = 'Person') {
         });
         html += `</tbody></table></div>`;
     } else {
-        // Use new title in "no data" message
         html += `<p>No ${isPersonOrGroup ? 'paper trades' : 'techniques'} are being tracked for this source.</p>`;
     }
+    return html;
+}
 
-    // Use the new title
+/**
+ * --- MODIFIED FUNCTION ---
+ * Renders the "Completed Paper Trades" (Closed) table.
+ * Title changes to "Completed Techniques" for non-person source types.
+ * @param {any[]} journalEntries - Array of journal entry objects.
+ * @param {string} [sourceType='Person'] - The type of the source.
+ * @returns {string} HTML string.
+ */
+export function _renderModalPaperTrades_Closed(journalEntries, sourceType = 'Person') {
+    let html = '';
+    const isPersonOrGroup = (sourceType === 'Person' || sourceType === 'Group');
+    const completedTradeTitle = isPersonOrGroup ? 'Completed Paper Trades' : 'Completed Techniques';
+    
+    const closedJournalEntries = journalEntries.filter(entry => ['CLOSED', 'EXECUTED'].includes(entry.status));
+    
     html += `<h4 style="margin-top: 1rem;">${completedTradeTitle} (${closedJournalEntries.length})</h4>`;
     if (closedJournalEntries.length > 0) {
         html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
                 <tr>
-                    <th>Entry Date</th> <th>Exit Date</th> <th>Ticker</th> <th class="numeric">Entry $</th> <th class="numeric">Exit $</th> <th class="numeric">Qty</th> <th class="numeric">Realized P/L</th> 
-                    <th>Reason</th>
+                    <th>Entry Date</th> 
+                    <th>Exit Date</th> 
+                    <th>Ticker</th>
+                    <th class="center-align">Chart</th>
+                    <th class="numeric">Entry $</th> 
+                    <th class="numeric">Exit $</th> 
+                    <th class="numeric">Qty</th> 
+                    <th class="numeric">Realized P/L</th> 
+                    <th>Description</th>
                     <th>Status</th>
                 </tr>
             </thead><tbody>`;
@@ -434,17 +444,21 @@ export function _renderModalPaperTrades(journalEntries, sourceType = 'Person') {
             const pnl = entry.pnl;
             const pnlClass = pnl !== null && pnl !== undefined ? (pnl >= 0 ? 'positive' : 'negative') : '';
             const pnlDisplay = pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
-            
-            // --- THIS IS THE FIX ---
-            // Changed 'item.status' to 'entry.status' and 'item.linked_trade_id' to 'entry.linked_trade_id'
             const statusDisplay = entry.status === 'EXECUTED' && entry.linked_trade_id ? `Executed (Tx #${entry.linked_trade_id})` : escapeHTML(entry.status);
-            // --- END FIX ---
+
+            // --- ADDED: Chart Thumbnail ---
+            let chartThumbnail = '--';
+            if (entry.image_path) {
+                chartThumbnail = `<img src="${escapeHTML(entry.image_path)}" alt="Technique Chart" class="technique-image-thumbnail">`;
+            }
+            // --- END ADDED ---
 
             html += `
                 <tr class="text-muted">
                     <td>${escapeHTML(entry.entry_date) || 'N/A'}</td> 
                     <td>${escapeHTML(entry.exit_date) || '--'}</td> 
-                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td> 
+                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td>
+                    <td class="center-align">${chartThumbnail}</td> 
                     <td class="numeric">${formatAccounting(entry.entry_price)}</td> 
                     <td class="numeric">${entry.exit_price ? formatAccounting(entry.exit_price) : '--'}</td> 
                     <td class="numeric">${formatQuantity(entry.quantity)}</td> 
@@ -455,7 +469,6 @@ export function _renderModalPaperTrades(journalEntries, sourceType = 'Person') {
         });
         html += `</tbody></table></div>`;
     } else {
-        // Use new title in "no data" message
         html += `<p>No completed ${isPersonOrGroup ? 'paper trades' : 'techniques'} linked to this source.</p>`;
     }
     return html;

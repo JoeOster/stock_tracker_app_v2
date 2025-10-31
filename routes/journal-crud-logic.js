@@ -28,29 +28,37 @@ async function handleCreateJournalEntry(db, body) {
         direction,
         advice_source_details,
         entry_reason,
+        image_path, // --- ADDED ---
         linked_document_urls = []
     } = body;
 
     const createdAt = new Date().toISOString();
 
-    if (!account_holder_id || !ticker || !entry_date || !entry_price || !quantity || !exchange || !direction) {
+    // --- MODIFIED VALIDATION ---
+    // Check if price or quantity are explicitly null/undefined, but allow 0
+    const priceProvided = entry_price !== null && entry_price !== undefined;
+    const quantityProvided = quantity !== null && quantity !== undefined;
+
+    if (!account_holder_id || !ticker || !entry_date || !priceProvided || !quantityProvided || !exchange || !direction) {
         throw new Error('Missing required fields for journal entry (holder, ticker, date, price, qty, exchange, direction).');
     }
+    // --- END MODIFICATION ---
 
     const result = await db.run(
         `INSERT INTO journal_entries (
             account_holder_id, advice_source_id, ticker, entry_date, 
             entry_price, quantity, stop_loss_price, target_price, target_price_2, 
             notes, status, created_at,
-            exchange, direction, advice_source_details, entry_reason
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            exchange, direction, advice_source_details, entry_reason, image_path
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, // --- ADDED ? ---
         [
             account_holder_id, advice_source_id || null, ticker.toUpperCase(), entry_date,
             entry_price, quantity, stop_loss_price || null, target_price || null, target_price_2 || null,
             notes || null, status, createdAt,
             exchange, direction,
             advice_source_details || null,
-            entry_reason || null
+            entry_reason || null,
+            image_path || null // --- ADDED ---
         ]
     );
 
@@ -102,6 +110,7 @@ async function handleUpdateJournalEntry(db, id, body) {
         direction,
         advice_source_details,
         entry_reason,
+        image_path, // --- ADDED ---
         exit_date,
         exit_price,
         pnl
@@ -125,6 +134,7 @@ async function handleUpdateJournalEntry(db, id, body) {
         stop_loss_price,
         target_price, target_price_2, notes, status,
         exchange, direction, advice_source_details, entry_reason,
+        image_path, // --- ADDED ---
         exit_date, exit_price, pnl
     };
 

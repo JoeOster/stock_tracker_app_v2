@@ -25,29 +25,28 @@ export async function handleAddTechniqueSubmit(e, refreshDetailsCallback) {
     const formSourceId = form.dataset.sourceId;
 
     // Get form values
-    const entryDate = (/** @type {HTMLInputElement} */(form.querySelector('.tech-entry-date-input'))).value;
-    const ticker = (/** @type {HTMLInputElement} */(form.querySelector('.tech-ticker-input'))).value.toUpperCase().trim();
+    const entryDate = new Date().toLocaleDateString('en-CA'); // Get current date automatically
+    const ticker = 'N/A'; // Set placeholder ticker
     const entryReason = (/** @type {HTMLInputElement} */(form.querySelector('.tech-entry-reason-input'))).value.trim();
-    const quantityStr = (/** @type {HTMLInputElement} */(form.querySelector('.tech-quantity-input'))).value;
-    const entryPriceStr = (/** @type {HTMLInputElement} */(form.querySelector('.tech-entry-price-input'))).value;
-    const targetPriceStr = (/** @type {HTMLInputElement} */(form.querySelector('.tech-tp1-input'))).value;
-    const stopLossPriceStr = (/** @type {HTMLInputElement} */(form.querySelector('.tech-sl-input'))).value;
+    
+    const chartType = (/** @type {HTMLInputElement} */(form.querySelector('.tech-chart-type-input'))).value.trim();
+    const imagePath = (/** @type {HTMLInputElement} */(form.querySelector('.tech-image-path-input'))).value.trim(); // --- ADDED ---
     const notes = (/** @type {HTMLTextAreaElement} */(form.querySelector('.tech-notes-input'))).value.trim();
 
     // --- Validation ---
     if (holderId === 'all' || !formSourceId) { return showToast('Error: Account or Source ID is missing.', 'error'); }
-    if (!entryDate || !ticker || !entryReason || !quantityStr || !entryPriceStr) {
-        return showToast('Date, Ticker, Technique/Reason, Quantity, and Entry Price are required.', 'error');
+    if (!entryReason) {
+        return showToast('Description is required.', 'error');
     }
-    const quantity = parseFloat(quantityStr);
-    const entryPrice = parseFloat(entryPriceStr);
-    if (isNaN(quantity) || quantity <= 0) { return showToast('Quantity must be a valid positive number.', 'error'); }
-    if (isNaN(entryPrice) || entryPrice <= 0) { return showToast('Entry Price must be a valid positive number.', 'error'); }
-
-    const targetPrice = targetPriceStr ? parseFloat(targetPriceStr) : null;
-    const stopLossPrice = stopLossPriceStr ? parseFloat(stopLossPriceStr) : null;
-    if (targetPrice !== null && (isNaN(targetPrice) || targetPrice <= entryPrice)) { return showToast('Target Price must be greater than Entry Price.', 'error'); }
-    if (stopLossPrice !== null && (isNaN(stopLossPrice) || stopLossPrice >= entryPrice)) { return showToast('Stop Loss must be less than Entry Price.', 'error'); }
+    
+    // --- SET Default Values ---
+    const quantity = 0;
+    const entryPrice = 0;
+    const targetPrice = null;
+    const stopLossPrice = null;
+    
+    // Combine Chart Type and Notes
+    const combinedNotes = chartType ? `Chart Type: ${chartType}\n\n${notes}` : (notes || null);
 
     const entryData = {
         account_holder_id: holderId,
@@ -56,13 +55,14 @@ export async function handleAddTechniqueSubmit(e, refreshDetailsCallback) {
         ticker: ticker,
         exchange: 'Paper', // Default for techniques
         direction: 'BUY',   // Default for techniques
-        quantity: quantity,
-        entry_price: entryPrice,
-        target_price: targetPrice,
+        quantity: quantity, // Use default
+        entry_price: entryPrice, // Use default
+        target_price: targetPrice, // Use default
         target_price_2: null, // Not in this form
-        stop_loss_price: stopLossPrice,
+        stop_loss_price: stopLossPrice, // Use default
         entry_reason: entryReason,
-        notes: notes || null,
+        notes: combinedNotes, // Use combined notes
+        image_path: imagePath || null, // --- ADDED ---
         status: 'OPEN',
         linked_document_urls: []
     };
@@ -72,14 +72,8 @@ export async function handleAddTechniqueSubmit(e, refreshDetailsCallback) {
         await addJournalEntry(entryData);
         showToast('New technique added!', 'success');
         form.reset();
-        // Reset date
-        const dateInput = /** @type {HTMLInputElement} */(form.querySelector('.tech-entry-date-input'));
-        if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
         
-        // --- THIS IS THE FIX ---
-        // Call the callback function passed in, instead of re-importing the modal
         await refreshDetailsCallback();
-        // --- END FIX ---
     } catch (error) {
         console.error('Failed to add journal entry (technique):', error);
         const err = /** @type {Error} */ (error);
