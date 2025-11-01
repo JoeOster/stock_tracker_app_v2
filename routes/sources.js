@@ -170,12 +170,12 @@ module.exports = (db, log) => {
 
             // 6. Get all notes for this source
             // ---
-            // --- THIS IS THE FIX ---
-            // Removed `account_holder_id = ?` from the query
+            // --- THIS IS THE FIX (Bug #1) ---
+            // Added `account_holder_id = ?` to the query
             // ---
             const sourceNotes = await db.all(
-                'SELECT * FROM source_notes WHERE advice_source_id = ? ORDER BY created_at DESC',
-                [id]
+                'SELECT * FROM source_notes WHERE advice_source_id = ? AND account_holder_id = ? ORDER BY created_at DESC',
+                [id, holderId]
             );
             
 // --- REPLACEMENT: Calculate full summary stats ---
@@ -272,12 +272,12 @@ module.exports = (db, log) => {
             // --- END FIX ---
 
             const createdAt = new Date().toISOString();
-            // --- FIX: Remove account_holder_id from INSERT ---
+            // --- FIX (Bug #2): Add account_holder_id to INSERT ---
             const query = `
-                INSERT INTO source_notes (advice_source_id, note_content, created_at, updated_at)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO source_notes (advice_source_id, note_content, created_at, updated_at, account_holder_id)
+                VALUES (?, ?, ?, ?, ?)
             `;
-            const result = await db.run(query, [id, note_content, createdAt, createdAt]);
+            const result = await db.run(query, [id, note_content, createdAt, createdAt, holderId]);
             // --- END FIX ---
             
             const newNoteId = result.lastID;
@@ -318,13 +318,13 @@ module.exports = (db, log) => {
             // --- END FIX ---
 
             const updatedAt = new Date().toISOString();
-            // --- FIX: Remove account_holder_id from query ---
+            // --- FIX (Bug #3): Add account_holder_id to WHERE clause ---
             const query = `
                 UPDATE source_notes 
                 SET note_content = ?, updated_at = ?
-                WHERE id = ? AND advice_source_id = ?
+                WHERE id = ? AND advice_source_id = ? AND account_holder_id = ?
             `;
-            const result = await db.run(query, [note_content, updatedAt, noteId, id]);
+            const result = await db.run(query, [note_content, updatedAt, noteId, id, holderId]);
             // --- END FIX ---
 
             if (result.changes === 0) {
@@ -364,12 +364,12 @@ module.exports = (db, log) => {
             }
             // --- END FIX ---
 
-            // --- FIX: Remove account_holder_id from query ---
+            // --- FIX (Bug #4): Add account_holder_id to WHERE clause ---
             const query = `
                 DELETE FROM source_notes
-                WHERE id = ? AND advice_source_id = ?
+                WHERE id = ? AND advice_source_id = ? AND account_holder_id = ?
             `;
-            const result = await db.run(query, [noteId, id]);
+            const result = await db.run(query, [noteId, id, holderId]);
             // --- END FIX ---
 
             if (result.changes === 0) {

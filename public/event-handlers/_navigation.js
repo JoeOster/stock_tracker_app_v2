@@ -14,6 +14,7 @@ import { loadChartsPage } from './_charts.js';
 import { refreshLedger } from '../api/transactions-api.js';
 import { loadResearchPage } from './_research.js';
 import { loadDashboardPage } from './_dashboard_loader.js';
+// --- REMOVED: import { loadJournalPage } ---
 import { fetchAndStoreAdviceSources } from './_journal_settings.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
 import { loadWatchlistPage } from './_watchlist.js'; 
@@ -24,7 +25,6 @@ import { loadWatchlistPage } from './_watchlist.js';
  * @returns {void}
  */
 export function autosizeAccountSelector(selectElement) {
-    // ... (this function remains unchanged) ...
     if (!selectElement || selectElement.options.length === 0) return;
     const tempSpan = document.createElement('span');
     tempSpan.style.visibility = 'hidden'; 
@@ -47,11 +47,11 @@ export function autosizeAccountSelector(selectElement) {
  * @async
  * @param {string} viewType - The type of view to switch to.
  * @param {string|null} [viewValue=null] - The value associated with the view (e.g., date).
+ * @param {boolean} [forceReload=false] - If true, bypasses the same-view check and forces a reload.
  * @returns {Promise<void>}
  */
-export async function switchView(viewType, viewValue = null) {
-    // ... (this function remains unchanged) ...
-    console.log(`[Navigation] Attempting switch view to: ${viewType} ${viewValue || ''}`);
+export async function switchView(viewType, viewValue = null, forceReload = false) { 
+    console.log(`[Navigation] Attempting switch view to: ${viewType} ${viewValue || ''} (Force: ${forceReload})`);
 
     const previousViewType = state.currentView.type;
     const isSameViewType = state.currentView.type === viewType;
@@ -73,9 +73,9 @@ export async function switchView(viewType, viewValue = null) {
 
     const isTargetVisible = targetPageContainer?.style.display === 'block';
 
-    if (isSameView && isTargetVisible && viewType !== 'sources') {
+    if (isSameView && isTargetVisible && viewType !== 'sources' && !forceReload) {
         console.log(`[Navigation] View is the same (${viewType}) and visible, skipping reload.`);
-        return;
+        return; // Skip reload
     }
 
     console.log(`[Navigation] Proceeding with view switch/load for ${viewType}.`);
@@ -86,7 +86,7 @@ export async function switchView(viewType, viewValue = null) {
     }
 
     updateState({ currentView: { type: viewType, value: viewValue } });
-    renderTabs(state.currentView);
+    renderTabs(state.currentView); // Update tab highlighting
 
     document.querySelectorAll('.page-container').forEach(c => (/** @type {HTMLElement} */(c)).style.display = 'none');
 
@@ -96,9 +96,10 @@ export async function switchView(viewType, viewValue = null) {
     } else {
         console.warn(`[Navigation] Could not find page container with ID: ${finalContainerId}`);
         showToast(`UI Error: Could not find content area for ${viewType}.`, 'error');
-        return;
+        return; // Stop if container not found
     }
 
+    // Load data specific to the view
     try {
         console.log(`[Navigation] Loading data for view: ${viewType}`);
         switch (viewType) {
@@ -138,6 +139,8 @@ export function initializeNavigationHandlers() {
     const tabsContainer = document.getElementById('tabs-container');
     const globalHolderFilter = /** @type {HTMLSelectElement} */ (document.getElementById('global-account-holder-filter'));
     const customDatePicker = /** @type {HTMLInputElement} */ (document.getElementById('custom-date-picker'));
+    // --- ADDED: Get the new button ---
+    const addDateBtn = document.getElementById('add-date-btn');
 
     // Global Account Holder Filter Change
     if (globalHolderFilter) {
@@ -145,30 +148,19 @@ export function initializeNavigationHandlers() {
             const target = /** @type {HTMLSelectElement} */ (e.target);
             const currentType = state.currentView.type;
             const currentValue = state.currentView.value;
-            const newHolderId = target.value;
             
-            updateState({ selectedAccountHolderId: newHolderId });
-            
-            // --- THIS IS THE FIX ---
-            // Toggle read-only class on the entire body
-            if (newHolderId === 'all') {
-                document.body.classList.add('read-only');
-            } else {
-                document.body.classList.remove('read-only');
-            }
-            // --- END FIX ---
+            updateState({ selectedAccountHolderId: target.value });
             
             await fetchAndStoreAdviceSources(); 
             populateAllAdviceSourceDropdowns(); 
 
-            await switchView(currentType, currentValue);
+            await switchView(currentType, currentValue, true);
             autosizeAccountSelector(target);
         });
     }
 
     // Main Tab Clicks
     if (tabsContainer) {
-        // ... (this listener remains unchanged) ...
         tabsContainer.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             const tabElement = target.closest('.master-tab');
@@ -183,9 +175,22 @@ export function initializeNavigationHandlers() {
         });
     }
 
-    // Custom Date Picker
+    // --- ADDED: New handler for the calendar button ---
+    if (addDateBtn && customDatePicker) {
+        addDateBtn.addEventListener('click', () => {
+            try {
+                // Modern way to open the picker
+                customDatePicker.showPicker();
+            } catch (error) {
+                // Fallback for older browsers
+                console.log("showPicker() not supported, falling back to click()");
+                customDatePicker.click();
+            }
+        });
+    }
+
+    // Custom Date Picker (this existing listener is still correct)
     if (customDatePicker) {
-        // ... (this listener remains unchanged) ...
         customDatePicker.addEventListener('change', (e) => {
             const selectedDate = (/** @type {HTMLInputElement} */ (e.target)).value;
             if (selectedDate) {
@@ -196,7 +201,8 @@ export function initializeNavigationHandlers() {
                 persistentDates.push(newDate);
                 localStorage.setItem('persistentDates', JSON.stringify(persistentDates));
                 switchView('date', selectedDate);
-                customDatePicker.value = '';
+                // We no longer need to clear the value, as the input is hidden
+                // customDatePicker.value = ''; 
             }
         });
     }
