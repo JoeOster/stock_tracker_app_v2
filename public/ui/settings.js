@@ -11,6 +11,7 @@ import { switchView } from '../event-handlers/_navigation.js';
  * @returns {void}
  */
 export function saveSettings() {
+    // ... (this function remains unchanged) ...
     const oldTheme = state.settings.theme;
     
     const newSettings = {
@@ -27,11 +28,10 @@ export function saveSettings() {
     if (selectedDefaultHolder) {
         newSettings.defaultAccountHolderId = selectedDefaultHolder.value;
     } else {
-         // Keep the existing one if none is selected (shouldn't happen if list is populated)
          newSettings.defaultAccountHolderId = state.settings.defaultAccountHolderId || 1;
     }
     
-    updateState({ settings: newSettings }); // Update the state
+    updateState({ settings: newSettings });
     
     localStorage.setItem('stockTrackerSettings', JSON.stringify(state.settings));
 
@@ -47,6 +47,7 @@ export function saveSettings() {
  * @returns {void}
  */
 export function applyAppearanceSettings() {
+    // ... (this function remains unchanged) ...
     document.body.dataset.theme = state.settings.theme;
     const fontToUse = state.settings.font || 'Inter';
     const fontVar = fontToUse === 'System' ? 'var(--font-system)' : `var(--font-${fontToUse.toLowerCase().replace(' ', '-')})`;
@@ -71,6 +72,7 @@ export function applyAppearanceSettings() {
  * @returns {void}
  */
 export function renderExchangeManagementList() {
+    // ... (this function remains unchanged) ...
     const list = document.getElementById('exchange-list');
     if (!list) return;
     list.innerHTML = '';
@@ -124,14 +126,26 @@ export function renderAccountHolderManagementList() {
         const deleteButton = isProtected ? '' : `<button class="delete-holder-btn delete-btn" data-id="${holder.id}">Delete</button>`;
         const escapeHTML = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') : '';
         const escapedName = escapeHTML(holder.name);
+        
+        // --- ADDED: Manage Subscriptions Button ---
+        const manageSourcesButton = `
+            <button class="manage-subscriptions-btn" data-id="${holder.id}" data-name="${escapedName}" title="Manage Subscribed Sources">
+                Sources
+            </button>
+        `;
+        // --- END ADDED ---
 
         const li = document.createElement('li');
         li.dataset.id = String(holder.id);
         li.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1;"> <input type="radio" id="holder_radio_${holder.id}" name="default-holder-radio" value="${holder.id}" ${isDefault ? 'checked' : ''} style="flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1;">
+                <input type="radio" id="holder_radio_${holder.id}" name="default-holder-radio" value="${holder.id}" ${isDefault ? 'checked' : ''} style="flex-shrink: 0;">
                 <label for="holder_radio_${holder.id}" class="holder-name" style="cursor: pointer;">${escapedName}</label>
-                <input type="text" class="edit-holder-input" value="${escapedName}" style="display: none; width: 100%;"> </div>
-            <div style="flex-shrink: 0; display: flex; gap: 5px;"> <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
+                <input type="text" class="edit-holder-input" value="${escapedName}" style="display: none; width: 100%;">
+            </div>
+            <div style="flex-shrink: 0; display: flex; gap: 5px;">
+                ${manageSourcesButton}
+                <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
                 <button class="save-holder-btn" data-id="${holder.id}" style="display: none;">Save</button>
                 <button class="cancel-holder-btn cancel-btn" data-id="${holder.id}" style="display: none;">Cancel</button>                
                 ${deleteButton}

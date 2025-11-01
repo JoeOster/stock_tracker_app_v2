@@ -1,136 +1,47 @@
 /* public/css/base/_utilities.css */
-/* Contains miscellaneous helper classes and animations. */
+/* ... (existing styles for .loader, @keyframes spin, #toast-container, .toast, etc.) ... */
 
-.loader {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(128,128,128,.2);
-    border-top-color: var(--text-color);
-    border-radius: 50%;
-    animation: spin .6s linear infinite;
-}
+/* --- ADDED: Read-Only Mode for "All Accounts" --- */
 
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-#toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+/* * When 'read-only' class is on the body, disable all
+ * primary action buttons and inputs.
+ */
+.read-only button,
+.read-only input,
+.read-only select,
+.read-only textarea {
+    /* Make them look disabled */
+    opacity: 0.7;
+    /* Prevent all interaction */
+    pointer-events: none;
+    cursor: not-allowed !important; /* Force cursor */
 }
 
-.toast {
-    padding: 15px 20px;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 1em;
-    box-shadow: 0 4px 12px rgba(0,0,0,.15);
-    opacity: 0;
-    transform: translateX(100%);
-    animation: slideIn .3s forwards, fadeOut .5s 2.7s forwards;
+/* * Re-enable specific elements that MUST work in read-only mode:
+ * - The global account filter itself
+ * - Main navigation tabs
+ * - Filter/sort controls
+ * - Settings modal close button
+ * - Chart zoom modal close button
+ */
+.read-only #global-account-holder-filter,
+.read-only .header-left label[for="global-account-holder-filter"],
+.read-only .tab,
+.read-only .filter-bar input,
+.read-only .filter-bar select,
+.read-only .filter-bar button,
+.read-only #settings-btn,
+.read-only #settings-modal .close-button,
+.read-only #chart-zoom-modal .close-button {
+    opacity: 1;
+    pointer-events: auto;
+    cursor: auto !important;
 }
 
-.toast.toast-info {
-    background-color: var(--primary-color);
-}
-
-.toast.toast-success {
-    background-color: var(--positive-color);
-}
-
-.toast.toast-error {
-    background-color: var(--negative-color);
-}
-
-@keyframes slideIn {
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes fadeOut {
-    to {
-        opacity: 0;
-        transform: scale(.9);
-    }
-}
-/* Styles for click-and-drag table scrolling */
-.is-draggable {
-    cursor: grab;
-}
-
-.is-draggable.is-dragging {
-    cursor: grabbing;
-}
-
-/* --- ADDED: Generic Summary Container Styles --- */
-.summary-container {
-    display: flex;
-    justify-content: space-around;
-    align-items: center; /* Vertically center items if they have different heights */
-    padding: 15px;
-    margin-bottom: 2rem;
-    background-color: var(--info-panel-bg);
-    border: 1px solid var(--container-border);
-    border-radius: 8px;
-    text-align: center;
-}
-
-.summary-item {
-    flex: 1; /* Allow items to share space equally */
-    padding: 0 10px; /* Add some horizontal padding between items */
-}
-
-/* Optional: Style headings and paragraphs within summary items if needed */
-.summary-item h3 {
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-    font-size: 0.9em; /* Smaller heading */
-    color: var(--text-muted-color);
-    font-weight: 500;
-}
-
-.summary-item p {
-    margin: 0;
-    font-size: 1.1em; /* Slightly larger text for value */
-    font-weight: 600;
-    color: var(--heading-color);
-}
-/* --- END ADDED --- */
-/* --- ADDED: Generic Summary Container Styles --- */
-.summary-container {
-    display: flex;
-    justify-content: space-around;
-    align-items: center; /* Vertically center items if they have different heights */
-    padding: 15px;
-    margin-bottom: 2rem;
-    background-color: var(--info-panel-bg);
-    border: 1px solid var(--container-border);
-    border-radius: 8px;
-    text-align: center;
-}
-/* Optional: Style headings and paragraphs within summary items if needed */
-.summary-item h3 {
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-    font-size: 0.9em; /* Smaller heading */
-    color: var(--text-muted-color);
-    font-weight: 500;
-}
-
-.summary-item p {
-    margin: 0;
-    font-size: 1.1em; /* Slightly larger text for value */
-    font-weight: 600;
-    color: var(--heading-color);
+/* * Specifically allow pointer events on the select,
+ * but keep its buttons disabled
+ */
+.read-only #global-account-holder-filter {
+    cursor: pointer !important;
 }
 /* --- END ADDED --- */

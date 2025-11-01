@@ -1,0 +1,18 @@
+<div id="manage-subscriptions-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2 id="manage-subscriptions-title">Manage Subscribed Sources for --</h2>
+        <p class="subtitle" style="text-align: left; margin: -10px 0 15px 0;">Select the global sources you want to see for this user.</p>
+        
+        <div id="subscription-list-container" style="max-height: 50vh; overflow-y: auto; border: 1px solid var(--container-border); border-radius: 6px; padding: 10px; background-color: var(--info-panel-bg);">
+            <p>Loading available sources...</p>
+        </div>
+
+        <div class="modal-actions">
+            <div class="modal-actions-right">
+                <button type="button" class="cancel-btn close-modal-btn">Cancel</button>
+                <button type="button" id="manage-subscriptions-save-btn">Save Subscriptions</button>
+            </div>
+        </div>
+    </div>
+</div>

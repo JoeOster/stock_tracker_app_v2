@@ -44,9 +44,12 @@ describe('renderTabs', () => {
             expect(tabsContainer.textContent).toContain(tabInfo.textContent);
         });
 
-        // Check that "Research" is present (the new tab)
+        // --- THIS IS THE FIX ---
+        // Check that "Sources" is present
         // @ts-ignore
-        expect(tabsContainer.textContent).toContain('Research');
+        expect(tabsContainer.textContent).toContain('Sources'); // Changed from 'Research'
+        // --- END FIX ---
+        
         // @ts-ignore
         expect(tabsContainer.textContent).not.toContain('Journal');
     });

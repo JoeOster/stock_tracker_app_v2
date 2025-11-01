@@ -5,7 +5,9 @@
  * @module app-main
  */
 import { initializeAllEventHandlers } from './event-handlers/_init.js';
+// --- THIS IS FIX 1 ---
 import { showToast } from './ui/helpers.js';
+// --- END FIX 1 ---
 import { switchView, autosizeAccountSelector } from './event-handlers/_navigation.js';
 import { fetchAndPopulateAccountHolders } from './event-handlers/_settings_holders.js';
 import { fetchAndRenderExchanges } from './event-handlers/_settings_exchanges.js';
@@ -66,6 +68,7 @@ async function initialize() {
 
     try {
         // Fetch all templates concurrently
+        // --- THIS IS FIX 2 ---
         const [
             alerts, charts, dailyReport, imports, ledger, orders, watchlist,
             research, dashboard,
@@ -80,7 +83,8 @@ async function initialize() {
             modal_add_trade_idea,
             modal_add_technique,
             modal_add_paper_trade // --- ADDED ---
-        ] = await Promise.all([
+        ] = /** @type {any[]} */ (await Promise.all([ // <-- Cast to any[] to fix tuple errors
+        // --- END FIX 2 ---
             // Page fetches
             fetch('./templates/_alerts.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_alerts.html: ${res.statusText}`)),
             fetch('./templates/_charts.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_charts.html: ${res.statusText}`)),
@@ -107,7 +111,7 @@ async function initialize() {
             fetch('./templates/_modal_add_trade_idea.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_add_trade_idea.html: ${res.statusText}`)),
             fetch('./templates/_modal_add_technique.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_add_technique.html: ${res.statusText}`)),
             fetch('./templates/_modal_add_paper_trade.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_add_paper_trade.html: ${res.statusText}`)) // --- ADDED ---
-       ]);
+       ]));
 
         // Inject page templates
         mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + watchlist + research;

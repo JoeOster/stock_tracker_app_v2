@@ -4,14 +4,15 @@
  * @module event-handlers/_modals
  */
 
-// Import the new, specialized modal handlers
 import { initializeSelectiveSellModalHandler } from './_modal_selective_sell.js';
 import { initializeSellFromPositionModalHandler } from './_modal_sell_from_position.js';
 import { initializeEditTransactionModalHandler } from './_modal_edit_transaction.js';
 import { initializeManagePositionModalHandler } from './_modal_manage_position.js';
-// --- ADDED: Import the new paper trade modal handler ---
 import { initializeAddPaperTradeModalHandler } from './_modal_add_paper_trade.js';
+// --- ADDED: Import the new subscription modal handler ---
+import { initializeManageSubscriptionsModalHandler } from './_modal_manage_subscriptions.js';
 
+// ... (saveSettingsOnClose and clearSourceDetailsModal functions remain the same) ...
 /**
  * --- MODIFIED: Helper function to save settings on modal close ---
  * Dynamically imports and runs the saveSettings function.
@@ -58,37 +59,28 @@ function clearSourceDetailsModal(modal) {
  */
 export function initializeModalHandlers() {
     
-    // --- Generic Modal Closing Listeners ---
-    
+    // ... (Generic Modal Closing Listeners remain the same) ...
     // Top-right 'X' button
     document.querySelectorAll('.modal .close-button').forEach(btn =>
-        // --- MODIFIED: Made the event listener async ---
         btn.addEventListener('click', async (e) => {
-            // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
             const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
             if (modal) {
                 
                 if (modal.id === 'settings-modal') {
-                    // --- MODIFIED: Await the save function ---
                     await saveSettingsOnClose();
                 }
-                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
-                // --- END MODIFICATION ---
                 
-                modal.classList.remove('visible'); // <-- This will now run
+                modal.classList.remove('visible');
             }
         })
     );
     
-    // Bottom 'Close' or 'Cancel' buttons (often have .cancel-btn)
-     document.querySelectorAll('.modal .cancel-btn, .modal .close-modal-btn').forEach(btn => // Added .close-modal-btn
+    // Bottom 'Close' or 'Cancel' buttons
+     document.querySelectorAll('.modal .cancel-btn, .modal .close-modal-btn').forEach(btn =>
         btn.addEventListener('click', e => {
-             // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
              const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
              if (modal) {
-                // Do NOT save settings if 'Cancel' is clicked in the settings modal
-                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
                 modal.classList.remove('visible');
              }
@@ -97,18 +89,13 @@ export function initializeModalHandlers() {
     
     // Background click
     document.querySelectorAll('.modal').forEach(modal => {
-         // --- MODIFIED: Made the event listener async ---
          modal.addEventListener('click', async (e) => {
-            // Close if clicking on the background overlay
             if (e.target === modal) {
                 
                 if (modal.id === 'settings-modal') {
-                    // --- MODIFIED: Await the save function ---
                     await saveSettingsOnClose();
                 }
-                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
-                // --- END MODIFICATION ---
                 
                 modal.classList.remove('visible');
             }
@@ -132,10 +119,14 @@ export function initializeModalHandlers() {
         initializeManagePositionModalHandler();
     } catch (e) { console.error("Error initializing ManagePositionModalHandler:", e); }
 
-    // --- ADDED: Initialize the new paper trade modal handler ---
     try {
         initializeAddPaperTradeModalHandler();
     } catch (e) { console.error("Error initializing AddPaperTradeModalHandler:", e); }
+
+    // --- ADDED: Initialize the new subscription modal handler ---
+    try {
+        initializeManageSubscriptionsModalHandler();
+    } catch (e) { console.error("Error initializing ManageSubscriptionsModalHandler:", e); }
     // --- END ADDED ---
 
 } // End of initializeModalHandlers function

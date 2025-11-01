@@ -8,17 +8,17 @@ import { state, updateState } from '../state.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
 import {
-    fetchAdviceSources,
-    addAdviceSource,
-    updateAdviceSource,
-    deleteAdviceSource,
+    fetchAdviceSources, // This now fetches the user-linked list
+    addAdviceSource,    // This now creates/links a source
+    updateAdviceSource, // This still edits the global source
+    deleteAdviceSource, // This now *unlinks* the source
     toggleAdviceSourceActive 
 } from '../api/sources-api.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js'; 
 
 /**
- * Fetches *active* advice sources from the API and stores them in the global state
- * for use in dropdowns and the Research tab.
+ * Fetches *active* advice sources *linked to the current user*
+ * and stores them in the global state.
  * @async
  * @returns {Promise<void>}
  */
@@ -28,7 +28,7 @@ export async function fetchAndStoreAdviceSources() {
         return;
     }
     try {
-        // This now only fetches active sources by default
+        // This now fetches only sources *linked* to this user
         const sources = await fetchAdviceSources(state.selectedAccountHolderId, false); 
         updateState({ allAdviceSources: sources });
     } catch (error) {
@@ -40,18 +40,18 @@ export async function fetchAndStoreAdviceSources() {
 }
 
 /**
- * --- NEW FUNCTION ---
- * Fetches *all* advice sources (including inactive) for use *only* in the settings modal.
+ * Fetches *all* advice sources *linked to the current user* (active and inactive)
+ * for use *only* in the settings modal.
  * @async
  * @param {string|number} holderId The account holder ID.
  * @returns {Promise<any[]>} A promise that resolves to an array of all source objects.
  */
-export async function fetchAllAdviceSourcesForSettings(holderId) {
+export async function fetchAllAdviceSourcesForUser(holderId) {
     if (!holderId || holderId === 'all') {
         return [];
     }
     try {
-        // Pass `true` to include inactive sources
+        // Pass `true` to include inactive linked sources
         const sources = await fetchAdviceSources(holderId, true);
         return sources;
     } catch (error) {
@@ -62,6 +62,8 @@ export async function fetchAllAdviceSourcesForSettings(holderId) {
     }
 }
 
+// ... (toggleSourceDetailPanels, getSourceDetailsFromForm, populateEditFormDetails remain unchanged) ...
+// ... (These functions are still needed for the Add/Edit forms) ...
 /**
  * Shows or hides dynamic panels in a source form based on the selected type.
  * @param {string} type - The selected source type (e.g., 'Person', 'Book').
@@ -91,10 +93,8 @@ function toggleSourceDetailPanels(type, formPrefix) {
             if (bookPanel) bookPanel.style.display = 'grid';
             break;
         case 'Website':
-            // --- MODIFIED: This panel now has content, but this logic is still correct ---
             if (websitePanel) websitePanel.style.display = 'grid';
             break;
-        // Default: all remain hidden
     }
 }
 
@@ -106,40 +106,53 @@ function toggleSourceDetailPanels(type, formPrefix) {
  */
 function getSourceDetailsFromForm(type, formPrefix) {
     const details = {};
-    let websites, pdfs; // --- Declare vars ---
+    let websites, pdfs;
 
     switch (type) {
         case 'Person':
+            // @ts-ignore
             details.contact_email = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-email`))).value;
+            // @ts-ignore
             details.contact_phone = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-phone`))).value;
+            // @ts-ignore
             details.contact_app_type = (/** @type {HTMLSelectElement} */(document.getElementById(`${formPrefix}-contact-app-type`))).value;
+            // @ts-ignore
             details.contact_app_handle = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-contact-app-handle`))).value;
             break;
         case 'Group':
+            // @ts-ignore
             details.contact_person = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-group-person`))).value;
+            // @ts-ignore
             details.contact_email = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-group-email`))).value;
+            // @ts-ignore
             details.contact_phone = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-group-phone`))).value;
+            // @ts-ignore
             details.contact_app_type = (/** @type {HTMLSelectElement} */(document.getElementById(`${formPrefix}-group-app-type`))).value;
+            // @ts-ignore
             details.contact_app_handle = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-group-app-handle`))).value;
             break;
         case 'Book':
+            // @ts-ignore
             details.author = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-book-author`))).value;
+            // @ts-ignore
             details.isbn = (/** @type {HTMLInputElement} */(document.getElementById(`${formPrefix}-book-isbn`))).value;
             
             websites = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-book-websites`))).value;
             pdfs = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-book-pdfs`))).value;
+            // @ts-ignore
             details.websites = websites ? websites.split('\n').map(s => s.trim()).filter(Boolean) : [];
+            // @ts-ignore
             details.pdfs = pdfs ? pdfs.split('\n').map(s => s.trim()).filter(Boolean) : [];
             break;
         
-        // --- MODIFIED: Add case for 'Website' ---
         case 'Website':
             websites = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-website-websites`))).value;
             pdfs = (/** @type {HTMLTextAreaElement} */(document.getElementById(`${formPrefix}-website-pdfs`))).value;
+            // @ts-ignore
             details.websites = websites ? websites.split('\n').map(s => s.trim()).filter(Boolean) : [];
+            // @ts-ignore
             details.pdfs = pdfs ? pdfs.split('\n').map(s => s.trim()).filter(Boolean) : [];
             break;
-        // --- END MODIFICATION ---
     }
     return details;
 }
@@ -153,34 +166,48 @@ function populateEditFormDetails(details, type) {
     const d = details || {};
     switch (type) {
         case 'Person':
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-email'))).value = d.contact_email || '';
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-phone'))).value = d.contact_phone || '';
+            // @ts-ignore
             (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-contact-app-type'))).value = d.contact_app_type || '';
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-contact-app-handle'))).value = d.contact_app_handle || '';
             break;
         case 'Group':
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-group-person'))).value = d.contact_person || '';
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-group-email'))).value = d.contact_email || '';
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-group-phone'))).value = d.contact_phone || '';
+            // @ts-ignore
             (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-group-app-type'))).value = d.contact_app_type || '';
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-group-app-handle'))).value = d.contact_app_handle || '';
             break;
         case 'Book':
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-book-author'))).value = d.author || '';
+            // @ts-ignore
             (/** @type {HTMLInputElement} */(document.getElementById('edit-source-book-isbn'))).value = d.isbn || '';
             
+            // @ts-ignore
             (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-book-websites'))).value = (d.websites && Array.isArray(d.websites)) ? d.websites.join('\n') : '';
+            // @ts-ignore
             (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-book-pdfs'))).value = (d.pdfs && Array.isArray(d.pdfs)) ? d.pdfs.join('\n') : '';
             break;
 
-        // --- MODIFIED: Add case for 'Website' ---
         case 'Website':
+            // @ts-ignore
             (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-website-websites'))).value = (d.websites && Array.isArray(d.websites)) ? d.websites.join('\n') : '';
+            // @ts-ignore
             (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-website-pdfs'))).value = (d.pdfs && Array.isArray(d.pdfs)) ? d.pdfs.join('\n') : '';
             break;
-        // --- END MODIFICATION ---
     }
 }
+
 
 /**
  * Initializes all event handlers for the Advice Sources management panel.
@@ -188,26 +215,23 @@ function populateEditFormDetails(details, type) {
  */
 export function initializeJournalSettingsHandlers() {
     const addSourceForm = /** @type {HTMLFormElement} */ (document.getElementById('add-new-source-form'));
-    const sourceListContainer = document.getElementById('advice-source-list-container'); // This is the <div> wrapper
-    const sourceList = document.getElementById('advice-source-list'); // The <ul>
+    const sourceListContainer = document.getElementById('advice-source-list-container');
+    const sourceList = document.getElementById('advice-source-list');
     const editSourceModal = document.getElementById('edit-source-modal');
     const editSourceForm = /** @type {HTMLFormElement} */ (document.getElementById('edit-source-form'));
     const newSourceTypeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('new-source-type'));
     const editSourceTypeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('edit-source-type'));
 
-    // --- Dynamic Panel Toggling ---
     if (newSourceTypeSelect) {
         newSourceTypeSelect.addEventListener('change', () => {
             toggleSourceDetailPanels(newSourceTypeSelect.value, 'new-source');
         });
-        // Set initial state
         toggleSourceDetailPanels(newSourceTypeSelect.value, 'new-source');
     }
     if (editSourceTypeSelect) {
         editSourceTypeSelect.addEventListener('change', () => {
             toggleSourceDetailPanels(editSourceTypeSelect.value, 'edit-source');
         });
-        // Set initial state (will be reset when modal opens)
         toggleSourceDetailPanels(editSourceTypeSelect.value, 'edit-source');
     }
 
@@ -227,9 +251,10 @@ export function initializeJournalSettingsHandlers() {
             const imagePathInput = /** @type {HTMLInputElement} */(document.getElementById('new-source-image-path'));
             
             const type = typeInput.value;
-            // --- MODIFIED: This function now correctly gets details for 'Website' type ---
             const details = getSourceDetailsFromForm(type, 'new-source');
 
+            // --- THIS IS THE FIX ---
+            // The API now expects the account_holder_id to link the new/existing source
             const newSourceData = {
                 account_holder_id: state.selectedAccountHolderId,
                 name: nameInput.value,
@@ -237,22 +262,23 @@ export function initializeJournalSettingsHandlers() {
                 url: urlInput.value,
                 description: descriptionInput.value,
                 image_path: imagePathInput.value.trim() || null,
-                details: details, // Add the dynamic details object
-                is_active: true // New sources are active by default
+                details: details,
+                is_active: true
             };
+            // --- END FIX ---
 
             try {
                 const newSource = await addAdviceSource(newSourceData);
-                // Re-fetch the full list for the modal
-                const allSources = await fetchAllAdviceSourcesForSettings(state.selectedAccountHolderId);
-                renderAdviceSourceManagementList(allSources);
+                // Re-fetch the *user-specific* list for the modal
+                const userSources = await fetchAllAdviceSourcesForUser(state.selectedAccountHolderId);
+                renderAdviceSourceManagementList(userSources);
                 
-                // Re-fetch active sources for the rest of the app
+                // Re-fetch *active* user-specific sources for the rest of the app
                 await fetchAndStoreAdviceSources();
                 populateAllAdviceSourceDropdowns();
 
                 addSourceForm.reset();
-                toggleSourceDetailPanels('', 'new-source'); // Reset dynamic form
+                toggleSourceDetailPanels('', 'new-source');
                 showToast('Advice Source added successfully!', 'success');
             } catch (error) {
                 console.error("Failed to add advice source:", error);
@@ -262,7 +288,7 @@ export function initializeJournalSettingsHandlers() {
         });
     }
 
-    // --- Edit/Delete Source (via event delegation on <ul>) ---
+    // --- Edit/Delete/Toggle Source (via event delegation on <ul>) ---
     if (sourceList) {
         sourceList.addEventListener('click', async (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
@@ -270,12 +296,15 @@ export function initializeJournalSettingsHandlers() {
             const deleteButton = target.closest('.delete-source-btn');
 
             if (editButton) {
-                const sourceId = (/** @type {HTMLElement} */(editButton)).dataset.id;                // Fetch the *full* list of sources from the API
-                const allSources = await fetchAllAdviceSourcesForSettings(state.selectedAccountHolderId);
-                const source = allSources.find(s => String(s.id) === sourceId);
+                const sourceId = (/** @type {HTMLElement} */(editButton)).dataset.id;
+                
+                // --- THIS IS THE FIX ---
+                // We must fetch the user's list (including inactive)
+                const userSources = await fetchAllAdviceSourcesForUser(state.selectedAccountHolderId);
+                const source = userSources.find(s => String(s.id) === sourceId);
+                // --- END FIX ---
 
                 if (source && editSourceModal) {
-                    // Populate common fields
                     (/** @type {HTMLInputElement} */(document.getElementById('edit-source-id'))).value = String(source.id);
                     (/** @type {HTMLInputElement} */(document.getElementById('edit-source-name'))).value = source.name;
                     (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-type'))).value = source.type;
@@ -283,10 +312,7 @@ export function initializeJournalSettingsHandlers() {
                     (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-description'))).value = source.description || '';
                     (/** @type {HTMLInputElement} */(document.getElementById('edit-source-image-path'))).value = source.image_path || '';
 
-                    // --- MODIFIED: This function now correctly populates 'Website' fields ---
                     populateEditFormDetails(source.details, source.type);
-                    
-                    // Show the correct dynamic panel
                     toggleSourceDetailPanels(source.type, 'edit-source');
                     
                     editSourceModal.classList.add('visible');
@@ -294,29 +320,34 @@ export function initializeJournalSettingsHandlers() {
             }
 
             if (deleteButton) {
-                const sourceId = (/** @type {HTMLElement} */(deleteButton)).dataset.id;                showConfirmationModal('Delete Source?', 'This cannot be undone. Are you sure?', async () => {
+                const sourceId = (/** @type {HTMLElement} */(deleteButton)).dataset.id;
+                // --- THIS IS THE FIX ---
+                // The DELETE route now *unlinks* a source from a user.
+                // We must pass the holderId in the query.
+                showConfirmationModal('Remove Source?', 'This will remove this source from your list, but will not delete it globally.', async () => {
                     try {
-                        await deleteAdviceSource(sourceId);
+                        await deleteAdviceSource(sourceId, state.selectedAccountHolderId);
                         
-                        // Re-fetch the full list for the modal
-                        const allSources = await fetchAllAdviceSourcesForSettings(state.selectedAccountHolderId);
-                        renderAdviceSourceManagementList(allSources);
+                        // Re-fetch the user-specific list for the modal
+                        const userSources = await fetchAllAdviceSourcesForUser(state.selectedAccountHolderId);
+                        renderAdviceSourceManagementList(userSources);
                         
-                        // Re-fetch active sources for the rest of the app
+                        // Re-fetch active user-specific sources for the rest of the app
                         await fetchAndStoreAdviceSources();
                         populateAllAdviceSourceDropdowns();
 
-                        showToast('Advice Source deleted.', 'success');
+                        showToast('Advice Source removed.', 'success');
                     } catch (error) {
                         console.error("Failed to delete advice source:", error);
                         // @ts-ignore
-                        showToast(`Error deleting source: ${error.message}`, 'error');
+                        showToast(`Error removing source: ${error.message}`, 'error');
                     }
                 });
+                // --- END FIX ---
             }
         });
 
-        // --- NEW: Handle the 'Active' checkbox toggle ---
+        // --- Handle the 'Active' checkbox toggle ---
         sourceList.addEventListener('change', async (e) => {
             const target = /** @type {HTMLInputElement} */ (e.target);
             if (target.matches('.edit-source-is-active')) {
@@ -327,14 +358,12 @@ export function initializeJournalSettingsHandlers() {
                 if (!id) return;
 
                 try {
-                    // Call the new, simple API endpoint
+                    // This API call is global and correct.
                     await toggleAdviceSourceActive(id, isChecked);
                     showToast(`Source ${isChecked ? 'activated' : 'deactivated'}.`, 'success');
                     
-                    // Visually update the item in the settings list
                     if (li) {
                         li.style.opacity = isChecked ? '1' : '0.6';
-                        // Find/remove the "HIDDEN" span
                         const hiddenSpan = li.querySelector('.source-hidden-marker');
                         if (!isChecked && !hiddenSpan) {
                             const editBtn = li.querySelector('.edit-source-btn');
@@ -348,7 +377,6 @@ export function initializeJournalSettingsHandlers() {
 
                     // Refresh the main app's active-only source list
                     await fetchAndStoreAdviceSources();
-                    // Re-populate all dropdowns with the new active-only list
                     populateAllAdviceSourceDropdowns();
 
                 } catch (error) {
@@ -367,31 +395,30 @@ export function initializeJournalSettingsHandlers() {
             const id = (/** @type {HTMLInputElement} */(document.getElementById('edit-source-id'))).value;
             const type = (/** @type {HTMLSelectElement} */(document.getElementById('edit-source-type'))).value;
             
-            // Find the current 'is_active' status from the checkbox in the list (not in the modal)
             const activeCheckbox = /** @type {HTMLInputElement} */(document.getElementById(`active-toggle-${id}`));
-            const isActive = activeCheckbox ? activeCheckbox.checked : true; // Default to true if not found
+            const isActive = activeCheckbox ? activeCheckbox.checked : true;
 
-            // --- MODIFIED: This function now correctly gets details for 'Website' type ---
             const details = getSourceDetailsFromForm(type, 'edit-source');
 
+            // This update is global, which is correct.
             const updatedSourceData = {
                 name: (/** @type {HTMLInputElement} */(document.getElementById('edit-source-name'))).value,
                 type: type,
                 url: (/** @type {HTMLInputElement} */(document.getElementById('edit-source-url'))).value,
                 description: (/** @type {HTMLTextAreaElement} */(document.getElementById('edit-source-description'))).value,
                 image_path: (/** @type {HTMLInputElement} */(document.getElementById('edit-source-image-path'))).value.trim() || null,
-                details: details, // Add the dynamic details object
-                is_active: isActive // Pass the current active status
+                details: details,
+                is_active: isActive
             };
 
             try {
                 await updateAdviceSource(id, updatedSourceData);
                 
-                // Re-fetch the full list for the modal
-                const allSources = await fetchAllAdviceSourcesForSettings(state.selectedAccountHolderId);
-                renderAdviceSourceManagementList(allSources);
+                // Re-fetch the user-specific list for the modal
+                const userSources = await fetchAllAdviceSourcesForUser(state.selectedAccountHolderId);
+                renderAdviceSourceManagementList(userSources);
                         
-                // Re-fetch active sources for the rest of the app
+                // Re-fetch active user-specific sources for the rest of the app
                 await fetchAndStoreAdviceSources();
                 populateAllAdviceSourceDropdowns();
 

@@ -8,12 +8,15 @@
 import { state, updateState } from '../state.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAccountHolderManagementList, saveSettings } from '../ui/settings.js'; // Need saveSettings for default change
+// --- ADDED: Import the new modal opener ---
+import { openAndPopulateSubscriptionModal } from './_modal_manage_subscriptions.js';
 
 /**
  * Populates all account holder dropdowns on the page with the latest data from the state.
  * @returns {void}
  */
 function populateAllAccountHolderDropdowns() {
+    // ... (this function remains unchanged)
     const holderSelects = document.querySelectorAll('.account-holder-select');
     holderSelects.forEach(/** @param {HTMLSelectElement} select */ select => {
         const currentVal = select.value;
@@ -60,6 +63,7 @@ function populateAllAccountHolderDropdowns() {
  * @returns {Promise<void>}
  */
 export async function fetchAndPopulateAccountHolders() {
+    // ... (this function remains unchanged)
     try {
         const response = await fetch('/api/accounts/holders');
         const holders = await handleResponse(response);
@@ -83,9 +87,11 @@ export function initializeHolderManagementHandlers() {
 
     // --- Add Account Holder ---
     if (addAccountHolderBtn && newAccountHolderNameInput) {
+        // ... (this event listener remains unchanged)
         addAccountHolderBtn.addEventListener('click', async () => {
             const name = newAccountHolderNameInput.value.trim();
             if (!name) return showToast('Account holder name cannot be empty.', 'error');
+            // @ts-ignore
             if (state.allAccountHolders.some(h => h.name.toLowerCase() === name.toLowerCase())) {
                 return showToast(`Account holder "${name}" already exists.`, 'error');
             }
@@ -110,31 +116,38 @@ export function initializeHolderManagementHandlers() {
     // --- Edit/Save/Cancel/Delete/Set Default Account Holder ---
     if (accountHolderList) {
         accountHolderList.addEventListener('click', async (e) => {
-             // console.log("Click detected inside accountHolderList."); // Keep for debugging
              const target = /** @type {HTMLElement} */ (e.target);
 
-             // Radio button clicks are handled implicitly by saveSettings, so ignore them for direct actions
+             // --- ADDED: Handle "Manage Subscriptions" button ---
+             const subBtn = target.closest('.manage-subscriptions-btn');
+             if (subBtn) {
+                 const holderId = (/** @type {HTMLElement} */(subBtn)).dataset.id;
+                 const holderName = (/** @type {HTMLElement} */(subBtn)).dataset.name;
+                 if (holderId && holderName) {
+                     await openAndPopulateSubscriptionModal(holderId, holderName);
+                 }
+                 return; // Stop processing this click
+             }
+             // --- END ADDED ---
+
              if (target.matches('input[type="radio"]')) {
                  console.log("Click was on radio button, default will be saved on 'Save & Close'.");
                  return;
              }
-             // Allow clicks on the label to toggle the radio
              if (target.matches('label[for^="holder_radio_"]')) {
                  console.log("Click on radio label.");
-                 // Find the associated radio and check it (browser might do this anyway)
                  const radioId = target.getAttribute('for');
                  const radio = radioId ? /** @type {HTMLInputElement | null} */(document.getElementById(radioId)) : null;
                  if (radio) radio.checked = true;
-                 return; // Don't process further for edit/delete
+                 return;
              }
 
             const li = /** @type {HTMLElement | null} */ (target.closest('li[data-id]'));
-            if (!li) return; // Click wasn't on a button within a list item
+            if (!li) return;
 
             const id = li.dataset.id;
-             if (!id) return; // Should not happen
+             if (!id) return;
 
-            // Find elements within the specific list item `li`
             const nameLabel = /** @type {HTMLLabelElement | null} */ (li.querySelector('label.holder-name'));
             const nameInput = /** @type {HTMLInputElement | null} */ (li.querySelector('.edit-holder-input'));
             const editBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.edit-holder-btn'));
@@ -147,7 +160,8 @@ export function initializeHolderManagementHandlers() {
                   return;
              }
 
-            // --- Button Actions ---
+            // --- Button Actions (Edit, Cancel, Save, Delete) ---
+            // ... (this logic remains unchanged) ...
             if (target === editBtn) {
                  nameLabel.style.display = 'none';
                  nameInput.style.display = '';
@@ -168,13 +182,13 @@ export function initializeHolderManagementHandlers() {
             }
             else if (target === saveBtn) {
                 const newName = nameInput.value.trim();
-                // Validation
                  if (!newName) return showToast('Name cannot be empty.', 'error');
                  if (newName.toLowerCase() === nameLabel.textContent?.toLowerCase()) {
                      // @ts-ignore
-                     cancelBtn.click(); // No change
+                     cancelBtn.click();
                      return;
                  }
+                 // @ts-ignore
                   if (state.allAccountHolders.some(h => String(h.id) !== id && h.name.toLowerCase() === newName.toLowerCase())) {
                     return showToast(`Another account holder named "${newName}" already exists.`, 'error');
                  }
@@ -183,8 +197,8 @@ export function initializeHolderManagementHandlers() {
                 try {
                     const res = await fetch(`/api/accounts/holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
                     await handleResponse(res);
-                    await fetchAndPopulateAccountHolders(); // Refreshes state and dropdowns
-                    renderAccountHolderManagementList(); // Re-render this list
+                    await fetchAndPopulateAccountHolders();
+                    renderAccountHolderManagementList();
                     showToast('Account holder updated!', 'success');
                 } catch (error) {
                     // @ts-ignore
@@ -196,22 +210,20 @@ export function initializeHolderManagementHandlers() {
                  if (String(state.selectedAccountHolderId) === id) {
                       return showToast(`Cannot delete the currently selected account holder ("${holderName}"). Please switch accounts first.`, 'error');
                  }
-                 // Check if it's the default holder being deleted
-                 const isDefault = state.settings.defaultAccountHolderId == id; // Use == for potential type difference
+                 const isDefault = state.settings.defaultAccountHolderId == id;
 
                  showConfirmationModal(`Delete Account Holder "${holderName}"?`, 'This cannot be undone and will fail if the holder has transactions.', async () => {
                     try {
                         const res = await fetch(`/api/accounts/holders/${id}`, { method: 'DELETE' });
                         await handleResponse(res);
 
-                        // If the deleted holder *was* the default, reset default to Primary (ID 1)
                         if (isDefault) {
-                             updateState({ settings: { ...state.settings, defaultAccountHolderId: 1 } }); // Reset to Primary
+                             updateState({ settings: { ...state.settings, defaultAccountHolderId: 1 } });
                              showToast('Default account holder was deleted, default reset to Primary (will save on close).', 'info');
                         }
 
-                        await fetchAndPopulateAccountHolders(); // Refetch state and update dropdowns
-                        renderAccountHolderManagementList(); // Re-render list in modal
+                        await fetchAndPopulateAccountHolders();
+                        renderAccountHolderManagementList();
                         showToast('Account holder deleted.', 'success');
                     } catch (error) { 
                         // @ts-ignore
