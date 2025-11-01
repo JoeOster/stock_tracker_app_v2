@@ -1,160 +1,141 @@
-// public/event-handlers/_modals.js
-import { showToast, showConfirmationModal } from '../ui/helpers.js';
-import { refreshLedger, state, switchView } from '../app-main.js';
+﻿// public/event-handlers/_modals.js
+/**
+ * @file Initializes all event listeners related to modal dialogs.
+ * @module event-handlers/_modals
+ */
 
-export function initializeModalHandlers() {
-    const editModal = document.getElementById('edit-modal');
-    const editForm = /** @type {HTMLFormElement} */ (document.getElementById('edit-transaction-form'));
-    const sellFromPositionForm = /** @type {HTMLFormElement} */ (document.getElementById('sell-from-position-form'));
+// Import the new, specialized modal handlers
+import { initializeSelectiveSellModalHandler } from './_modal_selective_sell.js';
+import { initializeSellFromPositionModalHandler } from './_modal_sell_from_position.js';
+import { initializeEditTransactionModalHandler } from './_modal_edit_transaction.js';
+import { initializeManagePositionModalHandler } from './_modal_manage_position.js';
+// --- ADDED: Import the new paper trade modal handler ---
+import { initializeAddPaperTradeModalHandler } from './_modal_add_paper_trade.js';
 
-    // --- Generic Modal Closing Listeners ---
-    document.querySelectorAll('.modal .close-button').forEach(btn => 
-        btn.addEventListener('click', e => 
-            (/** @type {HTMLElement} */ (e.target)).closest('.modal').classList.remove('visible')
-        )
-    );
-
-    window.addEventListener('click', e => { 
-        if ((/** @type {HTMLElement} */ (e.target)).classList.contains('modal')) {
-            (/** @type {HTMLElement} */ (e.target)).classList.remove('visible');
-        }
-    });
-
-    // --- Sell From Position Modal ---
-	if(sellFromPositionForm) {
-		sellFromPositionForm.addEventListener('submit', async (e) => {
-			e.preventDefault();
-			const sellDetails = {
-				account_holder_id: (/** @type {HTMLInputElement} */(document.getElementById('sell-account-holder-id'))).value,
-				parent_buy_id: (/** @type {HTMLInputElement} */(document.getElementById('sell-parent-buy-id'))).value,
-				quantity: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('sell-quantity'))).value),
-				price: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('sell-price'))).value),
-				transaction_date: (/** @type {HTMLInputElement} */(document.getElementById('sell-date'))).value,
-				ticker: document.getElementById('sell-ticker-display').textContent,
-				exchange: document.getElementById('sell-exchange-display').textContent,
-				transaction_type: 'SELL',
-			};
-			const submitButton = /** @type {HTMLButtonElement} */ (sellFromPositionForm.querySelector('button[type="submit"]'));
-			submitButton.disabled = true;
-			try {
-				const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sellDetails) });
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.message || 'Server returned an error.');
-				}
-				showToast('Sale logged successfully!', 'success');
-				document.getElementById('sell-from-position-modal').classList.remove('visible');
-				await switchView(state.currentView.type, state.currentView.value);
-			} catch (error) {
-				showToast(`Failed to log sale: ${error.message}`, 'error');
-			} finally {
-				submitButton.disabled = false;
-			}
-		});
-	}
-
-    // --- Edit Transaction Modal ---
-    if(editForm) {
-        editForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = (/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value;
-            const updatedTransaction = {
-                account_holder_id: (/** @type {HTMLSelectElement} */(document.getElementById('edit-account-holder'))).value,
-                ticker: (/** @type {HTMLInputElement} */(document.getElementById('edit-ticker'))).value.toUpperCase().trim(),
-                exchange: (/** @type {HTMLSelectElement} */(document.getElementById('edit-exchange'))).value,
-                transaction_type: (/** @type {HTMLSelectElement} */(document.getElementById('edit-type'))).value,
-                quantity: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('edit-quantity'))).value),
-                price: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('edit-price'))).value),
-                transaction_date: (/** @type {HTMLInputElement} */(document.getElementById('edit-date'))).value,
-                limit_price_up: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-up'))).value) || null,
-                limit_up_expiration: (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-up-expiration'))).value || null,
-                limit_price_down: parseFloat((/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-down'))).value) || null,
-                limit_down_expiration: (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-down-expiration'))).value || null,
-            };
-
-            const lotData = state.activityMap.get(`lot-${id}`);
-            if (lotData) {
-                const costBasis = lotData.cost_basis;
-                if (updatedTransaction.limit_price_up && updatedTransaction.limit_price_up <= costBasis) {
-                    showToast('Take Profit price must be higher than the cost basis.', 'error');
-                    return;
-                }
-                if (updatedTransaction.limit_price_down && updatedTransaction.limit_price_down >= costBasis) {
-                    showToast('Stop Loss price must be lower than the cost basis.', 'error');
-                    return;
-                }
-            }
-
-            const submitButton = /** @type {HTMLButtonElement} */ (editForm.querySelector('button[type="submit"]'));
-            submitButton.disabled = true;
-
-            try {
-                const response = await fetch(`/api/transactions/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTransaction) });
-                if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message); }
-
-                editModal.classList.remove('visible');
-                showToast('Transaction updated!', 'success');
-
-                if (state.currentView.type === 'ledger') {
-                    await refreshLedger();
-                } else if (state.currentView.type === 'date') {
-                     await switchView(state.currentView.type, state.currentView.value);
-                }
-            } catch (error) {
-                showToast(`Error updating transaction: ${error.message}`, 'error');
-            } finally {
-                submitButton.disabled = false;
-            }
-        });
+/**
+ * --- MODIFIED: Helper function to save settings on modal close ---
+ * Dynamically imports and runs the saveSettings function.
+ * Now async with proper error handling.
+ */
+async function saveSettingsOnClose() {
+    try {
+        // Dynamically import and run saveSettings
+        const settingsModule = await import('../ui/settings.js');
+        settingsModule.saveSettings();
         
-        const cancelEditBtn = document.getElementById('edit-modal-cancel-btn');
-        if (cancelEditBtn) {
-            cancelEditBtn.addEventListener('click', () => {
-                editModal.classList.remove('visible');
-            });
-        }
-        
-        const deleteEditBtn = document.getElementById('edit-modal-delete-btn');
-        if (deleteEditBtn) {
-            deleteEditBtn.addEventListener('click', async () => {
-                const id = (/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value;
-                if (!id) return;
-                showConfirmationModal('Delete Transaction?', 'This is permanent.', async () => {
-                    try {
-                        const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-
-                        if (!res.ok) {
-                            // This part is new: it reads the specific error from the server
-                            const errorData = await res.json();
-                            throw new Error(errorData.message || 'Server error during deletion.');
-                        }
-
-                        editModal.classList.remove('visible');
-                        showToast('Transaction deleted.', 'success');
-                        await refreshLedger();
-
-                    } catch (err) { 
-                        // This 'catch' block will now display the specific error message
-                        showToast(`Failed to delete: ${err.message}`, 'error'); 
-                    }
-                });
-            });
-        }
-    }
-
-    if(editModal) {
-        editModal.addEventListener('click', (e) => {
-            const target = /** @type {HTMLElement} */(e.target);
-            const clearBtn = target.closest('.clear-limit-btn');
-            if (!clearBtn) return;
-            const dataTarget = (/** @type {HTMLElement} */(clearBtn)).dataset.target;
-            if (dataTarget === 'up') {
-                (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-up'))).value = '';
-                (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-up-expiration'))).value = '';
-            } else if (dataTarget === 'down') {
-                (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-down'))).value = '';
-                (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-down-expiration'))).value = '';
-            }
+        // Dynamically import and run showToast
+        const helpersModule = await import('../ui/helpers.js');
+        helpersModule.showToast('Settings saved!', 'success');
+    } catch (err) {
+        console.error("Error saving settings on close:", err);
+        // Don't await this, just fire and forget
+        import('../ui/helpers.js').then(helpersModule => {
+            // @ts-ignore
+            helpersModule.showToast(`Error saving settings: ${err.message}`, 'error');
         });
     }
 }
+
+/**
+ * --- NEW: Helper function to clear source details modal ---
+ * @param {HTMLElement} modal
+ */
+function clearSourceDetailsModal(modal) {
+    if (modal.id === 'source-details-modal') {
+        const contentArea = modal.querySelector('#source-details-modal-content');
+        if (contentArea) contentArea.innerHTML = '<p><i>Loading details...</i></p>'; // Reset content
+        const titleArea = modal.querySelector('#source-details-modal-title');
+            if (titleArea) titleArea.textContent = 'Source Details: --'; // Reset title
+    }
+}
+
+
+/**
+ * Initializes all event listeners for modal dialogs.
+ * This function handles generic "close" events and delegates
+ * form-specific logic to imported initializers.
+ * @returns {void}
+ */
+export function initializeModalHandlers() {
+    
+    // --- Generic Modal Closing Listeners ---
+    
+    // Top-right 'X' button
+    document.querySelectorAll('.modal .close-button').forEach(btn =>
+        // --- MODIFIED: Made the event listener async ---
+        btn.addEventListener('click', async (e) => {
+            // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
+            const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
+            if (modal) {
+                
+                if (modal.id === 'settings-modal') {
+                    // --- MODIFIED: Await the save function ---
+                    await saveSettingsOnClose();
+                }
+                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
+                clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
+                // --- END MODIFICATION ---
+                
+                modal.classList.remove('visible'); // <-- This will now run
+            }
+        })
+    );
+    
+    // Bottom 'Close' or 'Cancel' buttons (often have .cancel-btn)
+     document.querySelectorAll('.modal .cancel-btn, .modal .close-modal-btn').forEach(btn => // Added .close-modal-btn
+        btn.addEventListener('click', e => {
+             // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
+             const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
+             if (modal) {
+                // Do NOT save settings if 'Cancel' is clicked in the settings modal
+                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
+                clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
+                modal.classList.remove('visible');
+             }
+        })
+    );
+    
+    // Background click
+    document.querySelectorAll('.modal').forEach(modal => {
+         // --- MODIFIED: Made the event listener async ---
+         modal.addEventListener('click', async (e) => {
+            // Close if clicking on the background overlay
+            if (e.target === modal) {
+                
+                if (modal.id === 'settings-modal') {
+                    // --- MODIFIED: Await the save function ---
+                    await saveSettingsOnClose();
+                }
+                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
+                clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
+                // --- END MODIFICATION ---
+                
+                modal.classList.remove('visible');
+            }
+        });
+    });
+
+    // --- Initialize Form-Specific Modal Handlers ---
+    try {
+        initializeSelectiveSellModalHandler();
+    } catch (e) { console.error("Error initializing SelectiveSellModalHandler:", e); }
+
+    try {
+        initializeSellFromPositionModalHandler();
+    } catch (e) { console.error("Error initializing SellFromPositionModalHandler:", e); }
+
+    try {
+        initializeEditTransactionModalHandler();
+    } catch (e) { console.error("Error initializing EditTransactionModalHandler:", e); }
+
+    try {
+        initializeManagePositionModalHandler();
+    } catch (e) { console.error("Error initializing ManagePositionModalHandler:", e); }
+
+    // --- ADDED: Initialize the new paper trade modal handler ---
+    try {
+        initializeAddPaperTradeModalHandler();
+    } catch (e) { console.error("Error initializing AddPaperTradeModalHandler:", e); }
+    // --- END ADDED ---
+
+} // End of initializeModalHandlers function

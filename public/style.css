@@ -1,23 +1,28 @@
 /* style.css - Main Import File */
 
 /* --- BASE STYLES --- */
-/* Contains theme variables and global element styles. */
 @import url('./css/base/_themes.css');
 @import url('./css/base/_base.css');
 
 /* --- COMPONENT STYLES --- */
-/* Contains styles for specific UI components. */
 @import url('./css/components/_header.css');
-@import url('./css/components/_tabs.css');
+@import url('./css/components/_tabs.css'); /* Main tabs */
+@import url('./css/components/_sub-tabs.css'); /* ADDED: Sub-tabs */
 @import url('./css/components/_forms.css');
 @import url('./css/components/_tables.css');
+@import url('./css/components/_table-widths.css');
 @import url('./css/components/_modals.css');
 @import url('./css/components/_charts.css');
 @import url('./css/components/_ledger.css');
-@import url('./css/components/_snapshots.css');
 @import url('./css/components/_orders.css');
 @import url('./css/components/_daily-report.css');
+@import url('./css/components/_importers.css');
+@import url('./css/components/_dashboard.css');
+@import url('./css/components/_research.css');
+@import url('./css/components/_modal_manage_position.css');
+/* --- ADDED: New watchlist styles --- */
+@import url('./css/components/_watchlist.css');
 
 /* --- UTILITIES --- */
-/* Contains helper classes like loaders and toasts. */
 @import url('./css/base/_utilities.css');
+

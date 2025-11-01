@@ -1,47 +1,64 @@
-// public/ui/renderers/_orders.js
-import { state } from '../../app-main.js';
-import { formatQuantity, formatAccounting, showToast } from '../helpers.js';
+﻿// /public/ui/renderers/_orders.js
+// Version 0.1.10 (Cleaned up logging)
+/**
+ * @file Renderer for the orders page.
+ * @module renderers/_orders
+ */
 
-export async function renderOrdersPage() {
+import { state } from '../../state.js';
+import { formatQuantity, formatAccounting } from '../formatters.js';
+
+// console.log("[Orders Render Module] _orders.js renderer loaded."); // Removed log
+
+/**
+ * Renders the pending orders table from a given array of order data.
+ * @param {any[]} orders - An array of pending order objects to render.
+ * @returns {void}
+ */
+export function renderOpenOrders(orders) {
+    // console.log("[Orders Render] Rendering open orders table..."); // Removed log
     const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#pending-orders-table tbody'));
-    if (!tableBody) return;
-
-    tableBody.innerHTML = '<tr><td colspan="7">Loading active orders...</td></tr>';
-    state.pendingOrders = []; // Clear old data
-
-    try {
-        const response = await fetch(`/api/orders/pending?holder=${state.selectedAccountHolderId}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch pending orders from the server.');
-        }
-        const orders = await response.json();
-        state.pendingOrders = orders; // Save data to state for event listeners
-
-        tableBody.innerHTML = ''; // Clear loading message
-
-        if (orders.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">You have no active pending orders.</td></tr>';
-            return;
-        }
-
-        orders.forEach(order => {
-            const row = tableBody.insertRow();
-            row.innerHTML = `
-                <td>${order.ticker}</td>
-                <td>${order.exchange}</td>
-                <td class="numeric">${formatQuantity(order.quantity)}</td>
-                <td class="numeric">${formatAccounting(order.limit_price)}</td>
-                <td>${order.expiration_date || 'GTC'}</td>
-                <td>${order.created_date}</td>
-                <td class="actions-cell">
-                    <button class="fill-order-btn" data-id="${order.id}">Mark as Filled</button>
-                    <button class="cancel-order-btn delete-btn" data-id="${order.id}">Cancel</button>
-                </td>
-            `;
-        });
-    } catch (error) {
-        console.error(error);
-        tableBody.innerHTML = `<tr><td colspan="7">Error loading pending orders.</td></tr>`;
-        showToast(error.message, 'error');
+    if (!tableBody) {
+        console.error("[Orders Render] Could not find table body for pending orders."); // Keep error log
+        return;
     }
+
+    tableBody.innerHTML = '';
+
+    if (state) {
+        state.pendingOrders = orders;
+    } else {
+        console.warn("[Orders Render] State object not found during render."); // Keep warning
+    }
+
+    if (!orders || orders.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7">You have no active pending orders.</td></tr>';
+        return;
+    }
+
+    orders.forEach(order => {
+        const row = tableBody.insertRow();
+        // Use optional chaining and nullish coalescing for safety
+        const orderId = order?.id ?? `unknown_id_${Math.random()}`;
+        const ticker = order?.ticker ?? 'N/A';
+        const exchange = order?.exchange ?? 'N/A';
+        const quantity = order?.quantity !== undefined ? formatQuantity(order.quantity) : '--';
+        const limitPrice = order?.limit_price !== undefined ? formatAccounting(order.limit_price) : '--';
+        const expirationDate = order?.expiration_date ?? 'GTC';
+        const createdDate = order?.created_date ?? 'N/A';
+
+        row.innerHTML = `
+            <td>${ticker}</td>
+            <td>${exchange}</td>
+            <td class="numeric">${quantity}</td>
+            <td class="numeric">${limitPrice}</td>
+            <td>${expirationDate}</td>
+            <td>${createdDate}</td>
+            <td class="actions-cell">
+                <button class="fill-order-btn" data-id="${orderId}">Mark as Filled</button>
+                <button class="cancel-order-btn delete-btn" data-id="${orderId}">Cancel</button>
+            </td>
+        `;
+    });
+
 }

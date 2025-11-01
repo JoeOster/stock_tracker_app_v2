@@ -1,0 +1,244 @@
+﻿// /public/event-handlers/_modal_edit_transaction.js
+/**
+ * @file Initializes event handler for the Edit Transaction modal.
+ * @module event-handlers/_modal_edit_transaction
+ */
+import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
+import { state } from '../state.js';
+import { showToast, showConfirmationModal } from '../ui/helpers.js';
+// UPDATED IMPORTS
+import { handleResponse } from '../api/api-helpers.js';
+import { refreshLedger } from '../api/transactions-api.js';
+// END UPDATED IMPORTS
+import { switchView } from './_navigation.js';
+// --- MODIFIED: Import the correct function name ---
+import { openAndPopulateManageModal } from './_dashboard_init.js';
+// --- END MODIFIED ---
+
+// --- ADDED: Extracted populate logic into its own exported function ---
+/**
+ * Populates the Edit Transaction modal with existing data.
+ * @param {object} tx - The transaction object to edit.
+ * @param {boolean} [limitsOnly=false] - If true, only show limit fields.
+ */
+export function populateEditModal(tx, limitsOnly = false) {
+    const editModal = document.getElementById('edit-modal');
+    if (!tx || !editModal) {
+        console.error("populateEditModal: Transaction data or modal element not found.");
+        showToast("Error: Could not load edit modal.", "error");
+        return;
+    }
+
+    console.log("Populating edit modal for tx:", tx, "Limits Only:", limitsOnly);
+
+    // --- Populate Modal Fields ---
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value = String(tx.id);
+    (/** @type {HTMLSelectElement} */(document.getElementById('edit-account-holder'))).value = String(tx.account_holder_id);
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-date'))).value = tx.transaction_date;
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-ticker'))).value = tx.ticker;
+    (/** @type {HTMLSelectElement} */(document.getElementById('edit-exchange'))).value = tx.exchange;
+    (/** @type {HTMLSelectElement} */(document.getElementById('edit-type'))).value = tx.transaction_type;
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-quantity'))).value = String(tx.quantity);
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-price'))).value = String(tx.price);
+    // Handle potential null values for limits/expirations
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-up'))).value = String(tx.limit_price_up ?? '');
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-up-expiration'))).value = tx.limit_up_expiration ?? '';
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-down'))).value = String(tx.limit_price_down ?? '');
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-down-expiration'))).value = tx.limit_down_expiration ?? '';
+
+    // --- Show/Hide Sections & Set Title ---
+    const coreFields = /** @type {HTMLElement | null} */ (document.getElementById('edit-core-fields'));
+    const limitFields = /** @type {HTMLElement | null} */ (document.getElementById('edit-limit-fields'));
+    const modalTitle = document.getElementById('edit-modal-title');
+    
+    if (limitsOnly) {
+        if (modalTitle) modalTitle.textContent = `Set Limits for ${tx.ticker}`;
+        if (coreFields) coreFields.style.display = 'none';
+        if (limitFields) limitFields.style.display = 'block';
+    } else {
+        if (modalTitle) modalTitle.textContent = 'Edit Transaction';
+        if (coreFields) coreFields.style.display = 'block';
+        if (limitFields) limitFields.style.display = 'none';
+    }
+
+    // --- Ensure fields are editable (might have been disabled by Dashboard modal use) ---
+    const editTickerInput = /** @type {HTMLInputElement | null} */(document.getElementById('edit-ticker'));
+    const editTypeSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('edit-type'));
+    
+    // Logic from Daily Report / Dashboard init:
+    if (tx.transaction_type === 'BUY') {
+        if (editTickerInput) editTickerInput.readOnly = true;
+        if (editTypeSelect) editTypeSelect.disabled = true;
+    } else {
+        if (editTickerInput) editTickerInput.readOnly = false;
+        if (editTypeSelect) editTypeSelect.disabled = false;
+    }
+
+    editModal.classList.add('visible'); // Show the modal
+}
+// --- END ADDED ---
+
+/**
+ * Initializes the event listeners for the Edit Transaction modal form.
+ * @returns {void}
+ */
+export function initializeEditTransactionModalHandler() {
+    const editModal = document.getElementById('edit-modal');
+    const editForm = /** @type {HTMLFormElement | null} */ (document.getElementById('edit-transaction-form'));
+    const managePositionModal = document.getElementById('manage-position-modal');
+
+    if (editForm && editModal) {
+        // --- Form Submission ---
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = (/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value;
+             // Basic Validation
+            const quantityInput = /** @type {HTMLInputElement} */(document.getElementById('edit-quantity'));
+            const priceInput = /** @type {HTMLInputElement} */(document.getElementById('edit-price'));
+            const limitUpInput = /** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-up'));
+            const limitDownInput = /** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-down'));
+            const limitUpExpInput = /** @type {HTMLInputElement} */(document.getElementById('edit-limit-up-expiration'));
+            const limitDownExpInput = /** @type {HTMLInputElement} */(document.getElementById('edit-limit-down-expiration'));
+
+            const quantity = parseFloat(quantityInput.value);
+            const price = parseFloat(priceInput.value);
+            if (isNaN(quantity) || quantity <= 0 || isNaN(price) || price <= 0) {
+                 showToast('Quantity and Price must be valid positive numbers.', 'error'); return;
+            }
+            const limitUp = limitUpInput.value ? parseFloat(limitUpInput.value) : null;
+            const limitDown = limitDownInput.value ? parseFloat(limitDownInput.value) : null;
+            const limitUpExp = limitUpExpInput.value || null;
+            const limitDownExp = limitDownExpInput.value || null;
+
+            // Limit validation (only if limits are entered)
+            if (limitUp !== null && (isNaN(limitUp) || limitUp <= price)) { return showToast('Take Profit must be greater than Price.', 'error'); }
+            if (limitUp !== null && !limitUpExp) { return showToast('Take Profit needs an Expiration Date.', 'error'); }
+            if (limitDown !== null && (isNaN(limitDown) || limitDown <= 0 || limitDown >= price)) { return showToast('Stop Loss must be positive and less than Price.', 'error'); }
+            if (limitDown !== null && !limitDownExp) { return showToast('Stop Loss needs an Expiration Date.', 'error'); }
+
+
+            const accountHolderId = (/** @type {HTMLSelectElement} */(document.getElementById('edit-account-holder'))).value;
+            const ticker = (/** @type {HTMLInputElement} */(document.getElementById('edit-ticker'))).value.toUpperCase().trim();
+            const exchange = (/** @type {HTMLSelectElement} */(document.getElementById('edit-exchange'))).value;
+
+            if (!accountHolderId || !ticker || !exchange) {
+                 showToast('Account Holder, Ticker, and Exchange are required.', 'error'); return;
+            }
+            
+            const adviceSourceId = (/** @type {HTMLSelectElement} */(document.getElementById('edit-advice-source'))).value;
+
+            const updatedTransaction = {
+                account_holder_id: accountHolderId,
+                ticker: ticker,
+                exchange: exchange,
+                transaction_type: (/** @type {HTMLSelectElement} */(document.getElementById('edit-type'))).value,
+                quantity: quantity,
+                price: price,
+                transaction_date: (/** @type {HTMLInputElement} */(document.getElementById('edit-date'))).value,
+                limit_price_up: limitUp,
+                limit_up_expiration: limitUpExp,
+                limit_price_down: limitDown,
+                limit_down_expiration: limitDownExp,
+                limit_price_up_2: null, // Note: This field is not in the edit modal, so it's set to null
+                limit_up_expiration_2: null,
+                advice_source_id: adviceSourceId || null
+            };
+
+            const submitButton = /** @type {HTMLButtonElement | null} */ (editForm.querySelector('button[type="submit"]'));
+            if (submitButton) submitButton.disabled = true;
+
+            try {
+                const response = await fetch(`/api/transactions/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTransaction) });
+                await handleResponse(response);
+                showToast('Transaction updated!', 'success');
+
+                // Refresh Manage Modal if Open
+                if (managePositionModal?.classList.contains('visible')) {
+                    if (typeof openAndPopulateManageModal === 'function') {
+                        await openAndPopulateManageModal(ticker, exchange, accountHolderId);
+                    } else {
+                         console.warn('openAndPopulateManageModal function not available for refresh.');
+                    }
+                }
+
+                editModal?.classList.remove('visible'); // Close edit modal
+
+                // Refresh underlying view
+                if (state.currentView.type === 'ledger') {
+                    await refreshLedger();
+                } else if (state.currentView.type === 'dashboard' || state.currentView.type === 'date') {
+                    await switchView(state.currentView.type, state.currentView.value);
+                }
+
+            } catch (error) {
+                const err = /** @type {Error} */ (error);
+                showToast(`Error updating transaction: ${err.message}`, 'error');
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
+        });
+
+        // --- Edit Modal - Clear Limit Buttons ---
+        editModal.addEventListener('click', (e) => {
+            const target = /** @type {HTMLElement} */ (e.target);
+            if (target.classList.contains('clear-limit-btn')) {
+                 const targetType = target.dataset.target; // 'up' or 'down'
+                 if (targetType === 'up') {
+                     (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-up'))).value = '';
+                     (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-up-expiration'))).value = '';
+                 } else if (targetType === 'down') {
+                     (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-down'))).value = '';
+                     (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-down-expiration'))).value = '';
+                 }
+            }
+        });
+
+        // --- Edit Modal - Delete Button ---
+         const deleteEditBtn = document.getElementById('edit-modal-delete-btn');
+         if (deleteEditBtn) {
+             deleteEditBtn.addEventListener('click', async () => {
+                 const id = (/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value;
+                 if (!id) return;
+                  // Get details BEFORE deleting for potential refresh
+                  const accountHolderId = (/** @type {HTMLSelectElement} */(document.getElementById('edit-account-holder'))).value;
+                  const ticker = (/** @type {HTMLInputElement} */(document.getElementById('edit-ticker'))).value.toUpperCase().trim();
+                  const exchange = (/** @type {HTMLSelectElement} */(document.getElementById('edit-exchange'))).value;
+
+                 showConfirmationModal('Delete Transaction?', 'This is permanent and cannot be undone.', async () => {
+                     try {
+                         const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+                         await handleResponse(res);
+                         showToast('Transaction deleted.', 'success');
+
+                         // Refresh Manage Modal if Open
+                         if (managePositionModal?.classList.contains('visible')) {
+                             if (typeof openAndPopulateManageModal === 'function') {
+                                 await openAndPopulateManageModal(ticker, exchange, accountHolderId);
+                             } else {
+                                  console.warn('openAndPopulateManageModal function not available for refresh.');
+                             }
+                         }
+
+                         editModal?.classList.remove('visible'); // Close edit modal
+
+                         // Refresh underlying view
+                    if (state.currentView.type === 'ledger') {
+                        await refreshLedger();
+                    } else if (state.currentView.type === 'dashboard') {
+                        // Call the dashboard renderer directly to force a reload
+                        await renderDashboardPage();
+                    } else {
+                        // Use switchView for other cases (like 'date' view)
+                        await switchView(state.currentView.type, state.currentView.value);
+                    }
+                     } catch (err) {
+                         const error = /** @type {Error} */ (err);
+                         showToast(`Failed to delete: ${error.message}`, 'error');
+                     }
+                 });
+             });
+         }
+    } else {
+        console.warn("Edit transaction form or modal not found.");
+    }
+}

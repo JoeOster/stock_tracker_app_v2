@@ -1,148 +1,254 @@
-// services/cronJobs.js
+// /services/cronJobs.js
 const cron = require('node-cron');
-const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
+const { getPrices } = require('./priceService'); // Use the centralized price service
 
-const formatCurrency = (num) => (num ? `$${Number(num).toFixed(2)}` : '--');
+// Helper to format currency
+const formatCurrency = (num) => {
+    if (num === null || num === undefined || isNaN(num)) { return '--'; }
+    // Basic formatting, consider using Intl.NumberFormat for more robustness if needed
+    return `$${Number(num).toFixed(2)}`;
+};
 
-// --- NEW: Nightly Database Backup Function ---
-async function backupDatabase() {
-    // Ensure this only runs in the production environment
-    if (process.env.NODE_ENV !== 'production') {
-        console.log('[Backup] Skipping backup in non-production environment.');
-        return;
+
+/**
+ * Backs up the production database.
+ * @param {import('sqlite').Database} db - The database instance.
+ * @param {function(string): void} log - Logging function.
+ */
+async function backupDatabase(db, log) {
+    // Determine database path based on environment
+    const dbPath = process.env.DATABASE_PATH || (process.env.NODE_ENV === 'production' ? './production.db' : './development.db');
+
+    // Determine backup directory based on environment
+    let backupDir;
+    if (process.env.NODE_ENV === 'production') {
+        // Linux/Pi path (Ensure this path exists or script creates it)
+        backupDir = '/home/pi/portfolio_manager_bu/v3/prod'; // Example path, adjust if needed
+    } else {
+        // Windows development path
+        backupDir = 'C:\\portfolio_manager_bu\\v3\\dev'; // Ensure this matches your dev backup script
     }
 
-    console.log('[Backup] Starting nightly database backup...');
     try {
-        const dbPath = './production.db';
-        const backupDir = './backup';
-        
-        // Ensure the backup directory exists
         await fs.mkdir(backupDir, { recursive: true });
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupFile = path.join(backupDir, `${timestamp}_backup.db`);
+        await fs.copyFile(dbPath, backupFile);
+        log(`[Cron Backup] Database backed up successfully to ${backupFile}`);
 
-        const timestamp = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-        const backupFileName = `production-backup-${timestamp}.db`;
-        const backupPath = path.join(backupDir, backupFileName);
+        // Optional: Clean up old backups (e.g., keep last 7 days)
+        const files = await fs.readdir(backupDir);
+        const dbBackups = files
+            .filter(f => f.endsWith('_backup.db'))
+            .sort((a, b) => b.localeCompare(a)); // Sort descending (newest first)
 
-        await fs.copyFile(dbPath, backupPath);
-        console.log(`[Backup] Successfully created backup: ${backupPath}`);
+        if (dbBackups.length > 7) {
+            const filesToDelete = dbBackups.slice(7);
+            for (const fileToDelete of filesToDelete) {
+                await fs.unlink(path.join(backupDir, fileToDelete));
+                log(`[Cron Backup] Deleted old backup: ${fileToDelete}`);
+            }
+        }
+
     } catch (error) {
-        console.error('[Backup] CRITICAL ERROR: Nightly database backup failed:', error);
+        console.error(`[Cron Backup] Failed to backup database to ${backupDir}: ${error.message}`);
     }
 }
 
-
+/**
+ * Captures the end-of-day prices for tickers that were sold *if* historical price is missing.
+ * @param {import('sqlite').Database} db - The database instance.
+ * @param {string} dateToProcess - The date to process in YYYY-MM-DD format.
+ */
 async function captureEodPrices(db, dateToProcess) {
-    console.log(`[EOD Process] Running for date: ${dateToProcess}`);
     try {
-        const soldTickers = await db.all(`SELECT DISTINCT ticker FROM transactions WHERE transaction_date = ? AND transaction_type = 'SELL'`, dateToProcess);
-        if (soldTickers.length === 0) {
+        // Find SELL transactions on the given date where the parent BUY lot is now fully sold (quantity_remaining is near zero)
+        // AND for which we don't already have a historical price recorded for that ticker on that date.
+        const sellsNeedingEod = await db.all(`
+            SELECT s.ticker
+            FROM transactions s
+            JOIN transactions b ON s.parent_buy_id = b.id
+            WHERE DATE(s.transaction_date) = DATE(?)
+              AND s.transaction_type = 'SELL'
+              AND b.quantity_remaining < 0.00001
+              AND NOT EXISTS (
+                  SELECT 1 FROM historical_prices hp
+                  WHERE hp.ticker = s.ticker AND hp.date = DATE(?)
+              )
+            GROUP BY s.ticker
+        `, [dateToProcess, dateToProcess]);
+
+        const tickers = sellsNeedingEod.map(row => row.ticker);
+
+        if (tickers.length === 0) {
+            // console.log(`[Cron EOD] No EOD prices needed for sells on ${dateToProcess}.`);
             return;
         }
-        for (const { ticker } of soldTickers) {
-            const remaining = await db.get(`SELECT SUM(quantity_remaining) as total FROM transactions WHERE ticker = ?`, ticker);
-            if (remaining && remaining.total < 0.00001) {
-                const existingPrice = await db.get('SELECT id FROM historical_prices WHERE ticker = ? AND date = ?', [ticker, dateToProcess]);
-                if (existingPrice) continue;
-                console.log(`[EOD Process] Position for ${ticker} closed. Fetching closing price...`);
-                const apiKey = process.env.FINNHUB_API_KEY;
-                const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
-                if (apiRes.ok) {
-                    const data = await apiRes.json();
-                    const closePrice = (data && data.c > 0) ? data.c : null;
-                    if (closePrice) {
-                        await db.run('INSERT INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)', [ticker, dateToProcess, closePrice]);
-                    }
-                }
+
+        console.log(`[Cron EOD] Fetching EOD prices for sold tickers on ${dateToProcess}: ${tickers.join(', ')}`);
+
+        // Use getPrices - NOTE: Finnhub free plan might not support historical EOD lookups reliably.
+        const priceData = await getPrices(tickers, 3); // High priority for EOD capture
+
+        for (const ticker of tickers) {
+            const priceInfo = priceData[ticker];
+            if (priceInfo && typeof priceInfo.price === 'number') {
+                await db.run(
+                    'INSERT OR IGNORE INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)',
+                    [ticker, dateToProcess, priceInfo.price]
+                );
+                console.log(`[Cron EOD] Saved EOD price for ${ticker} on ${dateToProcess}: ${priceInfo.price}`);
+            } else {
+                console.warn(`[Cron EOD] Could not retrieve EOD price for ${ticker} on ${dateToProcess}.`);
             }
         }
     } catch (error) {
-        console.error(`[EOD Process] Error for ${dateToProcess}:`, error);
+        console.error(`[Cron EOD] Error capturing EOD prices for ${dateToProcess}: ${error.message}`);
     }
 }
 
-async function runOrderWatcher(db) {
-    console.log('[CRON] Running Order Watcher / Alert Generator...');
+
+/**
+ * Watches for pending order limits and journal entry targets/stops, creating notifications.
+ * @param {import('sqlite').Database} db - The database instance.
+ * @param {function(string): void} log - Logging function.
+ */
+async function runWatcher(db, log) { // Renamed from runOrderWatcher
     try {
+        log('[Cron Watcher] Starting watcher cycle...');
+        // --- Fetch Active Items ---
         const activeBuyOrders = await db.all("SELECT * FROM pending_orders WHERE status = 'ACTIVE' AND order_type = 'BUY_LIMIT'");
-        const openPositionsWithLimits = await db.all("SELECT * FROM transactions WHERE transaction_type = 'BUY' AND quantity_remaining > 0.00001 AND (limit_price_up IS NOT NULL OR limit_price_down IS NOT NULL)");
-        if (activeBuyOrders.length === 0 && openPositionsWithLimits.length === 0) { return; }
-        const buyTickers = activeBuyOrders.map(order => order.ticker);
-        const sellTickers = openPositionsWithLimits.map(pos => pos.ticker);
-        const uniqueTickers = [...new Set([...buyTickers, ...sellTickers])];
-        const currentPrices = {};
-        const apiKey = process.env.FINNHUB_API_KEY;
-        for (const ticker of uniqueTickers) {
-            const apiRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
-            if (apiRes.ok) {
-                const data = await apiRes.json();
-                if (data && data.c > 0) currentPrices[ticker] = data.c;
-            }
-            await new Promise(resolve => setTimeout(resolve, 150));
+        // Fetch journal entries with targets OR stops
+        const openJournalEntries = await db.all("SELECT * FROM journal_entries WHERE status = 'OPEN' AND (target_price IS NOT NULL OR stop_loss_price IS NOT NULL)");
+
+        // --- Gather Unique Tickers ---
+        const tickersToWatch = [...new Set([
+            ...activeBuyOrders.map(o => o.ticker),
+            ...openJournalEntries.map(j => j.ticker) // Added journal tickers
+        ])];
+
+        if (tickersToWatch.length === 0) {
+             log('[Cron Watcher] No active orders or journal entries with targets/stops to watch.');
+             return;
         }
+
+        log(`[Cron Watcher] Watching tickers: ${tickersToWatch.join(', ')}`);
+
+        // --- Fetch Current Prices ---
+        const priceData = await getPrices(tickersToWatch, 7); // Moderate priority
+
+        // --- Process Pending Buy Orders ---
         for (const order of activeBuyOrders) {
-            const currentPrice = currentPrices[order.ticker];
-            if (currentPrice && currentPrice <= order.limit_price) {
-                const existingNotification = await db.get("SELECT id FROM notifications WHERE pending_order_id = ? AND status = 'UNREAD'", order.id);
+            const currentPriceInfo = priceData[order.ticker];
+            if (!currentPriceInfo || typeof currentPriceInfo.price !== 'number') continue;
+
+            const currentPrice = currentPriceInfo.price;
+            if (currentPrice <= order.limit_price) {
+                const existingNotification = await db.get(
+                    "SELECT id FROM notifications WHERE pending_order_id = ? AND status = 'UNREAD'", // Check specific order ID
+                    [order.id]
+                );
                 if (!existingNotification) {
-                    const message = `Price target of ${formatCurrency(order.limit_price)} met for ${order.ticker}. Current price is ${formatCurrency(currentPrice)}.`;
-                    await db.run("INSERT INTO notifications (account_holder_id, pending_order_id, message) VALUES (?, ?, ?)", [order.account_holder_id, order.id, message]);
+                    const message = `BUY_LIMIT target of ${formatCurrency(order.limit_price)} met for ${order.ticker}. Current price is ${formatCurrency(currentPrice)}.`;
+                    await db.run(
+                        "INSERT INTO notifications (account_holder_id, pending_order_id, message) VALUES (?, ?, ?)",
+                        [order.account_holder_id, order.id, message]
+                    );
+                    log(`[Cron Watcher] Notification created for BUY_LIMIT order ID ${order.id} (${order.ticker})`);
                 }
             }
         }
-        for (const position of openPositionsWithLimits) {
-            const currentPrice = currentPrices[position.ticker];
-            if (!currentPrice) continue;
-            let executedPrice = null;
-            let executionType = null;
-            if (position.limit_price_down && currentPrice <= position.limit_price_down) {
-                executedPrice = position.limit_price_down;
-                executionType = 'Stop Loss';
-            } else if (position.limit_price_up && currentPrice >= position.limit_price_up) {
-                executedPrice = position.limit_price_up;
-                executionType = 'Take Profit';
+
+        // --- Process Open Journal Entries ---
+        for (const entry of openJournalEntries) {
+            const currentPriceInfo = priceData[entry.ticker];
+            if (!currentPriceInfo || typeof currentPriceInfo.price !== 'number') continue;
+
+            const currentPrice = currentPriceInfo.price;
+            let targetMet = null; // null, 'target', 'stop'
+            let hitPrice = null; // Store the price that was hit
+
+            // Check if target price is hit (adjust logic if SELL entries are added later)
+            if (entry.target_price && currentPrice >= entry.target_price) {
+                targetMet = 'target';
+                hitPrice = entry.target_price;
             }
-            if (executedPrice && executionType) {
-                await db.exec('BEGIN TRANSACTION');
-                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-                await db.run(`INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, parent_buy_id, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [position.ticker, position.exchange, 'SELL', position.quantity_remaining, executedPrice, today, position.id, position.account_holder_id]);
-                await db.run("UPDATE transactions SET quantity_remaining = 0, limit_price_up = NULL, limit_price_down = NULL WHERE id = ?", position.id);
-                const message = `${executionType} order for ${position.quantity_remaining} shares of ${position.ticker} was automatically executed at ${formatCurrency(executedPrice)}.`;
-                await db.run("INSERT INTO notifications (account_holder_id, message) VALUES (?, ?)", [position.account_holder_id, message]);
-                await db.exec('COMMIT');
+            // Check if stop loss is hit (check only if target wasn't already met)
+            else if (entry.stop_loss_price && currentPrice <= entry.stop_loss_price) {
+                targetMet = 'stop';
+                hitPrice = entry.stop_loss_price;
+            }
+
+            if (targetMet) {
+                // Target met, check if notification already exists for this journal entry ID
+                const existingNotification = await db.get(
+                    "SELECT id FROM notifications WHERE journal_entry_id = ? AND status = 'UNREAD'", // Check specific journal entry ID
+                    [entry.id]
+                );
+
+                if (!existingNotification) {
+                    let message = '';
+                    if (targetMet === 'target') {
+                        message = `Journal Target Price of ${formatCurrency(hitPrice)} met for ${entry.ticker}. Current price is ${formatCurrency(currentPrice)}.`;
+                    } else { // targetMet === 'stop'
+                        message = `Journal Stop Loss Price of ${formatCurrency(hitPrice)} hit for ${entry.ticker}. Current price is ${formatCurrency(currentPrice)}.`;
+                    }
+                    // Insert notification using the new journal_entry_id column
+                    await db.run(
+                        "INSERT INTO notifications (account_holder_id, journal_entry_id, message) VALUES (?, ?, ?)", // Added journal_entry_id
+                        [entry.account_holder_id, entry.id, message]
+                    );
+                     log(`[Cron Watcher] Notification created for Journal Entry ID ${entry.id} (${entry.ticker} hit ${targetMet})`);
+                }
             }
         }
+        log('[Cron Watcher] Watcher cycle finished.');
+
     } catch (error) {
-        console.error('[CRON] Error in Order Watcher:', error);
-        await db.exec('ROLLBACK');
+        // Use console.error for errors
+        console.error(`[Cron Error] runWatcher failed: ${error.message}\n${error.stack}`);
     }
 }
 
-function initializeAllCronJobs(db) {
+/**
+ * Initializes all cron jobs for the application.
+ * @param {import('sqlite').Database} db - The database instance.
+ * @param {function(string): void} log - Logging function.
+ */
+function setupCronJobs(db, log) {
+    // Only schedule jobs if NOT in test environment
     if (process.env.NODE_ENV !== 'test') {
-        // Schedule EOD price capture
-        cron.schedule('2 16 * * 1-5', () => {
+
+        // --- EOD Price Capture for Sold Stocks ---
+        cron.schedule('2 16 * * 1-5', () => { // M-F at 4:02 PM ET
+            log('[Cron EOD] Triggered EOD price capture.');
             const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
             captureEodPrices(db, today);
         }, { timezone: "America/New_York" });
-        
-        // Schedule Order Watcher
-        cron.schedule('*/5 9-16 * * 1-5', () => runOrderWatcher(db), {
-            timezone: "America/New_York"
-        });
 
-        // --- NEW: Schedule Nightly Database Backup ---
-        cron.schedule('0 2 * * *', () => {
-            backupDatabase();
+        // --- Order and Journal Watcher ---
+        cron.schedule('*/5 9-19 * * 1-5', () => { // M-F, every 5 mins, 9am-7:55pm ET
+            log('[Cron Watcher] Triggered watcher.');
+            runWatcher(db, log); // Pass db and log
         }, {
             timezone: "America/New_York"
         });
 
-        console.log("Cron jobs for EOD, Order Watcher, and Nightly Backups have been scheduled.");
+        // --- Nightly Database Backup ---
+        cron.schedule('0 2 * * *', () => { // Daily at 2:00 AM ET
+             log('[Cron Backup] Triggered nightly backup.');
+             backupDatabase(db, log); // Pass db and log
+        }, {
+            timezone: "America/New_York"
+        });
+
+        log("Cron jobs scheduled: EOD Price Capture, Order/Journal Watcher, Nightly Backups.");
+    } else {
+        log("Cron jobs skipped in test environment.");
     }
 }
 
-module.exports = { initializeAllCronJobs, captureEodPrices, runOrderWatcher, backupDatabase };
+// Update exports
+module.exports = { setupCronJobs, captureEodPrices, runWatcher, backupDatabase };

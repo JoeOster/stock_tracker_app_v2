@@ -1,12 +1,36 @@
-// routes/transactions.js
+﻿// /routes/transactions.js
+/**
+ * @file Creates and returns an Express router for handling transaction endpoints.
+ * @module routes/transactions
+ */
+
 const express = require('express');
 const router = express.Router();
 
-// Note: This module needs access to the database object and other functions.
-// We will pass `db` and `captureEodPrices` in from server.js.
-module.exports = (db, captureEodPrices) => {
-    // The base path for these routes is '/api/transactions', so we use relative paths like '/' or '/:id'.
+// --- Import Refactored Business Logic ---
+const { handleBuyTransaction } = require('./transaction-buy-logic.js');
+const { handleSellTransaction } = require('./transaction-sell-logic.js');
+const { handleUpdateTransaction } = require('./transaction-update-logic.js');
+const { handleDeleteTransaction } = require('./transaction-delete-logic.js');
+// --- End Imports ---
 
+/**
+ * Creates and returns an Express router for handling transaction endpoints.
+ * @param {import('sqlite').Database} db - The database connection object.
+ * @param {function(string): void} log - The logging function.
+ * @param {function(import('sqlite').Database, string): Promise<void>} captureEodPrices - Function to capture EOD prices.
+ * @returns {express.Router} The configured Express router.
+ */
+module.exports = (db, log, captureEodPrices) => {
+    // The base path for these routes is '/api/transactions'
+
+    /**
+     * @route GET /api/transactions/
+     * @group Transactions - Operations for transactions
+     * @description Fetches all transactions, optionally filtered by account holder.
+     * @param {string} [holder.query] - Optional Account holder ID ('all' or specific ID).
+     * @returns {Array<object>|object} 200 - An array of transaction objects. 500 - Error message.
+     */
     router.get('/', async (req, res) => {
         try {
             const holderId = req.query.holder;
@@ -20,157 +44,221 @@ module.exports = (db, captureEodPrices) => {
             const transactions = await db.all(query, params);
             res.json(transactions);
         } catch(e) {
+            log(`[ERROR] Failed to fetch transactions: ${e.message}`);
             res.status(500).json({message: "Error fetching transactions"});
         }
     });
 
+    /**
+     * @typedef {object} TransactionPostBody
+     * @property {string} ticker
+     * @property {string} exchange
+     * @property {'BUY'|'SELL'} transaction_type
+     * @property {number} price
+     * @property {string} transaction_date - Format YYYY-MM-DD
+     * @property {string|number} account_holder_id
+     * @property {number} [quantity] - Required for BUY or single SELL.
+     * @property {number|null} [limit_price_up]
+     * @property {string|null} [limit_up_expiration]
+     * @property {number|null} [limit_price_down]
+     * @property {string|null} [limit_down_expiration]
+     * @property {number|null} [limit_price_up_2]
+     * @property {string|null} [limit_up_expiration_2]
+     * @property {string|number|null} [parent_buy_id] - Required for single lot SELL.
+     * @property {Array<{parent_buy_id: string|number, quantity_to_sell: number}>|null} [lots] - Required for selective SELL.
+     * @property {string|number|null} [advice_source_id]
+     * @property {string|number|null} [linked_journal_id]
+     */
+
+    /**
+     * @route POST /api/transactions/
+     * @group Transactions - Operations for transactions
+     * @description Adds a single manual BUY/SELL transaction or a selective SELL transaction.
+     * @param {TransactionPostBody} req.body.required - The transaction data.
+     * @returns {object} 201 - Success. 400 - Invalid input. 404 - Parent BUY not found. 500 - Server error.
+     */
     router.post('/', async (req, res) => {
-        try {
-            const { ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration, parent_buy_id, account_holder_id } = req.body;
-            if (!ticker || !exchange || !transaction_date || !['BUY', 'SELL'].includes(transaction_type) || quantity <= 0 || price <= 0 || !account_holder_id) {
-                return res.status(400).json({ message: 'Invalid input. Ensure account holder is selected.' });
-            }
-            let original_quantity = null, quantity_remaining = null;
-            if (transaction_type === 'BUY') {
-                original_quantity = quantity;
-                quantity_remaining = quantity;
-            } else if (transaction_type === 'SELL' && parent_buy_id) {
-                const parentBuy = await db.get('SELECT * FROM transactions WHERE id = ?', parent_buy_id);
-                if (!parentBuy) return res.status(404).json({ message: 'Parent buy transaction not found.' });
-                if (new Date(transaction_date) < new Date(parentBuy.transaction_date)) return res.status(400).json({ message: 'Sell date cannot be before the buy date.' });
-                if (parentBuy.quantity_remaining < quantity) return res.status(400).json({ message: 'Sell quantity exceeds remaining quantity.' });
-                await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [quantity, parent_buy_id]);
-            }
-            const query = `INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, parent_buy_id, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-            await db.run(query, [ticker.toUpperCase(), exchange, transaction_type, quantity, price, transaction_date, limit_price_up || null, limit_price_down || null, limit_up_expiration || null, limit_down_expiration || null, parent_buy_id || null, original_quantity, quantity_remaining, account_holder_id]);
-            if (transaction_type === 'SELL') { captureEodPrices(db, transaction_date); }
-            res.status(201).json({ message: 'Success' });
-        } catch (error) {
-            console.error('Failed to add transaction:', error);
-            res.status(500).json({ message: 'Server Error' });
-        }
-    });
+        const {
+            ticker, exchange, transaction_type, price, transaction_date, account_holder_id
+        } = req.body;
+        const createdAt = new Date().toISOString();
 
-    router.get('/:id', async (req, res) => {
+        // Basic Validation
+        if (!ticker || !exchange || !transaction_date || !['BUY', 'SELL'].includes(transaction_type) || isNaN(parseFloat(price)) || parseFloat(price) <= 0 || !account_holder_id) {
+            return res.status(400).json({ message: 'Invalid input. Ensure ticker, exchange, type, date, price, and holder ID are valid.' });
+        }
+
         try {
-            const transaction = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
-            if (transaction) {
-                res.json(transaction);
+            await db.exec('BEGIN TRANSACTION');
+
+            if (transaction_type === 'BUY') {
+                await handleBuyTransaction(db, req.body, createdAt);
+            }
+            else if (transaction_type === 'SELL') {
+                await handleSellTransaction(db, log, captureEodPrices, req.body, createdAt);
+            }
+
+            await db.exec('COMMIT');
+            res.status(201).json({ message: 'Transaction logged successfully!' });
+
+        } catch (error) {
+            await db.exec('ROLLBACK');
+            log(`[ERROR] Failed to add transaction: ${error.message}\n${error.stack}`);
+            // Determine status code based on error message
+            if (error.message.includes('not found')) {
+                res.status(404).json({ message: error.message });
+            } else if (error.message.includes('Invalid') || error.message.includes('exceeds') || error.message.includes('before')) {
+                res.status(400).json({ message: error.message });
             } else {
-                res.status(404).json({ message: 'Transaction not found' });
+                res.status(500).json({ message: 'Server Error processing transaction.' });
             }
-        } catch (error) {
-            console.error('Error fetching single transaction:', error);
-            res.status(500).json({ message: 'Error fetching transaction.' });
         }
     });
 
-    router.put('/:id', async (req, res) => {
+     /**
+      * @route PUT /api/transactions/:id
+      * @group Transactions - Operations for transactions
+      * @description Updates an existing transaction.
+      * @param {string} id.path.required - The ID of the transaction to update.
+      * @param {object} req.body.required - A partial or full transaction object with fields to update.
+      * @returns {object} 200 - Success. 400 - Invalid input. 404 - Not found. 500 - Server error.
+      */
+     router.put('/:id', async (req, res) => {
+        const { id } = req.params;
         try {
-            const { exchange, transaction_type, quantity, price, transaction_date, limit_price_up, limit_price_down, limit_up_expiration, limit_down_expiration, account_holder_id } = req.body;
-            const ticker = req.body.ticker ? req.body.ticker.toUpperCase() : null;
-            
-            const originalTx = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
-            if (!originalTx) {
-                return res.status(404).json({ message: 'Transaction not found.' });
-            }
-
-            const finalUpdate = {
-                id: req.params.id, ticker, exchange, transaction_type, quantity, price, transaction_date, account_holder_id,
-                limit_price_up: (limit_price_up !== null && limit_price_up !== '' && !isNaN(parseFloat(limit_price_up))) ? parseFloat(limit_price_up) : null,
-                limit_up_expiration: limit_up_expiration || null,
-                limit_price_down: (limit_price_down !== null && limit_price_down !== '' && !isNaN(parseFloat(limit_price_down))) ? parseFloat(limit_price_down) : null,
-                limit_down_expiration: limit_down_expiration || null,
-                original_quantity: originalTx.original_quantity,
-                quantity_remaining: originalTx.quantity_remaining
-            };
-
-            if (transaction_type === 'BUY') {
-                const childSales = await db.all('SELECT * FROM transactions WHERE parent_buy_id = ?', req.params.id);
-                for (const sale of childSales) {
-                    if (new Date(sale.transaction_date) < new Date(transaction_date)) {
-                        return res.status(400).json({ message: 'Buy date cannot be after any of its sell dates.' });
-                    }
-                }
-                const quantitySold = originalTx.original_quantity - originalTx.quantity_remaining;
-                const newRemaining = quantity - quantitySold;
-                if (newRemaining < 0) {
-                    return res.status(400).json({ message: 'Update would result in negative remaining quantity.' });
-                }
-                finalUpdate.original_quantity = quantity;
-                finalUpdate.quantity_remaining = newRemaining;
-            } else if (transaction_type === 'SELL' && originalTx.parent_buy_id) {
-                const quantityChange = quantity - originalTx.quantity;
-                const parentBuy = await db.get('SELECT * FROM transactions WHERE id = ?', originalTx.parent_buy_id);
-                if (parentBuy.quantity_remaining - quantityChange < 0) {
-                    return res.status(400).json({ message: 'Update would result in negative remaining quantity on parent.' });
-                }
-                await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining - ? WHERE id = ?', [quantityChange, originalTx.parent_buy_id]);
-            }
-            
-            const query = `UPDATE transactions 
-                           SET ticker = ?, exchange = ?, transaction_type = ?, quantity = ?, price = ?, transaction_date = ?, 
-                               limit_price_up = ?, limit_price_down = ?, limit_up_expiration = ?, limit_down_expiration = ?,
-                               original_quantity = ?, quantity_remaining = ?, account_holder_id = ?
-                           WHERE id = ?`;
-            await db.run(query, [
-                finalUpdate.ticker, finalUpdate.exchange, finalUpdate.transaction_type, finalUpdate.quantity, finalUpdate.price, finalUpdate.transaction_date,
-                finalUpdate.limit_price_up, finalUpdate.limit_price_down, finalUpdate.limit_up_expiration, finalUpdate.limit_down_expiration,
-                finalUpdate.original_quantity, finalUpdate.quantity_remaining, finalUpdate.account_holder_id,
-                finalUpdate.id
-            ]);
-            res.json({ message: 'Transaction updated.' });
+            await handleUpdateTransaction(db, id, req.body);
+            res.json({ message: 'Transaction updated successfully.' });
         } catch (error) {
-            console.error('Failed to update transaction:', error);
-            res.status(500).json({ message: 'Error updating transaction.' });
+            log(`[ERROR] Failed to update transaction with ID ${id}: ${error.message}\n${error.stack}`);
+            if (error.message.includes('not found')) {
+                res.status(404).json({ message: error.message });
+            } else if (error.message.includes('Invalid')) {
+                res.status(400).json({ message: error.message });
+            } else {
+                res.status(500).json({ message: 'Server error during transaction update.' });
+            }
         }
     });
 
+    /**
+     * @route DELETE /api/transactions/:id
+     * @group Transactions - Operations for transactions
+     * @description Deletes a transaction. If it's a SELL, restores quantity to the parent BUY.
+     * @param {string} id.path.required - The ID of the transaction to delete.
+     * @returns {object} 200 - Success. 400 - Cannot delete BUY with child SELLs. 404 - Not found. 500 - Server error.
+     */
     router.delete('/:id', async (req, res) => {
+        const { id } = req.params;
         try {
-            const txToDelete = await db.get('SELECT * FROM transactions WHERE id = ?', req.params.id);
-            if (!txToDelete) return res.status(404).json({ message: 'Transaction not found' });
-            if (txToDelete.transaction_type === 'SELL' && txToDelete.parent_buy_id) {
-                await db.run('UPDATE transactions SET quantity_remaining = quantity_remaining + ? WHERE id = ?', [txToDelete.quantity, txToDelete.parent_buy_id]);
-            } else if (txToDelete.transaction_type === 'BUY') {
-                const sells = await db.get('SELECT COUNT(*) as count FROM transactions WHERE parent_buy_id = ?', txToDelete.id);
-                if (sells.count > 0) { return res.status(400).json({ message: 'Cannot delete a BUY transaction that has associated sales. Please delete the sales first.' }); }
-            }
-            await db.run('DELETE FROM transactions WHERE id = ?', req.params.id);
-            res.json({ message: 'Transaction deleted.' });
+            await db.exec('BEGIN TRANSACTION');
+            await handleDeleteTransaction(db, log, id);
+            await db.exec('COMMIT');
+            res.json({ message: 'Transaction deleted successfully.' });
         } catch (error) {
-            console.error('Failed to delete transaction:', error);
-            res.status(500).json({ message: 'Error deleting transaction.' });
+             await db.exec('ROLLBACK');
+            log(`[ERROR] Failed to delete transaction with ID ${req.params.id}: ${error.message}\n${error.stack}`);
+            if (error.message.includes('not found')) {
+                res.status(404).json({ message: error.message });
+            } else if (error.message.includes('Cannot delete')) {
+                res.status(400).json({ message: error.message });
+            } else {
+                res.status(500).json({ message: 'Server error during transaction deletion.' });
+            }
         }
     });
 
-    // Batch import endpoint
-    router.post('/batch', async (req, res) => {
-        const { transactions, account_holder_id } = req.body;
-        if (!Array.isArray(transactions) || transactions.length === 0 || !account_holder_id) {
-            return res.status(400).json({ message: 'Invalid input. Expected an array of transactions and an account_holder_id.' });
-        }
-        let insert;
+    /**
+     * @route GET /api/transactions/sales/:buyId
+     * @group Transactions - Operations for transactions
+     * @description Fetches all SELL transactions linked to a specific parent BUY transaction ID.
+     * @param {string} buyId.path.required - The ID of the parent BUY transaction.
+     * @param {string} holder.query.required - Account holder ID.
+     * @returns {Array<object>|object} 200 - An array of SELL objects. 400 - Missing IDs. 500 - Server error.
+     */
+    router.get('/sales/:buyId', async (req, res) => {
+        const { buyId } = req.params;
+        const accountHolderId = req.query.holder;
+
+        if (!buyId) { return res.status(400).json({ message: 'Parent Buy ID is required.' }); }
+        if (!accountHolderId || accountHolderId === 'all') { return res.status(400).json({ message: 'Account Holder ID is required.' }); }
+
         try {
-            insert = await db.prepare('INSERT INTO transactions (transaction_date, ticker, exchange, transaction_type, quantity, price, original_quantity, quantity_remaining, account_holder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            for (const tx of transactions) {
-                if (tx.transaction_type !== 'BUY') {
-                    throw new Error(`CSV contains a non-BUY transaction for ${tx.ticker}, which is not allowed.`);
-                }
-                const ticker = tx.ticker ? tx.ticker.toUpperCase() : null;
-                if (!ticker || !tx.exchange || !tx.transaction_date || tx.quantity <= 0 || tx.price <= 0) {
-                    throw new Error('Invalid transaction data in batch.');
-                }
-                await insert.run(tx.transaction_date, ticker, tx.exchange, tx.transaction_type, tx.quantity, tx.price, tx.quantity, tx.quantity, account_holder_id);
+            const parentBuy = await db.get( 'SELECT price as cost_basis FROM transactions WHERE id = ? AND account_holder_id = ? AND transaction_type = \'BUY\'', [buyId, accountHolderId] );
+            if (!parentBuy) {
+                log(`[INFO] Parent BUY lot ID ${buyId} not found for holder ${accountHolderId} when fetching sales.`);
+                return res.json([]);
             }
-            res.status(201).json({ message: `${transactions.length} transactions imported successfully.` });
+            const sales = await db.all( 'SELECT id, transaction_date, quantity, price FROM transactions WHERE parent_buy_id = ? AND account_holder_id = ? AND transaction_type = \'SELL\' ORDER BY transaction_date ASC, id ASC', [buyId, accountHolderId] );
+            const salesWithPL = sales.map(sale => ({ ...sale, realizedPL: (sale.price - parentBuy.cost_basis) * sale.quantity }));
+            res.json(salesWithPL);
         } catch (error) {
-            console.error('Failed to import batch transactions:', error);
-            res.status(500).json({ message: error.message || 'Failed to import transactions.' });
-        } finally {
-            if (insert) await insert.finalize();
+            log(`[ERROR] Failed to fetch sales for buyId ${buyId}: ${error.message}\n${error.stack}`);
+            res.status(500).json({ message: 'Server error fetching sales history.' });
         }
     });
+
+    // --- ADDED: New route for Task 1.2 ---
+    /**
+     * @route POST /api/transactions/sales/batch
+     * @group Transactions - Operations for transactions
+     * @description Fetches all SELL transactions for a *list* of parent BUY transaction IDs.
+     * @param {object} req.body.required - The request body.
+     * @param {Array<number>} req.body.lotIds - An array of parent BUY transaction IDs.
+     * @param {string|number} req.body.holderId - The account holder ID.
+     * @returns {Array<object>|object} 200 - An array of SELL objects. 400 - Missing IDs. 500 - Server error.
+     */
+    router.post('/sales/batch', async (req, res) => {
+        const { lotIds, holderId } = req.body;
+
+        if (!Array.isArray(lotIds) || lotIds.length === 0) {
+            return res.status(400).json({ message: 'An array of lotIds is required.' });
+        }
+        if (!holderId || holderId === 'all') {
+            return res.status(400).json({ message: 'A specific Account Holder ID is required.' });
+        }
+
+        try {
+            // Create a ( ? ) placeholder string for the IN clause
+            const placeholders = lotIds.map(() => '?').join(',');
+
+            // 1. Fetch all parent BUY lots to get their cost basis
+            const buysQuery = `
+                SELECT id, price as cost_basis 
+                FROM transactions 
+                WHERE id IN (${placeholders}) 
+                  AND account_holder_id = ? 
+                  AND transaction_type = 'BUY'
+            `;
+            const parentBuys = await db.all(buysQuery, [...lotIds, holderId]);
+            
+            // Create a Map for quick cost basis lookup
+            const costBasisMap = new Map(parentBuys.map(lot => [lot.id, lot.cost_basis]));
+
+            // 2. Fetch all SELL transactions linked to any of these parent BUYs
+            const salesQuery = `
+                SELECT id, transaction_date, quantity, price, parent_buy_id 
+                FROM transactions 
+                WHERE parent_buy_id IN (${placeholders}) 
+                  AND account_holder_id = ? 
+                  AND transaction_type = 'SELL' 
+                ORDER BY transaction_date ASC, id ASC
+            `;
+            const sales = await db.all(salesQuery, [...lotIds, holderId]);
+
+            // 3. Calculate P/L for each sale
+            const salesWithPL = sales.map(sale => {
+                const cost_basis = costBasisMap.get(sale.parent_buy_id);
+                const realizedPL = (cost_basis !== undefined) ? (sale.price - cost_basis) * sale.quantity : 0;
+                return { ...sale, realizedPL };
+            });
+
+            res.json(salesWithPL);
+        } catch (error) {
+            log(`[ERROR] Failed to fetch batch sales history: ${error.message}\n${error.stack}`);
+            res.status(500).json({ message: 'Server error fetching sales history.' });
+        }
+    });
+    // --- END ADDED ---
 
     return router;
 };

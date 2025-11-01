@@ -2,122 +2,378 @@
 /* Contains styles for all modal dialogs. */
 
 /* --- General Modal Styles --- */
-.modal { 
-    display: none; 
-    position: fixed; 
-    z-index: 1000; 
-    left: 0; 
-    top: 0; 
-    width: 100%; 
-    height: 100%; 
-    overflow: auto; 
-    background-color: rgba(0,0,0,.6); 
-    justify-content: center; 
-    align-items: center; 
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000; /* Base z-index for the background overlay */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,.6);
+    justify-content: center;
+    align-items: center;
+    padding: 20px; /* Add padding for smaller screens */
+    box-sizing: border-box;
 }
 
-.modal.visible { 
-    display: flex; 
+.modal.visible {
+    display: flex;
 }
 
-.modal-content { 
-    background-color: var(--container-bg); 
-    padding: 2rem; 
-    border: 1px solid var(--container-border); 
-    width: 80%; 
-    max-width: 500px; 
-    border-radius: 12px; 
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-    position: relative; 
+.modal-content {
+    background-color: var(--container-bg);
+    padding: 2rem;
+    border: 1px solid var(--container-border);
+    width: 90%; /* Use percentage for better responsiveness */
+    max-width: 500px; /* Default max width */
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    position: relative;
+    max-height: 90vh; /* Prevent modal from exceeding viewport height */
+    overflow-y: auto; /* Allow content to scroll if needed */
+    z-index: 1001; /* Base z-index for general modal content */
 }
 
-.modal-content.modal-large { 
-    max-width: 90vw; 
-    max-height: 90vh; 
+/* --- MODIFIED: Increased max-width for modal-large --- */
+.modal-content.modal-large {
+    /* Change 90vw to a larger value, e.g., 1400px or 95vw */
+    max-width: 1600px; /* Or 95vw if you prefer percentage */
+    width: auto; /* Allow it to shrink if content is narrower */
+}
+/* --- END MODIFICATION --- */
+
+
+.close-button {
+    color: var(--text-muted-color);
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-size: 28px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1; /* Ensure consistent vertical position */
+    z-index: 10; /* Relative z-index within the modal-content */
+    background: none;
+    border: none;
+    padding: 0;
+    width: auto;
+    height: auto;
+}
+/* Hide any text added via ::before or ::after - Fix for button-style inheritance */
+.close-button::before,
+.close-button::after {
+    content: none !important;
 }
 
-.close-button { 
-    color: var(--text-muted-color); 
-    position: absolute; 
-    top: 1rem; 
-    right: 1.5rem; 
-    font-size: 28px; 
-    font-weight: 700; 
-    cursor: pointer; 
+.close-button:hover {
+    color: var(--heading-color);
+    background: none; /* Ensure no background on hover */
 }
 
 .form-static-text {
     margin: 0;
-    padding: 10px 5px;
+    padding: 10px 5px; /* Adjust padding if needed */
     font-weight: 600;
+    color: var(--text-color); /* Ensure it uses text color */
+    line-height: 1.5; /* Ensure alignment with inputs */
 }
+
+.modal h2 { /* Style modal titles */
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    color: var(--heading-color);
+}
+
+/* --- Specific Modal Z-indices --- */
+
+/* Settings, Advice, Chart Zoom, Sales History (Old), Source Details, Selective Sell */
+/* These open directly from the main app, use the base content z-index */
+#settings-modal .modal-content,
+#advice-modal .modal-content,
+#chart-zoom-modal .modal-content,
+#sales-history-modal .modal-content, /* Keep for now, might be removed later */
+#selective-sell-modal .modal-content,
+#source-details-modal .modal-content { /* Added source details modal */
+    z-index: 1001;
+}
+
+/* Manage Position Modal - Higher than base modals */
+#manage-position-modal .modal-content {
+    z-index: 1010;
+}
+/* Ensure its background overlay is also appropriately high, but below its content */
+#manage-position-modal {
+    z-index: 1009; /* Slightly lower than its content */
+}
+
+
+/* Modals opened FROM Manage Position - Highest */
+#edit-modal .modal-content,
+#sell-from-position-modal .modal-content {
+    z-index: 1020;
+}
+/* Ensure their background overlays are also appropriately high */
+#edit-modal,
+#sell-from-position-modal {
+    z-index: 1019; /* Slightly lower than their content */
+}
+
+/* --- ADDED: Confirmation Modals - Highest Z-index --- */
+/* Must appear on top of other modals that trigger them (e.g., Settings, Manage, Edit, Source Details) */
+#confirm-modal,
+#confirm-fill-modal {
+    z-index: 1029; /* Overlay z-index (higher than Edit/Sell overlay) */
+}
+#confirm-modal .modal-content,
+#confirm-fill-modal .modal-content {
+    z-index: 1030; /* Content z-index (highest) */
+}
+/* --- END ADDITION --- */
 
 
 /* --- Settings Modal (Tabbed) --- */
-.settings-layout { 
-    display: flex; 
-    gap: 2rem; 
+.settings-layout {
+    display: flex;
+    gap: 2rem;
 }
 
-.settings-tabs { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 5px; 
-    flex-shrink: 0; 
+.settings-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--container-border); /* Add separator */
+    padding-right: 1.5rem; /* Space between tabs and content */
 }
 
-.settings-tab {
+.settings-tab { /* Styles specific to the main settings tabs */
     background: none;
     border: 1px solid transparent;
     color: var(--text-muted-color);
     text-align: left;
     padding: 10px 15px;
     border-radius: 8px;
-    width: 150px;
+    width: 150px; /* Fixed width for tabs */
+    cursor: pointer;
+    font-size: 1em;
 }
 
 .settings-tab.active, .settings-tab:hover {
     background-color: var(--info-panel-bg);
     color: var(--heading-color);
+    font-weight: 600;
 }
 
-.settings-content { 
-    flex-grow: 1; 
+.settings-content {
+    flex-grow: 1;
+    min-width: 0; /* Prevent flex item overflow */
 }
 
-.settings-panel { 
-    display: none; 
+.settings-panel {
+    display: none;
 }
 
-.settings-panel.active { 
-    display: block; 
+.settings-panel.active {
+    display: block;
 }
 
-.settings-grid { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    gap: 1rem; 
+/* General grid for simple settings (e.g., General, Appearance) */
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid */
+    gap: 1.5rem;
 }
 
-.settings-footer { 
-    margin-top: 2rem; 
-    text-align: right; 
+.settings-footer {
+    margin-top: 2rem;
+    display: flex; /* Use flex */
+    justify-content: flex-end; /* Align button to the right */
+    border-top: 1px solid var(--container-border); /* Add separator */
+    padding-top: 1.5rem; /* Space above button */
 }
 
-.management-list { 
-    list-style: none; 
-    padding: 0; 
-    margin: 0; 
+.management-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px; /* Allow list to scroll if long */
+    overflow-y: auto; /* Enable scrolling */
+    border: 1px solid var(--container-border); /* Add border around list */
+    border-radius: 8px; /* Match other elements */
+    margin-bottom: 1rem; /* Space below list */
 }
 
-.management-list li { 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
-    padding: 10px; 
-    border-radius: 8px; 
+.management-list li {
+    display: flex;
+    align-items: center; /* Vertically center items */
+    justify-content: space-between; /* Push buttons to the right */
+    padding: 12px 10px; /* Increased vertical padding */
+    border-bottom: 1px solid var(--container-border); /* Separator lines */
+    gap: 15px; /* Add space between content and buttons */
+}
+.management-list li:last-child {
+    border-bottom: none; /* Remove border on last item */
 }
 
-.management-list li:nth-child(even) { 
-    background-color: var(--info-panel-bg); 
+.management-list li:nth-child(even) { /* Subtle striping */
+    background-color: var(--info-panel-bg);
+}
+
+/* Specific fix for Account Holder radio/label alignment */
+.management-list li div:has(> input[type="radio"]) { /* Target the div containing radio */
+    display: flex;
+    align-items: center; /* Align radio and label */
+    gap: 8px; /* Space between radio and label */
+    flex-grow: 1; /* Allow it to take available space */
+}
+.management-list li input[type="radio"] {
+    width: auto; /* Don't force radio button width */
+    flex-shrink: 0; /* Prevent shrinking */
+    margin: 0;
+}
+
+/* Ensure edit input inside takes full width */
+.management-list li input.edit-holder-input,
+.management-list li input.edit-exchange-input {
+    width: 100%;
+    margin: 0; /* Remove default margins */
+}
+.management-list li label.holder-name,
+.management-list li span.exchange-name {
+    flex-grow: 1; /* Allow name to take space */
+    margin: 0; /* Reset margins */
+}
+
+
+/* Keep buttons grouped together */
+.management-list li > div:last-child {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0; /* Prevent buttons from wrapping */
+}
+.management-list li button {
+    padding: 5px 8px; /* Smaller buttons in lists */
+    font-size: 0.9em;
+}
+
+
+/* Grid layout for the Add Advice Source form */
+.add-item-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px; /* row-gap column-gap */
+    margin-top: 1rem;
+    background-color: var(--info-panel-bg); /* Give form slight background */
+    padding: 1.5rem; /* Add padding around form */
+    border-radius: 8px;
+    border: 1px solid var(--container-border);
+}
+
+.add-item-form-grid .form-group {
+    margin-bottom: 0; /* Override default margin inside the grid */
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    justify-content: flex-start; /* Align items to the start vertically */
+}
+
+/* Ensure labels inside the grid align left */
+.add-item-form-grid .form-group label {
+    text-align: left;
+    margin-bottom: 0; /* Override default if needed */
+}
+
+.add-item-form-grid .form-group-span-2 {
+    grid-column: span 2;
+}
+
+/* Ensure the submit button aligns to the right within its grid cell */
+.add-item-form-grid .form-group[style*="text-align: right"] {
+     display: flex; /* Override column direction */
+     flex-direction: row; /* Align button horizontally */
+     justify-content: flex-end; /* Align button container content (the button itself) to the right */
+     align-items: center; /* Center button vertically if needed */
+}
+.add-item-form-grid .form-group[style*="text-align: right"] button {
+    width: auto; /* Don't force button full width */
+}
+
+
+/* Styles for standardized modal button layouts */
+.modal-actions {
+    margin-top: 1.5rem; /* Add some space above the buttons */
+    display: flex;
+    justify-content: space-between; /* Pushes delete to left, others to right */
+    align-items: center;
+    gap: 10px; /* Add gap for cases where delete isn't present */
+    border-top: 1px solid var(--container-border); /* Separator line */
+    padding-top: 1.5rem; /* Space above buttons */
+}
+
+.modal-actions-right {
+    display: flex;
+    gap: 10px; /* Space between Cancel and Confirm/Save */
+    margin-left: auto; /* Push this group fully to the right */
+}
+
+/* Ensure all buttons in actions have consistent size */
+.modal-actions button {
+    width: auto; /* Don't force full width */
+}
+
+/* Small icon for app type in management list display */
+.contact-app-icon-small {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle; /* Align with text */
+    margin-right: 4px; /* Space before text */
+    object-fit: contain; /* Ensure icon scales nicely */
+}
+
+/* Thumbnail for image in management list */
+.source-list-thumbnail {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%; /* Circular */
+    margin-right: 8px; /* Space between image and name */
+    object-fit: cover; /* Crop image nicely */
+    vertical-align: middle; /* Align with text */
+    border: 1px solid var(--container-border); /* Subtle border */
+    background-color: var(--info-panel-bg); /* Background if image fails */
+}
+
+/* Ensure edit inputs inside source list take reasonable space */
+.management-list li .source-edit input,
+.management-list li .source-edit select {
+    width: 100%; /* Make inputs fill grid cells */
+    box-sizing: border-box;
+    padding: 5px; /* Smaller padding */
+    font-size: 0.9em;
+}
+
+/* Grid layout specifically for the edit view within the list item */
+.management-list li .source-edit {
+    /* display: grid; /* Use grid for layout */
+    /* grid-template-columns: 1fr 1fr; */
+    /* gap: 5px 10px; /* row-gap column-gap */
+    /* align-items: center; /* Vertically align items */
+    /* padding: 5px 0; /* Add some padding */
+    
+    /* NEW FLEX LAYOUT FOR EDIT */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 5px;
+}
+.management-list li .source-edit > div {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    gap: 5px 10px;
+    align-items: center;
+}
+.management-list li .source-edit > input {
+    grid-column: 2 / 4; /* Make single inputs span */
 }

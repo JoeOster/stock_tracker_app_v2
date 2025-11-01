@@ -1,0 +1,42 @@
+/* public/css/components/_sub-tabs.css */
+/* Contains centralized styles for sub-tab navigation */
+
+/* Base container for sub-tabs */
+.sub-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--container-border);
+    margin-bottom: 1.5rem;
+    /* Add flex-wrap if needed, but often not desired for sub-tabs */
+    /* flex-wrap: wrap; */
+}
+
+/* Individual sub-tab button */
+.sub-tab {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text-muted-color);
+    border-bottom: 2px solid transparent;
+    font-size: 1em; /* Ensure consistent font size */
+    margin-bottom: -1px; /* Overlap border-bottom */
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+/* Active and hover states for sub-tab button */
+.sub-tab.active,
+.sub-tab:hover {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600; /* Add weight to active/hover */
+}
+
+/* Sub-tab content panel (hidden by default) */
+.sub-tab-panel {
+    display: none;
+}
+
+/* Active sub-tab content panel (visible) */
+.sub-tab-panel.active {
+    display: block;
+}

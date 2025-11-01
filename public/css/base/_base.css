@@ -3,7 +3,7 @@
 
 body {
     font-family: var(--font-family-base, var(--font-inter));
-    background-color: var(--bg-color);
+    background-color: var(--bg-color); /* This rule applies the theme background */
     color: var(--text-color);
     margin: 0;
     padding: 2rem;

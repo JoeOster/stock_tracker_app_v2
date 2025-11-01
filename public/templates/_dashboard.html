@@ -1,0 +1,59 @@
+<div id="dashboard-page-container" class="page-container" style="display: none;">
+    <h2>Dashboard - Open Positions</h2>
+    <p class="subtitle">Overview of your current holdings.</p>
+
+    <div class="sub-tabs dashboard-sub-tabs" style="margin-bottom: 1.5rem;">
+        <button class="sub-tab active" data-sub-tab="dashboard-card-view">Card View</button>
+        <button class="sub-tab" data-sub-tab="dashboard-table-view">Table View</button>
+    </div>
+
+    <div id="dashboard-controls" class="filter-bar"> <input type="text" id="dashboard-ticker-filter" placeholder="Filter by Ticker...">
+        <select id="dashboard-sort-select">
+            <option value="ticker-asc">Sort by Ticker (A-Z)</option>
+            <option value="exchange-asc">Sort by Exchange</option>
+            <option value="proximity-asc">Sort by Limit Proximity</option>
+            <option value="gain-desc">Sort by Gain %</option>
+            <option value="loss-asc">Sort by Loss %</option>
+            </select>
+        <button id="dashboard-refresh-prices-btn">Refresh Prices</button>
+    </div>
+
+
+    <div class="sub-tab-content">
+        <div id="dashboard-card-view" class="sub-tab-panel active">
+            <div id="positions-cards-grid" class="cards-grid">
+                <p>Loading open positions...</p>
+            </div>
+        </div>
+
+        <div id="dashboard-table-view" class="sub-tab-panel">
+            <table id="open-positions-table">
+                <thead>
+                    <tr>
+                        <th class="reconciliation-checkbox-header sticky-col"></th>
+                        <th data-sort="ticker" class="sticky-col">Ticker</th>
+                        <th data-sort="exchange">Exchange</th>
+                        <th data-sort="purchase_date">Purchase Date</th>
+                        <th class="numeric" data-sort="cost_basis" data-type="numeric">Basis</th>
+                        <th class="numeric" data-sort="quantity_remaining" data-type="numeric">Qty</th>
+                        <th class="numeric" data-sort="current-price" data-type="numeric">Current Price</th>
+                        <th class="numeric" data-sort="unrealized-pl-dollar" data-type="numeric">Unr. P/L ($ | %)</th>
+                        <th class="numeric">Limits)</th>
+                        <th class="center-align actions-cell sticky-col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="open-positions-tbody">
+                    <tr><td colspan="10">Loading open positions...</td></tr>
+                </tbody>
+                 <tfoot>
+                     <tr>
+                         <td colspan="6" style="text-align: right; font-weight: bold;">Totals:</td>
+                         <td id="dashboard-total-value" class="numeric">--</td>
+                         <td id="dashboard-unrealized-pl-total" class="numeric">--</td>
+                         <td colspan="2"></td>
+                         </tr>
+                 </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

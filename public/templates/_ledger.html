@@ -2,14 +2,27 @@
     <h2>Transaction Ledger</h2>
     <p class="subtitle">Filter and review your complete transaction history below.</p>
 
-    <div class="ledger-filters">
+    <div class="filter-bar">
         <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
         <label for="ledger-filter-start">From:</label><input type="date" id="ledger-filter-start">
         <label for="ledger-filter-end">To:</label><input type="date" id="ledger-filter-end">
         <button id="ledger-clear-filters-btn">Clear Filters</button>
     </div>
-    <table id="ledger-table">
-        <thead><tr><th data-sort="transaction_date">Date</th><th data-sort="ticker">Ticker</th><th data-sort="exchange">Exchange</th><th data-sort="transaction_type" class="center-align">Type</th><th class="numeric" data-sort="quantity">Quantity</th><th class="numeric" data-sort="price">Price</th><th class="center-align">Actions</th></tr></thead>
+
+    <div class="summary-container" id="ledger-summary-container">
+        </div>
+    <table id="ledger-table" style="min-width: 900px;">
+        <thead>
+            <tr>
+                <th data-sort="transaction_date" class="col-date">Date</th>
+                <th data-sort="ticker" class="col-ticker">Ticker</th>
+                <th data-sort="exchange" class="col-exchange">Exchange</th>
+                <th data-sort="transaction_type" class="center-align col-type">Type</th>
+                <th class="numeric col-qty" data-sort="quantity" data-type="numeric">Quantity</th>
+                <th class="numeric col-price" data-sort="price" data-type="numeric">Price</th>
+                <th class="center-align col-actions">Actions</th>
+            </tr>
+        </thead>
         <tbody></tbody>
     </table>
 </div>
