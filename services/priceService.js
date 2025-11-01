@@ -1,7 +1,7 @@
 // services/priceService.js
 const fetch = require('node-fetch');
 // --- FIX: Refined JSDoc import for Bottleneck CommonJS constructor ---
-/** @type {import('bottleneck')} */
+/** @type {typeof import('bottleneck')} */
 const Bottleneck = require('bottleneck');
 
 // --- Read both API keys ---
@@ -19,7 +19,7 @@ const priceCache = new Map();
 const getTimestamp = () => new Date().toISOString();
 
 // Initialize the rate limiter directly using the imported constructor
-const limiter = new Bottleneck({ // <-- Use Bottleneck directly
+const limiter = new Bottleneck({ // <-- This line will now be correct
     reservoir: TOTAL_API_CALLS_PER_MINUTE,
     reservoirRefreshAmount: TOTAL_API_CALLS_PER_MINUTE,
     reservoirRefreshInterval: 60 * 1000,
@@ -58,6 +58,7 @@ async function fetchSinglePrice(ticker, apiKey) {
         console.error(`[${getTimestamp()}] [Price Service Error] API call for ${ticker} failed with status: ${apiRes.status}`);
         return 'invalid';
     } catch (error) {
+        // @ts-ignore
         console.error(`[${getTimestamp()}] [Price Service Error] Error fetching price for ${ticker}:`, error.message);
         return null;
     }

@@ -4,12 +4,13 @@
  * @module event-handlers/_research_sources_actions_notes
  */
 
+// --- MODIFIED: Added 'state' import ---
+import { state } from '../state.js';
+// --- END MODIFICATION ---
 import { addSourceNote, updateSourceNote, deleteSourceNote } from '../api/sources-api.js';
 import { deleteDocument } from '../api/documents-api.js';
 import { deleteJournalEntry } from '../api/journal-api.js';
-// --- MODIFIED: Import the correct function name ---
 import { closeWatchlistIdea } from '../api/watchlist-api.js';
-// --- END MODIFIED ---
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 /**
@@ -20,10 +21,8 @@ import { showToast, showConfirmationModal } from '../ui/helpers.js';
  */
 export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
     e.preventDefault();
-    // --- MODIFIED: Cast e.target to HTMLFormElement ---
     const form = /** @type {HTMLFormElement} */ (e.target);
     if (!form) return;
-    // --- END MODIFICATION ---
 
     const sourceId = form.dataset.sourceId;
     const textarea = /** @type {HTMLTextAreaElement} */ (form.querySelector('.add-note-content-textarea'));
@@ -37,7 +36,9 @@ export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
     addButton.disabled = true;
 
     try {
-        await addSourceNote(sourceId, content);
+        // --- MODIFIED: Added state.selectedAccountHolderId ---
+        await addSourceNote(sourceId, state.selectedAccountHolderId, content);
+        // --- END MODIFICATION ---
         showToast('Note added!', 'success');
         textarea.value = ''; // Clear textarea
         await refreshDetailsCallback();
@@ -59,7 +60,6 @@ export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
  * @returns {Promise<void>}
  */
 export async function handleNoteEditActions(target, modalSourceId, modalHolderId, refreshDetailsCallback) {
-    // --- MODIFIED: Cast target to HTMLElement before using .closest ---
     const noteLi = /** @type {HTMLLIElement} */ ((/** @type {HTMLElement} */(target)).closest('li[data-note-id]'));
     if (!noteLi) return;
 
@@ -97,7 +97,9 @@ export async function handleNoteEditActions(target, modalSourceId, modalHolderId
 
         (/** @type {HTMLButtonElement} */ (target)).disabled = true;
         try {
-            await updateSourceNote(noteId, newContent);
+            // --- MODIFIED: Added modalSourceId and modalHolderId ---
+            await updateSourceNote(modalSourceId, noteId, modalHolderId, newContent);
+            // --- END MODIFICATION ---
             showToast('Note updated!', 'success');
             // Update display div immediately
             displayDiv.innerHTML = newContent.replace(/\n/g, '<br>');
@@ -125,7 +127,6 @@ export async function handleNoteEditActions(target, modalSourceId, modalHolderId
  * @returns {Promise<void>}
  */
 export async function handleDeleteClick(target, modalSourceId, modalHolderId, refreshDetailsCallback) {
-    // --- MODIFIED: Cast target to HTMLElement before using .dataset ---
     const itemId = (/** @type {HTMLElement} */(target)).dataset.id || (/** @type {HTMLElement} */(target)).dataset.docId || (/** @type {HTMLElement} */(target)).dataset.noteId || (/** @type {HTMLElement} */(target)).dataset.itemId;
     if (!itemId) return;
 
@@ -134,9 +135,7 @@ export async function handleDeleteClick(target, modalSourceId, modalHolderId, re
         const ticker = target.closest('tr')?.querySelector('td:first-child')?.textContent || 'this idea';
         showConfirmationModal(`Archive ${ticker} Idea?`, 'Are you sure you want to close this trade idea? This will hide it from the list.', async () => {
             try {
-                // --- MODIFIED: Use the correct function name ---
                 await closeWatchlistIdea(itemId);
-                // --- END MODIFIED ---
                 showToast(`Trade idea for ${ticker} archived.`, 'success');
                 await refreshDetailsCallback(); // Refresh the modal
             } catch (error) {
@@ -151,9 +150,7 @@ export async function handleDeleteClick(target, modalSourceId, modalHolderId, re
         const ticker = target.closest('tr')?.querySelector('td:nth-child(3)')?.textContent || 'this technique';
         showConfirmationModal(`Archive ${ticker} Technique?`, 'Are you sure you want to archive this technique? This will close it.', async () => {
             try {
-                // We don't "delete" journal entries, we set their status to "CANCELLED" or "CLOSED"
-                // For this context, "CANCELLED" is safer if it's not "EXECUTED"
-                await deleteJournalEntry(itemId); // This API route should handle it gracefully
+                await deleteJournalEntry(itemId);
                 showToast(`Technique archived.`, 'success');
                 await refreshDetailsCallback();
             } catch (error) {
@@ -181,7 +178,9 @@ export async function handleDeleteClick(target, modalSourceId, modalHolderId, re
     else if (target.matches('.delete-source-note-button')) {
         showConfirmationModal('Delete Note?', 'Are you sure you want to permanently delete this note?', async () => {
             try {
-                await deleteSourceNote(itemId);
+                // --- MODIFIED: Added modalSourceId and modalHolderId ---
+                await deleteSourceNote(modalSourceId, itemId, modalHolderId);
+                // --- END MODIFICATION ---
                 showToast('Note deleted.', 'success');
                 await refreshDetailsCallback();
             } catch (error) {

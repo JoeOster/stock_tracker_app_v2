@@ -1,7 +1,7 @@
 // Portfolio Tracker V3.0.6
 // public/ui/chart-builder.js
 
-/* global Chart */ // FIX: Informs the type checker about the global Chart object.
+/** @typedef {import('chart.js').Chart} Chart */
 
 import { state } from '../state.js';
 
@@ -92,6 +92,7 @@ export function createChart(ctx, snapshots) {
         datasets[exchangeName].data = labels.map(label => valueMap.get(label) ?? null);
     });
 
+    // @ts-ignore
     return new Chart(ctx, {
         type: 'line',
         data: { labels: labels, datasets: Object.values(datasets) },
@@ -112,6 +113,7 @@ export function createChart(ctx, snapshots) {
                 const zoomedChartCtx = zoomedChartCanvas.getContext('2d');
                 if (!zoomedChartCtx) return;
                 if(state.zoomedChart) state.zoomedChart.destroy();
+                // @ts-ignore
                 state.zoomedChart = new Chart(zoomedChartCtx, chart.config);
                 chartZoomModal.classList.add('visible');
             }

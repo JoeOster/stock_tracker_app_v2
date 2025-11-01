@@ -16,8 +16,7 @@ import { showToast } from '../ui/helpers.js';
  */
 export async function handleAddDocumentSubmit(e, refreshDetailsCallback) {
     e.preventDefault();
-    const form = /** @type {HTMLFormElement} */ (e.target.closest('form'));
-    if (!form) return;
+    const form = /** @type {HTMLFormElement} */ ((/** @type {HTMLElement} */(e.target)).closest('form'));    if (!form) return;
     const addButton = /** @type {HTMLButtonElement | null} */ (form.querySelector('.add-document-button'));
     if (!addButton) return;
 

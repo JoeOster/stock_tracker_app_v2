@@ -39,7 +39,7 @@ const defaultLogo = genericLogoPath;
 export function createAggregatedCardHTML(aggData) {
     const {
         ticker, exchange, totalQuantity, totalCurrentValue, weightedAvgCostBasis,
-        overallUnrealrealizedPL, overallUnrealizedPercent, priceData, underlyingLots
+        overallUnrealizedPL, overallUnrealizedPercent, priceData, underlyingLots
     } = aggData;
 
     // --- Check if this card represents a single lot or multiple ---

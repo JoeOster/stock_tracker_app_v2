@@ -270,8 +270,7 @@ export function initializeJournalSettingsHandlers() {
             const deleteButton = target.closest('.delete-source-btn');
 
             if (editButton) {
-                const sourceId = editButton.dataset.id;
-                // Fetch the *full* list of sources from the API
+                const sourceId = (/** @type {HTMLElement} */(editButton)).dataset.id;                // Fetch the *full* list of sources from the API
                 const allSources = await fetchAllAdviceSourcesForSettings(state.selectedAccountHolderId);
                 const source = allSources.find(s => String(s.id) === sourceId);
 
@@ -295,8 +294,7 @@ export function initializeJournalSettingsHandlers() {
             }
 
             if (deleteButton) {
-                const sourceId = deleteButton.dataset.id;
-                showConfirmationModal('Delete Source?', 'This cannot be undone. Are you sure?', async () => {
+                const sourceId = (/** @type {HTMLElement} */(deleteButton)).dataset.id;                showConfirmationModal('Delete Source?', 'This cannot be undone. Are you sure?', async () => {
                     try {
                         await deleteAdviceSource(sourceId);
                         

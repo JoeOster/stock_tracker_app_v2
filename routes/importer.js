@@ -36,8 +36,8 @@ const createImporterRouter = (db, log, importSessions) => {
      * @param {string} brokerageTemplate.body.required - The key of the template to use (e.g., 'fidelity').
      * @param {object} csvfile.files.required - The uploaded CSV file.
      * @returns {object} 200 - JSON object with `importSessionId` and `reconciliationData`.
-     * @returns {object} 400 - Error message for invalid input or file.
-     * @returns {object} 500 - Error message for server errors.
+     * 400 - Error message for invalid input or file.
+     * 500 - Error message for server errors. 
      */
     router.post('/upload', async (req, res) => {
         if (!req.files || !req.files.csvfile) {

@@ -74,7 +74,7 @@ export function initializeSourceModalSubHandlers(contentArea) {
         // --- Edit Transaction Button ---
         const editTxBtn = target.closest('.edit-transaction-btn');
         if (editTxBtn) {
-            const transactionId = editTxBtn.dataset.id;
+            const transactionId = (/** @type {HTMLElement} */(editTxBtn)).dataset.id;
             if (transactionId) {
                 populateAndShowEditModal(transactionId);
             }

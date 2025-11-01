@@ -32,20 +32,24 @@ function populateAllExchangeDropdowns() {
         let otherOption = null;
         const sortedExchanges = Array.isArray(state.allExchanges)
             ? [...state.allExchanges]
-                  .filter(ex => { // Filter out 'Other' temporarily
+                  // --- FIX: Add JSDoc hint for 'ex' ---
+                  .filter(/** @param {any} ex */ ex => { // Filter out 'Other' temporarily
                       if (ex.name.toLowerCase() === 'other') {
                           otherOption = ex;
                           return false;
                       }
                       return true;
                   })
-                  .sort((a, b) => a.name.localeCompare(b.name)) // Sort the rest alphabetically
+                  // --- FIX: Add JSDoc hint for 'a' and 'b' ---
+                  .sort((/** @type {any} */ a, /** @type {any} */ b) => a.name.localeCompare(b.name)) // Sort the rest alphabetically
             : [];
 
         // Add sorted exchanges
         sortedExchanges.forEach(ex => {
             const option = document.createElement('option');
+            // @ts-ignore
             option.value = ex.name;
+            // @ts-ignore
             option.textContent = ex.name;
             select.appendChild(option);
         });
@@ -53,7 +57,9 @@ function populateAllExchangeDropdowns() {
         // Add 'Other' option at the end if it exists
         if (otherOption) {
             const option = document.createElement('option');
+            // @ts-ignore
             option.value = otherOption.name;
+            // @ts-ignore
             option.textContent = otherOption.name;
             select.appendChild(option);
         }
@@ -100,6 +106,7 @@ export function initializeExchangeManagementHandlers() {
          addExchangeBtn.addEventListener('click', async () => {
             const name = newExchangeNameInput.value.trim();
             if (!name) return showToast('Exchange name cannot be empty.', 'error');
+            // @ts-ignore
             if (state.allExchanges.some(ex => ex.name.toLowerCase() === name.toLowerCase())) {
                  return showToast(`Exchange "${name}" already exists.`, 'error');
             }
@@ -161,6 +168,7 @@ export function initializeExchangeManagementHandlers() {
                     // @ts-ignore
                     cancelBtn.click(); return; 
                 }
+                // @ts-ignore
                  if (state.allExchanges.some(ex => String(ex.id) !== id && ex.name.toLowerCase() === newName.toLowerCase())) {
                     return showToast(`Another exchange named "${newName}" already exists.`, 'error');
                  }
