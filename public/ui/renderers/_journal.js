@@ -1,204 +1,204 @@
-// public/ui/renderers/_journal.js
+// /public/ui/renderers/_journal.js
 /**
- * @file Renderer for the Journal page.
+ * @file Renders the Journal (Paper Trading) tables.
  * @module renderers/_journal
  */
 
 import { state } from '../../state.js';
-import { formatAccounting, formatQuantity } from '../formatters.js';
-import { populateAllAdviceSourceDropdowns } from '../dropdowns.js';
-import { getCurrentESTDateString } from '../datetime.js';
+import { formatAccounting, formatQuantity, formatDate } from '../formatters.js';
+// --- MODIFIED: Import the correct function name ---
+import { getSourceNameFromId } from '../../ui/dropdowns.js';
+// --- END MODIFICATION ---
 
 /**
- * Renders the rows for the open journal entries table.
- * @param {HTMLTableSectionElement} tbody The table body element to populate.
- * @param {any[]} openEntries Array of open journal entry objects.
- * @returns {void}
+ * Generates the HTML for the action buttons in a journal row.
+ * @param {object} entry - The journal entry object.
+ * @param {boolean} [readOnly=false] - If true, only show the 'Edit' button.
+ * @returns {string} HTML string for the action buttons.
  */
-function renderOpenEntriesTable(tbody, openEntries) {
-    tbody.innerHTML = ''; // Clear existing rows
-
-    if (!openEntries || openEntries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11">No open journal entries found.</td></tr>'; // Updated colspan
-        return;
+function getActionButtonsHTML(entry, readOnly = false) {
+    const entryId = entry.id;
+    const editButton = `<button class="journal-edit-btn" data-id="${entryId}" title="Edit Entry">✏️</button>`;
+    
+    if (readOnly) {
+        return editButton; // Only show "Edit" in read-only mode
     }
 
+    // Full action buttons for the main Journal page
+    const executeButton = (entry.direction === 'BUY')
+        ? `<button class="journal-execute-btn" data-id="${entryId}" title="Execute This BUY Trade">⚡</button>`
+        : '';
+    const closeButton = `<button class="journal-close-btn" data-id="${entryId}" title="Manually Close Trade">X</button>`;
+    const deleteButton = `<button class="journal-delete-btn delete-btn" data-id="${entryId}" title="Delete Entry">🗑️</button>`;
+
+    return `${executeButton} ${closeButton} ${editButton} ${deleteButton}`;
+}
+
+/**
+ * Generates the HTML for a single row in the 'Open Ideas' table.
+ * @param {object} entry - The journal entry object.
+ * @param {boolean} [readOnly=false] - If true, only show the 'Edit' button.
+ * @returns {string} HTML string for the table row.
+ */
+function createOpenTableRowHTML(entry, readOnly = false) {
+    // --- MODIFIED: Use the correct function call ---
+    const sourceName = getSourceNameFromId(entry.advice_source_id) || entry.advice_source_details || '--';
+    // --- END MODIFIED ---
+    const { priceData, currentPL, plClass } = calculateCurrentPL(entry);
+    const currentPriceDisplay = (priceData && typeof priceData.price === 'number')
+        ? formatAccounting(priceData.price)
+        : (priceData?.price || '--'); // Show text if it's a message like 'TBD'
+    
+    const actionButtons = getActionButtonsHTML(entry, readOnly);
+
+    return `
+        <tr data-id="${entry.id}">
+            <td>${formatDate(entry.entry_date)}</td>
+            <td>${entry.ticker}</td>
+            <td class="numeric">${formatAccounting(entry.entry_price)}</td>
+            <td class="numeric">${formatQuantity(entry.quantity)}</td>
+            <td class="numeric">${formatAccounting(entry.target_price)}</td>
+            <td class="numeric">${formatAccounting(entry.target_price_2)}</td>
+            <td class="numeric">${formatAccounting(entry.stop_loss_price)}</td>
+            <td class="numeric">${currentPriceDisplay}</td>
+            <td class="numeric ${plClass}">${formatAccounting(currentPL)}</td>
+            <td>${sourceName}</td>
+            <td class="center-align actions-cell">${actionButtons}</td>
+        </tr>
+    `;
+}
+
+/**
+ * Generates the HTML for a single row in the 'Closed Ideas' table.
+ * @param {object} entry - The journal entry object.
+ * @param {boolean} [readOnly=false] - If true, only show the 'Edit' button.
+ * @returns {string} HTML string for the table row.
+ */
+function createClosedTableRowHTML(entry, readOnly = false) {
+    // --- MODIFIED: Use the correct function call ---
+    const sourceName = getSourceNameFromId(entry.advice_source_id) || entry.advice_source_details || '--';
+    // --- END MODIFIED ---
+    const pl = entry.pnl ?? 0;
+    const plClass = pl >= 0 ? 'positive' : 'negative';
+    const statusText = entry.status === 'EXECUTED' ? `Executed (Tx #${entry.linked_trade_id})` : entry.status;
+    
+    const actionButtons = readOnly 
+        ? `<button class="journal-edit-btn" data-id="${entry.id}" title="Edit Entry">✏️</button>`
+        : `<button class="journal-edit-btn" data-id="${entry.id}" title="Edit Entry">✏️</button> <button class="journal-delete-btn delete-btn" data-id="${entry.id}" title="Delete Entry">🗑️</button>`;
+
+    return `
+        <tr data-id="${entry.id}" class="text-muted">
+            <td>${formatDate(entry.entry_date)}</td>
+            <td>${formatDate(entry.exit_date)}</td>
+            <td>${entry.ticker}</td>
+            <td class="numeric">${formatAccounting(entry.entry_price)}</td>
+            <td class="numeric">${formatAccounting(entry.exit_price)}</td>
+            <td class="numeric">${formatQuantity(entry.quantity)}</td>
+            <td class="numeric ${plClass}">${formatAccounting(pl)}</td>
+            <td>${statusText}</td>
+            <td>${sourceName}</td>
+            <td class="center-align actions-cell">${actionButtons}</td>
+        </tr>
+    `;
+}
+
+/**
+ * Calculates the current P/L for an open journal entry.
+ * @param {object} entry - The journal entry object.
+ * @returns {{priceData: object, currentPL: number, plClass: string}}
+ */
+function calculateCurrentPL(entry) {
+    const priceData = state.priceCache.get(entry.ticker);
+    let currentPL = 0;
+    let plClass = '';
+
+    if (priceData && typeof priceData.price === 'number' && priceData.price > 0) {
+        if (entry.direction === 'BUY') {
+            currentPL = (priceData.price - entry.entry_price) * entry.quantity;
+        } else { // 'SELL'
+            currentPL = (entry.entry_price - priceData.price) * entry.quantity;
+        }
+        plClass = currentPL >= 0 ? 'positive' : 'negative';
+    }
+    return { priceData, currentPL, plClass };
+}
+
+/**
+ * Calculates and updates summary statistics for the journal.
+ * @param {object[]} openEntries - Array of open journal entries.
+ * @param {object[]} closedEntries - Array of closed/executed entries.
+ */
+function updateJournalSummary(openEntries, closedEntries) {
+    // --- Open Ideas ---
+    let totalOpenPL = 0;
     openEntries.forEach(entry => {
-        const row = tbody.insertRow();
-        row.dataset.entryId = String(entry.id); // Add ID for event handling
-
-        // Calculate potential gain/loss based on targets vs entry
-        const potentialGain = entry.target_price ? (entry.target_price - entry.entry_price) * entry.quantity : null;
-        const potentialLoss = entry.stop_loss_price ? (entry.stop_loss_price - entry.entry_price) * entry.quantity : null;
-        const currentPnl = entry.current_pnl; // Comes pre-calculated from backend GET
-
-        // Determine color class based on current P/L
-        let pnlClass = '';
-        if (currentPnl !== null && currentPnl !== undefined) {
-            pnlClass = currentPnl >= 0 ? 'positive' : 'negative';
-        }
-
-        row.innerHTML = `
-            <td>${entry.entry_date}</td>
-            <td>${entry.ticker}</td>
-            <td class="numeric">${formatAccounting(entry.entry_price)}</td>
-            <td class="numeric">${formatQuantity(entry.quantity)}</td>
-            <td class="numeric ${potentialGain !== null && potentialGain >= 0 ? 'positive' : 'negative'}">${entry.target_price ? formatAccounting(entry.target_price) : '--'}</td>
-            <td class="numeric ${potentialGain !== null && potentialGain >= 0 ? 'positive' : 'negative'}">${entry.target_price_2 ? formatAccounting(entry.target_price_2) : '--'}</td>
-            <td class="numeric ${potentialLoss !== null && potentialLoss < 0 ? 'negative' : 'positive'}">${entry.stop_loss_price ? formatAccounting(entry.stop_loss_price) : '--'}</td>
-            <td class="numeric">${entry.current_price ? formatAccounting(entry.current_price) : '--'}</td>
-            <td class="numeric ${pnlClass}">${currentPnl !== null ? formatAccounting(currentPnl) : '--'}</td>
-            <td>${entry.advice_source_name || entry.advice_source_details || '--'}</td>
-            <td class="center-align actions-cell">
-                <button class="journal-execute-btn" data-id="${entry.id}" title="Execute this idea as a real BUY transaction">Execute Buy</button>
-                <button class="journal-close-btn" data-id="${entry.id}" title="Manually close this paper trade">Close Trade</button>
-                <button class="journal-edit-btn" data-id="${entry.id}">Edit</button>
-                <button class="journal-delete-btn delete-btn" data-id="${entry.id}">Delete</button>
-            </td>
-        `;
+        totalOpenPL += calculateCurrentPL(entry).currentPL;
     });
-}
-
-/**
- * Renders the rows for the closed/executed journal entries table.
- * @param {HTMLTableSectionElement} tbody The table body element to populate.
- * @param {any[]} closedEntries Array of closed/executed journal entry objects.
- * @returns {void}
- */
-function renderClosedEntriesTable(tbody, closedEntries) {
-    tbody.innerHTML = ''; // Clear existing rows
-
-    if (!closedEntries || closedEntries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10">No closed or executed journal entries found.</td></tr>';
-        return;
-    }
-
-    closedEntries.forEach(entry => {
-        const row = tbody.insertRow();
-        row.dataset.entryId = String(entry.id);
-
-        const pnlClass = entry.pnl >= 0 ? 'positive' : 'negative';
-        let statusDisplay = entry.status;
-        if (entry.status === 'EXECUTED' && entry.linked_trade_id) {
-            // Optionally make this a link to the ledger entry later
-            statusDisplay += ` (Tx #${entry.linked_trade_id})`;
+    const avgOpenPL = openEntries.length > 0 ? (totalOpenPL / openEntries.length) : 0;
+    
+    // --- Closed Ideas ---
+    const closedTrades = closedEntries.filter(e => e.status === 'CLOSED');
+    let totalClosedPL = 0;
+    let winningTrades = 0;
+    closedTrades.forEach(entry => {
+        const pnl = entry.pnl ?? 0;
+        totalClosedPL += pnl;
+        if (pnl > 0) {
+            winningTrades++;
         }
-
-
-        row.innerHTML = `
-            <td>${entry.entry_date}</td>
-            <td>${entry.exit_date || '--'}</td>
-            <td>${entry.ticker}</td>
-            <td class="numeric">${formatAccounting(entry.entry_price)}</td>
-            <td class="numeric">${entry.exit_price ? formatAccounting(entry.exit_price) : '--'}</td>
-            <td class="numeric">${formatQuantity(entry.quantity)}</td>
-            <td class="numeric ${pnlClass}">${entry.pnl !== null ? formatAccounting(entry.pnl) : '--'}</td>
-            <td>${statusDisplay}</td>
-            <td>${entry.advice_source_name || entry.advice_source_details || '--'}</td>
-            <td class="center-align actions-cell">
-                <button class="journal-edit-btn" data-id="${entry.id}">View/Edit</button>
-                 <button class="journal-delete-btn delete-btn" data-id="${entry.id}">Delete</button>
-                 </td>
-        `;
     });
-}
+    const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length) * 100 : 0;
+    const avgGainLoss = closedTrades.length > 0 ? (totalClosedPL / closedTrades.length) : 0;
 
-/**
- * Calculates and renders summary statistics for the journal page.
- * @param {any[]} openEntries Array of open journal entry objects.
- * @param {any[]} closedEntries Array of closed/executed journal entry objects.
- * @returns {void}
- */
-function renderJournalSummary(openEntries, closedEntries) {
+    // --- Update DOM ---
     const openCountEl = document.getElementById('journal-open-count');
     const openPnlEl = document.getElementById('journal-open-pnl');
     const winRateEl = document.getElementById('journal-win-rate');
     const avgGainLossEl = document.getElementById('journal-avg-gain-loss');
 
-    // Open Entries Summary
-    const validOpenPnlEntries = openEntries.filter(e => e.current_pnl !== null && e.current_pnl !== undefined);
-    const totalOpenPnl = validOpenPnlEntries.reduce((sum, entry) => sum + entry.current_pnl, 0);
-    const avgOpenPnl = validOpenPnlEntries.length > 0 ? totalOpenPnl / validOpenPnlEntries.length : 0;
-
-    if (openCountEl) openCountEl.textContent = openEntries.length.toString();
+    if (openCountEl) openCountEl.textContent = String(openEntries.length);
     if (openPnlEl) {
-        openPnlEl.textContent = formatAccounting(avgOpenPnl);
-        openPnlEl.className = avgOpenPnl >= 0 ? 'positive' : 'negative';
+        openPnlEl.textContent = formatAccounting(avgOpenPL);
+        openPnlEl.className = avgOpenPL >= 0 ? 'positive' : 'negative';
     }
-
-    // Closed Entries Summary
-    const closedForStats = closedEntries.filter(e => ['CLOSED', 'EXECUTED'].includes(e.status) && e.pnl !== null && e.pnl !== undefined);
-    const winners = closedForStats.filter(e => e.pnl > 0);
-    const losers = closedForStats.filter(e => e.pnl < 0); // Exclude break-even trades
-
-    const winRate = closedForStats.length > 0 ? (winners.length / closedForStats.length) * 100 : 0;
-    const totalGain = winners.reduce((sum, entry) => sum + entry.pnl, 0);
-    const totalLoss = losers.reduce((sum, entry) => sum + entry.pnl, 0); // Loss is negative
-    const avgGain = winners.length > 0 ? totalGain / winners.length : 0;
-    const avgLoss = losers.length > 0 ? totalLoss / losers.length : 0; // Avg loss will be negative
-
     if (winRateEl) winRateEl.textContent = `${winRate.toFixed(1)}%`;
     if (avgGainLossEl) {
-         avgGainLossEl.innerHTML = `
-            <span class="positive">${formatAccounting(avgGain)}</span> / <span class="negative">${formatAccounting(avgLoss)}</span>
-        `;
+        avgGainLossEl.textContent = formatAccounting(avgGainLoss);
+        avgGainLossEl.className = avgGainLoss >= 0 ? 'positive' : 'negative';
     }
-
 }
 
 /**
- * Main rendering function for the Journal page.
- * @param {object} journalData - Object containing arrays of journal entries.
- * @param {any[]} journalData.openEntries - Array of open journal entries.
- * @param {any[]} journalData.closedEntries - Array of closed/executed/cancelled entries.
- * @returns {void}
+ * Renders the open and closed journal tables.
+ * @param {object} journalData - An object containing openEntries and closedEntries arrays.
+ * @param {boolean} [readOnly=false] - If true, renders tables in read-only mode (no action buttons).
  */
-export function renderJournalPage(journalData) {
-    const { openEntries = [], closedEntries = [] } = journalData || {};
-
-    // Ensure elements exist
-    const openTableBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('journal-open-body'));
-    const closedTableBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('journal-closed-body'));
-    const exchangeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('journal-exchange'));
-
-    // Populate dropdowns that rely on global state
-    populateAllAdviceSourceDropdowns();
-
-    // Populate exchange dropdown (using existing state if available)
-    if (exchangeSelect && state.allExchanges) {
-        const currentVal = exchangeSelect.value;
-        exchangeSelect.innerHTML = '<option value="" disabled selected>Select Exchange</option>';
-        const sortedExchanges = [...state.allExchanges].sort((a, b) => a.name.localeCompare(b.name));
-        sortedExchanges.forEach(ex => {
-            const option = document.createElement('option');
-            option.value = ex.name;
-            option.textContent = ex.name;
-            exchangeSelect.appendChild(option);
-        });
-        exchangeSelect.value = currentVal; // Restore previous or stay at default
-    }
-
-
-    // Render Tables
+export function renderJournalPage(journalData, readOnly = false) {
+    const { openEntries, closedEntries } = journalData || { openEntries: [], closedEntries: [] };
+    
+    const openTableBody = document.querySelector('#journal-open-body');
+    const closedTableBody = document.querySelector('#journal-closed-body');
+    
+    // --- Render Open Table ---
     if (openTableBody) {
-        renderOpenEntriesTable(openTableBody, openEntries);
-    } else {
-        console.error("Could not find open journal table body.");
+        if (openEntries && openEntries.length > 0) {
+            openTableBody.innerHTML = openEntries.map(entry => createOpenTableRowHTML(entry, readOnly)).join('');
+        } else {
+            openTableBody.innerHTML = '<tr><td colspan="11">No open journal entries found.</td></tr>';
+        }
     }
 
+    // --- Render Closed Table ---
     if (closedTableBody) {
-        renderClosedEntriesTable(closedTableBody, closedEntries);
-    } else {
-        console.error("Could not find closed journal table body.");
+        if (closedEntries && closedEntries.length > 0) {
+            closedTableBody.innerHTML = closedEntries.map(entry => createClosedTableRowHTML(entry, readOnly)).join('');
+        } else {
+            closedTableBody.innerHTML = '<tr><td colspan="10">No closed or executed entries found.</td></tr>';
+        }
     }
-
-    // Render Summary
-    renderJournalSummary(openEntries, closedEntries);
-
-    // Set default entry date
-    const entryDateInput = /** @type {HTMLInputElement} */ (document.getElementById('journal-entry-date'));
-    if (entryDateInput && !entryDateInput.value) {
-       entryDateInput.value = getCurrentESTDateString();
+    
+    // --- Update Summary (only if summary elements exist, e.g., on the full Journal page) ---
+    if (document.getElementById('journal-open-count')) {
+        updateJournalSummary(openEntries, closedEntries);
     }
-
 }

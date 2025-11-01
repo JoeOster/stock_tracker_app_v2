@@ -1,27 +1,36 @@
 <#
 .SYNOPSIS
-    Creates the empty scaffolding files for the Phase 4 (Watchlist Hub) refactor.
+    Creates the empty scaffolding files for the Phase 1 (Manage Position Details) refactor.
 
 .DESCRIPTION
-    This script reads a list of new files, ensures their parent directories exist,
+    This script reads a list of new files required for Phase 1, ensures their parent directories exist,
     and then creates the empty files. It is safe to run multiple times, as it
     will not overwrite existing files or folders.
 
 .NOTES
-    Run this script from the project's root directory (e.g., by running '.\create-phase4-scaffolding.ps1').
+    Run this script from the project's root directory.
 #>
 
-Write-Host "Starting Phase 4 scaffolding..."
-Write-Host "--------------------------------"
+Write-Host "Starting Phase 1 (Manage Position) scaffolding..."
+Write-Host "------------------------------------------------"
 
 # List of all new files to be created relative to the script location
+# Based on Implementation Guide Task 1.1, 1.2, 1.3
 $filesToCreate = @(
-    "public/templates/_modal_add_paper_trade.html",
-    "public/event-handlers/_modal_add_paper_trade.js",
-    "public/templates/_watchlist.html",
-    "public/event-handlers/_watchlist.js",
-    "public/ui/renderers/_watchlist_real.js",
-    "public/css/components/_watchlist.css"
+    # Task 1.1: New Modal Template
+    "public/templates/_modal_manage_position.html",
+
+    # Task 1.1: New Modal CSS
+    "public/css/components/_modal_manage_position.css",
+
+    # Task 1.1: New Modal Frontend Handler
+    "public/event-handlers/_modal_manage_position.js",
+
+    # Task 1.1: New Modal Frontend UI Test File (as requested)
+    "public/event-handlers/_modal_manage_position.ui.test.js",
+
+    # Task 1.2: New Backend API Test File (as requested)
+    "tests/batch_sales.api.test.js"
 )
 
 foreach ($file in $filesToCreate) {
@@ -47,5 +56,5 @@ foreach ($file in $filesToCreate) {
     }
 }
 
-Write-Host "--------------------------------"
-Write-Host "Scaffolding creation complete."
+Write-Host "------------------------------------------------"
+Write-Host "Phase 1 scaffolding creation complete."

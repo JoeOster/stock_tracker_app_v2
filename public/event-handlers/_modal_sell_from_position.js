@@ -12,8 +12,34 @@ import { refreshLedger } from '../api/transactions-api.js';
 // import { switchView } from './_navigation.js'; // No longer needed
 import { loadDashboardPage } from './_dashboard_loader.js'; // <-- ADDED
 import { loadDailyReportPage } from './_dailyReport.js'; // <-- ADDED
+// --- MODIFIED: Import the correct function name ---
 import { openAndPopulateManageModal } from './_dashboard_init.js';
 // --- END MODIFIED IMPORTS ---
+// --- ADDED: Import new dependencies ---
+import { getCurrentESTDateString } from '../ui/datetime.js';
+// --- END ADDED ---
+
+// --- ADDED: Extracted populate logic ---
+/**
+ * Populates the "Sell From Position" modal with lot data.
+ * @param {object} lot - The BUY lot object to sell from.
+ */
+export function populateSellFromPositionModal(lot) {
+    const sellModal = document.getElementById('sell-from-position-modal');
+    if (!sellModal) return;
+
+    (/** @type {HTMLInputElement} */(document.getElementById('sell-parent-buy-id'))).value = String(lot.id);
+    (/** @type {HTMLInputElement} */(document.getElementById('sell-account-holder-id'))).value = String(lot.account_holder_id);
+    (/** @type {HTMLElement} */(document.getElementById('sell-ticker-display'))).textContent = lot.ticker;
+    (/** @type {HTMLElement} */(document.getElementById('sell-exchange-display'))).textContent = lot.exchange;
+    const sellQuantityInput = /** @type {HTMLInputElement} */ (document.getElementById('sell-quantity'));
+    sellQuantityInput.value = String(lot.quantity_remaining); // Use remaining quantity
+    sellQuantityInput.max = String(lot.quantity_remaining);
+    (/** @type {HTMLInputElement} */(document.getElementById('sell-date'))).value = getCurrentESTDateString();
+
+    sellModal.classList.add('visible');
+}
+// --- END ADDED ---
 
 /**
  * Initializes the event listener for the Sell From Position modal form submission.

@@ -1,179 +1,193 @@
-﻿// public/event-handlers/_research_sources_actions_notes.js
+﻿// /public/event-handlers/_research_sources_actions_notes.js
 /**
- * @file Handles Note and Delete actions triggered from within the Research Source details view.
+ * @file Contains action handlers for the Notes and Documents panel in the Source Details modal.
  * @module event-handlers/_research_sources_actions_notes
  */
 
-import { state } from '../state.js';
-import { showToast, showConfirmationModal } from '../ui/helpers.js';
-import { addSourceNote, deleteSourceNote, updateSourceNote } from '../api/sources-api.js';
+import { addSourceNote, updateSourceNote, deleteSourceNote } from '../api/sources-api.js';
 import { deleteDocument } from '../api/documents-api.js';
-import { deleteWatchlistItem } from '../api/watchlist-api.js';
-// --- ADDED IMPORT ---
 import { deleteJournalEntry } from '../api/journal-api.js';
-// --- END ADD ---
-
+// --- MODIFIED: Import the correct function name ---
+import { closeWatchlistIdea } from '../api/watchlist-api.js';
+// --- END MODIFIED ---
+import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 /**
- * Handles submission of the "Add Note" form.
- * @param {Event} e - The form submission event.
+ * Handles the submission of the "Add New Note" form.
+ * @param {Event} e - The submit event.
  * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
 export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
-    // ... (This function remains unchanged) ...
     e.preventDefault();
-    const form = /** @type {HTMLFormElement} */ (e.target.closest('form'));
+    // --- MODIFIED: Cast e.target to HTMLFormElement ---
+    const form = /** @type {HTMLFormElement} */ (e.target);
     if (!form) return;
-    const addButton = /** @type {HTMLButtonElement | null} */ (form.querySelector('.add-source-note-button'));
-    if (!addButton) return;
+    // --- END MODIFICATION ---
 
-    const holderId = state.selectedAccountHolderId;
-    const formSourceId = form.dataset.sourceId;
-    const contentTextarea = /** @type {HTMLTextAreaElement | null} */ (form.querySelector('.add-note-content-textarea'));
-    const noteContent = contentTextarea?.value.trim();
+    const sourceId = form.dataset.sourceId;
+    const textarea = /** @type {HTMLTextAreaElement} */ (form.querySelector('.add-note-content-textarea'));
+    const content = textarea.value.trim();
+    
+    if (!sourceId || !content) {
+        return showToast('Note content cannot be empty.', 'error');
+    }
 
-    if (!noteContent) { return showToast('Note content cannot be empty.', 'error'); }
-    if (!formSourceId || holderId === 'all') { return showToast('Context missing or "All Accounts" selected.', 'error'); }
-
+    const addButton = /** @type {HTMLButtonElement} */ (form.querySelector('.add-source-note-button'));
     addButton.disabled = true;
+
     try {
-        await addSourceNote(formSourceId, holderId, noteContent);
-        showToast('Note added.', 'success');
-        if (contentTextarea) contentTextarea.value = ''; // Clear textarea
+        await addSourceNote(sourceId, content);
+        showToast('Note added!', 'success');
+        textarea.value = ''; // Clear textarea
         await refreshDetailsCallback();
     } catch (error) {
-         // Assert error as Error type for message access
-         const err = /** @type {Error} */ (error);
-        showToast(`Error adding note: ${err.message}`, 'error');
+        console.error('Failed to add source note:', error);
+        // @ts-ignore
+        showToast(`Error: ${error.message}`, 'error');
     } finally {
         addButton.disabled = false;
     }
 }
 
 /**
- * Handles clicks on delete buttons within the source details modal content.
- * @param {HTMLElement} target - The clicked element.
- *... 
+ * Handles clicks on "Edit", "Save", or "Cancel" buttons for an individual note.
+ * @param {HTMLElement} target - The button element that was clicked.
+ * @param {string} modalSourceId - The ID of the source (from modal dataset).
+ * @param {string} modalHolderId - The ID of the holder (from modal dataset).
  * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
-export async function handleDeleteClick(target, sourceId, holderId, refreshDetailsCallback) {
-    // --- UPDATED: Added delete-journal-btn ---
-    const closeWatchlistBtn = /** @type {HTMLButtonElement | null} */ (target.closest('.delete-watchlist-item-button'));
-    const deleteDocumentBtn = /** @type {HTMLButtonElement | null} */ (target.closest('.delete-document-button'));
-    const deleteNoteBtn = /** @type {HTMLButtonElement | null} */ (target.closest('.delete-source-note-button'));
-    const deleteJournalBtn = /** @type {HTMLButtonElement | null} */ (target.closest('.delete-journal-btn')); // <-- ADDED
-    // --- END UPDATED ---
+export async function handleNoteEditActions(target, modalSourceId, modalHolderId, refreshDetailsCallback) {
+    // --- MODIFIED: Cast target to HTMLElement before using .closest ---
+    const noteLi = /** @type {HTMLLIElement} */ ((/** @type {HTMLElement} */(target)).closest('li[data-note-id]'));
+    if (!noteLi) return;
 
-    if (!closeWatchlistBtn && !deleteDocumentBtn && !deleteNoteBtn && !deleteJournalBtn) return; // Not a delete button we handle here
+    const noteId = noteLi.dataset.noteId;
+    const displayDiv = /** @type {HTMLElement} */ (noteLi.querySelector('.note-content-display'));
+    const editDiv = /** @type {HTMLElement} */ (noteLi.querySelector('.note-content-edit'));
+    const editTextArea = /** @type {HTMLTextAreaElement} */ (editDiv?.querySelector('.edit-note-textarea'));
 
-    let confirmTitle = 'Confirm Deletion';
-    let confirmBody = 'Are you sure? This cannot be undone.';
-    /** @type {(() => Promise<any>) | null} */
-    let deleteAction = null;
-    let successMessage = 'Item deleted.'; // Default success message
-
-    if (closeWatchlistBtn) {
-        const itemId = closeWatchlistBtn.dataset.itemId;
-        if (!itemId) return;
-        confirmTitle = 'Close Trade Idea?';
-        confirmBody = 'This will archive the idea and remove it from this list. It will not delete any real or paper trades.';
-        deleteAction = async () => deleteWatchlistItem(itemId); 
-        successMessage = 'Trade Idea closed/archived.';
-    } else if (deleteDocumentBtn) {
-        const docId = deleteDocumentBtn.dataset.docId;
-        if (!docId) return;
-        confirmTitle = 'Delete Document Link?';
-        deleteAction = async () => deleteDocument(docId);
-        successMessage = 'Document link deleted.';
-    } else if (deleteNoteBtn) {
-        const noteLi = target.closest('li[data-note-id]');
-        const noteId = noteLi?.dataset.noteId;
-        if (!noteId) return;
-        confirmTitle = 'Delete Note?';
-        deleteAction = async () => deleteSourceNote(sourceId, noteId, holderId);
-        successMessage = 'Note deleted.';
-    // --- ADDED: Handle Journal/Technique deletion ---
-    } else if (deleteJournalBtn) {
-        const journalId = deleteJournalBtn.dataset.journalId;
-        if (!journalId) return;
-        confirmTitle = 'Delete Technique?';
-        confirmBody = 'Are you sure? This will delete the paper trade technique. It cannot be undone.';
-        deleteAction = async () => deleteJournalEntry(journalId);
-        successMessage = 'Technique deleted.';
-    // --- END ADDED ---
+    if (!noteId || !displayDiv || !editDiv || !editTextArea) {
+        return console.warn("Could not find note edit elements.", noteLi);
     }
 
-    if (deleteAction) {
-        showConfirmationModal(confirmTitle, confirmBody, async () => {
-            try {
-                if (deleteAction) { // Re-check deleteAction inside async callback
-                    await deleteAction(); // Execute the API call
-                    showToast(successMessage, 'success'); // Use specific success message
-                    await refreshDetailsCallback(); // Refresh modal view after successful deletion
-                }
-            } catch (error) {
-                 const err = /** @type {Error} */ (error);
-                showToast(`Action failed: ${err.message}`, 'error');
-            }
-        });
+    // --- Handle "Edit" button click ---
+    if (target.matches('.edit-source-note-button')) {
+        displayDiv.style.display = 'none';
+        editDiv.style.display = 'block';
+        editTextArea.focus();
+        // Ensure text area has the latest content (in case of stale HTML)
+        editTextArea.value = displayDiv.textContent || '';
+    }
+
+    // --- Handle "Cancel" button click ---
+    else if (target.matches('.cancel-edit-note-button')) {
+        displayDiv.style.display = 'block';
+        editDiv.style.display = 'none';
+        // No save, just revert UI
+    }
+
+    // --- Handle "Save" button click ---
+    else if (target.matches('.save-edit-note-button')) {
+        const newContent = editTextArea.value.trim();
+        if (!newContent) {
+            return showToast('Note content cannot be empty.', 'error');
+        }
+
+        (/** @type {HTMLButtonElement} */ (target)).disabled = true;
+        try {
+            await updateSourceNote(noteId, newContent);
+            showToast('Note updated!', 'success');
+            // Update display div immediately
+            displayDiv.innerHTML = newContent.replace(/\n/g, '<br>');
+            displayDiv.style.display = 'block';
+            editDiv.style.display = 'none';
+            // We can do a full refresh, or just update the timestamps manually
+            await refreshDetailsCallback(); // Easiest way to ensure all data is fresh
+        } catch (error) {
+            console.error('Failed to update source note:', error);
+            // @ts-ignore
+            showToast(`Error: ${error.message}`, 'error');
+        } finally {
+            (/** @type {HTMLButtonElement} */ (target)).disabled = false;
+        }
     }
 }
 
+
 /**
- * Handles clicks related to editing, saving, or canceling note edits within the modal.
- * @param {HTMLElement} target - The clicked element.
- *...
+ * Handles clicks on various "Delete" buttons within the source details modal.
+ * @param {HTMLElement} target - The delete button element that was clicked.
+ * @param {string} modalSourceId - The ID of the source (from modal dataset).
+ * @param {string} modalHolderId - The ID of the holder (from modal dataset).
  * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {Promise<void>}
  */
-export async function handleNoteEditActions(target, sourceId, holderId, refreshDetailsCallback) {
-    // ... (This function remains unchanged) ...
-    const noteLi = /** @type {HTMLElement | null} */ (target.closest('li[data-note-id]'));
-    if (!noteLi) return; // Click wasn't within a note item
+export async function handleDeleteClick(target, modalSourceId, modalHolderId, refreshDetailsCallback) {
+    // --- MODIFIED: Cast target to HTMLElement before using .dataset ---
+    const itemId = (/** @type {HTMLElement} */(target)).dataset.id || (/** @type {HTMLElement} */(target)).dataset.docId || (/** @type {HTMLElement} */(target)).dataset.noteId || (/** @type {HTMLElement} */(target)).dataset.itemId;
+    if (!itemId) return;
 
-    const noteId = noteLi.dataset.noteId;
-    const displayDiv = /** @type {HTMLElement | null} */ (noteLi.querySelector('.note-content-display'));
-    const editDiv = /** @type {HTMLElement | null} */ (noteLi.querySelector('.note-content-edit'));
-    const editBtn = /** @type {HTMLButtonElement | null} */ (noteLi.querySelector('.edit-source-note-button'));
-    const saveBtn = /** @type {HTMLButtonElement | null} */ (noteLi.querySelector('.save-edit-note-button'));
-    const cancelBtn = /** @type {HTMLButtonElement | null} */ (noteLi.querySelector('.cancel-edit-note-button'));
-    const textarea = /** @type {HTMLTextAreaElement | null} */ (editDiv?.querySelector('.edit-note-textarea'));
-    const noteActions = /** @type {HTMLElement | null} */ (noteLi.querySelector('.note-actions'));
-
-    if (!noteId || !displayDiv || !editDiv || !editBtn || !saveBtn || !cancelBtn || !textarea || !noteActions) {
-        console.warn("[Research Sources Actions] Missing elements for note edit/save/cancel on note ID:", noteId);
-        return;
+    // --- Case 1: Delete Watchlist "Trade Idea" ---
+    if (target.matches('.delete-watchlist-item-button')) {
+        const ticker = target.closest('tr')?.querySelector('td:first-child')?.textContent || 'this idea';
+        showConfirmationModal(`Archive ${ticker} Idea?`, 'Are you sure you want to close this trade idea? This will hide it from the list.', async () => {
+            try {
+                // --- MODIFIED: Use the correct function name ---
+                await closeWatchlistIdea(itemId);
+                // --- END MODIFIED ---
+                showToast(`Trade idea for ${ticker} archived.`, 'success');
+                await refreshDetailsCallback(); // Refresh the modal
+            } catch (error) {
+                // @ts-ignore
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        });
     }
 
-    if (target === editBtn) {
-        displayDiv.style.display = 'none';
-        noteActions.style.display = 'none';
-        editDiv.style.display = 'block';
-        textarea.focus();
-        textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
-    } else if (target === cancelBtn) {
-        editDiv.style.display = 'none';
-        displayDiv.style.display = 'block';
-        noteActions.style.display = '';
-        textarea.value = displayDiv.innerHTML.replace(/<br\s*\/?>/gi, '\n');
-    } else if (target === saveBtn) {
-        const newContent = textarea.value.trim();
-        if (!newContent) { return showToast('Note content cannot be empty.', 'error'); }
-        if (!sourceId || holderId === 'all') { return showToast('Context missing or "All Accounts" selected.', 'error'); }
+    // --- Case 2: Delete "Technique" (Journal Entry) ---
+    else if (target.matches('.delete-journal-btn')) {
+        const ticker = target.closest('tr')?.querySelector('td:nth-child(3)')?.textContent || 'this technique';
+        showConfirmationModal(`Archive ${ticker} Technique?`, 'Are you sure you want to archive this technique? This will close it.', async () => {
+            try {
+                // We don't "delete" journal entries, we set their status to "CANCELLED" or "CLOSED"
+                // For this context, "CANCELLED" is safer if it's not "EXECUTED"
+                await deleteJournalEntry(itemId); // This API route should handle it gracefully
+                showToast(`Technique archived.`, 'success');
+                await refreshDetailsCallback();
+            } catch (error) {
+                // @ts-ignore
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        });
+    }
 
-        saveBtn.disabled = true;
-        cancelBtn.disabled = true;
-        try {
-            await updateSourceNote(sourceId, noteId, holderId, newContent);
-            showToast('Note updated.', 'success');
-            await refreshDetailsCallback(); 
-        } catch (error) {
-             const err = /** @type {Error} */ (error);
-            showToast(`Error updating note: ${err.message}`, 'error');
-            saveBtn.disabled = false;
-            cancelBtn.disabled = false;
-        }
+    // --- Case 3: Delete Linked Document ---
+    else if (target.matches('.delete-document-button')) {
+        showConfirmationModal('Delete Document Link?', 'Are you sure? This only removes the link, not the document itself.', async () => {
+            try {
+                await deleteDocument(itemId);
+                showToast('Document link removed.', 'success');
+                await refreshDetailsCallback();
+            } catch (error) {
+                // @ts-ignore
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        });
+    }
+
+    // --- Case 4: Delete Source Note ---
+    else if (target.matches('.delete-source-note-button')) {
+        showConfirmationModal('Delete Note?', 'Are you sure you want to permanently delete this note?', async () => {
+            try {
+                await deleteSourceNote(itemId);
+                showToast('Note deleted.', 'success');
+                await refreshDetailsCallback();
+            } catch (error) {
+                // @ts-ignore
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        });
     }
 }

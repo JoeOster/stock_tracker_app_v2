@@ -8,6 +8,9 @@
 import { initializeSelectiveSellModalHandler } from './_modal_selective_sell.js';
 import { initializeSellFromPositionModalHandler } from './_modal_sell_from_position.js';
 import { initializeEditTransactionModalHandler } from './_modal_edit_transaction.js';
+import { initializeManagePositionModalHandler } from './_modal_manage_position.js';
+// --- ADDED: Import the new paper trade modal handler ---
+import { initializeAddPaperTradeModalHandler } from './_modal_add_paper_trade.js';
 
 /**
  * --- MODIFIED: Helper function to save settings on modal close ---
@@ -61,6 +64,7 @@ export function initializeModalHandlers() {
     document.querySelectorAll('.modal .close-button').forEach(btn =>
         // --- MODIFIED: Made the event listener async ---
         btn.addEventListener('click', async (e) => {
+            // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
             const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
             if (modal) {
                 
@@ -68,7 +72,8 @@ export function initializeModalHandlers() {
                     // --- MODIFIED: Await the save function ---
                     await saveSettingsOnClose();
                 }
-                clearSourceDetailsModal(modal);
+                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
+                clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
                 // --- END MODIFICATION ---
                 
                 modal.classList.remove('visible'); // <-- This will now run
@@ -79,10 +84,12 @@ export function initializeModalHandlers() {
     // Bottom 'Close' or 'Cancel' buttons (often have .cancel-btn)
      document.querySelectorAll('.modal .cancel-btn, .modal .close-modal-btn').forEach(btn => // Added .close-modal-btn
         btn.addEventListener('click', e => {
+             // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
              const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
              if (modal) {
                 // Do NOT save settings if 'Cancel' is clicked in the settings modal
-                clearSourceDetailsModal(modal);
+                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
+                clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
                 modal.classList.remove('visible');
              }
         })
@@ -99,7 +106,8 @@ export function initializeModalHandlers() {
                     // --- MODIFIED: Await the save function ---
                     await saveSettingsOnClose();
                 }
-                clearSourceDetailsModal(modal);
+                // --- MODIFIED: Replaced 'as' syntax with JSDoc cast ---
+                clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
                 // --- END MODIFICATION ---
                 
                 modal.classList.remove('visible');
@@ -119,5 +127,15 @@ export function initializeModalHandlers() {
     try {
         initializeEditTransactionModalHandler();
     } catch (e) { console.error("Error initializing EditTransactionModalHandler:", e); }
+
+    try {
+        initializeManagePositionModalHandler();
+    } catch (e) { console.error("Error initializing ManagePositionModalHandler:", e); }
+
+    // --- ADDED: Initialize the new paper trade modal handler ---
+    try {
+        initializeAddPaperTradeModalHandler();
+    } catch (e) { console.error("Error initializing AddPaperTradeModalHandler:", e); }
+    // --- END ADDED ---
 
 } // End of initializeModalHandlers function

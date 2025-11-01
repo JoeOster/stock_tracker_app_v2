@@ -17,9 +17,12 @@
 @import url('./css/components/_orders.css');
 @import url('./css/components/_daily-report.css');
 @import url('./css/components/_importers.css');
-@import url('./css/components/_journal.css');
 @import url('./css/components/_dashboard.css');
 @import url('./css/components/_research.css');
+@import url('./css/components/_modal_manage_position.css');
+/* --- ADDED: New watchlist styles --- */
+@import url('./css/components/_watchlist.css');
 
 /* --- UTILITIES --- */
 @import url('./css/base/_utilities.css');
+

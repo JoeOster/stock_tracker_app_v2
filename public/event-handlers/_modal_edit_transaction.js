@@ -11,7 +11,72 @@ import { handleResponse } from '../api/api-helpers.js';
 import { refreshLedger } from '../api/transactions-api.js';
 // END UPDATED IMPORTS
 import { switchView } from './_navigation.js';
+// --- MODIFIED: Import the correct function name ---
 import { openAndPopulateManageModal } from './_dashboard_init.js';
+// --- END MODIFIED ---
+
+// --- ADDED: Extracted populate logic into its own exported function ---
+/**
+ * Populates the Edit Transaction modal with existing data.
+ * @param {object} tx - The transaction object to edit.
+ * @param {boolean} [limitsOnly=false] - If true, only show limit fields.
+ */
+export function populateEditModal(tx, limitsOnly = false) {
+    const editModal = document.getElementById('edit-modal');
+    if (!tx || !editModal) {
+        console.error("populateEditModal: Transaction data or modal element not found.");
+        showToast("Error: Could not load edit modal.", "error");
+        return;
+    }
+
+    console.log("Populating edit modal for tx:", tx, "Limits Only:", limitsOnly);
+
+    // --- Populate Modal Fields ---
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-id'))).value = String(tx.id);
+    (/** @type {HTMLSelectElement} */(document.getElementById('edit-account-holder'))).value = String(tx.account_holder_id);
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-date'))).value = tx.transaction_date;
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-ticker'))).value = tx.ticker;
+    (/** @type {HTMLSelectElement} */(document.getElementById('edit-exchange'))).value = tx.exchange;
+    (/** @type {HTMLSelectElement} */(document.getElementById('edit-type'))).value = tx.transaction_type;
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-quantity'))).value = String(tx.quantity);
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-price'))).value = String(tx.price);
+    // Handle potential null values for limits/expirations
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-up'))).value = String(tx.limit_price_up ?? '');
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-up-expiration'))).value = tx.limit_up_expiration ?? '';
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-price-down'))).value = String(tx.limit_price_down ?? '');
+    (/** @type {HTMLInputElement} */(document.getElementById('edit-limit-down-expiration'))).value = tx.limit_down_expiration ?? '';
+
+    // --- Show/Hide Sections & Set Title ---
+    const coreFields = /** @type {HTMLElement | null} */ (document.getElementById('edit-core-fields'));
+    const limitFields = /** @type {HTMLElement | null} */ (document.getElementById('edit-limit-fields'));
+    const modalTitle = document.getElementById('edit-modal-title');
+    
+    if (limitsOnly) {
+        if (modalTitle) modalTitle.textContent = `Set Limits for ${tx.ticker}`;
+        if (coreFields) coreFields.style.display = 'none';
+        if (limitFields) limitFields.style.display = 'block';
+    } else {
+        if (modalTitle) modalTitle.textContent = 'Edit Transaction';
+        if (coreFields) coreFields.style.display = 'block';
+        if (limitFields) limitFields.style.display = 'none';
+    }
+
+    // --- Ensure fields are editable (might have been disabled by Dashboard modal use) ---
+    const editTickerInput = /** @type {HTMLInputElement | null} */(document.getElementById('edit-ticker'));
+    const editTypeSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('edit-type'));
+    
+    // Logic from Daily Report / Dashboard init:
+    if (tx.transaction_type === 'BUY') {
+        if (editTickerInput) editTickerInput.readOnly = true;
+        if (editTypeSelect) editTypeSelect.disabled = true;
+    } else {
+        if (editTickerInput) editTickerInput.readOnly = false;
+        if (editTypeSelect) editTypeSelect.disabled = false;
+    }
+
+    editModal.classList.add('visible'); // Show the modal
+}
+// --- END ADDED ---
 
 /**
  * Initializes the event listeners for the Edit Transaction modal form.

@@ -1,79 +1,100 @@
 ﻿// /public/api/watchlist-api.js
 /**
- * @file API calls related to the watchlist (Trade Ideas).
+ * @file API calls related to the 'Trade Idea' watchlist.
  * @module api/watchlist-api
  */
-
 import { handleResponse } from './api-helpers.js';
+import { showToast } from '../ui/helpers.js';
 
 /**
- * @typedef {object} WatchlistPostBody
- * @property {string|number} account_holder_id
- * @property {string} ticker
- * @property {string|number|null} [advice_source_id]
- * @property {number|null} [rec_entry_low]
- * @property {number|null} [rec_entry_high]
- * @property {number|null} [rec_tp1]
- * @property {number|null} [rec_tp2]
- * @property {number|null} [rec_stop_loss]
- * @property {string|number|null} [journal_entry_id] - New field
- */
-
-/**
- * Adds a ticker to the watchlist, optionally linking it to an advice source and guidelines.
+ * Fetches all 'Trade Idea' watchlist items for a specific holder.
  * @async
- * @param {string|number} accountHolderId - The account holder ID.
- * @param {string} ticker - The ticker symbol to add.
- * @param {string|number|null} [adviceSourceId=null] - Optional ID of the advice source to link.
- * @param {number|null} [recEntryLow=null] - Optional recommended entry price low.
- * @param {number|null} [recEntryHigh=null] - Optional recommended entry price high.
- * @param {number|null} [recTp1=null] - Optional recommended take profit 1.
- * @param {number|null} [recTp2=null] - Optional recommended take profit 2.
- * @param {number|null} [recStopLoss=null] - Optional recommended stop loss.
- * @param {string|number|null} [journalEntryId=null] - Optional ID of the journal entry to link.
- * @returns {Promise<any>} The response from the server.
+ * @param {string|number} holderId - The account holder's ID.
+ * @returns {Promise<any[]>} A promise that resolves to an array of watchlist items.
  */
-export async function addWatchlistItem(
-    accountHolderId,
-    ticker,
-    adviceSourceId = null,
-    recEntryLow = null,
-    recEntryHigh = null,
-    recTp1 = null,
-    recTp2 = null,
-    recStopLoss = null,
-    journalEntryId = null // --- FIX: Added 9th argument ---
-) {
-    /** @type {WatchlistPostBody} */
-    const body = {
-        account_holder_id: accountHolderId,
-        ticker: ticker,
-        advice_source_id: adviceSourceId,
-        journal_entry_id: journalEntryId, // --- FIX: Added field to body ---
-        rec_entry_low: recEntryLow,
-        rec_entry_high: recEntryHigh,
-        rec_tp1: recTp1,
-        rec_tp2: recTp2,
-        rec_stop_loss: recStopLoss
-    };
+export async function fetchWatchlistIdeas(holderId) {
+    if (!holderId || holderId === 'all') {
+        console.warn("[API] fetchWatchlistIdeas requires a specific holderId.");
+        return [];
+    }
+    const response = await fetch(`/api/watchlist/ideas/${holderId}`);
+    return handleResponse(response);
+}
 
-    const response = await fetch('/api/watchlist', {
+/**
+ * Adds a new 'Trade Idea' to the watchlist.
+ * @async
+ * @param {object} ideaData - The data for the new trade idea.
+ * @returns {Promise<any>} A promise that resolves to the server's response.
+ */
+export async function addWatchlistIdea(ideaData) {
+    const response = await fetch('/api/watchlist/ideas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(ideaData)
     });
     return handleResponse(response);
 }
 
 /**
- * Deletes (archives) a watchlist item by its ID.
+ * Closes (archives) a 'Trade Idea' watchlist item by its ID.
  * @async
- * @param {string|number} itemId - The ID of the watchlist item to delete.
- * @returns {Promise<any>} The response from the server.
+ * @param {string|number} itemId - The ID of the watchlist item.
+ * @returns {Promise<any>} A promise that resolves to the server's response.
  */
-export async function deleteWatchlistItem(itemId) {
-    const response = await fetch(`/api/watchlist/${itemId}`, {
+export async function closeWatchlistIdea(itemId) {
+    const response = await fetch(`/api/watchlist/ideas/${itemId}/close`, {
+        method: 'PATCH'
+    });
+    return handleResponse(response);
+}
+
+// --- ADDED: New functions for simple 'WATCH' type tickers ---
+
+/**
+ * Fetches all simple 'WATCH' tickers for a specific holder.
+ * @async
+ * @param {string|number} holderId - The account holder's ID.
+ * @returns {Promise<any[]>} A promise that resolves to an array of {id, ticker} objects.
+ */
+export async function fetchSimpleWatchlist(holderId) {
+    if (!holderId || holderId === 'all') {
+        console.warn("[API] fetchSimpleWatchlist requires a specific holderId.");
+        return [];
+    }
+    const response = await fetch(`/api/watchlist/simple/${holderId}`);
+    return handleResponse(response);
+}
+
+/**
+ * Adds a new 'WATCH' ticker to the simple watchlist.
+ * @async
+ * @param {string} ticker - The ticker symbol to add.
+ * @param {string|number} holderId - The account holder's ID.
+ * @returns {Promise<any>} A promise that resolves to the server's response.
+ */
+export async function addSimpleWatchedTicker(ticker, holderId) {
+    if (!ticker || !holderId || holderId === 'all') {
+        throw new Error("Ticker and a specific Account Holder ID are required.");
+    }
+    const response = await fetch('/api/watchlist/simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: ticker.toUpperCase(), account_holder_id: holderId })
+    });
+    return handleResponse(response);
+}
+
+/**
+ * Deletes a 'WATCH' ticker from the simple watchlist by its ID.
+ * @async
+ * @param {string|number} itemId - The ID of the watchlist item.
+ * @returns {Promise<any>} A promise that resolves to the server's response.
+ */
+export async function deleteSimpleWatchedTicker(itemId) {
+    const response = await fetch(`/api/watchlist/simple/${itemId}`, {
         method: 'DELETE'
     });
     return handleResponse(response);
 }
+// --- END ADDED ---

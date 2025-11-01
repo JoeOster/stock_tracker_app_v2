@@ -4,6 +4,7 @@
  * @module renderers/_tabs
  */
 import { getTradingDays, getActivePersistentDates } from '../datetime.js';
+import { state } from '../../state.js'; // --- ADDED: Import state ---
 
 /**
  * @typedef {object} TabInfo
@@ -17,13 +18,16 @@ import { getTradingDays, getActivePersistentDates } from '../datetime.js';
  */
 export const staticTabs = [
     { viewType: 'dashboard', textContent: 'Dashboard' },
-    { viewType: 'research', textContent: 'Research' }, // <-- Changed from Journal
+    { viewType: 'sources', textContent: 'Sources' },
+    { viewType: 'watchlist', textContent: 'Watchlist' },
+    // --- REMOVED: { viewType: 'journal', textContent: 'Journal' }, ---
     { viewType: 'ledger', textContent: 'Ledger' },
     { viewType: 'orders', textContent: 'Orders' },
     { viewType: 'alerts', textContent: 'Alerts' },
     { viewType: 'imports', textContent: 'Imports' },
     { viewType: 'charts', textContent: 'Charts' },
 ];
+// --- END MODIFICATION ---
 
 /**
  * Sets the 'active' class on the currently selected tab.
@@ -63,8 +67,10 @@ export function renderTabs(currentView) {
     tabsContainer.innerHTML = ''; // Clear existing tabs
 
     // --- Dynamic Date Tabs ---
-    const tradingDays = getTradingDays();
+    // --- MODIFIED: Use state.settings ---
+    const tradingDays = getTradingDays(state.settings.numberOfDateTabs || 1); 
     const activePersistentDates = getActivePersistentDates();
+    // --- END MODIFIED ---
     const allDates = [...new Set([...tradingDays, ...activePersistentDates])].sort();
 
     allDates.forEach(day => {

@@ -79,3 +79,28 @@ export function formatPercent(number) {
     
     return `${sign}${percent.toFixed(2)}%`;
 }
+
+// --- ADDED: Missing formatDate function ---
+/**
+ * Formats a 'YYYY-MM-DD' date string to 'MM/DD/YYYY'.
+ * @param {string | null | undefined} dateString - The date string in 'YYYY-MM-DD' format.
+ * @returns {string} The formatted date string or '--' if invalid.
+ */
+export function formatDate(dateString) {
+    if (!dateString) return '--';
+    try {
+        // Split the date to avoid timezone issues with new Date() parsing
+        const [year, month, day] = dateString.split('-');
+        // Create date in UTC to ensure it's not off by one day
+        const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit', 
+            timeZone: 'UTC' // Specify UTC to match the input
+        });
+    } catch (e) {
+        return dateString; // Fallback to the original string if formatting fails
+    }
+}
+// --- END ADDED ---

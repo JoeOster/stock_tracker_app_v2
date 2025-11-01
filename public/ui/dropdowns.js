@@ -1,54 +1,58 @@
-// public/ui/dropdowns.js
+// /public/ui/dropdowns.js
 /**
- * @file Manages populating various dropdowns across the UI.
+ * @file Manages population of dropdowns across the application.
  * @module ui/dropdowns
  */
 
 import { state } from '../state.js';
 
 /**
- * Populates all <select> elements with class 'advice-source-select'
- * with the sources from state.allAdviceSources.
- * @returns {void}
+ * Populates a single <select> element with the current list of advice sources.
+ * @param {HTMLSelectElement} selectElement - The <select> element to populate.
+ * @param {string} [selectedId] - The ID to pre-select (optional).
  */
-export function populateAllAdviceSourceDropdowns() {
-    // Selects ALL elements with this class, including the one in _orders.html
-    // and the one in _journal.html (inside the research tab)
-    const selects = document.querySelectorAll('.advice-source-select');
-    if (selects.length === 0) {
-        console.log("[Dropdowns] No '.advice-source-select' elements found to populate.");
-        return;
+function populateAdviceSourceDropdown(selectElement, selectedId) {
+    if (!selectElement) return;
+
+    // Preserve the first option (e.g., "(None)")
+    const firstOption = selectElement.options[0];
+    selectElement.innerHTML = ''; // Clear existing options
+    if (firstOption) {
+        selectElement.appendChild(firstOption);
     }
 
-    console.log(`[Dropdowns] Populating ${selects.length} advice source dropdown(s).`);
-
-    const sortedSources = Array.isArray(state.allAdviceSources)
-        ? [...state.allAdviceSources].sort((a, b) => a.name.localeCompare(b.name))
-        : [];
-
-    selects.forEach(select => {
-        const currentVal = (/** @type {HTMLSelectElement} */(select)).value;
-        select.innerHTML = ''; // Clear existing
-
-        // Add default option
-        const defaultOption = document.createElement('option');
-        defaultOption.value = "";
-        defaultOption.textContent = "(None/Manual Entry)";
-        select.appendChild(defaultOption);
-
-        // Add sorted sources
-        sortedSources.forEach(source => {
+    if (state.allAdviceSources && state.allAdviceSources.length > 0) {
+        state.allAdviceSources.forEach(source => {
             const option = document.createElement('option');
             option.value = String(source.id);
-            option.textContent = `${source.name} (${source.type})`;
-            select.appendChild(option);
+            option.textContent = source.name;
+            if (selectedId && String(source.id) === String(selectedId)) {
+                option.selected = true;
+            }
+            selectElement.appendChild(option);
         });
+    }
+}
 
-        // Try to restore the previously selected value
-        if (select.querySelector(`option[value="${currentVal}"]`)) {
-            (/** @type {HTMLSelectElement} */(select)).value = currentVal;
-        } else {
-            (/** @type {HTMLSelectElement} */(select)).value = ""; // Default to 'None'
-        }
+/**
+ * Gets the name of an advice source by its ID.
+ * @param {string|number} sourceId - The ID of the source.
+ * @returns {string | null} The name of the source, or null if not found.
+ */
+export function getSourceNameFromId(sourceId) {
+    if (!sourceId || !state.allAdviceSources) return null;
+    const source = state.allAdviceSources.find(s => String(s.id) === String(sourceId));
+    return source ? source.name : null;
+}
+
+/**
+ * Finds and populates all <select> elements with the class 'advice-source-select'.
+ * @param {string} [selectedId] - The ID to pre-select (optional).
+ * @returns {void}
+ */
+export function populateAllAdviceSourceDropdowns(selectedId) {
+    const dropdowns = document.querySelectorAll('.advice-source-select');
+    dropdowns.forEach(dropdown => {
+        populateAdviceSourceDropdown(/** @type {HTMLSelectElement} */(dropdown), selectedId);
     });
 }

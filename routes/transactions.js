@@ -197,5 +197,68 @@ module.exports = (db, log, captureEodPrices) => {
         }
     });
 
+    // --- ADDED: New route for Task 1.2 ---
+    /**
+     * @route POST /api/transactions/sales/batch
+     * @group Transactions - Operations for transactions
+     * @description Fetches all SELL transactions for a *list* of parent BUY transaction IDs.
+     * @param {object} req.body.required - The request body.
+     * @param {Array<number>} req.body.lotIds - An array of parent BUY transaction IDs.
+     * @param {string|number} req.body.holderId - The account holder ID.
+     * @returns {Array<object>|object} 200 - An array of SELL objects. 400 - Missing IDs. 500 - Server error.
+     */
+    router.post('/sales/batch', async (req, res) => {
+        const { lotIds, holderId } = req.body;
+
+        if (!Array.isArray(lotIds) || lotIds.length === 0) {
+            return res.status(400).json({ message: 'An array of lotIds is required.' });
+        }
+        if (!holderId || holderId === 'all') {
+            return res.status(400).json({ message: 'A specific Account Holder ID is required.' });
+        }
+
+        try {
+            // Create a ( ? ) placeholder string for the IN clause
+            const placeholders = lotIds.map(() => '?').join(',');
+
+            // 1. Fetch all parent BUY lots to get their cost basis
+            const buysQuery = `
+                SELECT id, price as cost_basis 
+                FROM transactions 
+                WHERE id IN (${placeholders}) 
+                  AND account_holder_id = ? 
+                  AND transaction_type = 'BUY'
+            `;
+            const parentBuys = await db.all(buysQuery, [...lotIds, holderId]);
+            
+            // Create a Map for quick cost basis lookup
+            const costBasisMap = new Map(parentBuys.map(lot => [lot.id, lot.cost_basis]));
+
+            // 2. Fetch all SELL transactions linked to any of these parent BUYs
+            const salesQuery = `
+                SELECT id, transaction_date, quantity, price, parent_buy_id 
+                FROM transactions 
+                WHERE parent_buy_id IN (${placeholders}) 
+                  AND account_holder_id = ? 
+                  AND transaction_type = 'SELL' 
+                ORDER BY transaction_date ASC, id ASC
+            `;
+            const sales = await db.all(salesQuery, [...lotIds, holderId]);
+
+            // 3. Calculate P/L for each sale
+            const salesWithPL = sales.map(sale => {
+                const cost_basis = costBasisMap.get(sale.parent_buy_id);
+                const realizedPL = (cost_basis !== undefined) ? (sale.price - cost_basis) * sale.quantity : 0;
+                return { ...sale, realizedPL };
+            });
+
+            res.json(salesWithPL);
+        } catch (error) {
+            log(`[ERROR] Failed to fetch batch sales history: ${error.message}\n${error.stack}`);
+            res.status(500).json({ message: 'Server error fetching sales history.' });
+        }
+    });
+    // --- END ADDED ---
+
     return router;
 };

@@ -18,6 +18,8 @@ import { initializeHolderManagementHandlers } from './_settings_holders.js';
 import { initializeJournalSettingsHandlers } from './_journal_settings.js';
 import { initializeResearchHandlers } from './_research.js';
 import { initializeDashboardHandlers } from './_dashboard_init.js';
+import { initializeWatchlistHandlers } from './_watchlist.js';
+// --- REMOVED: Imports for _journal and _journal_tabs ---
 
 /**
  * Initializes all event handlers for the application.
@@ -32,23 +34,14 @@ export function initializeAllEventHandlers() {
         initializeModalHandlers();
         initializeSettingsModalHandlers();
         
-        // --- FIX: Move these modal initializers into the setTimeout ---
-        // These elements don't exist until the modal template is parsed.
-        // initializeExchangeManagementHandlers();
-        // initializeHolderManagementHandlers();
-        // initializeJournalSettingsHandlers(); 
-        // --- END FIX ---
-
         // Defer page-specific handlers slightly
         setTimeout(() => {
             try {
                 console.log("Initializing page-specific event handlers (Deferred)...");
                 
-                // --- FIX: Add modal initializers here ---
                 initializeExchangeManagementHandlers();
                 initializeHolderManagementHandlers();
                 initializeJournalSettingsHandlers(); // Handles Advice Sources in Settings
-                // --- END FIX ---
 
                 initializeOrdersHandlers();
                 initializeLedgerHandlers();
@@ -56,8 +49,10 @@ export function initializeAllEventHandlers() {
                 initializeDailyReportHandlers();
                 initializeImportHandlers();
                 initializeChartsHandlers();
-                initializeResearchHandlers(); // Initializes top-level research tabs
+                initializeResearchHandlers(); // This is now for "Sources"
                 initializeDashboardHandlers();
+                initializeWatchlistHandlers();
+                // --- REMOVED: initializeJournalHandlers() and initializeJournalSubTabHandlers() ---
                 console.log("All event handlers initialized.");
             } catch (deferredError) {
                  console.error("[Init - Deferred] Error occurred during deferred handler initialization:", deferredError);

@@ -24,10 +24,12 @@ import {
     handleDeleteClick,
     handleNoteEditActions
 } from './_research_sources_actions_notes.js';
+// --- MODIFIED: Added handleOpenAddTechniqueModal to the import list ---
 import { 
-    initializeAddTechniqueModalHandler, // --- ADDED ---
-    handleOpenAddTechniqueModal // --- ADDED ---
+    initializeAddTechniqueModalHandler,
+    handleOpenAddTechniqueModal
 } from './_research_sources_actions_journal.js';
+// --- END MODIFICATION ---
 
 
 /** @type {EventListener | null} */
@@ -98,6 +100,7 @@ function initializeModalActionHandlers(modalContentArea, details, refreshDetails
         // --- ADDED: Handle "Add Technique" button ---
         } else if (target.matches('#add-technique-btn')) {
             console.log("[Modal Actions] Delegating to handleOpenAddTechniqueModal (Book/Etc)");
+            // --- MODIFIED: This function will now be correctly imported ---
             await handleOpenAddTechniqueModal(target);
 
         // --- All other handlers ---

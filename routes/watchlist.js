@@ -3,154 +3,183 @@
  * @file Creates and returns an Express router for handling watchlist endpoints.
  * @module routes/watchlist
  */
-
 const express = require('express');
 const router = express.Router();
 
 /**
- * Creates and returns an Express router for the watchlist.
+ * Creates and returns an Express router for handling watchlist endpoints.
  * @param {import('sqlite').Database} db - The database connection object.
  * @param {function(string): void} log - The logging function.
  * @returns {express.Router} The configured Express router.
  */
 module.exports = (db, log) => {
-    // Base path for these routes is '/api/watchlist'
 
     /**
-     * @route GET /api/watchlist/
-     * @group Watchlist - Operations for the watchlist
-     * @description Fetches all 'OPEN' watchlist items for a specific account holder.
-     * @param {string} holder.query.required - The account holder ID.
-     * @returns {Array<object>|object} 200 - An array of watchlist items. 500 - Server error.
+     * @route GET /api/watchlist/ideas/:holderId
+     * @group Watchlist - Watchlist operations
+     * @description Fetches all 'Trade Idea' watchlist items for a holder.
+     * @param {string} holderId.path.required - Account holder ID.
+     * @returns {Array<object>|object} 200 - Array of watchlist items. 500 - Error.
      */
-    router.get('/', async (req, res) => {
+    router.get('/ideas/:holderId', async (req, res) => {
+        const { holderId } = req.params;
+        if (!holderId || holderId === 'all') {
+            return res.status(400).json({ message: "A specific Account Holder ID is required." });
+        }
         try {
-            const holderId = req.query.holder;
-            if (!holderId || holderId === 'all') {
-                log('[WARN] Attempted to fetch watchlist without a specific holder ID.');
-                return res.status(400).json({ message: "A specific account holder ID is required." });
-            }
-
+            // --- MODIFIED: Added "type" check ---
             const items = await db.all(
-                "SELECT * FROM watchlist WHERE account_holder_id = ? AND status = 'OPEN' ORDER BY created_at DESC",
+                "SELECT * FROM watchlist WHERE account_holder_id = ? AND type = 'IDEA' AND status = 'OPEN' ORDER BY created_at DESC",
                 [holderId]
             );
             res.json(items);
-        } catch (e) {
-            log(`[ERROR] Failed to fetch watchlist: ${e.message}`);
-            res.status(500).json({ message: 'Error fetching watchlist.' });
+        } catch (error) {
+            log(`[ERROR] Failed to fetch watchlist 'ideas' for holder ${holderId}: ${error.message}`);
+            res.status(500).json({ message: "Server error fetching watchlist ideas." });
         }
     });
 
     /**
-     * @typedef {object} WatchlistPostBody
-     * @property {string|number} account_holder_id
-     * @property {string} ticker
-     * @property {string|number|null} [advice_source_id]
-     * @property {string|number|null} [journal_entry_id] - New field
-     * @property {number|null} [rec_entry_low]
-     * @property {number|null} [rec_entry_high]
-     * @property {number|null} [rec_tp1]
-     * @property {number|null} [rec_tp2]
-     * @property {number|null} [rec_stop_loss]
+     * @route POST /api/watchlist/ideas
+     * @group Watchlist - Watchlist operations
+     * @description Adds a new 'Trade Idea' to the watchlist.
+     * @param {object} req.body.required - The trade idea data.
+     * @returns {object} 201 - Success. 500 - Error.
      */
-
-    /**
-     * @route POST /api/watchlist/
-     * @group Watchlist - Operations for the watchlist
-     * @description Adds a new item to the watchlist.
-     * @param {WatchlistPostBody} req.body.required - The data for the new watchlist item.
-     * @returns {object} 201 - The newly created item. 400/500 - Error message.
-     */
-    router.post('/', async (req, res) => {
+    router.post('/ideas', async (req, res) => {
         const {
-            account_holder_id,
-            ticker,
-            advice_source_id,
-            journal_entry_id, // New field
-            rec_entry_low,
-            rec_entry_high,
-            rec_tp1,
-            rec_tp2,
-            rec_stop_loss
+            account_holder_id, ticker, advice_source_id, journal_entry_id,
+            rec_entry_low, rec_entry_high, rec_tp1, rec_tp2, rec_stop_loss
         } = req.body;
 
         if (!account_holder_id || !ticker) {
-            return res.status(400).json({ message: 'Account Holder ID and Ticker are required.' });
+            return res.status(400).json({ message: "Account Holder ID and Ticker are required." });
         }
-        
-        // --- FIX: Validation updated ---
-        // A trade idea MUST have an advice_source_id.
-        // It can OPTIONALLY have a journal_entry_id.
-        if (!advice_source_id) {
-             return res.status(400).json({ message: 'A trade idea must be linked to an advice source.' });
-        }
-        // --- END FIX ---
 
         try {
-            const createdAt = new Date().toISOString();
-            
-            // --- MIGRATE: Add journal_entry_id to the INSERT statement ---
-            const query = `
+            const sql = `
                 INSERT INTO watchlist (
                     account_holder_id, ticker, advice_source_id, journal_entry_id,
                     rec_entry_low, rec_entry_high, rec_tp1, rec_tp2, rec_stop_loss,
-                    status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    type, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'IDEA', 'OPEN', CURRENT_TIMESTAMP)
             `;
-            const result = await db.run(query, [
-                account_holder_id,
-                ticker.toUpperCase(),
-                advice_source_id || null,
-                journal_entry_id || null, // Save new field
-                rec_entry_low || null,
-                rec_entry_high || null,
-                rec_tp1 || null,
-                rec_tp2 || null,
-                rec_stop_loss || null,
-                'OPEN', // Default status
-                createdAt
-            ]);
-            // --- END MIGRATE ---
-
-            const newItemId = result.lastID;
-            const newItem = await db.get('SELECT * FROM watchlist WHERE id = ?', newItemId);
-            res.status(201).json(newItem);
-        } catch (e) {
-            log(`[ERROR] Failed to add watchlist item: ${e.message}\n${e.stack}`);
-            if (e.message.includes('UNIQUE constraint failed')) {
-                res.status(409).json({ message: 'This ticker is already on the watchlist for this source/journal entry.' });
-            } else {
-                res.status(500).json({ message: 'Server error while adding watchlist item.' });
-            }
+            const result = await db.run(
+                sql,
+                [
+                    account_holder_id, ticker.toUpperCase(), advice_source_id, journal_entry_id,
+                    rec_entry_low, rec_entry_high, rec_tp1, rec_tp2, rec_stop_loss
+                ]
+            );
+            res.status(201).json({ id: result.lastID, message: "Trade Idea added to watchlist." });
+        } catch (error) {
+            log(`[ERROR] Failed to add watchlist 'idea': ${error.message}`);
+            res.status(500).json({ message: "Server error adding watchlist idea." });
         }
     });
 
     /**
-     * @route DELETE /api/watchlist/:id
-     * @group Watchlist - Operations for the watchlist
-     * @description Deletes (archives) a watchlist item by setting its status to 'CLOSED'.
-     * @param {string} id.path.required - The ID of the watchlist item to delete.
-     * @returns {object} 200 - Success message. 404/500 - Error message.
+     * @route PATCH /api/watchlist/ideas/:id/close
+     * @group Watchlist - Watchlist operations
+     * @description Closes (archives) a 'Trade Idea' watchlist item.
+     * @param {string} id.path.required - The ID of the watchlist item.
+     * @returns {object} 200 - Success. 500 - Error.
      */
-    router.delete('/:id', async (req, res) => {
+    router.patch('/ideas/:id/close', async (req, res) => {
         const { id } = req.params;
         try {
-            // We don't delete, we archive by setting status to 'CLOSED'
-            const result = await db.run(
-                "UPDATE watchlist SET status = 'CLOSED' WHERE id = ?",
-                [id]
-            );
-
-            if (result.changes === 0) {
-                return res.status(404).json({ message: 'Watchlist item not found.' });
-            }
-            res.json({ message: 'Watchlist item archived successfully.' });
-        } catch (e) {
-            log(`[ERROR] Failed to delete/archive watchlist item ${id}: ${e.message}\n${e.stack}`);
-            res.status(500).json({ message: 'Server error while deleting watchlist item.' });
+            await db.run("UPDATE watchlist SET status = 'CLOSED' WHERE id = ?", [id]);
+            res.json({ message: "Trade Idea closed." });
+        } catch (error) {
+            log(`[ERROR] Failed to close watchlist 'idea' ${id}: ${error.message}`);
+            res.status(500).json({ message: "Server error closing watchlist idea." });
         }
     });
+
+    // --- ADDED: New routes for simple 'WATCH' type tickers ---
+
+    /**
+     * @route GET /api/watchlist/simple/:holderId
+     * @group Watchlist - Watchlist operations
+     * @description Fetches all simple 'WATCH' tickers for a holder.
+     * @param {string} holderId.path.required - Account holder ID.
+     * @returns {Array<object>|object} 200 - Array of simple watchlist items. 500 - Error.
+     */
+    router.get('/simple/:holderId', async (req, res) => {
+        const { holderId } = req.params;
+        if (!holderId || holderId === 'all') {
+            return res.status(400).json({ message: "A specific Account Holder ID is required." });
+        }
+        try {
+            const items = await db.all(
+                "SELECT id, ticker FROM watchlist WHERE account_holder_id = ? AND type = 'WATCH' AND status = 'OPEN' ORDER BY ticker ASC",
+                [holderId]
+            );
+            res.json(items);
+        } catch (error) {
+            log(`[ERROR] Failed to fetch simple watchlist for holder ${holderId}: ${error.message}`);
+            res.status(500).json({ message: "Server error fetching simple watchlist." });
+        }
+    });
+
+    /**
+     * @route POST /api/watchlist/simple
+     * @group Watchlist - Watchlist operations
+     * @description Adds a new 'WATCH' ticker to the watchlist.
+     * @param {object} req.body.required - The ticker data.
+     * @param {string} req.body.ticker - The ticker symbol.
+     * @param {string|number} req.body.account_holder_id - The account holder ID.
+     * @returns {object} 201 - Success. 400 - Invalid input. 409 - Conflict. 500 - Error.
+     */
+    router.post('/simple', async (req, res) => {
+        const { ticker, account_holder_id } = req.body;
+        if (!ticker || !account_holder_id || account_holder_id === 'all') {
+            return res.status(400).json({ message: "Ticker and Account Holder ID are required." });
+        }
+
+        const upperTicker = ticker.toUpperCase();
+
+        try {
+            // Check if this ticker is already being watched
+            const existing = await db.get(
+                "SELECT id FROM watchlist WHERE account_holder_id = ? AND ticker = ? AND type = 'WATCH' AND status = 'OPEN'",
+                [account_holder_id, upperTicker]
+            );
+            if (existing) {
+                return res.status(409).json({ message: `${upperTicker} is already on your watched list.` });
+            }
+
+            const sql = `
+                INSERT INTO watchlist (account_holder_id, ticker, type, status, created_at)
+                VALUES (?, ?, 'WATCH', 'OPEN', CURRENT_TIMESTAMP)
+            `;
+            const result = await db.run(sql, [account_holder_id, upperTicker]);
+            res.status(201).json({ id: result.lastID, ticker: upperTicker, message: `${upperTicker} added to watched list.` });
+        } catch (error) {
+            log(`[ERROR] Failed to add simple watched ticker: ${error.message}`);
+            res.status(500).json({ message: "Server error adding watched ticker." });
+        }
+    });
+
+    /**
+     * @route DELETE /api/watchlist/simple/:id
+     * @group Watchlist - Watchlist operations
+     * @description Deletes a simple 'WATCH' ticker from the watchlist.
+     * @param {string} id.path.required - The ID of the watchlist item to delete.
+     * @returns {object} 200 - Success. 500 - Error.
+     */
+    router.delete('/simple/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            // We just delete it. We could set status='CLOSED', but for simple tickers, delete is fine.
+            await db.run("DELETE FROM watchlist WHERE id = ? AND type = 'WATCH'", [id]);
+            res.json({ message: "Ticker removed from watched list." });
+        } catch (error) {
+            log(`[ERROR] Failed to delete simple watched ticker ${id}: ${error.message}`);
+            res.status(500).json({ message: "Server error deleting watched ticker." });
+        }
+    });
+    // --- END ADDED ---
 
     return router;
 };
