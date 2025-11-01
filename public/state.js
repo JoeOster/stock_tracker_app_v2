@@ -57,8 +57,7 @@
  * @property {any[]} dashboardOpenLots - Raw array of open lots fetched for the dashboard view.
  *Setting
  * @property {any[]} researchWatchlistItems - Raw array of watchlist items fetched for the source details modal.
- * @property {{sourceId: string, sourceName: string, ticker: string, price: string}|null} prefillOrderFromSource - Temp state for pre-filling the order form.
- * @property {AppSettings} settings - The user's application settings.
+* @property {{sourceId: string, sourceName: string, ticker: string, price: string, tp1: (string | null), tp2: (string | null), sl: (string | null)}|null} prefillOrderFromSource - Temp state for pre-filling the order form. * @property {AppSettings} settings - The user's application settings.
  */
 
 /**

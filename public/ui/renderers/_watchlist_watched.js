@@ -54,15 +54,27 @@ function createWatchedTableHTML(watchedTickers) {
         let priceDisplay = '<i>Fetching...</i>';
         let changeDisplay = '<i>...</i>';
 
-        // --- MODIFIED: Use optional chaining (?.) to fix type errors ---
+        // --- FIX: Manually calculate change and changePercent ---
         if (priceData && typeof priceData.price === 'number') {
-            const changeClass = (priceData?.changePercent || 0) >= 0 ? 'positive' : 'negative';
             priceDisplay = formatAccounting(priceData.price);
-            changeDisplay = `<span class="${changeClass}">${formatAccounting(priceData?.change || 0, false)} (${formatPercent(priceData?.changePercent || 0)})</span>`;
+
+            let change = 0;
+            let changePercent = 0;
+
+            // Only calculate change if previousPrice is also a valid number and not zero
+            if (priceData.previousPrice !== null && typeof priceData.previousPrice === 'number' && priceData.previousPrice > 0) {
+                change = priceData.price - priceData.previousPrice;
+                changePercent = change / priceData.previousPrice; // This is a decimal (e.g., 0.05)
+            }
+
+            const changeClass = change >= 0 ? 'positive' : 'negative';
+            // Pass the calculated decimal to formatPercent
+            changeDisplay = `<span class="${changeClass}">${formatAccounting(change, false)} (${formatPercent(changePercent)})</span>`;
+            
         } else if (priceData) {
-            priceDisplay = `<span class="negative">${priceData.price}</span>`; // e.g., "Error" or "TBD"
+            priceDisplay = `<span class="negative">${priceData.price}</span>`; // e.g., "Error" or "Invalid"
         }
-        // --- END MODIFICATION ---
+        // --- END FIX ---
 
         tableHTML += `
             <tr data-id="${item.id}" data-ticker="${item.ticker}">

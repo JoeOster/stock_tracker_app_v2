@@ -15,6 +15,7 @@ function populateAdviceSourceDropdown(selectElement, selectedId) {
     if (!selectElement) return;
 
     // Preserve the first option (e.g., "(None)")
+    console.log()
     const firstOption = selectElement.options[0];
     selectElement.innerHTML = ''; // Clear existing options
     if (firstOption) {
@@ -51,7 +52,9 @@ export function getSourceNameFromId(sourceId) {
  * @returns {void}
  */
 export function populateAllAdviceSourceDropdowns(selectedId) {
-    const dropdowns = document.querySelectorAll('.advice-source-select');
+    // --- THIS IS THE FIX ---
+    const dropdowns = document.querySelectorAll('select.advice-source-select');
+    // --- END FIX ---
     dropdowns.forEach(dropdown => {
         populateAdviceSourceDropdown(/** @type {HTMLSelectElement} */(dropdown), selectedId);
     });

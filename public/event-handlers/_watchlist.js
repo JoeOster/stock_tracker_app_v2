@@ -290,13 +290,17 @@ export function initializeWatchlistHandlers() {
         // --- END MODIFICATION ---
 
         // --- Listen for journal updates from modals ---
-        document.addEventListener('journalUpdated', async () => {
-            console.log("[Watchlist] 'journalUpdated' event detected. Refreshing paper trades...");
-            const activeSubTabButton = watchlistContainer.querySelector('.watchlist-sub-tabs .sub-tab.active');
-            // Only refresh if the paper panel is currently active
-            if (activeSubTabButton?.dataset.subTab === 'watchlist-paper-panel') {
-                await renderWatchlistPaperTrades(/** @type {HTMLDivElement} */(document.getElementById('watchlist-paper-panel')));
-            }
-        });
+document.addEventListener('journalUpdated', async () => {
+    console.log("[Watchlist] 'journalUpdated' event detected. Refreshing paper trades...");
+    
+    // --- THIS IS THE FIX ---
+    const activeSubTabButton = /** @type {HTMLElement | null} */ (watchlistContainer.querySelector('.watchlist-sub-tabs .sub-tab.active'));
+    // --- END FIX ---
+
+    // Only refresh if the paper panel is currently active
+    if (activeSubTabButton?.dataset.subTab === 'watchlist-paper-panel') { // <-- This line will now work
+        await renderWatchlistPaperTrades(/** @type {HTMLDivElement} */(document.getElementById('watchlist-paper-panel')));
+    }
+});
     }
 }

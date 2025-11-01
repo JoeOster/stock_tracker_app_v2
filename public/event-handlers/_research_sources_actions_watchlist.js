@@ -226,21 +226,19 @@ export async function handleCreateTradeIdeaFromTechnique(target, journalEntries)
  * @returns {Promise<void>}
  */
 export async function handleCreateBuyOrderFromIdea(target) {
-    const { ticker, price, tp1, tp2, sl, sourceId, sourceName } = target.dataset;
-    if (!ticker) { return showToast('Error: Ticker not found.', 'error'); }
+const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId, sourceName } = target.dataset;
 
-    const prefillData = {
-        ticker: ticker,
-        entryPrice: price, // This might be empty, that's fine
-        tp1: tp1,
-        tp2: tp2,
-        sl: sl,
-        adviceSourceId: sourceId,
-        adviceSourceDetails: `From "${sourceName}" idea`
-    };
+const prefillData = {
+    sourceId: sourceId,                      // <-- Correct: 'sourceId'
+    sourceName: sourceName,                  // <-- Correct: 'sourceName'
+    ticker: ticker,
+    price: entryHigh || entryLow || '',      // <-- Correct: 'price'
+    tp1: tp1 || null,
+    tp2: tp2 || null,
+    sl: sl || null
+};
 
-    // --- MODIFIED: Use imported functions ---
-    updateState({ prefillOrderFromSource: prefillData });
+updateState({ prefillOrderFromSource: prefillData }); //
     await switchView('orders');
     // --- END MODIFIED ---
     
