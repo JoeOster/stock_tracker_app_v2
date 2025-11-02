@@ -1,26 +1,14 @@
 // public/ui/renderers/_dashboard_data.js
-/**
- * @file Contains functions for fetching and processing data for the Dashboard page.
- * @module renderers/_dashboard_data
- */
-
+// ... (imports are unchanged) ...
 import { state, updateState } from '../../state.js';
 import { fetchPositions } from '../../api/reporting-api.js';
 import { updatePricesForView } from '../../api/price-api.js';
 import { getCurrentESTDateString } from '../datetime.js';
 import { showToast } from '../helpers.js';
 
-// --- Configuration ---
-const PROXIMITY_THRESHOLD_PERCENT = 5; // e.g., Show indicator if within 5% of limit
-
-/**
- * Calculates unrealized P/L and limit proximity for a position lot.
- * @param {object} lot - The position lot data.
- * @param {number|null} currentPrice - The current market price (validated as number or null).
- * @returns {{currentValue: number, costOfRemaining: number, unrealizedPL: number, unrealizedPercent: number, proximity: 'up'|'down'|null}}
- */
+// ... (PROXIMITY_THRESHOLD_PERCENT and calculateLotMetrics are unchanged) ...
+const PROXIMITY_THRESHOLD_PERCENT = 5;
 function calculateLotMetrics(lot, currentPrice) {
-    // ... (full code for calculateLotMetrics function as it was in _dashboard.js) ...
     const metrics = {
         currentValue: 0,
         costOfRemaining: lot.quantity_remaining * lot.cost_basis,
@@ -28,12 +16,10 @@ function calculateLotMetrics(lot, currentPrice) {
         unrealizedPercent: 0,
         proximity: null,
     };
-
     if (currentPrice !== null && currentPrice > 0) {
         metrics.currentValue = lot.quantity_remaining * currentPrice;
         metrics.unrealizedPL = metrics.currentValue - metrics.costOfRemaining;
         metrics.unrealizedPercent = (metrics.costOfRemaining !== 0) ? (metrics.unrealizedPL / metrics.costOfRemaining) * 100 : 0;
-
         if (lot.limit_price_up && currentPrice > 0) {
             const diffUp = lot.limit_price_up - currentPrice;
             const percentDiffUp = (diffUp / currentPrice) * 100;
@@ -49,12 +35,10 @@ function calculateLotMetrics(lot, currentPrice) {
             }
         }
     } else {
-        // Fallback to cost basis if price invalid or zero
         metrics.currentValue = metrics.costOfRemaining;
         metrics.unrealizedPL = 0;
         metrics.unrealizedPercent = 0;
     }
-
     return metrics;
 }
 
@@ -63,7 +47,7 @@ function calculateLotMetrics(lot, currentPrice) {
  * @returns {Promise<any[]>} A promise resolving to the array of open lots, or empty array on error.
  */
 export async function loadAndPrepareDashboardData() {
-    // ... (full code for loadAndPrepareDashboardData function as it was in _dashboard.js) ...
+    // ... (this function is unchanged) ...
     showToast('Loading dashboard data...', 'info', 1500);
     try {
         const today = getCurrentESTDateString();
@@ -79,6 +63,7 @@ export async function loadAndPrepareDashboardData() {
         return openLots;
     } catch (error) {
         console.error("Error loading dashboard data:", error);
+        // @ts-ignore
         showToast(`Error loading positions: ${error.message}`, 'error');
         updateState({ dashboardOpenLots: [] }); // Clear state on error
         return []; // Return empty array to signal failure upstream
@@ -86,14 +71,16 @@ export async function loadAndPrepareDashboardData() {
 }
 
 /**
+ * --- THIS IS THE FIX ---
  * Processes raw lot data: calculates metrics, filters, groups by Ticker/Exchange, sorts, and calculates totals.
  * @param {any[]} openLots - Raw array of open lots.
- * @param {string} filterValue - Uppercase ticker filter string.
+ * @param {string} tickerFilter - Uppercase ticker filter string.
+ * @param {string} exchangeFilter - Exchange filter string.
  * @param {string} sortValue - Sort criteria string.
  * @returns {{aggregatedLots: any[], individualLotsForTable: any[], totalUnrealizedPL: number, totalCurrentValue: number}}
  */
-export function processFilterAndSortLots(openLots, filterValue, sortValue) {
-    // ... (full code for processFilterAndSortLots function as it was in _dashboard.js) ...
+export function processFilterAndSortLots(openLots, tickerFilter, exchangeFilter, sortValue) {
+// --- END FIX ---
     let totalUnrealizedPL = 0;
     let totalCurrentValue = 0;
     const aggregationMap = new Map();
@@ -102,13 +89,10 @@ export function processFilterAndSortLots(openLots, filterValue, sortValue) {
         .map(lot => {
             const priceData = state.priceCache.get(lot.ticker);
             const currentPriceValue = (priceData && typeof priceData.price === 'number') ? priceData.price : null;
-            // console.log(`Processing Lot ID ${lot.id} (${lot.ticker}): Price=${currentPriceValue}, Basis=${lot.cost_basis}, Qty=${lot.quantity_remaining}`); // Keep for debugging if needed
             const metrics = calculateLotMetrics(lot, currentPriceValue);
-            // console.log(` -> Metrics for Lot ID ${lot.id}:`, metrics); // Keep for debugging if needed
 
             const processedLot = { ...lot, ...metrics, priceData }; // Combine lot, metrics, and priceData
 
-            // Accumulate totals *after* calculating metrics for each lot
             totalUnrealizedPL += metrics.unrealizedPL;
             totalCurrentValue += metrics.currentValue;
 
@@ -133,7 +117,12 @@ export function processFilterAndSortLots(openLots, filterValue, sortValue) {
 
             return processedLot; // Return processed individual lot for table view filtering/sorting
         })
-        .filter(lot => !filterValue || lot.ticker.toUpperCase().includes(filterValue));
+        // --- THIS IS THE FIX ---
+        .filter(lot => 
+            (!tickerFilter || lot.ticker.toUpperCase().includes(tickerFilter)) &&
+            (!exchangeFilter || lot.exchange === exchangeFilter)
+        );
+        // --- END FIX ---
 
     // --- Finalize Aggregated Data ---
     const aggregatedLots = Array.from(aggregationMap.values()).map(agg => {
@@ -141,8 +130,6 @@ export function processFilterAndSortLots(openLots, filterValue, sortValue) {
         const overallUnrealizedPL = agg.totalCurrentValue - agg.totalCostBasisValue;
         const overallUnrealizedPercent = agg.totalCostBasisValue !== 0 ? (overallUnrealizedPL / agg.totalCostBasisValue) * 100 : 0;
         const priceData = state.priceCache.get(agg.ticker); // Get price data for the ticker
-
-        // Sort underlying lots by purchase date (useful for the selective sell / management modal)
         agg.underlyingLots.sort((a, b) => a.purchase_date.localeCompare(b.purchase_date));
 
         return {
@@ -152,23 +139,26 @@ export function processFilterAndSortLots(openLots, filterValue, sortValue) {
             overallUnrealizedPercent,
             priceData // Attach price data to aggregated object
         };
-    }).filter(agg => !filterValue || agg.ticker.toUpperCase().includes(filterValue)); // Also filter aggregated list
+    })
+    // --- THIS IS THE FIX ---
+    .filter(agg => 
+        (!tickerFilter || agg.ticker.toUpperCase().includes(tickerFilter)) &&
+        (!exchangeFilter || agg.exchange === exchangeFilter)
+    ); // Also filter aggregated list
+    // --- END FIX ---
 
 
     // --- Apply Sorting ---
-    // Sort Aggregated Lots (for Card View)
+    // (Sort logic is unchanged)
     aggregatedLots.sort((a, b) => {
          switch (sortValue) {
             case 'exchange-asc':
                 return a.exchange.localeCompare(b.exchange) || a.ticker.localeCompare(b.ticker);
-            // Proximity sort might be complex/less useful for aggregated view, TBD
             case 'gain-desc': return b.overallUnrealizedPercent - a.overallUnrealizedPercent || a.ticker.localeCompare(b.ticker);
             case 'loss-asc': return a.overallUnrealizedPercent - b.overallUnrealizedPercent || a.ticker.localeCompare(b.ticker);
             case 'ticker-asc': default: return a.ticker.localeCompare(b.ticker);
         }
     });
-
-    // Sort Individual Lots (for Table View - same logic as before)
     individualLotsForTable.sort((a, b) => {
          switch (sortValue) {
             case 'exchange-asc': return a.exchange.localeCompare(b.exchange) || a.ticker.localeCompare(b.ticker);
@@ -188,7 +178,7 @@ export function processFilterAndSortLots(openLots, filterValue, sortValue) {
                 };
                 return getProximityPercent(a) - getProximityPercent(b) || a.ticker.localeCompare(b.ticker);
              }
-            case 'gain-desc': return b.unrealizedPercent - a.unrealizedPercent || a.ticker.localeCompare(b.ticker);
+            case 'gain-desc': return b.unrealizedPercent - b.unrealizedPercent || a.ticker.localeCompare(b.ticker);
             case 'loss-asc': return a.unrealizedPercent - b.unrealizedPercent || a.ticker.localeCompare(b.ticker);
             case 'ticker-asc': default: return a.ticker.localeCompare(b.ticker);
         }

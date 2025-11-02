@@ -1,37 +1,21 @@
 ﻿// public/event-handlers/_dashboard_init.js
-/**
- * @file Initializes event handlers for the Dashboard page.
- * @module event-handlers/_dashboard_init
- */
 
-// --- MODIFIED: Import from the correct, specific modal files ---
-import { fetchPositions } from '../api/reporting-api.js';
-import { fetchSalesForLot, fetchTransactionById, deleteTransaction } from '../api/transactions-api.js';
-import { updateAllPrices } from '../api/price-api.js';
 import { state } from '../state.js';
+import { fetchPositions } from '../api/reporting-api.js';
+import { fetchSalesForLot } from '../api/transactions-api.js';
+import { updateAllPrices } from '../api/price-api.js';
 import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
 import { showToast, showConfirmationModal, sortTableByColumn } from '../ui/helpers.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
-// --- These are the corrected imports ---
 import { populateEditModal } from './_modal_edit_transaction.js';
 import { populateManagementModal } from './_modal_manage_position.js';
 import { populateSellFromPositionModal } from './_modal_sell_from_position.js';
 import { populateSelectiveSellModal } from './_modal_selective_sell.js';
-// --- END MODIFIED ---
-
-
-/**
- * Fetches data and populates the Manage Position modal for a given position.
- * @param {string} ticker
- * @param {string} exchange
- * @param {string|number} accountHolderId
- * @returns {Promise<void>}
- */
+// ... (openAndPopulateManageModal is unchanged) ...
 async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
     const managePositionModal = document.getElementById('manage-position-modal');
-    // --- MODIFIED: This HTML is from the new modal template ---
     const lotsListEl = document.getElementById('manage-position-lots-list');
     const salesListEl = document.getElementById('manage-position-sales-history');
 
@@ -44,13 +28,11 @@ async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
         return;
      }
 
-    // Show modal and loading states immediately
     lotsListEl.innerHTML = '<p>Loading lots...</p>';
     salesListEl.innerHTML = '<p>Loading sales history...</p>';
     managePositionModal.classList.add('visible'); 
 
     try {
-        // 1. Fetch all open lots for THIS specific ticker/exchange/holder again
         const today = getCurrentESTDateString();
         const positionData = await fetchPositions(today, String(accountHolderId));
         const relevantBuyLots = (positionData?.endOfDayPositions || []).filter(
@@ -64,13 +46,10 @@ async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
             return; // Exit if no lots found
         }
         
-        // Store data on the modal itself
         managePositionModal.dataset.ticker = ticker;
         managePositionModal.dataset.exchange = exchange;
         managePositionModal.dataset.lotIds = relevantBuyLots.map(lot => lot.id).join(',');
 
-        // 2. Populate the modal (this will render the lots list)
-        // We pass 'true' to trigger the sales history fetch
         await populateManagementModal(true); 
 
     } catch (error) {
@@ -80,7 +59,6 @@ async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
         if(salesListEl) salesListEl.innerHTML = '<p>Error loading sales history.</p>';
     }
 }
-// --- END NEW Reusable Function ---
 
 /**
  * Initializes event listeners for Dashboard controls and actions.
@@ -89,6 +67,9 @@ async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
 export function initializeDashboardHandlers() {
     const dashboardContainer = document.getElementById('dashboard-page-container');
     const filterInput = document.getElementById('dashboard-ticker-filter');
+    // --- THIS IS THE FIX ---
+    const exchangeFilter = document.getElementById('dashboard-exchange-filter');
+    // --- END FIX ---
     const sortSelect = document.getElementById('dashboard-sort-select');
     const refreshButton = document.getElementById('dashboard-refresh-prices-btn');
     const subTabsContainer = dashboardContainer?.querySelector('.dashboard-sub-tabs');
@@ -97,6 +78,7 @@ export function initializeDashboardHandlers() {
 
     // --- Sub-Tab Switching ---
      if (subTabsContainer && dashboardContainer) {
+        // ... (this listener is unchanged) ...
         subTabsContainer.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
             if (target.classList.contains('sub-tab') && !target.classList.contains('active')) {
@@ -117,6 +99,9 @@ export function initializeDashboardHandlers() {
 
     // --- Filter and Sort ---
     filterInput?.addEventListener('input', renderDashboardPage);
+    // --- THIS IS THE FIX ---
+    exchangeFilter?.addEventListener('change', renderDashboardPage);
+    // --- END FIX ---
     sortSelect?.addEventListener('change', renderDashboardPage);
 
     // --- Refresh Prices ---
@@ -125,12 +110,7 @@ export function initializeDashboardHandlers() {
         await updateAllPrices(); // updateAllPrices now calls renderDashboardPage itself if needed
     });
 
-    // --- Action Buttons (Event Delegation on Card Grid and Table Body) ---
-    /**
-     * Handles clicks on various action buttons within the dashboard.
-     * @param {Event} e - The click event.
-     * @returns {Promise<void>}
-     */
+    // ... (rest of file: handleActionClick, table sorting, checkbox logic are unchanged) ...
     const handleActionClick = async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         const holderId = state.selectedAccountHolderId;
@@ -151,7 +131,6 @@ export function initializeDashboardHandlers() {
         // --- Sell Button Logic (Individual Lot) ---
         if (sellBtn) {
             const { ticker, exchange, buyId, quantity } = (/** @type {HTMLElement} */(sellBtn)).dataset;
-            // --- MODIFIED: Use dashboardOpenLots ---
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
             if (!lotData) { return showToast('Error: Could not find original lot data.', 'error'); }
             
@@ -165,7 +144,6 @@ export function initializeDashboardHandlers() {
 
             let underlyingLots = [];
             try {
-                // --- MODIFIED: Use dashboardOpenLots ---
                 const lotIdArray = encodedLots.split(',').map(id => parseInt(id, 10));
                 underlyingLots = state.dashboardOpenLots.filter(p => lotIdArray.includes(p.id));
             } catch (err) { /* ... error handling ... */ return; }
@@ -175,14 +153,12 @@ export function initializeDashboardHandlers() {
         // --- Limits Button Logic (Single Lot Card or Table Row) ---
         else if (limitBtn) {
             const lotId = (/** @type {HTMLElement} */(limitBtn)).dataset.id;
-            // --- MODIFIED: Use dashboardOpenLots ---
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
             populateEditModal(lotData, true); // True for limitsOnly
         }
         // --- Edit Button Logic (Single Lot Card or Table Row) ---
         else if (editBtn) {
             const lotId = (/** @type {HTMLElement} */(editBtn)).dataset.id;
-            // --- MODIFIED: Use dashboardOpenLots ---
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === lotId);
             // We must populate all dropdowns *before* opening the edit modal
             await populateAllAdviceSourceDropdowns();
@@ -192,7 +168,6 @@ export function initializeDashboardHandlers() {
          else if (historyBtn) {
             const buyId = (/** @type {HTMLElement} */(historyBtn)).dataset.buyId;
             if (!buyId) return;
-            // --- MODIFIED: Use dashboardOpenLots ---
             const lotData = state.dashboardOpenLots.find(lot => String(lot.id) === buyId);
             if (!lotData) { showToast('Could not find original purchase details.', 'error'); return; }
             
@@ -248,13 +223,9 @@ export function initializeDashboardHandlers() {
             // Call the reusable function to handle fetching and populating
             await openAndPopulateManageModal(ticker, exchange, accountHolderId);
         }
-    }; // End of handleActionClick
-
-    // Attach listener to both potential containers
+    };
     cardGrid?.addEventListener('click', handleActionClick);
-    positionTable?.querySelector('tbody')?.addEventListener('click', handleActionClick); // Delegate on tbody for actions
-
-    // --- Table Header Sorting ---
+    positionTable?.querySelector('tbody')?.addEventListener('click', handleActionClick);
     const thead = positionTable?.querySelector('thead');
     if (thead) {
         thead.addEventListener('click', (e) => {
@@ -268,18 +239,12 @@ export function initializeDashboardHandlers() {
             }
         });
     }
-
-    // --- Reconciliation Checkbox Logic (Placeholder) ---
     positionTable?.addEventListener('change', (e) => {
         const target = /** @type {HTMLInputElement} */ (e.target);
         if (target.classList.contains('reconciliation-checkbox')) {
             const lotId = target.closest('tr')?.dataset.lotId;
             console.log(`Checkbox for lot ID ${lotId} changed: ${target.checked}`);
-            // Add reconciliation tracking logic here if needed
         }
     });
-
-} // End of initializeDashboardHandlers
-
-// --- Export the function needed by _modals.js ---
+}
 export { openAndPopulateManageModal };

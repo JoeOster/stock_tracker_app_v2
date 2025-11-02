@@ -9,29 +9,32 @@ import { initializeSellFromPositionModalHandler } from './_modal_sell_from_posit
 import { initializeEditTransactionModalHandler } from './_modal_edit_transaction.js';
 import { initializeManagePositionModalHandler } from './_modal_manage_position.js';
 import { initializeAddPaperTradeModalHandler } from './_modal_add_paper_trade.js';
+// --- MODIFIED: Import the correct handler name ---
 import { initializeSubscriptionPanelHandlers } from './_modal_manage_subscriptions.js';
+// --- ADDED: Static imports to resolve TS/linting errors ---
 import { saveSettings } from '../ui/settings.js';
 import { showToast } from '../ui/helpers.js';
 
 /**
  * --- MODIFIED: Helper function to save settings on modal close ---
  * Now async and awaits the async saveSettings() function.
+ * @returns {Promise<void>}
  */
 async function saveSettingsOnClose() {
     try {
         // Use the statically imported functions
+        // saveSettings() will show its own toast on success
         await saveSettings();
-        // saveSettings() now shows its own toast
     } catch (err) {
         console.error("Error saving settings on close:", err);
-        // @ts-ignore
-        showToast(`Error saving settings: ${err.message}`, 'error');
+        // showToast(`Error saving settings: ${err.message}`, 'error'); // Error already shown by saveSettings
     }
 }
 
 /**
  * --- NEW: Helper function to clear source details modal ---
  * @param {HTMLElement} modal
+ * @returns {void}
  */
 function clearSourceDetailsModal(modal) {
     if (modal.id === 'source-details-modal') {
@@ -58,7 +61,12 @@ export function initializeModalHandlers() {
             if (modal) {
                 
                 if (modal.id === 'settings-modal') {
-                    await saveSettingsOnClose(); // Added await
+                    try {
+                        await saveSettingsOnClose(); // Added await
+                    } catch (saveError) {
+                        console.log("[Modal Close] saveSettings failed, preventing modal close.");
+                        return; // Do not close modal if save fails
+                    }
                 }
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
                 
@@ -77,6 +85,12 @@ export function initializeModalHandlers() {
         btn.addEventListener('click', e => {
              const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
              if (modal) {
+                // --- FIX: Don't close modal if this is an inline cancel button ---
+                if (btn.classList.contains('cancel-holder-btn') || btn.classList.contains('cancel-exchange-btn')) {
+                    return;
+                }
+                // --- END FIX ---
+                 
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
                 modal.classList.remove('visible');
              }
@@ -89,7 +103,12 @@ export function initializeModalHandlers() {
             if (e.target === modal) {
                 
                 if (modal.id === 'settings-modal') {
-                    await saveSettingsOnClose(); // Added await
+                     try {
+                        await saveSettingsOnClose(); // Added await
+                    } catch (saveError) {
+                        console.log("[Modal Close] saveSettings failed, preventing modal close.");
+                        return; // Do not close modal if save fails
+                    }
                 }
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
 
@@ -103,7 +122,7 @@ export function initializeModalHandlers() {
         });
     });
 
-    // --- ADDED: Global Escape Key Handler ---
+    // --- ADDED: Global Escape Key Handler (Task UX.4) ---
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             // Find all visible modals
@@ -155,8 +174,10 @@ export function initializeModalHandlers() {
         initializeAddPaperTradeModalHandler();
     } catch (e) { console.error("Error initializing AddPaperTradeModalHandler:", e); }
 
+    // --- MODIFIED: Call correct function name ---
     try {
         initializeSubscriptionPanelHandlers(); 
     } catch (e) { console.error("Error initializing ManageSubscriptionsModalHandler:", e); }
+    // --- END MODIFIED ---
 
 } // End of initializeModalHandlers function

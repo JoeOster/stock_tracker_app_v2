@@ -27,6 +27,7 @@
                         </div>
                     </form>
                 </div>
+
                 <div id="appearance-settings-panel" class="settings-panel active">
                     <h3>Appearance</h3>
                     <form id="appearance-settings-form" class="settings-grid">
@@ -51,20 +52,14 @@
                         </div>
                     </form>
                 </div>
+
                 <div id="data-settings-panel" class="settings-panel">
                     <div class="sub-tabs">
                         <button class="sub-tab active" data-sub-tab="sources-panel">Advice Sources</button>
                         <button class="sub-tab" data-sub-tab="exchanges-panel">Exchanges</button>
                     </div>
                     <div class="sub-tab-content">
-                        <div id="exchanges-panel" class="sub-tab-panel">
-                            <h4>Manage Exchanges</h4>
-                            <form id="add-exchange-form" class="add-item-form">
-                                <input type="text" id="new-exchange-name" placeholder="New Exchange Name" required>
-                                <button type="button" id="add-exchange-btn">Add Exchange</button>
-                            </form>
-                            <ul id="exchange-list" class="management-list" style="margin-top: 1rem;"></ul>
-                        </div>
+                        
                         <div id="sources-panel" class="sub-tab-panel active">
                             <h4>Manage Advice Sources</h4>
                             <form id="add-new-source-form" class="form-grid">
@@ -189,7 +184,16 @@
                                 </ul>
                             </div>
                         </div>
-                    </div>
+
+                        <div id="exchanges-panel" class="sub-tab-panel">
+                            <h4>Manage Exchanges</h4>
+                            <form id="add-exchange-form" class="add-item-form">
+                                <input type="text" id="new-exchange-name" placeholder="New Exchange Name" required>
+                                <button type="button" id="add-exchange-btn">Add Exchange</button>
+                            </form>
+                            <ul id="exchange-list" class="management-list" style="margin-top: 1rem;"></ul>
+                        </div>
+                        </div>
                 </div>
 
                 <div id="user-management-settings-panel" class="settings-panel">
@@ -213,16 +217,13 @@
                                 </ul>
                             </div>
                         </div>
-                        
                         <div id="subscriptions-panel" class="sub-tab-panel">
                             <h2 id="subscriptions-panel-title">Manage Subscribed Sources for --</h2>
                             <p class="subtitle" style="text-align: left; margin: -10px 0 15px 0;">Select the global sources you want to see for this user.</p>
-                            
                             <div id="subscriptions-panel-list-container" style="max-height: 50vh; overflow-y: auto; border: 1px solid var(--container-border); border-radius: 6px; padding: 10px; background-color: var(--info-panel-bg);">
                                 <p>Select a user from the 'Users' tab and click 'Subscriptions' to manage them here.</p>
                             </div>
-
-                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -283,7 +284,7 @@
                         <option value="Signal">Signal</option>
                         <option value="WhatsApp">WhatsApp</option>
                         <option value="Telegram">Telegram</option>
-                        <option value="Discord">Discord</option>
+                        <option valueD=""isabled>Discord</option>
                         <option value="Other">Other</option>
                     </select>
                 </div>

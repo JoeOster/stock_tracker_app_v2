@@ -1,3 +1,4 @@
+// public/event-handlers/_imports.js
 import { showToast } from '../ui/helpers.js';
 import { switchView } from './_navigation.js';
 
@@ -79,7 +80,6 @@ export function initializeImportHandlers() {
     const accountHolderSelect = /** @type {HTMLSelectElement} */ (document.getElementById('import-account-holder'));
     const brokerageSelect = /** @type {HTMLSelectElement} */ (document.getElementById('brokerage-template-select'));
 
-    // FIX: Add event listener to refresh the UI when the brokerage selection changes.
     if (brokerageSelect) {
         brokerageSelect.addEventListener('change', () => {
             const reconSection = document.getElementById('reconciliation-section');
@@ -165,7 +165,9 @@ export function initializeImportHandlers() {
             commitBtn.textContent = "Importing...";
 
             try {
-                const response = await fetch('/api/transactions/import', {
+                // --- THIS IS THE FIX ---
+                const response = await fetch('/api/importer/import', {
+                // --- END FIX ---
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -179,9 +181,10 @@ export function initializeImportHandlers() {
                 const result = await response.json();
                 showToast(result.message, 'success', 10000);
                 await switchView('ledger', null);
-                location.reload();
+                location.reload(); // Reload to ensure all state is fresh
 
             } catch (error) {
+                // @ts-ignore
                 showToast(`Import failed: ${error.message}`, 'error', 10000);
             } finally {
                 commitBtn.disabled = false;

@@ -11,12 +11,8 @@ import { renderAccountHolderManagementList } from '../ui/settings.js';
 import { populateSubscriptionPanel } from './_modal_manage_subscriptions.js';
 import { setActiveTab } from './_settings_modal.js';
 
-/**
- * Populates all account holder dropdowns on the page with the latest data from the state.
- * @returns {void}
- */
+// ... (populateAllAccountHolderDropdowns and fetchAndPopulateAccountHolders are unchanged) ...
 function populateAllAccountHolderDropdowns() {
-    // ... (this function remains unchanged) ...
     const holderSelects = document.querySelectorAll('.account-holder-select');
     holderSelects.forEach(/** @param {HTMLSelectElement} select */ select => {
         const currentVal = select.value;
@@ -56,14 +52,7 @@ function populateAllAccountHolderDropdowns() {
         }
     });
 }
-
-/**
- * Fetches the list of account holders, stores them in state, and populates dropdowns.
- * @async
- * @returns {Promise<void>}
- */
 export async function fetchAndPopulateAccountHolders() {
-    // ... (this function remains unchanged) ...
     try {
         const response = await fetch('/api/accounts/holders');
         const holders = await handleResponse(response);
@@ -76,6 +65,64 @@ export async function fetchAndPopulateAccountHolders() {
     }
 }
 
+// --- NEW EXPORTED FUNCTION ---
+/**
+ * Saves the changes for a specific account holder list item in edit mode.
+ * @param {HTMLLIElement} li - The <li> element for the holder.
+ * @returns {Promise<void>}
+ * @throws {Error} If save fails
+ */
+export async function saveHolderChange(li) {
+    const id = li.dataset.id;
+    if (!id) throw new Error("Missing ID on list item.");
+
+    const nameLabel = /** @type {HTMLLabelElement | null} */ (li.querySelector('label.holder-name'));
+    const nameInput = /** @type {HTMLInputElement | null} */ (li.querySelector('.edit-holder-input'));
+    const saveBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.save-holder-btn'));
+
+    if (!nameLabel || !nameInput || !saveBtn) {
+        throw new Error("Could not find all required elements for saving.");
+    }
+
+    const newName = nameInput.value.trim();
+    if (!newName) {
+        showToast('Name cannot be empty.', 'error');
+        throw new Error('Name cannot be empty.');
+    }
+    if (newName.toLowerCase() === nameLabel.textContent?.toLowerCase()) {
+        // No change, just cancel
+        const cancelBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.cancel-holder-btn'));
+        if (cancelBtn) cancelBtn.click();
+        return;
+    }
+    // @ts-ignore
+    if (state.allAccountHolders.some(h => String(h.id) !== id && h.name.toLowerCase() === newName.toLowerCase())) {
+        showToast(`Another account holder named "${newName}" already exists.`, 'error');
+        throw new Error(`Another account holder named "${newName}" already exists.`);
+    }
+
+    saveBtn.disabled = true;
+    try {
+        const res = await fetch(`/api/accounts/holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+        await handleResponse(res);
+        await fetchAndPopulateAccountHolders();
+        renderAccountHolderManagementList();
+        showToast('Account holder updated!', 'success');
+    } catch (error) {
+        // @ts-ignore
+        showToast(`Error updating account holder: ${error.message}`, 'error');
+        throw error; // Re-throw to stop saveSettings
+    } finally {
+        // This might run after the list is re-rendered, so the button might not exist
+        // The re-render from renderAccountHolderManagementList() handles resetting the UI.
+        const currentSaveBtn = document.querySelector(`.save-holder-btn[data-id="${id}"]`);
+        if (currentSaveBtn) {
+            (/** @type {HTMLButtonElement} */(currentSaveBtn)).disabled = false;
+        }
+    }
+}
+// --- END NEW FUNCTION ---
+
 /**
  * Initializes event listeners for Account Holder Management.
  * @returns {void}
@@ -87,15 +134,13 @@ export function initializeHolderManagementHandlers() {
 
     // --- Add Account Holder ---
     if (addAccountHolderBtn && newAccountHolderNameInput) {
-        // ... (this event listener remains unchanged) ...
         addAccountHolderBtn.addEventListener('click', async () => {
+            // ... (this logic is unchanged) ...
             const name = newAccountHolderNameInput.value.trim();
             if (!name) return showToast('Account holder name cannot be empty.', 'error');
-            // @ts-ignore
             if (state.allAccountHolders.some(h => h.name.toLowerCase() === name.toLowerCase())) {
                 return showToast(`Account holder "${name}" already exists.`, 'error');
             }
-
             addAccountHolderBtn.disabled = true;
             try {
                 const res = await fetch('/api/accounts/holders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
@@ -118,23 +163,18 @@ export function initializeHolderManagementHandlers() {
         accountHolderList.addEventListener('click', async (e) => {
              const target = /** @type {HTMLElement} */ (e.target);
 
-             // --- Handle "Manage Subscriptions" button ---
+             // ... (Subscription button logic is unchanged) ...
              const subBtn = target.closest('.manage-subscriptions-btn');
              if (subBtn) {
                  const holderId = (/** @type {HTMLElement} */(subBtn)).dataset.id;
                  const holderName = (/** @type {HTMLElement} */(subBtn)).dataset.name;
                  if (holderId && holderName) {
-                     // 1. Find the User Management panel and the subscription tab button
                      const userMgmtPanel = document.getElementById('user-management-settings-panel');
+                     const subTabsContainer = userMgmtPanel?.querySelector('.sub-tabs');
                      const subTabButton = userMgmtPanel?.querySelector('button[data-sub-tab="subscriptions-panel"]');
-                     
                      if (subTabButton) {
-                         // --- MODIFICATION: Show the tab ---
                          (/** @type {HTMLElement} */(subTabButton)).style.display = '';
                      }
-                     
-                     // 2. Switch to the 'Subscriptions' sub-tab
-                     const subTabsContainer = userMgmtPanel?.querySelector('.sub-tabs');
                      if (userMgmtPanel && subTabsContainer && subTabButton) {
                          setActiveTab(
                              subTabsContainer,
@@ -145,39 +185,41 @@ export function initializeHolderManagementHandlers() {
                              '#'
                          );
                      }
-                     // 3. Populate that panel
                      await populateSubscriptionPanel(holderId, holderName);
                  }
-                 return; // Stop processing this click
+                 return;
              }
-             // --- END MODIFICATION ---
 
-             // ... (rest of the click handler for radio, edit, save, delete) ...
+             // ... (Radio button logic is unchanged) ...
              if (target.matches('input[type="radio"]')) {
-                 console.log("Click was on radio button, default will be saved on 'Save & Close'.");
                  return;
              }
              if (target.matches('label[for^="holder_radio_"]')) {
-                 console.log("Click on radio label.");
                  const radioId = target.getAttribute('for');
                  const radio = radioId ? /** @type {HTMLInputElement | null} */(document.getElementById(radioId)) : null;
                  if (radio) radio.checked = true;
                  return;
              }
+
             const li = /** @type {HTMLElement | null} */ (target.closest('li[data-id]'));
             if (!li) return;
+
             const id = li.dataset.id;
              if (!id) return;
+
             const nameLabel = /** @type {HTMLLabelElement | null} */ (li.querySelector('label.holder-name'));
             const nameInput = /** @type {HTMLInputElement | null} */ (li.querySelector('.edit-holder-input'));
             const editBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.edit-holder-btn'));
             const saveBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.save-holder-btn'));
             const cancelBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.cancel-holder-btn'));
             const deleteBtn = /** @type {HTMLButtonElement | null} */ (li.querySelector('.delete-holder-btn'));
+
              if (!nameLabel || !nameInput || !editBtn || !saveBtn || !cancelBtn) {
                   console.error("Could not find core elements within the account holder list item.");
                   return;
              }
+
+            // --- Button Actions (Edit, Cancel, Delete) ---
             if (target === editBtn) {
                  nameLabel.style.display = 'none';
                  nameInput.style.display = '';
@@ -196,30 +238,17 @@ export function initializeHolderManagementHandlers() {
                  saveBtn.style.display = 'none';
                  cancelBtn.style.display = 'none';
             }
+            // --- MODIFIED: Save button now calls the exported function ---
             else if (target === saveBtn) {
-                const newName = nameInput.value.trim();
-                 if (!newName) return showToast('Name cannot be empty.', 'error');
-                 if (newName.toLowerCase() === nameLabel.textContent?.toLowerCase()) {
-                     // @ts-ignore
-                     cancelBtn.click();
-                     return;
-                 }
-                  if (state.allAccountHolders.some(h => String(h.id) !== id && h.name.toLowerCase() === newName.toLowerCase())) {
-                    return showToast(`Another account holder named "${newName}" already exists.`, 'error');
-                 }
-                saveBtn.disabled = true;
                 try {
-                    const res = await fetch(`/api/accounts/holders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
-                    await handleResponse(res);
-                    await fetchAndPopulateAccountHolders();
-                    renderAccountHolderManagementList();
-                    showToast('Account holder updated!', 'success');
+                    await saveHolderChange(li);
                 } catch (error) {
-                    // @ts-ignore
-                    showToast(`Error updating account holder: ${error.message}`, 'error');
-                     saveBtn.disabled = false;
+                    console.log("Inline save failed, error was already shown by saveHolderChange.");
                 }
-            } else if (deleteBtn && target === deleteBtn) {
+            } 
+            // --- END MODIFICATION ---
+            else if (deleteBtn && target === deleteBtn) {
+                 // ... (Delete logic is unchanged) ...
                  const holderName = nameLabel.textContent;
                  if (String(state.selectedAccountHolderId) === id) {
                       return showToast(`Cannot delete the currently selected account holder ("${holderName}"). Please switch accounts first.`, 'error');
