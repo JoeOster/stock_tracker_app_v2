@@ -18,6 +18,7 @@ const formatCurrency = (num) => {
  * @param {function(string): void} log - Logging function.
  */
 async function backupDatabase(db, log) {
+    // ... (this function is correct) ...
     // Determine database path based on environment
     const dbPath = process.env.DATABASE_PATH || (process.env.NODE_ENV === 'production' ? './production.db' : './development.db');
 
@@ -58,39 +59,42 @@ async function backupDatabase(db, log) {
 }
 
 /**
- * Captures the end-of-day prices for tickers that were sold *if* historical price is missing.
+ * --- MODIFIED (Task 1.1) ---
+ * Captures the end-of-day prices for all *currently held* tickers
+ * if historical price is missing for that day.
  * @param {import('sqlite').Database} db - The database instance.
  * @param {string} dateToProcess - The date to process in YYYY-MM-DD format.
+ * @param {function(string): void} log - Logging function.
  */
-async function captureEodPrices(db, dateToProcess) {
+async function captureEodPrices(db, dateToProcess, log) { // <-- ADDED log
     try {
-        // Find SELL transactions on the given date where the parent BUY lot is now fully sold (quantity_remaining is near zero)
-        // AND for which we don't already have a historical price recorded for that ticker on that date.
-        const sellsNeedingEod = await db.all(`
-            SELECT s.ticker
-            FROM transactions s
-            JOIN transactions b ON s.parent_buy_id = b.id
-            WHERE DATE(s.transaction_date) = DATE(?)
-              AND s.transaction_type = 'SELL'
-              AND b.quantity_remaining < 0.00001
+        // --- THIS QUERY IS NOW UPDATED ---
+        // Find all unique tickers from open 'BUY' lots
+        // for which we don't already have a historical price recorded for that ticker on that date.
+        const tickersNeedingEod = await db.all(`
+            SELECT ticker
+            FROM transactions
+            WHERE transaction_type = 'BUY'
+              AND COALESCE(quantity_remaining, 0) > 0.00001
               AND NOT EXISTS (
                   SELECT 1 FROM historical_prices hp
-                  WHERE hp.ticker = s.ticker AND hp.date = DATE(?)
+                  WHERE hp.ticker = transactions.ticker AND hp.date = DATE(?)
               )
-            GROUP BY s.ticker
-        `, [dateToProcess, dateToProcess]);
+            GROUP BY ticker
+        `, [dateToProcess]);
+        // --- END QUERY UPDATE ---
 
-        const tickers = sellsNeedingEod.map(row => row.ticker);
+        const tickers = tickersNeedingEod.map(row => row.ticker);
 
         if (tickers.length === 0) {
-            // console.log(`[Cron EOD] No EOD prices needed for sells on ${dateToProcess}.`);
+            log(`[Cron EOD] No new EOD prices needed for held tickers on ${dateToProcess}.`); // <-- FIX
             return;
         }
 
-        console.log(`[Cron EOD] Fetching EOD prices for sold tickers on ${dateToProcess}: ${tickers.join(', ')}`);
+        log(`[Cron EOD] Fetching EOD prices for held tickers on ${dateToProcess}: ${tickers.join(', ')}`); // <-- FIX
 
-        // Use getPrices - NOTE: Finnhub free plan might not support historical EOD lookups reliably.
-        const priceData = await getPrices(tickers, 3); // High priority for EOD capture
+        // Use getPrices - priority 3 (high) for EOD capture
+        const priceData = await getPrices(tickers, 3);
 
         for (const ticker of tickers) {
             const priceInfo = priceData[ticker];
@@ -99,15 +103,16 @@ async function captureEodPrices(db, dateToProcess) {
                     'INSERT OR IGNORE INTO historical_prices (ticker, date, close_price) VALUES (?, ?, ?)',
                     [ticker, dateToProcess, priceInfo.price]
                 );
-                console.log(`[Cron EOD] Saved EOD price for ${ticker} on ${dateToProcess}: ${priceInfo.price}`);
+                log(`[Cron EOD] Saved EOD price for ${ticker} on ${dateToProcess}: ${priceInfo.price}`); // <-- FIX
             } else {
-                console.warn(`[Cron EOD] Could not retrieve EOD price for ${ticker} on ${dateToProcess}.`);
+                log(`[Cron EOD] Could not retrieve EOD price for ${ticker} on ${dateToProcess}.`); // <-- FIX (changed from console.warn)
             }
         }
     } catch (error) {
         console.error(`[Cron EOD] Error capturing EOD prices for ${dateToProcess}: ${error.message}`);
     }
 }
+// --- END MODIFICATION ---
 
 
 /**
@@ -225,7 +230,7 @@ function setupCronJobs(db, log) {
         cron.schedule('2 16 * * 1-5', () => { // M-F at 4:02 PM ET
             log('[Cron EOD] Triggered EOD price capture.');
             const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-            captureEodPrices(db, today);
+            captureEodPrices(db, today, log); // <-- ADDED log
         }, { timezone: "America/New_York" });
 
         // --- Order and Journal Watcher ---
