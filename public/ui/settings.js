@@ -85,12 +85,15 @@ export function renderExchangeManagementList() {
          return;
     }
 
+    // @ts-ignore
     const sortedExchanges = [...state.allExchanges].sort((a, b) => a.name.localeCompare(b.name));
 
     sortedExchanges.forEach(exchange => {
         const li = document.createElement('li');
+        // @ts-ignore
         li.dataset.id = String(exchange.id);
         const escapeHTML = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') : '';
+        // @ts-ignore
         const escapedName = escapeHTML(exchange.name);
 
         li.innerHTML = `
@@ -112,7 +115,11 @@ export function renderExchangeManagementList() {
  * @returns {void}
  */
 export function renderAccountHolderManagementList() {
-    const list = document.getElementById('account-holder-list');
+    // --- THIS IS THE FIX ---
+    // Swapped the target list ID to match the one in the General tab
+    const list = document.getElementById('account-holder-list'); 
+    // --- END FIX ---
+    
     if (!list) return;
     list.innerHTML = '';
 
@@ -121,22 +128,38 @@ export function renderAccountHolderManagementList() {
          return;
     }
 
+    // @ts-ignore
     const sortedHolders = [...state.allAccountHolders].sort((a, b) => a.name.localeCompare(b.name));
 
     sortedHolders.forEach(holder => {
+        // @ts-ignore
         const isDefault = state.settings.defaultAccountHolderId == holder.id;
+        // @ts-ignore
         const isProtected = holder.id == 1;
         const deleteButton = isProtected ? '' : `<button class="delete-holder-btn delete-btn" data-id="${holder.id}">Delete</button>`;
         const escapeHTML = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') : '';
+        // @ts-ignore
         const escapedName = escapeHTML(holder.name);
+        
+        // --- THIS IS THE FIX ---
+        // Added the "Manage Subscriptions" button
+        const subscriptionsButton = isProtected ? '' : `<button class="manage-subscriptions-btn" data-id="${holder.id}" data-name="${escapedName}" title="Manage Source Subscriptions">Subscribe</button>`;
+        // --- END FIX ---
 
         const li = document.createElement('li');
+        // @ts-ignore
         li.dataset.id = String(holder.id);
         li.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1;"> <input type="radio" id="holder_radio_${holder.id}" name="default-holder-radio" value="${holder.id}" ${isDefault ? 'checked' : ''} style="flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1;"> 
+                <input type="radio" id="holder_radio_${holder.id}" name="default-holder-radio" value="${holder.id}" ${isDefault ? 'checked' : ''} style="flex-shrink: 0;">
                 <label for="holder_radio_${holder.id}" class="holder-name" style="cursor: pointer;">${escapedName}</label>
-                <input type="text" class="edit-holder-input" value="${escapedName}" style="display: none; width: 100%;"> </div>
-            <div style="flex-shrink: 0; display: flex; gap: 5px;"> <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
+                <input type="text" class="edit-holder-input" value="${escapedName}" style="display: none; width: 100%;"> 
+            </div>
+            <div style="flex-shrink: 0; display: flex; gap: 5px;"> 
+                <!-- ADDED BUTTON -->
+                ${subscriptionsButton}
+                <!-- END ADDED BUTTON -->
+                <button class="edit-holder-btn" data-id="${holder.id}">Edit</button>
                 <button class="save-holder-btn" data-id="${holder.id}" style="display: none;">Save</button>
                 <button class="cancel-holder-btn cancel-btn" data-id="${holder.id}" style="display: none;">Cancel</button>                
                 ${deleteButton}

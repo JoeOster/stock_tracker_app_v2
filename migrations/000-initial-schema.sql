@@ -73,15 +73,18 @@ CREATE TABLE IF NOT EXISTS advice_sources (
     details TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (name, type) -- MODIFIED: Changed from (account_holder_id, name, type)
+    -- MODIFIED: Unique constraint no longer includes account_holder_id
+    UNIQUE (name, type)
 );
 
--- ADDED: New join table for account-source links
+-- --- NEW TABLE ---
+-- Creates the many-to-many link between account holders and advice sources
 CREATE TABLE IF NOT EXISTS account_source_links (
     account_holder_id INTEGER NOT NULL REFERENCES account_holders(id) ON DELETE CASCADE,
     advice_source_id INTEGER NOT NULL REFERENCES advice_sources(id) ON DELETE CASCADE,
     PRIMARY KEY (account_holder_id, advice_source_id)
 );
+-- --- END NEW TABLE ---
 
 CREATE TABLE IF NOT EXISTS journal_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,6 +128,7 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE TABLE IF NOT EXISTS source_notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     advice_source_id INTEGER NOT NULL REFERENCES advice_sources(id) ON DELETE CASCADE,
+    -- MODIFIED: This should be linked to the user who WROTE the note, not the source owner
     account_holder_id INTEGER REFERENCES account_holders(id),
     note_content TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -184,7 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions (transaction_ty
 CREATE INDEX IF NOT EXISTS idx_transactions_advice_source ON transactions (advice_source_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_linked_journal ON transactions (linked_journal_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_journal_entry ON notifications (journal_entry_id);
--- REMOVED: CREATE INDEX IF NOT EXISTS idx_advice_sources_account_holder ON advice_sources (account_holder_id);
+-- REMOVED: idx_advice_sources_account_holder
 CREATE INDEX IF NOT EXISTS idx_advice_sources_type ON advice_sources (type);
 CREATE INDEX IF NOT EXISTS idx_advice_sources_is_active ON advice_sources (is_active);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_account_holder ON journal_entries (account_holder_id);
@@ -200,9 +204,10 @@ CREATE INDEX IF NOT EXISTS idx_watchlist_journal_entry_id ON watchlist (journal_
 CREATE INDEX IF NOT EXISTS idx_watchlist_status ON watchlist (status);
 CREATE INDEX IF NOT EXISTS idx_watchlist_type ON watchlist (type); -- <<< ADDED INDEX FOR NEW COLUMN
 
--- ADDED: Indexes for new link table
+-- --- NEW INDEXES ---
 CREATE INDEX IF NOT EXISTS idx_links_account_holder ON account_source_links (account_holder_id);
 CREATE INDEX IF NOT EXISTS idx_links_advice_source ON account_source_links (advice_source_id);
+-- --- END NEW INDEXES ---
 
 
 -- 5. Seed Initial Data
