@@ -21,7 +21,7 @@ async function saveSettingsOnClose() {
     try {
         // Use the statically imported functions
         await saveSettings();
-        // showToast('Settings saved!', 'success'); // saveSettings() now shows its own toast
+        // saveSettings() now shows its own toast
     } catch (err) {
         console.error("Error saving settings on close:", err);
         // @ts-ignore
@@ -103,6 +103,37 @@ export function initializeModalHandlers() {
         });
     });
 
+    // --- ADDED: Global Escape Key Handler ---
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            // Find all visible modals
+            const visibleModals = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.modal.visible'));
+            if (visibleModals.length === 0) return; // No modals open
+
+            // Find the top-most modal
+            let topModal = visibleModals[0];
+            let maxZ = parseInt(window.getComputedStyle(topModal).zIndex || '0', 10);
+
+            visibleModals.forEach(modal => {
+                const z = parseInt(window.getComputedStyle(modal).zIndex || '0', 10);
+                if (z > maxZ) {
+                    topModal = modal;
+                    maxZ = z;
+                }
+            });
+
+            // Trigger its close button
+            const closeButton = /** @type {HTMLElement | null} */ (topModal.querySelector('.close-button'));
+            if (closeButton) {
+                closeButton.click(); // This will trigger the async saveSettingsOnClose if it's the settings modal
+            } else {
+                // Fallback if no 'X' button (shouldn't happen)
+                topModal.classList.remove('visible');
+            }
+        }
+    });
+    // --- END ADDED ---
+
     // --- Initialize Form-Specific Modal Handlers ---
     try {
         initializeSelectiveSellModalHandler();
@@ -125,7 +156,6 @@ export function initializeModalHandlers() {
     } catch (e) { console.error("Error initializing AddPaperTradeModalHandler:", e); }
 
     try {
-        // This function is now empty, but safe to call
         initializeSubscriptionPanelHandlers(); 
     } catch (e) { console.error("Error initializing ManageSubscriptionsModalHandler:", e); }
 

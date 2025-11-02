@@ -75,14 +75,17 @@ echo "$SERVICE_FILE_CONTENT" | sudo tee /etc/systemd/system/portfolio-tracker.se
 
 # --- 8. Create Backup Script and Directory ---
 echo_green "\n--- Creating the backup script... ---"
-mkdir -p /home/$PI_USERNAME/portfolio_manager_bu
+# MODIFIED: Updated backup directory
+BACKUP_DIR_PATH="/home/${PI_USERNAME}/portfolio_manager_bu/v3/prod"
+mkdir -p $BACKUP_DIR_PATH
 BACKUP_SCRIPT_CONTENT="#!/bin/bash
 SOURCE_DB=\"/home/${PI_USERNAME}/stock_tracker_app_v2/production.db\"
-BACKUP_DIR=\"/home/${PI_USERNAME}/portfolio_manager_bu\"
+BACKUP_DIR=\"${BACKUP_DIR_PATH}\"
 TIMESTAMP=\$(date +\"%Y-%m-%d\")
 BACKUP_FILE=\"\$BACKUP_DIR/production-backup-\$TIMESTAMP.db\"
 cp \"\$SOURCE_DB\" \"\$BACKUP_FILE\"
 "
+# END MODIFICATION
 echo "$BACKUP_SCRIPT_CONTENT" > /home/$PI_USERNAME/stock_tracker_app_v2/backup.sh
 chmod +x /home/$PI_USERNAME/stock_tracker_app_v2/backup.sh
 

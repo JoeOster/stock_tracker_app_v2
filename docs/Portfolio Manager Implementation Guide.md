@@ -1,129 +1,69 @@
-# Portfolio Manager V3 - Revised Development Plan
+# Portfolio Manager V3 - Active Roadmap
 
-**Last Updated:** 2025-10-30
+**Last Updated:** 2025-11-01
 
-This document outlines the remaining tasks for the Portfolio Tracker application, organized into a logical development pathway.
-
----
-
-## **UX Considerations (To Review)**
-
-These are areas to consider for improving the user experience during or after the main phases.
-
-* **Task UX.1: Loading States & Feedback:**
-  * [ ] Review loading feedback during asynchronous operations (tab switching, manual price refresh, CSV commit).
-  * [ ] Consider adding spinners or disabling buttons during processing to provide clearer feedback beyond toasts.
-* **Task UX.2: Importer Workflow Clarity:**
-  * [ ] Add more descriptive text/visual cues during the reconciliation step.
-  * [ ] Ensure error messages during parsing/processing are specific (e.g., row number, error type).
-  * [ ] **(New)** Enhance alert messages for skipped imports (e.g., invalid price, no open BUY lot) to include specific details from the CSV row (Ticker, Date, Qty, Price) to aid manual reconciliation.
-  * [ ] **(New)** Implement detection/messaging for uploading a CSV that seems identical (or contains mostly identical rows) to a previously imported file for the same account holder. Consider if/how to track import history per file/date. Maybe add a "source\_import\_id" to transactions table?
-* **Task UX.3: State Persistence (Filters/Sorts):**
-  * [ ] Decide if filter/sort states on Ledger, Journal, Dashboard should persist when switching main tabs.
-  * [ ] If yes, implement storing/retrieving these UI states (e.g., in global `state` or `localStorage`).
-* **Task UX.4: Modal Management:**
-  * [ ] Review modal closing behavior (background click, escape key).
-  * [ ] Ensure context is clear when modals (like Edit) are opened from different views.
-  * [ ] Consider if the "Manage Position Details" modal should become a dedicated view/panel instead of a modal due to its planned complexity.
-* **Task UX.5: Settings Navigation:**
-  * [ ] Review clarity of Settings modal tab/sub-tab hierarchy.
+This document outlines the remaining active tasks for the Portfolio Tracker application, organized into a logical development pathway.
 
 ---
 
-## **Phase 1: Complete Dashboard Core Functionality**
+## **Phase 1: Backend & Architectural Enhancements**
 
-**Goal:** Finalize the main user interaction loop for managing positions directly from the dashboard.
+**Goal:** Improve data collection, stability, and maintainability before building new UI features.
 
-* **Task 1.1 (Task X.5 - Part 1): Implement "Manage Position Details" Modal**
-  * [ ] Create the new modal template (`_modal_manage_position.html`) including sections for:
-    * Ticker/Exchange Header
-    * List of individual lots with per-lot "Edit" and "Limits" buttons.
-    * Placeholder for combined sales history.
-    * (Future Placeholders: Chart, News, Journal Links).
-  * [ ] Add necessary CSS for the new modal.
-* **Task 1.2 (Task X.5 - Part 2): Implement Backend Batch Sales History**
-  * [ ] Create a new backend API endpoint (e.g., `/api/transactions/sales/batch`) that accepts an array of `buyId`s and returns the combined, sorted sales history.
-* **Task 1.3 (Task X.5 - Part 3): Update Frontend Handler for "Manage" Button**
-  * [ ] Modify `handleActionClick` in `public/event-handlers/_dashboard.js`:
-    * Handle clicks on `.manage-position-btn`.
-    * Parse `data-ticker`, `data-exchange`, and `data-lot-ids`.
-    * Call the new batch sales history API endpoint.
-    * Create and call a new function (e.g., `populateManagementModal`) to render the fetched data and lot list (including per-lot buttons) into the new modal.
-    * Add event listeners within the modal (or use delegation) for the per-lot "Edit" / "Limits" buttons, likely reusing the existing `populateEditModal` logic.
-    * Display the modal.
-
----
-
-## **Phase 2: Hardening & Testing Foundation**
-
-**Goal:** Improve application stability, maintainability, and test coverage before adding major new features.
-
-* **Task 2.1 (Task 4.2): Implement Robust Backend Validation**
-  * [ ] Review all backend API routes (`routes/` directory) and add stricter validation for incoming request bodies and parameters.
-* **Task 2.2 (Task 4.3): Centralize Backend Error Handling**
-  * [ ] Create Express middleware to catch errors and send consistent JSON error responses from the API.
-* **Task 2.3 (Task 0.5.3 / 4.1): Revisit & Expand Testing**
+* **Task 1.1: Enhance Historical Price Tracking**
+  * [ ] Modify the `captureEodPrices` cron job in `services/cronJobs.js` to capture EOD prices for *all currently held* tickers (`transaction_type = 'BUY'` and `quantity_remaining > 0`), not just recently sold ones.
+* **Task 1.2: Implement Robust Backend Validation**
+  * [ ] Review all backend API routes (`routes/` directory) and add stricter validation for incoming request bodies and parameters (e.g., check for non-empty strings, valid numbers, etc.).
+* **Task 1.3: Centralize Backend Error Handling**
+  * [ ] Create Express middleware to catch errors and send consistent JSON error responses from the API (e.g., `{ "message": "Error details" }`).
+* **Task 1.4: Centralize Application Configuration**
+  * [ ] Implement a more robust configuration system beyond just `.env` for non-secret settings (e.g., a `config.js` file).
+* **Task 1.5: Revisit & Expand Testing**
   * [ ] Investigate and fix the skipped UI tests in `_settings.ui.test.js`.
-  * [ ] Add further unit tests where practical (e.g., more helper functions).
+  * [ ] Add further unit tests where practical (e.g., for `importer-helpers.js`).
 
 ---
 
-## **Phase 3: Source-Centric Management (Vision Feature)**
+## **Phase 2: Position Management & UX Refinements**
 
-**Goal:** Build the new "Sources" feature as a central hub for advice tracking.
+**Goal:** Build the new "Manage Position" page (as decided in UX.4) and address all remaining UI/UX tasks.
 
-* **Task 3.1 (Task 5.1): Refocus Tabs:**
-  * [ ] Rename/merge "Journal", potentially create new "Sources" tab in `_tabs.js`.
-* **Task 3.2 (Task 5.2 & X.15 Part 1): Database Schema Changes**
-  * [ ] Create DB migration script:
-    * **Refactor `advice_sources`:** Add `details TEXT` column for JSON data. (Plan to migrate old `contact_*` fields and drop them later).
-    * **Add `journal_entry_id` to `watchlist` table** (to link Trade Ideas to Techniques).
-    * Add `advice_source_id` to `documents`, make `journal_entry_id` nullable.
-    * (Optional) Create `source_notes` table.
-* **Task 3.3 (Task 5.3 & X.15 Part 2): Backend API Development**
-  * [ ] Update `routes/advice_sources.js` to save and read from the new `details` JSON column.
-  * [ ] Create new `/api/sources/*` endpoints (fetch details, notes, linked items).
-  * [ ] Modify `watchlist`, `documents`, `journal` routes as needed for new links.
-* **Task 3.4 (Task 5.4 & X.15 Part 3): Frontend UI Development**
-  * [ ] Update Settings modal 'Add Source' form to be **dynamic** based on the 'Type' dropdown, showing/hiding fields (e.g., Author/ISBN for 'Book').
-  * [ ] Update 'Source Details' modal to render **dynamically** based on `source.type`.
-  * [ ] For 'Book'/'Service' types, rename 'Paper Trades' table to '**Techniques / Methods**'.
-  * [ ] For 'Book'/'Service' types, **hide** the top "Add Trade Idea" form.
-  * [ ] Add **"Add Idea" buttons** to each row in the "Techniques / Methods" table.
-  * [ ] Update "Add Idea" logic to link to `journal_entry_id` when created from a Technique, and `advice_source_id` when from a 'Person' source.
-* **Task 3.5 (Task 5.5): Integrate Techniques (Journal):**
-  * [ ] Decide final location/integration of "Technique" (Journal) creation UI within the new dynamic modal.
-
----
-
-## **Phase 4: Settings, Long-Term Architecture & Future Features**
-
-**Goal:** Address remaining settings, improve underlying architecture, integrate future data sources, and keep documentation current.
-
-* **Task 4.1 (Task X.3 Deferred): Add UI Settings**
-  * [ ] Add settings for Default View & Number of Date Tabs.
-* **Task 4.2 (Task 4.4): Centralize Application Configuration**
-  * [ ] Implement a more robust configuration system beyond just `.env`.
-* **Task 4.3 (Task 4.5): Enhance Historical Price Tracking**
-  * [ ] Modify cron job to capture EOD prices for *all currently held* tickers, not just sold ones.
-* **Task 4.4 (Future): Integrate Finnhub Data**
-  * [ ] Add Finnhub Company Profile/News fetching to backend.
-  * [ ] Integrate data into the Manage Position Details modal.
-* **Task 4.5 (Future): Integrate Journal Links**
-  * [ ] Fetch related journal entries on backend.
-  * [ ] Add links/data into the Manage Position Details modal.
-* **Task 4.6 (Future): Implement Advanced Charting**
+* **Task 2.1: Implement "Manage Position" Page**
+  * [ ] Create a new page template (e.g., `_position_details.html`) to serve as a dedicated view for a single position.
+  * [ ] Update the "Manage" button on dashboard cards to navigate to this new view (e.g., `switchView('position', { ticker: 'AAPL' })`).
+  * [ ] On this new page, render:
+    * A header with ticker/exchange info.
+    * A list of individual open lots.
+    * The combined sales history (using the completed batch sales API endpoint).
+  * [ ] Add event listeners for per-lot "Edit" / "Limits" buttons.
+* **Task 2.2: Integrate Finnhub Data**
+  * [ ] Add Finnhub Company Profile/News fetching to the backend.
+  * [ ] Integrate this data into the new "Manage Position" page.
+* **Task 2.3: Integrate Journal Links**
+  * [ ] Fetch related journal entries on the backend.
+  * [ ] Add links/data into the new "Manage Position" page.
+* **Task 2.4: Implement Advanced Charting**
   * [ ] Implement Spark Charts on Dashboard Cards.
-  * [ ] Refactor Charts tab for Realized Gains analysis, etc..
-* **Task 4.7 (Task X.17 - Ongoing): Maintain Documentation**
-  * [ ] Keep Implementation Guide and other documentation updated throughout all phases.
+  * [ ] (Future) Refactor/re-introduce a Charts tab for Realized Gains analysis, etc.
+* **Task 2.5: Loading States & Feedback**
+  * [ ] Review loading feedback (tab switching, price refresh, CSV commit).
+  * [ ] Add spinners or disable buttons during processing where needed.
+* **Task 2.6: Importer Workflow Clarity**
+  * [ ] Add more descriptive text/visual cues during reconciliation.
+  * [ ] Enhance alert messages for skipped imports to include CSV row details.
+  * [ ] Implement detection for uploading a seemingly identical CSV file.
+* **Task 2.7: Add UI Settings**
+  * [ ] Add settings for "Default View" (e.g., Dashboard, Sources) to `public/templates/_modal_settings.html`.
+  * [ ] Add setting for "Number of Date Tabs" to `public/templates/_modal_settings.html`.
+  * [ ] Update `app-main.js` and `_tabs.js` to use these new settings from `state.settings`.
 
 ---
 
-## **Phase 5: Implement Authentication**
+## **Phase 3: Authentication & Documentation**
 
-**Goal:** Secure the application and manage users.
+**Goal:** Secure the application and finalize all documentation.
 
-* **Task 5.1:** Implement backend user authentication (e.g., username/password hashing, session management).
-* **Task 5.2:** Create frontend login page and integrate the login/logout flow.
-* **Task 5.3:** Refine Account Holder Management (logic for deleting primary holder, default reassignment, potential two-step delete process).
+* **Task 3.1:** Implement backend user authentication (e.g., username/password hashing, session management).
+* **Task 3.2:** Create frontend login page and integrate the login/logout flow.
+* **Task 3.3:** Refine Account Holder Management (logic for deleting primary holder, default reassignment, etc.).
+* **Task 3.4:** Maintain Documentation (keep all guides updated as these phases are completed).

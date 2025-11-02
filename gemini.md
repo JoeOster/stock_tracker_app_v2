@@ -1,26 +1,21 @@
 # Strategic Roadmap
 
-## Completed: Phases 0, 0.5, 1, 1.5, 2, 5
+This document outlines the high-level phases for the V3 development of the Portfolio Manager.
 
-* **Foundational Refactoring & Cleanup**
-* **Application Hardening**
-* **Intelligent CSV Importer & Hardening**
-* **Strategy & Advice Journal / Dashboard Implementation**
-* **Source-Centric Management** (Integration of Journal, Watchlist, Documents, and Notes under the "Research" tab)
+## Phase 1: Backend & Architectural Enhancements
 
-### Future Phases
+**Goal:** Improve data collection, stability, and maintainability before building new UI features.
 
-* **Phase X: UI Refinements & Fixes (Ongoing)**
-  * Address various UI bugs and minor enhancements identified through usage (see Implementation Guide).
-  * Implement "Manage Position Details" modal to replace the old sales history modal.
-* **Phase 3: Authentication & Enhanced Account Management**
-  * Implement user authentication and session management.
-  * Refine Account Holder deletion logic.
-* **Phase 4: Future Architectural Improvements**
-  * Adopt Unit Testing (revisit skipped tests).
-  * Implement Robust Backend Validation.
-  * Centralize Server-Side Error Handling.
-  * Centralize Application Configuration.
-  * Enhance Historical Price Tracking.
-* **Phase 6: Finalization & Documentation Review**
-  * Review and update all documentation to reflect the final V3 feature set.
+* **Tasks:** Enhance historical price tracking, implement robust backend validation, centralize error handling, and expand the automated testing suite.
+
+## Phase 2: Position Management & UX Refinements
+
+**Goal:** Build the new "Manage Position" page and address all remaining UI/UX tasks.
+
+* **Tasks:** Create a new dedicated page for managing position details, integrate Finnhub news/profile data, link journal entries, add spark charts, improve loading states, and enhance the importer workflow.
+
+## Phase 3: Authentication & Documentation
+
+**Goal:** Secure the application and finalize all documentation.
+
+* **Tasks:** Implement backend user authentication, create a frontend login page, refine account holder management logic, and keep all documentation up-to-date.
