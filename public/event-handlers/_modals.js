@@ -9,31 +9,23 @@ import { initializeSellFromPositionModalHandler } from './_modal_sell_from_posit
 import { initializeEditTransactionModalHandler } from './_modal_edit_transaction.js';
 import { initializeManagePositionModalHandler } from './_modal_manage_position.js';
 import { initializeAddPaperTradeModalHandler } from './_modal_add_paper_trade.js';
-// --- ADDED: Import the new subscription modal handler ---
-import { initializeManageSubscriptionsModalHandler } from './_modal_manage_subscriptions.js';
+import { initializeSubscriptionPanelHandlers } from './_modal_manage_subscriptions.js';
+import { saveSettings } from '../ui/settings.js';
+import { showToast } from '../ui/helpers.js';
 
-// ... (saveSettingsOnClose and clearSourceDetailsModal functions remain the same) ...
 /**
  * --- MODIFIED: Helper function to save settings on modal close ---
- * Dynamically imports and runs the saveSettings function.
- * Now async with proper error handling.
+ * Now async and awaits the async saveSettings() function.
  */
 async function saveSettingsOnClose() {
     try {
-        // Dynamically import and run saveSettings
-        const settingsModule = await import('../ui/settings.js');
-        settingsModule.saveSettings();
-        
-        // Dynamically import and run showToast
-        const helpersModule = await import('../ui/helpers.js');
-        helpersModule.showToast('Settings saved!', 'success');
+        // Use the statically imported functions
+        await saveSettings();
+        // showToast('Settings saved!', 'success'); // saveSettings() now shows its own toast
     } catch (err) {
         console.error("Error saving settings on close:", err);
-        // Don't await this, just fire and forget
-        import('../ui/helpers.js').then(helpersModule => {
-            // @ts-ignore
-            helpersModule.showToast(`Error saving settings: ${err.message}`, 'error');
-        });
+        // @ts-ignore
+        showToast(`Error saving settings: ${err.message}`, 'error');
     }
 }
 
@@ -59,24 +51,21 @@ function clearSourceDetailsModal(modal) {
  */
 export function initializeModalHandlers() {
     
-    // ... (Generic Modal Closing Listeners remain the same) ...
     // Top-right 'X' button
     document.querySelectorAll('.modal .close-button').forEach(btn =>
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async (e) => { // Made async
             const modal = (/** @type {HTMLElement} */ (e.target)).closest('.modal');
             if (modal) {
                 
                 if (modal.id === 'settings-modal') {
-                    await saveSettingsOnClose();
+                    await saveSettingsOnClose(); // Added await
                 }
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
                 
-                // --- ADDED: Clear zoomed chart if this is the one being closed ---
                 if (modal.id === 'image-zoom-modal') {
                     const zoomImage = document.getElementById('zoomed-image-content');
                     if (zoomImage) (/** @type {HTMLImageElement} */ (zoomImage)).src = '';
                 }
-                // --- END ADDED ---
                 
                 modal.classList.remove('visible');
             }
@@ -96,20 +85,18 @@ export function initializeModalHandlers() {
     
     // Background click
     document.querySelectorAll('.modal').forEach(modal => {
-         modal.addEventListener('click', async (e) => {
+         modal.addEventListener('click', async (e) => { // Made async
             if (e.target === modal) {
                 
                 if (modal.id === 'settings-modal') {
-                    await saveSettingsOnClose();
+                    await saveSettingsOnClose(); // Added await
                 }
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
 
-                // --- ADDED: Clear zoomed chart if this is the one being closed ---
                 if (modal.id === 'image-zoom-modal') {
                     const zoomImage = document.getElementById('zoomed-image-content');
                     if (zoomImage) (/** @type {HTMLImageElement} */ (zoomImage)).src = '';
                 }
-                // --- END ADDED ---
                 
                 modal.classList.remove('visible');
             }
@@ -137,10 +124,9 @@ export function initializeModalHandlers() {
         initializeAddPaperTradeModalHandler();
     } catch (e) { console.error("Error initializing AddPaperTradeModalHandler:", e); }
 
-    // --- ADDED: Initialize the new subscription modal handler ---
     try {
-        initializeManageSubscriptionsModalHandler();
+        // This function is now empty, but safe to call
+        initializeSubscriptionPanelHandlers(); 
     } catch (e) { console.error("Error initializing ManageSubscriptionsModalHandler:", e); }
-    // --- END ADDED ---
 
 } // End of initializeModalHandlers function

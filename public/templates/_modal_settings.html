@@ -3,23 +3,16 @@
         <span class="close-button">&times;</span>
         <div class="settings-layout">
             <div class="settings-tabs">
-                <button class="settings-tab active" data-tab="general">General</button>
-                <button class="settings-tab" data-tab="appearance">Appearance</button>
+                <button class="settings-tab active" data-tab="appearance">Appearance</button>
                 <button class="settings-tab" data-tab="data">Data Management</button>
+                <button class="settings-tab" data-tab="general">General</button>
+                <button class="settings-tab" data-tab="user-management">User Management</button>
             </div>
             <div class="settings-content">
                 
-                <div id="general-settings-panel" class="settings-panel active">
+                <div id="general-settings-panel" class="settings-panel">
                     <h3>General Settings</h3>
                     <form id="general-settings-form" class="settings-grid">
-                        <div class="form-group">
-                            <label>Default Account Holder</label>
-                            <div id="account-holder-list-container" style="padding-top: 10px;">
-                                <ul id="account-holder-list" class="management-list">
-                                    <li>Loading...</li>
-                                </ul>
-                            </div>
-                        </div>
                         <div class="form-group">
                             <label for="family-name">Family Name (App Title)</label>
                             <input type="text" id="family-name">
@@ -27,12 +20,14 @@
                             <input type="number" id="take-profit-percent" step="1" min="0">
                             <label for="stop-loss-percent" style="margin-top: 1rem;">Default Stop Loss %</label>
                             <input type="number" id="stop-loss-percent" step="1" min="0">
-                            <label for="notification-cooldown" style="margin-top: 1rem;">Notification Cooldown (Min)</label>
+                        </div>
+                        <div class="form-group">
+                             <label for="notification-cooldown" style="margin-top: 1rem;">Notification Cooldown (Min)</label>
                             <input type="number" id="notification-cooldown" step="1" min="1">
                         </div>
                     </form>
                 </div>
-                <div id="appearance-settings-panel" class="settings-panel">
+                <div id="appearance-settings-panel" class="settings-panel active">
                     <h3>Appearance</h3>
                     <form id="appearance-settings-form" class="settings-grid">
                         <div class="form-group">
@@ -58,12 +53,11 @@
                 </div>
                 <div id="data-settings-panel" class="settings-panel">
                     <div class="sub-tabs">
-                        <button class="sub-tab active" data-sub-tab="exchanges-panel">Exchanges</button>
-                        <!-- REMOVED: <button class="sub-tab" data-sub-tab="holders-panel">Account Holders</button> -->
-                        <button class="sub-tab" data-sub-tab="sources-panel">Advice Sources</button>
+                        <button class="sub-tab active" data-sub-tab="sources-panel">Advice Sources</button>
+                        <button class="sub-tab" data-sub-tab="exchanges-panel">Exchanges</button>
                     </div>
                     <div class="sub-tab-content">
-                        <div id="exchanges-panel" class="sub-tab-panel active">
+                        <div id="exchanges-panel" class="sub-tab-panel">
                             <h4>Manage Exchanges</h4>
                             <form id="add-exchange-form" class="add-item-form">
                                 <input type="text" id="new-exchange-name" placeholder="New Exchange Name" required>
@@ -71,18 +65,7 @@
                             </form>
                             <ul id="exchange-list" class="management-list" style="margin-top: 1rem;"></ul>
                         </div>
-                        <!-- REMOVED: This panel is no longer used -->
-                        <div id="holders-panel" class="sub-tab-panel">
-                            <h4>Manage Account Holders</h4>
-                            <form id="add-holder-form" class="add-item-form">
-                                <input type="text" id="new-holder-name" placeholder="New Account Holder Name" required>
-                                <button type="button" id="add-account-holder-btn">Add Account Holder</button>
-                            </form>
-                            <ul id="holder-list-secondary" class="management-list" style="margin-top: 1rem;">
-                                 <li>Loading...</li>
-                            </ul>
-                        </div>
-                        <div id="sources-panel" class="sub-tab-panel">
+                        <div id="sources-panel" class="sub-tab-panel active">
                             <h4>Manage Advice Sources</h4>
                             <form id="add-new-source-form" class="form-grid">
                                 <div class="form-group form-group-span-2">
@@ -112,7 +95,6 @@
                                     <label for="new-source-image-path">Image Path (Optional)</label>
                                     <input type="text" id="new-source-image-path" placeholder="e.g., /images/contacts/default.png">
                                 </div>
-
                                 <div id="new-source-panel-person" class="dynamic-source-panel">
                                     <div class="form-group">
                                         <label for="new-source-contact-email">Contact Email (Optional)</label>
@@ -185,7 +167,6 @@
                                         <textarea id="new-source-book-pdfs" rows="3"></textarea>
                                     </div>
                                 </div>
-
                                 <div id="new-source-panel-website" class="dynamic-source-panel">
                                     <div class="form-group form-group-span-2">
                                         <label for="new-source-website-websites">Relevant Links (Optional, one per line)</label>
@@ -210,8 +191,47 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="user-management-settings-panel" class="settings-panel">
+                    <div class="sub-tabs">
+                        <button class="sub-tab active" data-sub-tab="users-panel">Users</button>
+                        <button class="sub-tab" data-sub-tab="subscriptions-panel" style="display: none;">Subscriptions</button>
+                    </div>
+                    <div class="sub-tab-content">
+                        <div id="users-panel" class="sub-tab-panel active">
+                            <h4>Manage Account Holders</h4>
+                            <form id="add-holder-form" class="add-item-form">
+                                <input type="text" id="new-holder-name" placeholder="New Account Holder Name" required>
+                                <button type="button" id="add-account-holder-btn">Add Account Holder</button>
+                            </form>
+                            <label style="font-weight: 500; font-size: 0.9em; color: var(--text-muted-color); margin-top: 1.5rem; display: block;">
+                                Select default user and manage existing users:
+                            </label>
+                            <div id="account-holder-list-container" style="padding-top: 10px;">
+                                <ul id="account-holder-list" class="management-list">
+                                    <li>Loading...</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div id="subscriptions-panel" class="sub-tab-panel">
+                            <h2 id="subscriptions-panel-title">Manage Subscribed Sources for --</h2>
+                            <p class="subtitle" style="text-align: left; margin: -10px 0 15px 0;">Select the global sources you want to see for this user.</p>
+                            
+                            <div id="subscriptions-panel-list-container" style="max-height: 50vh; overflow-y: auto; border: 1px solid var(--container-border); border-radius: 6px; padding: 10px; background-color: var(--info-panel-bg);">
+                                <p>Select a user from the 'Users' tab and click 'Subscriptions' to manage them here.</p>
+                            </div>
+
+                            </div>
+                    </div>
+                </div>
+
+            </div> </div> <div class="modal-actions" style="border-top: 1px solid var(--container-border); padding-top: 1.5rem; margin-top: 1.5rem;">
+            <div class="modal-actions-right">
+                <button id="save-settings-button">Save & Close</button>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -243,12 +263,10 @@
                 <label for="edit-source-description">Description (Optional)</label>
                 <textarea id="edit-source-description" rows="2"></textarea>
             </div>
-
             <div class="form-group form-group-span-2">
                 <label for="edit-source-image-path">Image Path (Optional)</label>
                 <input type="text" id="edit-source-image-path" placeholder="e.g., /images/contacts/default.png">
             </div>
-            
             <div id="edit-source-panel-person" class="dynamic-source-panel">
                 <div class="form-group">
                     <label for="edit-source-contact-email">Contact Email (Optional)</label>
@@ -303,25 +321,24 @@
                     <input type="text" id="edit-source-group-app-handle" placeholder="e.g., @username or +1234567890">
                 </div>
             </div>
-<div id="edit-source-panel-book" class="dynamic-source-panel">
-    <div class="form-group">
-        <label for="edit-source-book-author">Author (Optional)</label>
-        <input type="text" id="edit-source-book-author">
-    </div>
-    <div class="form-group">
-        <label for="edit-source-book-isbn">ISBN (Optional)</label>
-        <input type="text" id="edit-source-book-isbn">
-    </div>
-    <div class="form-group form-group-span-2">
-        <label for="edit-source-book-websites">Website Links (Optional, one per line)</label>
-        <textarea id="edit-source-book-websites" rows="3"></textarea>
-    </div>
-    <div class="form-group form-group-span-2">
-        <label for="edit-source-book-pdfs">PDF/Document Links (Optional, one per line)</label>
-        <textarea id="edit-source-book-pdfs" rows="3"></textarea>
-    </div>
-</div>
-
+            <div id="edit-source-panel-book" class="dynamic-source-panel">
+                <div class="form-group">
+                    <label for="edit-source-book-author">Author (Optional)</label>
+                    <input type="text" id="edit-source-book-author">
+                </div>
+                <div class="form-group">
+                    <label for="edit-source-book-isbn">ISBN (Optional)</label>
+                    <input type="text" id="edit-source-book-isbn">
+                </div>
+                <div class="form-group form-group-span-2">
+                    <label for="edit-source-book-websites">Website Links (Optional, one per line)</label>
+                    <textarea id="edit-source-book-websites" rows="3"></textarea>
+                </div>
+                <div class="form-group form-group-span-2">
+                    <label for="edit-source-book-pdfs">PDF/Document Links (Optional, one per line)</label>
+                    <textarea id="edit-source-book-pdfs" rows="3"></textarea>
+                </div>
+            </div>
             <div id="edit-source-panel-website" class="dynamic-source-panel">
                 <div class="form-group form-group-span-2">
                     <label for="edit-source-website-websites">Relevant Links (Optional, one per line)</label>
@@ -339,4 +356,3 @@
         </form>
     </div>
 </div>
-

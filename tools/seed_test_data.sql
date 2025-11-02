@@ -36,7 +36,6 @@ INSERT INTO advice_sources (name, type, description, is_active, image_path, deta
 ('Source A', 'Website', 'Financial News Site', 1, NULL, NULL),
 ('Source B (Emily)', 'Person', 'Investment Advisor', 1, '/images/contacts/Emily.png', '{"contact_app_type": "Signal", "contact_app_handle": "+1234567890"}'),
 ('Source C (A.Z Penn)', 'Book', 'Classic Investing Book', 1, '/images/contacts/A_Z_Penn_Swing Trading.jpg', '{"author": "A.Z Penn", "isbn": "978-1234567890"}'),
-('Source D', 'Service', 'Subscription Newsletter', 0, NULL, NULL), -- Inactive
 ('Source E (Anabella)', 'Group', 'Local Investment Club', 1, '/images/contacts/anabella.png', '{"contact_person": "Anabella", "contact_app_type": "WhatsApp"}');
 
 -- === ADDED: Link Sources to Test Users ===

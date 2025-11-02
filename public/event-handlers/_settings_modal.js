@@ -15,9 +15,8 @@ import {
 import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
 import { fetchAndRenderExchanges } from './_settings_exchanges.js';
 import { fetchAndPopulateAccountHolders } from './_settings_holders.js';
-// --- MODIFIED: Import the correct fetcher ---
 import { fetchAllAdviceSourcesForUser } from './_journal_settings.js';
-// --- END MODIFIED ---
+// --- REMOVED: Subscription panel initializer ---
 
 /**
  * Helper function to set the active tab and panel within a tab group.
@@ -31,6 +30,7 @@ import { fetchAllAdviceSourcesForUser } from './_journal_settings.js';
  * @returns {void}
  */
 export function setActiveTab(containerElement, clickedTabElement, scopeElement, panelSelector, tabAttribute, panelIdPrefix = '#', panelIdSuffix = '') {
+    // ... (this function remains unchanged) ...
     const tabId = clickedTabElement.getAttribute(tabAttribute);
 
     if (!tabId) {
@@ -67,6 +67,7 @@ export function setActiveTab(containerElement, clickedTabElement, scopeElement, 
  * @returns {void}
  */
 export function initializeSettingsModalHandlers() {
+    // ... (variable declarations remain the same) ...
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
     const saveSettingsBtn = document.getElementById('save-settings-button');
@@ -74,60 +75,61 @@ export function initializeSettingsModalHandlers() {
     const fontSelector = /** @type {HTMLSelectElement} */ (document.getElementById('font-selector'));
     const settingsTabsContainer = settingsModal?.querySelector('.settings-tabs');
     const dataManagementPanel = settingsModal?.querySelector('#data-settings-panel');
+    const userManagementPanel = settingsModal?.querySelector('#user-management-settings-panel');
 
 
     // --- Settings Modal Opening ---
     if (settingsBtn && settingsModal) {
+        // ... (click listener remains the same as previous response) ...
         settingsBtn.addEventListener('click', async () => {
             console.log("Settings button clicked - opening modal...");
             
-            // --- THIS IS THE FIX ---
             if (state.selectedAccountHolderId === 'all') {
                 showToast('Please select a specific account holder to manage settings.', 'error');
                 return;
             }
-            // --- END FIX ---
             
             try {
                 showToast('Loading settings data...', 'info', 2000);
                 
-                // --- MODIFIED: Fetch user-specific sources for the modal ---
                 const [_, __, userSources] = await Promise.all([
                     fetchAndRenderExchanges(),
                     fetchAndPopulateAccountHolders(),
-                    fetchAllAdviceSourcesForUser(state.selectedAccountHolderId) // Fetch user-specific sources
+                    fetchAllAdviceSourcesForUser(state.selectedAccountHolderId)
                 ]);
-                // --- END MODIFIED ---
 
                 const takeProfitInput = /** @type {HTMLInputElement} */(document.getElementById('take-profit-percent'));
                 const stopLossInput = /** @type {HTMLInputElement} */(document.getElementById('stop-loss-percent'));
-                const themeSelect = /** @type {HTMLSelectElement} */(document.getElementById('theme-selector'));
-                const fontSelect = /** @type {HTMLSelectElement} */(document.getElementById('font-selector'));
                 const cooldownInput = /** @type {HTMLInputElement} */(document.getElementById('notification-cooldown'));
                 const familyNameInput = /** @type {HTMLInputElement} */(document.getElementById('family-name'));
-
-                if (!takeProfitInput || !stopLossInput || !themeSelect || !fontSelect || !cooldownInput || !familyNameInput) {
-                    console.error("Error populating settings: One or more form elements are missing from _modal_settings.html.");
-                    throw new Error("Modal UI elements are missing. Check browser cache or template file.");
-                }
-
-                takeProfitInput.value = String(state.settings.takeProfitPercent || 0);
-                stopLossInput.value = String(state.settings.stopLossPercent || 0);
-                themeSelect.value = state.settings.theme || 'light';
-                fontSelect.value = state.settings.font || 'Inter';
-                cooldownInput.value = String(state.settings.notificationCooldown || 16);
-                familyNameInput.value = state.settings.familyName || '';
-
+                if (takeProfitInput) takeProfitInput.value = String(state.settings.takeProfitPercent || 0);
+                if (stopLossInput) stopLossInput.value = String(state.settings.stopLossPercent || 0);
+                if (cooldownInput) cooldownInput.value = String(state.settings.notificationCooldown || 16);
+                if (familyNameInput) familyNameInput.value = state.settings.familyName || '';
+                const themeSelect = /** @type {HTMLSelectElement} */(document.getElementById('theme-selector'));
+                const fontSelect = /** @type {HTMLSelectElement} */(document.getElementById('font-selector'));
+                if (themeSelect) themeSelect.value = state.settings.theme || 'light';
+                if (fontSelect) fontSelect.value = state.settings.font || 'Inter';
                 renderExchangeManagementList();
-                renderAccountHolderManagementList();
-                // --- MODIFIED: Pass the user-specific list to the renderer ---
                 renderAdviceSourceManagementList(userSources);
-                // --- END MODIFIED ---
+                renderAccountHolderManagementList(); 
 
                 settingsTabsContainer?.querySelectorAll('.settings-tab').forEach((tab, index) => tab.classList.toggle('active', index === 0));
                 settingsModal.querySelectorAll('.settings-panel').forEach((panel, index) => panel.classList.toggle('active', index === 0));
                 dataManagementPanel?.querySelectorAll('.sub-tab').forEach((tab, index) => tab.classList.toggle('active', index === 0));
                 dataManagementPanel?.querySelectorAll('.sub-tab-panel').forEach((panel, index) => panel.classList.toggle('active', index === 0));
+                userManagementPanel?.querySelectorAll('.sub-tab').forEach((tab, index) => tab.classList.toggle('active', index === 0));
+                userManagementPanel?.querySelectorAll('.sub-tab-panel').forEach((panel, index) => panel.classList.toggle('active', index === 0));
+                
+                const subTabBtn = userManagementPanel?.querySelector('button[data-sub-tab="subscriptions-panel"]');
+                if (subTabBtn) {
+                    (/** @type {HTMLElement} */(subTabBtn)).style.display = 'none';
+                }
+
+                const subPanelTitle = document.getElementById('subscriptions-panel-title');
+                const subPanelList = document.getElementById('subscriptions-panel-list-container');
+                if (subPanelTitle) subPanelTitle.textContent = 'Manage Subscribed Sources for --';
+                if (subPanelList) subPanelList.innerHTML = '<p>Select a user from the \'Users\' tab and click \'Subscriptions\' to manage them here.</p>';
 
                 settingsModal.classList.add('visible');
                 console.log("Settings modal opened and initialized.");
@@ -142,17 +144,20 @@ export function initializeSettingsModalHandlers() {
         console.warn("Settings button or modal element not found.");
     }
 
+    // --- Main Save Button ---
     if (saveSettingsBtn && settingsModal) {
-        saveSettingsBtn.addEventListener('click', () => {
-            saveSettings();
+        // --- MODIFICATION: Made listener async and added await ---
+        saveSettingsBtn.addEventListener('click', async () => {
+            await saveSettings(); // This function now handles default user saving
             settingsModal.classList.remove('visible');
-            showToast('Settings saved!', 'success');
+            // saveSettings shows its own toast
         });
+        // --- END MODIFICATION ---
     }
 
+    // ... (Appearance, Main Tab, and Data Tab listeners are unchanged) ...
     if (themeSelector) themeSelector.addEventListener('change', () => { state.settings.theme = themeSelector.value; applyAppearanceSettings(); });
     if (fontSelector) fontSelector.addEventListener('change', () => { state.settings.font = fontSelector.value; applyAppearanceSettings(); });
-
     if (settingsTabsContainer && settingsModal) {
         settingsTabsContainer.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
@@ -166,7 +171,6 @@ export function initializeSettingsModalHandlers() {
     } else {
         console.warn("Could not find settings tabs container or settings modal for main tab events.");
     }
-
     if (dataManagementPanel) {
         const subTabsContainer = dataManagementPanel.querySelector('.sub-tabs');
         if (subTabsContainer) {
@@ -184,5 +188,49 @@ export function initializeSettingsModalHandlers() {
         }
     } else {
          console.warn("Could not find data management panel for sub-tab events.");
+    }
+
+    // --- User Management Sub-Tab Navigation ---
+    if (userManagementPanel) {
+        // --- REMOVED: initializeSubscriptionPanelHandlers(); ---
+        
+        const subTabsContainer = userManagementPanel.querySelector('.sub-tabs');
+        if (subTabsContainer) {
+            // ... (sub-tab click listener remains the same as previous response) ...
+            subTabsContainer.addEventListener('click', (e) => {
+                const target = /** @type {HTMLElement} */ (e.target);
+                if (target.tagName === 'BUTTON' && target.classList.contains('sub-tab') && !target.classList.contains('active')) {
+                    
+                    const clickedTabId = target.dataset.subTab;
+                    if (clickedTabId === 'users-panel') {
+                        const subTabBtn = userManagementPanel?.querySelector('button[data-sub-tab="subscriptions-panel"]');
+                        if (subTabBtn) {
+                            (/** @type {HTMLElement} */(subTabBtn)).style.display = 'none';
+                        }
+                    }
+
+                    setActiveTab(
+                        subTabsContainer, target, userManagementPanel,
+                        '.sub-tab-panel', 'data-sub-tab', '#'
+                    );
+                    
+                    if (target.dataset.subTab === 'subscriptions-panel') {
+                        // --- MODIFICATION: Check container for holderId ---
+                        const container = document.getElementById('subscriptions-panel-list-container');
+                        if (container && !(/** @type {HTMLElement} */(container)).dataset.holderId) {
+                             const subPanelTitle = document.getElementById('subscriptions-panel-title');
+                             const subPanelList = document.getElementById('subscriptions-panel-list-container');
+                             if (subPanelTitle) subPanelTitle.textContent = 'Manage Subscribed Sources for --';
+                             if (subPanelList) subPanelList.innerHTML = '<p>Select a user from the \'Users\' tab and click \'Subscriptions\' to manage them here.</p>';
+                        }
+                        // --- END MODIFICATION ---
+                    }
+                }
+            });
+        } else {
+            console.warn("Could not find sub-tabs container within user management panel.");
+        }
+    } else {
+         console.warn("Could not find user management panel for sub-tab events.");
     }
 }

@@ -47,7 +47,7 @@ export function initializeAllEventHandlers() {
                 initializeAlertsHandlers();
                 initializeDailyReportHandlers();
                 initializeImportHandlers();
-                initializeChartsHandlers();
+                // --- REMOVED: initializeChartsHandlers(); ---
                 initializeResearchHandlers(); // This is now for "Sources"
                 initializeDashboardHandlers();
                 initializeWatchlistHandlers();

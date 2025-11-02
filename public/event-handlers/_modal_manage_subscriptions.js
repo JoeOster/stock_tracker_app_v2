@@ -1,37 +1,37 @@
-// /public/event-handlers/_modal_manage_subscriptions.js
+// public/event-handlers/_modal_manage_subscriptions.js
 /**
- * @file Initializes event handlers for the "Manage Subscriptions" modal.
+ * @file Initializes event handlers for the "Manage Subscriptions" PANEL.
  * @module event-handlers/_modal_manage_subscriptions
  */
 
 import { state, updateState } from '../state.js';
 import { showToast } from '../ui/helpers.js';
 import { handleResponse } from '../api/api-helpers.js';
-import { fetchAndStoreAdviceSources } from './_journal_settings.js';
+import { fetchAndStoreAdviceSources, fetchAllAdviceSourcesForUser } from './_journal_settings.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
 import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
 
 /**
- * Fetches all global sources and populates the subscription modal.
+ * Fetches all global sources and populates the subscription PANEL.
  * @async
  * @param {string|number} holderId - The account holder ID.
  * @param {string} holderName - The account holder's name.
  * @returns {Promise<void>}
  */
-export async function openAndPopulateSubscriptionModal(holderId, holderName) {
-    const modal = document.getElementById('manage-subscriptions-modal');
-    const title = document.getElementById('manage-subscriptions-title');
-    const container = document.getElementById('subscription-list-container');
+export async function populateSubscriptionPanel(holderId, holderName) {
+    const title = document.getElementById('subscriptions-panel-title');
+    const container = document.getElementById('subscriptions-panel-list-container');
     
-    if (!modal || !title || !container) {
-        return showToast('Error: Subscription modal elements not found.', 'error');
+    // --- FIX: Button is gone, no need to find it ---
+    if (!title || !container) {
+        return showToast('Error: Subscription panel elements not found.', 'error');
     }
 
-    // Set modal title and store holderId
+    // --- MODIFICATION: Store holderId on the list container ---
     title.textContent = `Manage Subscribed Sources for ${holderName}`;
-    modal.dataset.holderId = String(holderId);
+    (/** @type {HTMLElement} */(container)).dataset.holderId = String(holderId); 
     container.innerHTML = '<p>Loading available sources...</p>';
-    modal.classList.add('visible');
+    // --- END MODIFICATION ---
 
     try {
         // Fetch all sources and their link status for this user
@@ -83,23 +83,27 @@ export async function openAndPopulateSubscriptionModal(holderId, holderName) {
 
 /**
  * Saves the user's source subscriptions.
+ * This is now exported and called by the main saveSettings function.
  * @async
  * @returns {Promise<void>}
  */
-async function saveSubscriptions() {
-    const modal = document.getElementById('manage-subscriptions-modal');
-    const saveBtn = document.getElementById('manage-subscriptions-save-btn');
-    if (!modal || !saveBtn) return;
+export async function saveSubscriptions() {
+    const container = document.getElementById('subscriptions-panel-list-container');
+    if (!container) return;
 
-    const holderId = modal.dataset.holderId;
+    // --- MODIFICATION: Read holderId from container's dataset ---
+    const holderId = (/** @type {HTMLElement} */(container)).dataset.holderId;
+    
+    // If no holderId is set, this panel was never opened, so do nothing.
     if (!holderId) {
-        return showToast('Error: No account holder ID associated with this action.', 'error');
+        console.log("[saveSubscriptions] No holderId set on panel, skipping save.");
+        return Promise.resolve();
     }
+    // --- END MODIFICATION ---
 
-    const checkboxes = modal.querySelectorAll('.subscription-checkbox:checked');
+    const checkboxes = container.querySelectorAll('.subscription-checkbox:checked');
     const sourceIds = Array.from(checkboxes).map(cb => (/** @type {HTMLElement} */(cb)).dataset.sourceId);
 
-    saveBtn.disabled = true;
     try {
         const response = await fetch(`/api/accounts/holders/${holderId}/sources`, {
             method: 'PUT',
@@ -114,29 +118,28 @@ async function saveSubscriptions() {
             populateAllAdviceSourceDropdowns();
         }
         
-        // We also need to refresh the Settings modal's list
-        const { fetchAllAdviceSourcesForUser } = await import('./_journal_settings.js');
+        // Refresh the Advice Sources list in the Data Management tab
         const userSources = await fetchAllAdviceSourcesForUser(holderId);
         renderAdviceSourceManagementList(userSources);
-
-        showToast('Subscriptions updated!', 'success');
-        modal.classList.remove('visible');
+        
+        // --- MODIFICATION: Clear the holderId from the dataset after saving ---
+        delete (/** @type {HTMLElement} */(container)).dataset.holderId;
+        console.log("[saveSubscriptions] Subscriptions updated!");
+        // --- END MODIFICATION ---
 
     } catch (error) {
         // @ts-ignore
-        showToast(`Error: ${error.message}`, 'error');
-    } finally {
-        saveBtn.disabled = false;
+        showToast(`Error saving subscriptions: ${error.message}`, 'error');
+        // We re-throw the error so the main saveSettings can be aware of it if needed
+        throw error;
     }
 }
 
 /**
- * Initializes event listeners for the "Manage Subscriptions" modal.
+ * Initializes event listeners for the "Manage Subscriptions" PANEL.
+ * This function is now EMPTY because the save button was removed.
  * @returns {void}
  */
-export function initializeManageSubscriptionsModalHandler() {
-    const saveBtn = document.getElementById('manage-subscriptions-save-btn');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', saveSubscriptions);
-    }
+export function initializeSubscriptionPanelHandlers() {
+    // --- REMOVED: Save button listener ---
 }
