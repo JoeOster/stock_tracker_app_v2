@@ -16,38 +16,47 @@ import { formatQuantity, formatAccounting } from '../formatters.js';
  * @returns {void}
  */
 export function renderOpenOrders(orders) {
-    // console.log("[Orders Render] Rendering open orders table..."); // Removed log
-    const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#pending-orders-table tbody'));
-    if (!tableBody) {
-        console.error("[Orders Render] Could not find table body for pending orders."); // Keep error log
-        return;
-    }
+  // console.log("[Orders Render] Rendering open orders table..."); // Removed log
+  const tableBody = /** @type {HTMLTableSectionElement} */ (
+    document.querySelector('#pending-orders-table tbody')
+  );
+  if (!tableBody) {
+    console.error(
+      '[Orders Render] Could not find table body for pending orders.'
+    ); // Keep error log
+    return;
+  }
 
-    tableBody.innerHTML = '';
+  tableBody.innerHTML = '';
 
-    if (state) {
-        state.pendingOrders = orders;
-    } else {
-        console.warn("[Orders Render] State object not found during render."); // Keep warning
-    }
+  if (state) {
+    state.pendingOrders = orders;
+  } else {
+    console.warn('[Orders Render] State object not found during render.'); // Keep warning
+  }
 
-    if (!orders || orders.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7">You have no active pending orders.</td></tr>';
-        return;
-    }
+  if (!orders || orders.length === 0) {
+    tableBody.innerHTML =
+      '<tr><td colspan="7">You have no active pending orders.</td></tr>';
+    return;
+  }
 
-    orders.forEach(order => {
-        const row = tableBody.insertRow();
-        // Use optional chaining and nullish coalescing for safety
-        const orderId = order?.id ?? `unknown_id_${Math.random()}`;
-        const ticker = order?.ticker ?? 'N/A';
-        const exchange = order?.exchange ?? 'N/A';
-        const quantity = order?.quantity !== undefined ? formatQuantity(order.quantity) : '--';
-        const limitPrice = order?.limit_price !== undefined ? formatAccounting(order.limit_price) : '--';
-        const expirationDate = order?.expiration_date ?? 'GTC';
-        const createdDate = order?.created_date ?? 'N/A';
+  orders.forEach((order) => {
+    const row = tableBody.insertRow();
+    // Use optional chaining and nullish coalescing for safety
+    const orderId = order?.id ?? `unknown_id_${Math.random()}`;
+    const ticker = order?.ticker ?? 'N/A';
+    const exchange = order?.exchange ?? 'N/A';
+    const quantity =
+      order?.quantity !== undefined ? formatQuantity(order.quantity) : '--';
+    const limitPrice =
+      order?.limit_price !== undefined
+        ? formatAccounting(order.limit_price)
+        : '--';
+    const expirationDate = order?.expiration_date ?? 'GTC';
+    const createdDate = order?.created_date ?? 'N/A';
 
-        row.innerHTML = `
+    row.innerHTML = `
             <td>${ticker}</td>
             <td>${exchange}</td>
             <td class="numeric">${quantity}</td>
@@ -59,6 +68,5 @@ export function renderOpenOrders(orders) {
                 <button class="cancel-order-btn delete-btn" data-id="${orderId}">Cancel</button>
             </td>
         `;
-    });
-
+  });
 }

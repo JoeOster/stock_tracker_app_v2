@@ -10,11 +10,11 @@
 .read-only input,
 .read-only select,
 .read-only textarea {
-    /* Make them look disabled */
-    opacity: 0.7;
-    /* Prevent all interaction */
-    pointer-events: none;
-    cursor: not-allowed !important; /* Force cursor */
+  /* Make them look disabled */
+  opacity: 0.7;
+  /* Prevent all interaction */
+  pointer-events: none;
+  cursor: not-allowed !important; /* Force cursor */
 }
 
 /* * Re-enable specific elements that MUST work in read-only mode:
@@ -25,7 +25,7 @@
  * - Chart zoom modal close button
  */
 .read-only #global-account-holder-filter,
-.read-only .header-left label[for="global-account-holder-filter"],
+.read-only .header-left label[for='global-account-holder-filter'],
 .read-only .tab,
 .read-only .filter-bar input,
 .read-only .filter-bar select,
@@ -33,15 +33,15 @@
 .read-only #settings-btn,
 .read-only #settings-modal .close-button,
 .read-only #chart-zoom-modal .close-button {
-    opacity: 1;
-    pointer-events: auto;
-    cursor: auto !important;
+  opacity: 1;
+  pointer-events: auto;
+  cursor: auto !important;
 }
 
 /* * Specifically allow pointer events on the select,
  * but keep its buttons disabled
  */
 .read-only #global-account-holder-filter {
-    cursor: pointer !important;
+  cursor: pointer !important;
 }
 /* --- END ADDED --- */

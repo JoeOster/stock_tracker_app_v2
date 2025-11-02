@@ -26,39 +26,46 @@ import { initializeWatchlistHandlers } from './_watchlist.js';
  * @returns {void}
  */
 export function initializeAllEventHandlers() {
-    try {
-        console.log("Initializing core event handlers (Navigation, Modals, Settings)...");
+  try {
+    console.log(
+      'Initializing core event handlers (Navigation, Modals, Settings)...'
+    );
 
-        initializeNavigationHandlers();
-        initializeModalHandlers();
-        initializeSettingsModalHandlers();
-        
-        // Defer page-specific handlers slightly
-        setTimeout(() => {
-            try {
-                console.log("Initializing page-specific event handlers (Deferred)...");
-                
-                initializeExchangeManagementHandlers();
-                initializeHolderManagementHandlers();
-                initializeJournalSettingsHandlers(); // Handles Advice Sources in Settings
+    initializeNavigationHandlers();
+    initializeModalHandlers();
+    initializeSettingsModalHandlers();
 
-                initializeOrdersHandlers();
-                initializeLedgerHandlers();
-                initializeAlertsHandlers();
-                initializeDailyReportHandlers();
-                initializeImportHandlers();
-                // --- REMOVED: initializeChartsHandlers(); ---
-                initializeResearchHandlers(); // This is now for "Sources"
-                initializeDashboardHandlers();
-                initializeWatchlistHandlers();
-                // --- REMOVED: initializeJournalHandlers() and initializeJournalSubTabHandlers() ---
-                console.log("All event handlers initialized.");
-            } catch (deferredError) {
-                 console.error("[Init - Deferred] Error occurred during deferred handler initialization:", deferredError);
-            }
-        }, 0);
+    // Defer page-specific handlers slightly
+    setTimeout(() => {
+      try {
+        console.log('Initializing page-specific event handlers (Deferred)...');
 
-    } catch (error) {
-        console.error("[Init - Immediate] Error occurred during immediate handler initialization:", error);
-    }
+        initializeExchangeManagementHandlers();
+        initializeHolderManagementHandlers();
+        initializeJournalSettingsHandlers(); // Handles Advice Sources in Settings
+
+        initializeOrdersHandlers();
+        initializeLedgerHandlers();
+        initializeAlertsHandlers();
+        initializeDailyReportHandlers();
+        initializeImportHandlers();
+        // --- REMOVED: initializeChartsHandlers(); ---
+        initializeResearchHandlers(); // This is now for "Sources"
+        initializeDashboardHandlers();
+        initializeWatchlistHandlers();
+        // --- REMOVED: initializeJournalHandlers() and initializeJournalSubTabHandlers() ---
+        console.log('All event handlers initialized.');
+      } catch (deferredError) {
+        console.error(
+          '[Init - Deferred] Error occurred during deferred handler initialization:',
+          deferredError
+        );
+      }
+    }, 0);
+  } catch (error) {
+    console.error(
+      '[Init - Immediate] Error occurred during immediate handler initialization:',
+      error
+    );
+  }
 }

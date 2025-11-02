@@ -3,70 +3,69 @@
 
 /* --- Journal Table Styles (Copied from _journal.css) --- */
 .journal-table {
-    width: 100%;
-    /* Re-uses .data-table styles, so not much else is needed */
+  width: 100%;
+  /* Re-uses .data-table styles, so not much else is needed */
 }
 
 /* Filter bars for paper trades */
 .filter-bar {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    margin-bottom: 1rem;
-    background-color: var(--info-panel-bg);
-    padding: 10px;
-    border-radius: 6px;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  background-color: var(--info-panel-bg);
+  padding: 10px;
+  border-radius: 6px;
 }
 
-.filter-bar input[type="text"] {
-    max-width: 200px;
+.filter-bar input[type='text'] {
+  max-width: 200px;
 }
 
 /* Action cell styles for paper trade tables */
 .journal-table .actions-cell {
-    width: 80px; /* Give a fixed width for the edit/action buttons */
-    min-width: 80px;
-    text-align: center;
-    white-space: nowrap;
+  width: 80px; /* Give a fixed width for the edit/action buttons */
+  min-width: 80px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .journal-table .actions-cell button {
-    padding: 4px 8px;
-    font-size: 0.8em;
-    margin: 0 2px;
+  padding: 4px 8px;
+  font-size: 0.8em;
+  margin: 0 2px;
 }
 /* --- End Journal Styles --- */
 
-
 /* --- Real Positions Table Styles --- */
 #watchlist-real-table {
-    width: 100%;
+  width: 100%;
 }
 
 /* Style for the proximity indicators (🔥, ❄️) */
 #watchlist-real-table .limit-proximity-indicator {
-    font-size: 0.8em;
-    margin-left: 4px;
-    cursor: default;
+  font-size: 0.8em;
+  margin-left: 4px;
+  cursor: default;
 }
 
 /* --- ADDED: Watched Tickers Styles --- */
 #add-watched-ticker-form {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 1.5rem;
-    background-color: var(--info-panel-bg);
-    padding: 10px;
-    border-radius: 6px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+  background-color: var(--info-panel-bg);
+  padding: 10px;
+  border-radius: 6px;
 }
 
-#add-watched-ticker-form input[type="text"] {
-    flex-grow: 1;
-    max-width: 300px;
+#add-watched-ticker-form input[type='text'] {
+  flex-grow: 1;
+  max-width: 300px;
 }
 
 #watched-tickers-table .delete-watched-ticker-btn {
-    padding: 4px 8px;
-    font-size: 0.8em;
+  padding: 4px 8px;
+  font-size: 0.8em;
 }
 /* --- END ADDED --- */

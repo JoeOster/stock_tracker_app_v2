@@ -1,34 +1,60 @@
 <div id="manage-position-modal" class="modal">
-    <div class="modal-content modal-large">
-        <span class="close-button">&times;</span>
-        <h2 id="manage-position-title">Manage Position: --</h2>
-        
-        <div id="manage-position-summary" style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--container-border);">
-             <p><strong>Ticker:</strong> <span id="manage-position-ticker">--</span> (<span id="manage-position-exchange">--</span>)</p>
-             <p><strong>Total Held:</strong> <span id="manage-position-total-qty">--</span> | <strong>Avg. Basis:</strong> <span id="manage-position-avg-basis">--</span> | <strong>Current Value:</strong> <span id="manage-position-current-value">--</span></p>
-             <p><strong>Overall Unrealized P/L:</strong> <span id="manage-position-overall-pl">--</span></p>
-        </div>
+  <div class="modal-content modal-large">
+    <span class="close-button">&times;</span>
+    <h2 id="manage-position-title">Manage Position: --</h2>
 
-        <h4>Lot Details & History</h4>
-        <div style="max-height: 50vh; overflow-y: auto;"> <table id="manage-position-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th class="numeric">Price</th>
-                        <th class="numeric">Quantity</th>
-                        <th class="numeric">Remaining Qty</th>
-                        <th class="numeric">Realized P/L ($ / %)</th>
-                        <th class="numeric">Unrealized P/L ($ / %)</th>
-                        <th class="center-align actions-cell" style="min-width: 170px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="manage-position-tbody">
-                    <tr><td colspan="8">Loading lot details...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-
+    <div
+      id="manage-position-summary"
+      style="
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--container-border);
+      "
+    >
+      <p>
+        <strong>Ticker:</strong>
+        <span id="manage-position-ticker">--</span> (<span
+          id="manage-position-exchange"
+          >--</span
+        >)
+      </p>
+      <p>
+        <strong>Total Held:</strong>
+        <span id="manage-position-total-qty">--</span> |
+        <strong>Avg. Basis:</strong>
+        <span id="manage-position-avg-basis">--</span> |
+        <strong>Current Value:</strong>
+        <span id="manage-position-current-value">--</span>
+      </p>
+      <p>
+        <strong>Overall Unrealized P/L:</strong>
+        <span id="manage-position-overall-pl">--</span>
+      </p>
     </div>
+
+    <h4>Lot Details & History</h4>
+    <div style="max-height: 50vh; overflow-y: auto">
+      <table id="manage-position-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th class="numeric">Price</th>
+            <th class="numeric">Quantity</th>
+            <th class="numeric">Remaining Qty</th>
+            <th class="numeric">Realized P/L ($ / %)</th>
+            <th class="numeric">Unrealized P/L ($ / %)</th>
+            <th class="center-align actions-cell" style="min-width: 170px">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody id="manage-position-tbody">
+          <tr>
+            <td colspan="8">Loading lot details...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>

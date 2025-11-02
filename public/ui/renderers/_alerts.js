@@ -12,21 +12,24 @@ import { state } from '../../state.js';
  * @returns {void}
  */
 export function renderAlerts(alerts) {
-    const tableBody = /** @type {HTMLTableSectionElement} */ (document.querySelector('#alerts-table tbody'));
-    if (!tableBody) return;
+  const tableBody = /** @type {HTMLTableSectionElement} */ (
+    document.querySelector('#alerts-table tbody')
+  );
+  if (!tableBody) return;
 
-    tableBody.innerHTML = ''; // Clear previous content
+  tableBody.innerHTML = ''; // Clear previous content
 
-    state.activeAlerts = alerts;
+  state.activeAlerts = alerts;
 
-    if (alerts.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="3">You have no new alerts.</td></tr>';
-        return;
-    }
+  if (alerts.length === 0) {
+    tableBody.innerHTML =
+      '<tr><td colspan="3">You have no new alerts.</td></tr>';
+    return;
+  }
 
-    alerts.forEach(alert => {
-        const row = tableBody.insertRow();
-        row.innerHTML = `
+  alerts.forEach((alert) => {
+    const row = tableBody.insertRow();
+    row.innerHTML = `
             <td>${new Date(alert.created_at).toLocaleString()}</td>
             <td>${alert.message}</td>
             <td class="actions-cell">
@@ -35,5 +38,5 @@ export function renderAlerts(alerts) {
                 <button class="alert-pending-btn" data-notification-id="${alert.id}">Review Later</button>
             </td>
         `;
-    });
+  });
 }

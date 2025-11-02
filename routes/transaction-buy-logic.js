@@ -14,28 +14,35 @@
  * @throws {Error} Throws an error if the quantity is invalid.
  */
 async function handleBuyTransaction(db, txData, createdAt) {
-    const {
-        ticker, exchange, transaction_type, price, transaction_date,
-        limit_price_up, limit_up_expiration,
-        limit_price_down, limit_down_expiration,
-        limit_price_up_2, limit_up_expiration_2,
-        account_holder_id,
-        advice_source_id,
-        linked_journal_id,
-        quantity // Specific to BUY
-    } = txData;
+  const {
+    ticker,
+    exchange,
+    transaction_type,
+    price,
+    transaction_date,
+    limit_price_up,
+    limit_up_expiration,
+    limit_price_down,
+    limit_down_expiration,
+    limit_price_up_2,
+    limit_up_expiration_2,
+    account_holder_id,
+    advice_source_id,
+    linked_journal_id,
+    quantity, // Specific to BUY
+  } = txData;
 
-    const numPrice = parseFloat(price);
-    const numQuantity = parseFloat(quantity);
+  const numPrice = parseFloat(price);
+  const numQuantity = parseFloat(quantity);
 
-    if (isNaN(numQuantity) || numQuantity <= 0) {
-        throw new Error('Invalid quantity for BUY.');
-    }
+  if (isNaN(numQuantity) || numQuantity <= 0) {
+    throw new Error('Invalid quantity for BUY.');
+  }
 
-    const original_quantity = numQuantity;
-    const quantity_remaining = numQuantity;
+  const original_quantity = numQuantity;
+  const quantity_remaining = numQuantity;
 
-    const query = `INSERT INTO transactions (
+  const query = `INSERT INTO transactions (
                        ticker, exchange, transaction_type, quantity, price, transaction_date,
                        limit_price_up, limit_up_expiration, limit_price_down, limit_down_expiration,
                        limit_price_up_2, limit_up_expiration_2,
@@ -43,16 +50,30 @@ async function handleBuyTransaction(db, txData, createdAt) {
                        advice_source_id, linked_journal_id
                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    await db.run(query, [
-        ticker.toUpperCase(), exchange, transaction_type, numQuantity, numPrice, transaction_date,
-        limit_price_up || null, limit_up_expiration || null, limit_price_down || null, limit_down_expiration || null,
-        limit_price_up_2 || null, limit_up_expiration_2 || null,
-        null, original_quantity, quantity_remaining, account_holder_id, 'MANUAL', createdAt,
-        advice_source_id || null,
-        linked_journal_id || null
-    ]);
+  await db.run(query, [
+    ticker.toUpperCase(),
+    exchange,
+    transaction_type,
+    numQuantity,
+    numPrice,
+    transaction_date,
+    limit_price_up || null,
+    limit_up_expiration || null,
+    limit_price_down || null,
+    limit_down_expiration || null,
+    limit_price_up_2 || null,
+    limit_up_expiration_2 || null,
+    null,
+    original_quantity,
+    quantity_remaining,
+    account_holder_id,
+    'MANUAL',
+    createdAt,
+    advice_source_id || null,
+    linked_journal_id || null,
+  ]);
 }
 
 module.exports = {
-    handleBuyTransaction
+  handleBuyTransaction,
 };

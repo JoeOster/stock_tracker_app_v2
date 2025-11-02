@@ -5,15 +5,15 @@
  */
 
 import {
-    _renderModalProfile,
-    _renderModalActionsPanel, // --- MODIFIED ---
-    _renderModalSummaryStats,
-    _renderModalTradeIdeas,
-    _renderModalRealTrades,
-    _renderModalPaperTrades_Open,
-    _renderModalPaperTrades_Closed,
-    _renderModalDocuments,
-    _renderModalNotes
+  _renderModalProfile,
+  _renderModalActionsPanel, // --- MODIFIED ---
+  _renderModalSummaryStats,
+  _renderModalTradeIdeas,
+  _renderModalRealTrades,
+  _renderModalPaperTrades_Open,
+  _renderModalPaperTrades_Closed,
+  _renderModalDocuments,
+  _renderModalNotes,
 } from './_research_sources_modal_html.js';
 
 /**
@@ -23,47 +23,59 @@ import {
  * @returns {string} The HTML string for the details content.
  */
 export function generateSourceDetailsHTML(details) {
-    const {
-        source, journalEntries, watchlistItems,
-        linkedTransactions, documents, sourceNotes, summaryStats
-    } = details;
+  const {
+    source,
+    journalEntries,
+    watchlistItems,
+    linkedTransactions,
+    documents,
+    sourceNotes,
+    summaryStats,
+  } = details;
 
-    // --- Create Sets for checking links ---
-    // Only consider a trade "Live" if there is an OPEN BUY lot.
-    const openBuyTransactions = (linkedTransactions || []).filter(
-        tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001
-    );
-    const linkedTxTickers = new Set(openBuyTransactions.map(tx => tx.ticker));
-    const paperTradeTickers = new Set(journalEntries.map(entry => entry.ticker));
+  // --- Create Sets for checking links ---
+  // Only consider a trade "Live" if there is an OPEN BUY lot.
+  const openBuyTransactions = (linkedTransactions || []).filter(
+    (tx) => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001
+  );
+  const linkedTxTickers = new Set(openBuyTransactions.map((tx) => tx.ticker));
+  const paperTradeTickers = new Set(
+    journalEntries.map((entry) => entry.ticker)
+  );
 
-    // --- Assemble HTML Sections ---
-    let detailsHTML = '<div class="source-details-grid">';
-    
-    // Top Grid: Profile and (Conditional) Add Idea/Technique Form
-    detailsHTML += _renderModalProfile(source);
+  // --- Assemble HTML Sections ---
+  let detailsHTML = '<div class="source-details-grid">';
 
-    // --- MODIFIED: Render the new universal actions panel ---
-    detailsHTML += _renderModalActionsPanel(source);
-    // --- END MODIFIED ---
+  // Top Grid: Profile and (Conditional) Add Idea/Technique Form
+  detailsHTML += _renderModalProfile(source);
 
-    detailsHTML += '</div>'; // End source-details-grid
+  // --- MODIFIED: Render the new universal actions panel ---
+  detailsHTML += _renderModalActionsPanel(source);
+  // --- END MODIFIED ---
 
-    // Summary Stats
-    detailsHTML += _renderModalSummaryStats(summaryStats);
-    detailsHTML += '<hr style="margin: 1.5rem 0;">';
+  detailsHTML += '</div>'; // End source-details-grid
 
-    // --- REORDERED LINKED SECTIONS ---
-    detailsHTML += _renderModalPaperTrades_Open(journalEntries, source.type); // Techniques / Methods
-    detailsHTML += _renderModalTradeIdeas(watchlistItems, linkedTxTickers, paperTradeTickers, source); // Trade Ideas
-    detailsHTML += _renderModalRealTrades(linkedTransactions); // Linked Real Trades (Open & History)
-    
-    detailsHTML += '<hr style="margin: 1.5rem 0;">';
-    detailsHTML += _renderModalPaperTrades_Closed(journalEntries, source.type); // Completed Techniques
-    
-    detailsHTML += '<hr style="margin: 1.5rem 0;">';
-    detailsHTML += _renderModalDocuments(documents, source); // Documents
-    detailsHTML += _renderModalNotes(sourceNotes, source); // Notes
-    // --- END REORDER ---
+  // Summary Stats
+  detailsHTML += _renderModalSummaryStats(summaryStats);
+  detailsHTML += '<hr style="margin: 1.5rem 0;">';
 
-    return detailsHTML;
+  // --- REORDERED LINKED SECTIONS ---
+  detailsHTML += _renderModalPaperTrades_Open(journalEntries, source.type); // Techniques / Methods
+  detailsHTML += _renderModalTradeIdeas(
+    watchlistItems,
+    linkedTxTickers,
+    paperTradeTickers,
+    source
+  ); // Trade Ideas
+  detailsHTML += _renderModalRealTrades(linkedTransactions); // Linked Real Trades (Open & History)
+
+  detailsHTML += '<hr style="margin: 1.5rem 0;">';
+  detailsHTML += _renderModalPaperTrades_Closed(journalEntries, source.type); // Completed Techniques
+
+  detailsHTML += '<hr style="margin: 1.5rem 0;">';
+  detailsHTML += _renderModalDocuments(documents, source); // Documents
+  detailsHTML += _renderModalNotes(sourceNotes, source); // Notes
+  // --- END REORDER ---
+
+  return detailsHTML;
 }

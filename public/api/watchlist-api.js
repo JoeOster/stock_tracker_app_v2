@@ -4,7 +4,6 @@
  * @module api/watchlist-api
  */
 import { handleResponse } from './api-helpers.js';
-import { showToast } from '../ui/helpers.js';
 
 /**
  * Fetches all 'Trade Idea' watchlist items for a specific holder.
@@ -13,12 +12,12 @@ import { showToast } from '../ui/helpers.js';
  * @returns {Promise<any[]>} A promise that resolves to an array of watchlist items.
  */
 export async function fetchWatchlistIdeas(holderId) {
-    if (!holderId || holderId === 'all') {
-        console.warn("[API] fetchWatchlistIdeas requires a specific holderId.");
-        return [];
-    }
-    const response = await fetch(`/api/watchlist/ideas/${holderId}`);
-    return handleResponse(response);
+  if (!holderId || holderId === 'all') {
+    console.warn('[API] fetchWatchlistIdeas requires a specific holderId.');
+    return [];
+  }
+  const response = await fetch(`/api/watchlist/ideas/${holderId}`);
+  return handleResponse(response);
 }
 
 /**
@@ -28,12 +27,12 @@ export async function fetchWatchlistIdeas(holderId) {
  * @returns {Promise<any>} A promise that resolves to the server's response.
  */
 export async function addWatchlistIdea(ideaData) {
-    const response = await fetch('/api/watchlist/ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ideaData)
-    });
-    return handleResponse(response);
+  const response = await fetch('/api/watchlist/ideas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(ideaData),
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -43,10 +42,10 @@ export async function addWatchlistIdea(ideaData) {
  * @returns {Promise<any>} A promise that resolves to the server's response.
  */
 export async function closeWatchlistIdea(itemId) {
-    const response = await fetch(`/api/watchlist/ideas/${itemId}/close`, {
-        method: 'PATCH'
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/watchlist/ideas/${itemId}/close`, {
+    method: 'PATCH',
+  });
+  return handleResponse(response);
 }
 
 // --- ADDED: New functions for simple 'WATCH' type tickers ---
@@ -58,12 +57,12 @@ export async function closeWatchlistIdea(itemId) {
  * @returns {Promise<any[]>} A promise that resolves to an array of {id, ticker} objects.
  */
 export async function fetchSimpleWatchlist(holderId) {
-    if (!holderId || holderId === 'all') {
-        console.warn("[API] fetchSimpleWatchlist requires a specific holderId.");
-        return [];
-    }
-    const response = await fetch(`/api/watchlist/simple/${holderId}`);
-    return handleResponse(response);
+  if (!holderId || holderId === 'all') {
+    console.warn('[API] fetchSimpleWatchlist requires a specific holderId.');
+    return [];
+  }
+  const response = await fetch(`/api/watchlist/simple/${holderId}`);
+  return handleResponse(response);
 }
 
 /**
@@ -74,15 +73,18 @@ export async function fetchSimpleWatchlist(holderId) {
  * @returns {Promise<any>} A promise that resolves to the server's response.
  */
 export async function addSimpleWatchedTicker(ticker, holderId) {
-    if (!ticker || !holderId || holderId === 'all') {
-        throw new Error("Ticker and a specific Account Holder ID are required.");
-    }
-    const response = await fetch('/api/watchlist/simple', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: ticker.toUpperCase(), account_holder_id: holderId })
-    });
-    return handleResponse(response);
+  if (!ticker || !holderId || holderId === 'all') {
+    throw new Error('Ticker and a specific Account Holder ID are required.');
+  }
+  const response = await fetch('/api/watchlist/simple', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ticker: ticker.toUpperCase(),
+      account_holder_id: holderId,
+    }),
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -92,9 +94,9 @@ export async function addSimpleWatchedTicker(ticker, holderId) {
  * @returns {Promise<any>} A promise that resolves to the server's response.
  */
 export async function deleteSimpleWatchedTicker(itemId) {
-    const response = await fetch(`/api/watchlist/simple/${itemId}`, {
-        method: 'DELETE'
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/watchlist/simple/${itemId}`, {
+    method: 'DELETE',
+  });
+  return handleResponse(response);
 }
 // --- END ADDED ---

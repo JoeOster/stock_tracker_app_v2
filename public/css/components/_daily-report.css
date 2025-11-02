@@ -3,76 +3,128 @@
 /* #daily-performance-summary { ... } REMOVED - Using generic .summary-container */
 
 #positions-summary-body tr {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 /* --- Redesigned Table Layout & Sticky Columns --- */
 
 #stock-table {
-    table-layout: fixed;
-    width: 100%;
-    min-width: 1200px;
-    border-collapse: separate;
-    border-spacing: 0;
-    overflow-x: auto;
+  table-layout: fixed;
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow-x: auto;
 }
 
 /* Base sticky styling */
 .sticky-col {
-    position: sticky;
-    z-index: 2;
-    background-color: var(--container-bg);
+  position: sticky;
+  z-index: 2;
+  background-color: var(--container-bg);
 }
 #stock-table thead .sticky-col {
-    z-index: 3;
-    background-color: var(--table-header-bg);
+  z-index: 3;
+  background-color: var(--table-header-bg);
 }
 #stock-table tbody tr:nth-child(even) .sticky-col {
-    background-color: var(--table-row-even-bg);
+  background-color: var(--table-row-even-bg);
 }
 #positions-summary-body tr:hover,
-#positions-summary-body tr:hover .sticky-col
-{
-    background-color: var(--primary-color) !important;
-    color: #fff;
+#positions-summary-body tr:hover .sticky-col {
+  background-color: var(--primary-color) !important;
+  color: #fff;
 }
 
 /* --- Column Width Definitions --- */
 #stock-table th.reconciliation-checkbox-header,
 #stock-table td.reconciliation-checkbox-cell {
-    width: 30px;
-    min-width: 30px;
-    padding-left: 5px;
-    padding-right: 5px;
+  width: 30px;
+  min-width: 30px;
+  padding-left: 5px;
+  padding-right: 5px;
 }
-#stock-table th:nth-child(2), #stock-table td:nth-child(2) { width: 8%; }
-#stock-table th:nth-child(3), #stock-table td:nth-child(3) { width: 10%; }
-#stock-table th:nth-child(4), #stock-table td:nth-child(4) { width: 10%; }
-#stock-table th:nth-child(5), #stock-table td:nth-child(5) { width: 6%; min-width: 60px; }
-#stock-table th:nth-child(6), #stock-table td:nth-child(6) { width: 6%; min-width: 60px; }
-#stock-table th:nth-child(7), #stock-table td:nth-child(7) { width: 10%; }
-#stock-table th:nth-child(8), #stock-table td:nth-child(8) { width: 15%; }
-#stock-table th:nth-child(9), #stock-table td:nth-child(9) { width: 12%; }
-#stock-table th:nth-child(10), #stock-table td:nth-child(10) { width: 13%; min-width: 170px; }
+#stock-table th:nth-child(2),
+#stock-table td:nth-child(2) {
+  width: 8%;
+}
+#stock-table th:nth-child(3),
+#stock-table td:nth-child(3) {
+  width: 10%;
+}
+#stock-table th:nth-child(4),
+#stock-table td:nth-child(4) {
+  width: 10%;
+}
+#stock-table th:nth-child(5),
+#stock-table td:nth-child(5) {
+  width: 6%;
+  min-width: 60px;
+}
+#stock-table th:nth-child(6),
+#stock-table td:nth-child(6) {
+  width: 6%;
+  min-width: 60px;
+}
+#stock-table th:nth-child(7),
+#stock-table td:nth-child(7) {
+  width: 10%;
+}
+#stock-table th:nth-child(8),
+#stock-table td:nth-child(8) {
+  width: 15%;
+}
+#stock-table th:nth-child(9),
+#stock-table td:nth-child(9) {
+  width: 12%;
+}
+#stock-table th:nth-child(10),
+#stock-table td:nth-child(10) {
+  width: 13%;
+  min-width: 170px;
+}
 
 /* --- Sticky Column Assignments --- */
 #stock-table th.reconciliation-checkbox-header,
-#stock-table td.reconciliation-checkbox-cell { left: 0; z-index: 4; }
-#stock-table td.reconciliation-checkbox-cell { z-index: 3; }
+#stock-table td.reconciliation-checkbox-cell {
+  left: 0;
+  z-index: 4;
+}
+#stock-table td.reconciliation-checkbox-cell {
+  z-index: 3;
+}
 #stock-table th:first-of-type:not(.reconciliation-checkbox-header),
-#stock-table td:first-of-type:not(.reconciliation-checkbox-cell) { left: 0; }
+#stock-table td:first-of-type:not(.reconciliation-checkbox-cell) {
+  left: 0;
+}
 #stock-table th:nth-child(2):not(:first-child),
-#stock-table td:nth-child(2):not(:first-child) { left: 30px; }
+#stock-table td:nth-child(2):not(:first-child) {
+  left: 30px;
+}
 #stock-table th:last-child,
-#stock-table td:last-child { right: 0; }
+#stock-table td:last-child {
+  right: 0;
+}
 
 /* --- Other Styles --- */
 #stock-table #log-body td:nth-child(4),
-#stock-table th.reconciliation-checkbox-header, #stock-table td.reconciliation-checkbox-cell
-{ text-align: center; }
+#stock-table th.reconciliation-checkbox-header,
+#stock-table td.reconciliation-checkbox-cell {
+  text-align: center;
+}
 
-#stock-table .numeric { text-align: right; }
-#stock-table .positive { color: var(--positive-color); font-weight: 600; }
-#stock-table .negative { color: var(--negative-color); font-weight: 600; }
+#stock-table .numeric {
+  text-align: right;
+}
+#stock-table .positive {
+  color: var(--positive-color);
+  font-weight: 600;
+}
+#stock-table .negative {
+  color: var(--negative-color);
+  font-weight: 600;
+}
 #positions-summary-body tr:hover .positive,
-#positions-summary-body tr:hover .negative { color: #fff; }
+#positions-summary-body tr:hover .negative {
+  color: #fff;
+}

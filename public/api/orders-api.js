@@ -13,8 +13,8 @@ import { handleResponse } from './api-helpers.js';
  * @returns {Promise<any[]>} A promise that resolves to an array of pending order objects.
  */
 export async function fetchPendingOrders(holderId) {
-    const response = await fetch(`/api/orders/pending?holder=${holderId}`);
-    return handleResponse(response);
+  const response = await fetch(`/api/orders/pending?holder=${holderId}`);
+  return handleResponse(response);
 }
 
 /**
@@ -34,17 +34,23 @@ export async function fetchPendingOrders(holderId) {
  * @returns {Promise<any>} A promise that resolves to the server's response (e.g., success message).
  */
 export async function addPendingOrder(orderData) {
-    // Basic validation on the client side for required fields
-    if (!orderData.account_holder_id || !orderData.ticker || !orderData.exchange ||
-        !orderData.order_type || !orderData.limit_price || !orderData.quantity ||
-        !orderData.created_date) {
-        throw new Error("Missing required fields for pending order.");
-    }
+  // Basic validation on the client side for required fields
+  if (
+    !orderData.account_holder_id ||
+    !orderData.ticker ||
+    !orderData.exchange ||
+    !orderData.order_type ||
+    !orderData.limit_price ||
+    !orderData.quantity ||
+    !orderData.created_date
+  ) {
+    throw new Error('Missing required fields for pending order.');
+  }
 
-    const response = await fetch('/api/orders/pending', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData) // Send the complete order data object
-    });
-    return handleResponse(response); // Use the existing handleResponse helper
+  const response = await fetch('/api/orders/pending', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(orderData), // Send the complete order data object
+  });
+  return handleResponse(response); // Use the existing handleResponse helper
 }

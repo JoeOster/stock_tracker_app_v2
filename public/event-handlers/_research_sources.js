@@ -11,7 +11,7 @@ import { initializeSourcesListClickListener } from './_research_sources_listener
 
 // Re-export the necessary functions for use by other modules (like _research.js)
 export {
-    renderSourcesList,
-    generateSourceDetailsHTML,
-    initializeSourcesListClickListener
+  renderSourcesList,
+  generateSourceDetailsHTML,
+  initializeSourcesListClickListener,
 };

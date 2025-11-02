@@ -13,6 +13,6 @@ import { handleResponse } from './api-helpers.js';
  * @returns {Promise<any[]>} A promise that resolves to an array of notification objects.
  */
 export async function fetchAlerts(holderId) {
-    const response = await fetch(`/api/orders/notifications?holder=${holderId}`);
-    return handleResponse(response);
+  const response = await fetch(`/api/orders/notifications?holder=${holderId}`);
+  return handleResponse(response);
 }

@@ -24,16 +24,22 @@ import { handleResponse } from './api-helpers.js';
  * @returns {Promise<any>} The response from the server.
  */
 export async function addDocument(documentData) {
-    // @ts-ignore
-    if (!documentData.account_holder_id || (!documentData.journal_entry_id && !documentData.advice_source_id) || !documentData.external_link) {
-        throw new Error("Missing required fields: account holder, link, and either journal or source ID.");
-    }
-    const response = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(documentData)
-    });
-    return handleResponse(response);
+  // @ts-ignore
+  if (
+    !documentData.account_holder_id ||
+    (!documentData.journal_entry_id && !documentData.advice_source_id) ||
+    !documentData.external_link
+  ) {
+    throw new Error(
+      'Missing required fields: account holder, link, and either journal or source ID.'
+    );
+  }
+  const response = await fetch('/api/documents', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(documentData),
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -43,8 +49,8 @@ export async function addDocument(documentData) {
  * @returns {Promise<any>} The response from the server.
  */
 export async function deleteDocument(documentId) {
-    const response = await fetch(`/api/documents/${documentId}`, {
-        method: 'DELETE'
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/documents/${documentId}`, {
+    method: 'DELETE',
+  });
+  return handleResponse(response);
 }

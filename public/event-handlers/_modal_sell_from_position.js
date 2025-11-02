@@ -25,19 +25,30 @@ import { getCurrentESTDateString } from '../ui/datetime.js';
  * @param {object} lot - The BUY lot object to sell from.
  */
 export function populateSellFromPositionModal(lot) {
-    const sellModal = document.getElementById('sell-from-position-modal');
-    if (!sellModal) return;
+  const sellModal = document.getElementById('sell-from-position-modal');
+  if (!sellModal) return;
 
-    (/** @type {HTMLInputElement} */(document.getElementById('sell-parent-buy-id'))).value = String(lot.id);
-    (/** @type {HTMLInputElement} */(document.getElementById('sell-account-holder-id'))).value = String(lot.account_holder_id);
-    (/** @type {HTMLElement} */(document.getElementById('sell-ticker-display'))).textContent = lot.ticker;
-    (/** @type {HTMLElement} */(document.getElementById('sell-exchange-display'))).textContent = lot.exchange;
-    const sellQuantityInput = /** @type {HTMLInputElement} */ (document.getElementById('sell-quantity'));
-    sellQuantityInput.value = String(lot.quantity_remaining); // Use remaining quantity
-    sellQuantityInput.max = String(lot.quantity_remaining);
-    (/** @type {HTMLInputElement} */(document.getElementById('sell-date'))).value = getCurrentESTDateString();
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('sell-parent-buy-id')
+  ).value = String(lot.id);
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('sell-account-holder-id')
+  ).value = String(lot.account_holder_id);
+  /** @type {HTMLElement} */ (
+    document.getElementById('sell-ticker-display')
+  ).textContent = lot.ticker;
+  /** @type {HTMLElement} */ (
+    document.getElementById('sell-exchange-display')
+  ).textContent = lot.exchange;
+  const sellQuantityInput = /** @type {HTMLInputElement} */ (
+    document.getElementById('sell-quantity')
+  );
+  sellQuantityInput.value = String(lot.quantity_remaining); // Use remaining quantity
+  sellQuantityInput.max = String(lot.quantity_remaining);
+  /** @type {HTMLInputElement} */ (document.getElementById('sell-date')).value =
+    getCurrentESTDateString();
 
-    sellModal.classList.add('visible');
+  sellModal.classList.add('visible');
 }
 // --- END ADDED ---
 
@@ -46,84 +57,119 @@ export function populateSellFromPositionModal(lot) {
  * @returns {void}
  */
 export function initializeSellFromPositionModalHandler() {
-    const sellFromPositionModal = document.getElementById('sell-from-position-modal');
-    const sellFromPositionForm = /** @type {HTMLFormElement | null} */ (document.getElementById('sell-from-position-form'));
-    const managePositionModal = document.getElementById('manage-position-modal');
+  const sellFromPositionModal = document.getElementById(
+    'sell-from-position-modal'
+  );
+  const sellFromPositionForm = /** @type {HTMLFormElement | null} */ (
+    document.getElementById('sell-from-position-form')
+  );
+  const managePositionModal = document.getElementById('manage-position-modal');
 
-    if (sellFromPositionForm && sellFromPositionModal) {
-        sellFromPositionForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const quantityInput = /** @type {HTMLInputElement} */(document.getElementById('sell-quantity'));
-            const priceInput = /** @type {HTMLInputElement} */(document.getElementById('sell-price'));
-            const dateInput = /** @type {HTMLInputElement} */(document.getElementById('sell-date'));
-            const quantity = parseFloat(quantityInput.value);
-            const price = parseFloat(priceInput.value);
-            const date = dateInput.value;
+  if (sellFromPositionForm && sellFromPositionModal) {
+    sellFromPositionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const quantityInput = /** @type {HTMLInputElement} */ (
+        document.getElementById('sell-quantity')
+      );
+      const priceInput = /** @type {HTMLInputElement} */ (
+        document.getElementById('sell-price')
+      );
+      const dateInput = /** @type {HTMLInputElement} */ (
+        document.getElementById('sell-date')
+      );
+      const quantity = parseFloat(quantityInput.value);
+      const price = parseFloat(priceInput.value);
+      const date = dateInput.value;
 
-            // Basic validation
-            if (isNaN(quantity) || quantity <= 0 || isNaN(price) || price <= 0 || !date) {
-                showToast('Please enter valid positive numbers for Quantity and Price, and select a Date.', 'error');
-                return;
-            }
+      // Basic validation
+      if (
+        isNaN(quantity) ||
+        quantity <= 0 ||
+        isNaN(price) ||
+        price <= 0 ||
+        !date
+      ) {
+        showToast(
+          'Please enter valid positive numbers for Quantity and Price, and select a Date.',
+          'error'
+        );
+        return;
+      }
 
-            const accountHolderId = (/** @type {HTMLInputElement} */(document.getElementById('sell-account-holder-id'))).value;
-            const ticker = document.getElementById('sell-ticker-display')?.textContent || ''; // Get ticker
-            const exchange = document.getElementById('sell-exchange-display')?.textContent || ''; // Get exchange
-            const parentBuyId = (/** @type {HTMLInputElement} */(document.getElementById('sell-parent-buy-id'))).value;
+      const accountHolderId = /** @type {HTMLInputElement} */ (
+        document.getElementById('sell-account-holder-id')
+      ).value;
+      const ticker =
+        document.getElementById('sell-ticker-display')?.textContent || ''; // Get ticker
+      const exchange =
+        document.getElementById('sell-exchange-display')?.textContent || ''; // Get exchange
+      const parentBuyId = /** @type {HTMLInputElement} */ (
+        document.getElementById('sell-parent-buy-id')
+      ).value;
 
-            if (!ticker || !exchange || !parentBuyId || !accountHolderId) {
-                showToast('Error: Missing necessary transaction details (Ticker, Exchange, Parent ID, Holder ID).', 'error');
-                return;
-            }
+      if (!ticker || !exchange || !parentBuyId || !accountHolderId) {
+        showToast(
+          'Error: Missing necessary transaction details (Ticker, Exchange, Parent ID, Holder ID).',
+          'error'
+        );
+        return;
+      }
 
-            const sellDetails = {
-                account_holder_id: accountHolderId,
-                parent_buy_id: parentBuyId,
-                quantity: quantity,
-                price: price,
-                transaction_date: date,
-                ticker: ticker, // Include ticker
-                exchange: exchange, // Include exchange
-                transaction_type: 'SELL',
-            };
-            const submitButton = /** @type {HTMLButtonElement | null} */ (sellFromPositionForm.querySelector('button[type="submit"]'));
-            if (submitButton) submitButton.disabled = true;
+      const sellDetails = {
+        account_holder_id: accountHolderId,
+        parent_buy_id: parentBuyId,
+        quantity: quantity,
+        price: price,
+        transaction_date: date,
+        ticker: ticker, // Include ticker
+        exchange: exchange, // Include exchange
+        transaction_type: 'SELL',
+      };
+      const submitButton = /** @type {HTMLButtonElement | null} */ (
+        sellFromPositionForm.querySelector('button[type="submit"]')
+      );
+      if (submitButton) submitButton.disabled = true;
 
-            try {
-                const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sellDetails) });
-                await handleResponse(response);
-                showToast('Sale logged successfully!', 'success');
-
-                // Refresh Manage Modal if Open
-                if (managePositionModal?.classList.contains('visible')) {
-                    if (typeof openAndPopulateManageModal === 'function') {
-                        await openAndPopulateManageModal(ticker, exchange, accountHolderId);
-                    } else {
-                        console.warn('openAndPopulateManageModal function not available for refresh.');
-                    }
-                }
-
-                sellFromPositionModal?.classList.remove('visible'); // Close sell modal
-                
-                // --- THIS IS THE FIX ---
-                // Refresh underlying view by calling its specific loader
-                if (state.currentView.type === 'dashboard') {
-                    await loadDashboardPage(); // <-- Call dashboard loader directly
-                } else if (state.currentView.type === 'date') {
-                    await loadDailyReportPage(state.currentView.value); // <-- Call daily report loader
-                } else if (state.currentView.type === 'ledger') {
-                    await refreshLedger();
-                }
-                // --- END FIX ---
-
-            } catch (error) {
-                 const err = /** @type {Error} */ (error);
-                showToast(`Failed to log sale: ${err.message}`, 'error');
-            } finally {
-                if (submitButton) submitButton.disabled = false;
-            }
+      try {
+        const response = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sellDetails),
         });
-    } else {
-        console.warn("Sell from position form or modal not found.");
-    }
+        await handleResponse(response);
+        showToast('Sale logged successfully!', 'success');
+
+        // Refresh Manage Modal if Open
+        if (managePositionModal?.classList.contains('visible')) {
+          if (typeof openAndPopulateManageModal === 'function') {
+            await openAndPopulateManageModal(ticker, exchange, accountHolderId);
+          } else {
+            console.warn(
+              'openAndPopulateManageModal function not available for refresh.'
+            );
+          }
+        }
+
+        sellFromPositionModal?.classList.remove('visible'); // Close sell modal
+
+        // --- THIS IS THE FIX ---
+        // Refresh underlying view by calling its specific loader
+        if (state.currentView.type === 'dashboard') {
+          await loadDashboardPage(); // <-- Call dashboard loader directly
+        } else if (state.currentView.type === 'date') {
+          await loadDailyReportPage(state.currentView.value); // <-- Call daily report loader
+        } else if (state.currentView.type === 'ledger') {
+          await refreshLedger();
+        }
+        // --- END FIX ---
+      } catch (error) {
+        const err = /** @type {Error} */ (error);
+        showToast(`Failed to log sale: ${err.message}`, 'error');
+      } finally {
+        if (submitButton) submitButton.disabled = false;
+      }
+    });
+  } else {
+    console.warn('Sell from position form or modal not found.');
+  }
 }

@@ -2,96 +2,97 @@
 /* Contains styles for the main application header */
 
 .header {
-    /* MODIFIED: Switched from grid to flex for better resizing */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    max-width: 1400px;
-    margin-left: auto;
-    margin-right: auto;
+  /* MODIFIED: Switched from grid to flex for better resizing */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .header-left {
-    /* MODIFIED: Switched from grid to flex */
-    display: flex;
-    gap: 10px; /* Spacing between "Viewing:", dropdown, and new date button */
-    align-items: center;
+  /* MODIFIED: Switched from grid to flex */
+  display: flex;
+  gap: 10px; /* Spacing between "Viewing:", dropdown, and new date button */
+  align-items: center;
 }
 
 .header-left label {
-    /* MODIFIED: Removed grid-specific alignment */
-    white-space: nowrap;
+  /* MODIFIED: Removed grid-specific alignment */
+  white-space: nowrap;
 }
 
 .header-left select,
 .header-left input {
-    width: auto; /* MODIFIED: Allow select to auto-size */
-    box-sizing: border-box;
+  width: auto; /* MODIFIED: Allow select to auto-size */
+  box-sizing: border-box;
 }
 
 /* ADDED: Style for the new date button */
 #add-date-btn {
-    background: none;
-    border: none;
-    font-size: 1.3rem; /* Slightly smaller than settings */
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-    color: var(--text-muted-color);
+  background: none;
+  border: none;
+  font-size: 1.3rem; /* Slightly smaller than settings */
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  color: var(--text-muted-color);
 }
 #add-date-btn:hover {
-    color: var(--heading-color);
+  color: var(--heading-color);
 }
 
 /* ADDED: Hide the actual date input */
 #custom-date-picker {
-    display: none;
+  display: none;
 }
 
-.header-right { 
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    justify-content: flex-end; 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: flex-end;
 }
 
-.header-center { 
-    text-align: center; 
+.header-center {
+  text-align: center;
 }
 
-.header h1 { 
-    margin: 0; 
-    font-size: 1.5rem; 
-    transition: color 0.2s; /* ADDED: Smooth color transition */
+.header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  transition: color 0.2s; /* ADDED: Smooth color transition */
 }
 
 /* ADDED: Development environment title color */
 body.env-development .header h1 {
-    color: var(--negative-color); /* Red title for dev */
+  color: var(--negative-color); /* Red title for dev */
 }
 
 #settings-btn {
-    background: 0 0;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-    color: var(--heading-color);
+  background: 0 0;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  color: var(--heading-color);
 }
 
 #api-timer-container {
-    /* MODIFIED: Removed background and border */
-    background-color: transparent;
-    border: none;
-    color: var(--text-muted-color);
-    padding: 8px 0; /* Removed side padding */
-    font-size: .9em;
-    font-family: monospace;
+  /* MODIFIED: Removed background and border */
+  background-color: transparent;
+  border: none;
+  color: var(--text-muted-color);
+  padding: 8px 0; /* Removed side padding */
+  font-size: 0.9em;
+  font-family: monospace;
 }
 
-.header select, .header label {
-    font-size: 0.9em;
+.header select,
+.header label {
+  font-size: 0.9em;
 }

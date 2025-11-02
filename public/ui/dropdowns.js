@@ -12,27 +12,27 @@ import { state } from '../state.js';
  * @param {string} [selectedId] - The ID to pre-select (optional).
  */
 function populateAdviceSourceDropdown(selectElement, selectedId) {
-    if (!selectElement) return;
+  if (!selectElement) return;
 
-    // Preserve the first option (e.g., "(None)")
-    console.log()
-    const firstOption = selectElement.options[0];
-    selectElement.innerHTML = ''; // Clear existing options
-    if (firstOption) {
-        selectElement.appendChild(firstOption);
-    }
+  // Preserve the first option (e.g., "(None)")
+  console.log();
+  const firstOption = selectElement.options[0];
+  selectElement.innerHTML = ''; // Clear existing options
+  if (firstOption) {
+    selectElement.appendChild(firstOption);
+  }
 
-    if (state.allAdviceSources && state.allAdviceSources.length > 0) {
-        state.allAdviceSources.forEach(source => {
-            const option = document.createElement('option');
-            option.value = String(source.id);
-            option.textContent = source.name;
-            if (selectedId && String(source.id) === String(selectedId)) {
-                option.selected = true;
-            }
-            selectElement.appendChild(option);
-        });
-    }
+  if (state.allAdviceSources && state.allAdviceSources.length > 0) {
+    state.allAdviceSources.forEach((source) => {
+      const option = document.createElement('option');
+      option.value = String(source.id);
+      option.textContent = source.name;
+      if (selectedId && String(source.id) === String(selectedId)) {
+        option.selected = true;
+      }
+      selectElement.appendChild(option);
+    });
+  }
 }
 
 /**
@@ -41,9 +41,11 @@ function populateAdviceSourceDropdown(selectElement, selectedId) {
  * @returns {string | null} The name of the source, or null if not found.
  */
 export function getSourceNameFromId(sourceId) {
-    if (!sourceId || !state.allAdviceSources) return null;
-    const source = state.allAdviceSources.find(s => String(s.id) === String(sourceId));
-    return source ? source.name : null;
+  if (!sourceId || !state.allAdviceSources) return null;
+  const source = state.allAdviceSources.find(
+    (s) => String(s.id) === String(sourceId)
+  );
+  return source ? source.name : null;
 }
 
 /**
@@ -52,10 +54,13 @@ export function getSourceNameFromId(sourceId) {
  * @returns {void}
  */
 export function populateAllAdviceSourceDropdowns(selectedId) {
-    // --- THIS IS THE FIX ---
-    const dropdowns = document.querySelectorAll('select.advice-source-select');
-    // --- END FIX ---
-    dropdowns.forEach(dropdown => {
-        populateAdviceSourceDropdown(/** @type {HTMLSelectElement} */(dropdown), selectedId);
-    });
+  // --- THIS IS THE FIX ---
+  const dropdowns = document.querySelectorAll('select.advice-source-select');
+  // --- END FIX ---
+  dropdowns.forEach((dropdown) => {
+    populateAdviceSourceDropdown(
+      /** @type {HTMLSelectElement} */ (dropdown),
+      selectedId
+    );
+  });
 }

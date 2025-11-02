@@ -8,8 +8,7 @@ This guide details the process of migrating the Portfolio Tracker application fr
 
 ## Phase 2: Automated Server Setup
 
-... (Steps 1-3 unchanged) ...
-    * The script will ask for your GitHub username, the application port (e.g., 3003), and your Finnhub API key.
+... (Steps 1-3 unchanged) ... \* The script will ask for your GitHub username, the application port (e.g., 3003), and your Finnhub API key.
 
 The script will handle all software installation, cloning the repository, and setting up the application to run as a service.
 

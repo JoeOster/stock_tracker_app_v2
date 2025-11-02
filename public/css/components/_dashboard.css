@@ -3,182 +3,188 @@
 
 /* --- General Layout --- */
 #dashboard-page-container h2 {
-    text-align: center;
+  text-align: center;
 }
 #dashboard-page-container .subtitle {
-    text-align: center;
-    margin-bottom: 1.5rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
 }
 
 /* --- Sub-Tabs --- */
 .dashboard-sub-tabs {
-    /* Uses general .sub-tabs styles from _sub-tabs.css */
-    margin-bottom: 1rem; /* Adjust spacing */
+  /* Uses general .sub-tabs styles from _sub-tabs.css */
+  margin-bottom: 1rem; /* Adjust spacing */
 }
 
 /* --- Filter/Sort Bar --- */
 /* Uses generic .filter-bar from _forms.css */
 
-
 /* --- Card View --- */
 .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
-    gap: 1.5rem; /* Space between cards */
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(300px, 1fr)
+  ); /* Responsive grid */
+  gap: 1.5rem; /* Space between cards */
 }
 
 .position-card {
-    background-color: var(--container-bg);
-    border: 1px solid var(--container-border);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px var(--shadow-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Prevent content overflow */
+  background-color: var(--container-bg);
+  border: 1px solid var(--container-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 5px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent content overflow */
 }
 
 .card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 15px;
-    border-bottom: 1px solid var(--container-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--container-border);
 }
 
 .card-header img.exchange-logo {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-    flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .card-header .ticker {
-    font-size: 1.2em;
-    font-weight: 600;
-    color: var(--heading-color);
-    margin: 0;
-    line-height: 1;
+  font-size: 1.2em;
+  font-weight: 600;
+  color: var(--heading-color);
+  margin: 0;
+  line-height: 1;
 }
 
 .card-body {
-    display: flex;
-    justify-content: space-between;
-    padding: 15px;
-    gap: 15px;
-    flex-direction: row;
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  gap: 15px;
+  flex-direction: row;
 }
 
-.card-stats, .card-performance {
-    display: flex;
-    flex-direction: column;
-    gap: 5px; /* Space between stat lines */
-    font-size: 0.9em;
+.card-stats,
+.card-performance {
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* Space between stat lines */
+  font-size: 0.9em;
 }
 
 /* --- UPDATED RULES for Label/Value Pairs (No Wrap Version) --- */
 .card-stats p,
 .card-performance p {
-    display: flex;          /* Use flexbox */
-    /* Removed flex-wrap: wrap; */
-    justify-content: space-between; /* Keep pushing label left, value right */
-    align-items: baseline;  /* Align text baselines */
-    line-height: 1.4;       /* Adjust line height */
-    gap: 5px;               /* Add a small horizontal gap between label and value */
-    /* Add overflow handling in case content is extremely long */
-    overflow: hidden;
+  display: flex; /* Use flexbox */
+  /* Removed flex-wrap: wrap; */
+  justify-content: space-between; /* Keep pushing label left, value right */
+  align-items: baseline; /* Align text baselines */
+  line-height: 1.4; /* Adjust line height */
+  gap: 5px; /* Add a small horizontal gap between label and value */
+  /* Add overflow handling in case content is extremely long */
+  overflow: hidden;
 }
 
 /* Adjust label styling */
 .card-stats span,
 .card-performance span {
-    color: var(--text-muted-color);
-    display: inline-block;
-    width: 50px; /* Keep fixed width for label alignment */
-    text-align: right;
-    margin-right: 5px;
-    flex-shrink: 0;       /* Prevent label from shrinking */
-    flex-grow: 0;         /* Prevent label from growing */
+  color: var(--text-muted-color);
+  display: inline-block;
+  width: 50px; /* Keep fixed width for label alignment */
+  text-align: right;
+  margin-right: 5px;
+  flex-shrink: 0; /* Prevent label from shrinking */
+  flex-grow: 0; /* Prevent label from growing */
 }
 
 /* Adjust value styling */
 .card-stats strong,
 .card-performance strong {
-    color: var(--text-color);
-    /* Removed flex-grow: 1; */ /* Let it size based on content */
-    flex-shrink: 1;         /* Allow value to shrink if needed */
-    text-align: right;      /* Align text within the strong tag to the right */
-    margin-left: auto;      /* Push value to the far right */
-    /* Remove width: 100% */
-    /* Add white-space control to handle potential overflow */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis; /* Add '...' if value is too long */
+  color: var(--text-color);
+  /* Removed flex-grow: 1; */ /* Let it size based on content */
+  flex-shrink: 1; /* Allow value to shrink if needed */
+  text-align: right; /* Align text within the strong tag to the right */
+  margin-left: auto; /* Push value to the far right */
+  /* Remove width: 100% */
+  /* Add white-space control to handle potential overflow */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Add '...' if value is too long */
 }
 
 /* Add specific styling for P/L % to allow slight shrinking */
 .card-performance p:has(strong.unrealized-pl) strong {
-    /* Allow P/L % to shrink a bit more readily if needed */
-     min-width: 50px;
+  /* Allow P/L % to shrink a bit more readily if needed */
+  min-width: 50px;
 }
 /* --- END UPDATED RULES --- */
 
 .card-performance .unrealized-pl {
-    font-weight: 600; /* Make P/L stand out */
+  font-weight: 600; /* Make P/L stand out */
 }
-.card-performance .positive { color: var(--positive-color); }
-.card-performance .negative { color: var(--negative-color); }
+.card-performance .positive {
+  color: var(--positive-color);
+}
+.card-performance .negative {
+  color: var(--negative-color);
+}
 
 .limit-proximity-indicator {
-    font-size: 1.1em;
-    margin-left: 5px;
+  font-size: 1.1em;
+  margin-left: 5px;
 }
 
 /* Placeholder for Spark Chart */
 .card-chart-placeholder {
-    height: 40px; /* Reserve space */
-    background-color: var(--info-panel-bg); /* Placeholder background */
-    margin: 0 15px 10px 15px; /* Add some margin */
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8em;
-    color: var(--text-muted-color);
+  height: 40px; /* Reserve space */
+  background-color: var(--info-panel-bg); /* Placeholder background */
+  margin: 0 15px 10px 15px; /* Add some margin */
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  color: var(--text-muted-color);
 }
-
 
 .card-footer {
-    padding: 10px 15px;
-    border-top: 1px solid var(--container-border);
-    background-color: var(--info-panel-bg);
-    font-size: 0.85em;
-    color: var(--text-muted-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
+  padding: 10px 15px;
+  border-top: 1px solid var(--container-border);
+  background-color: var(--info-panel-bg);
+  font-size: 0.85em;
+  color: var(--text-muted-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
 }
 .card-footer .limits-text {
-    flex-grow: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .card-footer .action-buttons {
-    display: flex;
-    gap: 5px;
-    flex-shrink: 0;
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
 }
 .card-footer button {
-    padding: 5px 8px; /* Smaller buttons */
-    font-size: 0.8em;
+  padding: 5px 8px; /* Smaller buttons */
+  font-size: 0.8em;
 }
 
 /* --- Table View --- */
 #open-positions-table {
-    /* table-layout: fixed; */ /* <-- REMOVED */
-    width: 100%;
-    min-width: 1100px;
+  /* table-layout: fixed; */ /* <-- REMOVED */
+  width: 100%;
+  min-width: 1100px;
 }
 
 /* REMOVED ALL th:nth-child, td:nth-child, and text-align rules */

@@ -13,169 +13,289 @@ import { getCurrentESTDateString } from '../ui/datetime.js';
  * Initializes event listeners for the "Log Executed Trade" form.
  * @returns {void}
  */
-export function initializeOrdersFormHandlers() { // <-- ADDED 'export'
-    const transactionForm = /** @type {HTMLFormElement | null} */ (document.getElementById('add-transaction-form'));
+export function initializeOrdersFormHandlers() {
+  // <-- ADDED 'export'
+  const transactionForm = /** @type {HTMLFormElement | null} */ (
+    document.getElementById('add-transaction-form')
+  );
 
-    if (transactionForm) {
-        const priceInput = /** @type {HTMLInputElement} */ (document.getElementById('price'));
+  if (transactionForm) {
+    const priceInput = /** @type {HTMLInputElement} */ (
+      document.getElementById('price')
+    );
 
-        // Suggest limits based on price input
-        priceInput.addEventListener('change', () => {
-            // --- MODIFICATION: Check if readOnly before suggesting ---
-            if (priceInput.readOnly) return; // Don't suggest if pre-filled
-            // --- END MODIFICATION ---
+    // Suggest limits based on price input
+    priceInput.addEventListener('change', () => {
+      // --- MODIFICATION: Check if readOnly before suggesting ---
+      if (priceInput.readOnly) return; // Don't suggest if pre-filled
+      // --- END MODIFICATION ---
 
-            const price = parseFloat(priceInput.value);
-            if (!price || isNaN(price) || price <= 0) return;
-            const takeProfitPercent = state.settings.takeProfitPercent;
-            const stopLossPercent = state.settings.stopLossPercent;
-            const suggestedProfit = price * (1 + takeProfitPercent / 100);
-            const suggestedLoss = price * (1 - stopLossPercent / 100);
-            (/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-up'))).value = suggestedProfit.toFixed(2);
-            (/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-down'))).value = suggestedLoss.toFixed(2);
+      const price = parseFloat(priceInput.value);
+      if (!price || isNaN(price) || price <= 0) return;
+      const takeProfitPercent = state.settings.takeProfitPercent;
+      const stopLossPercent = state.settings.stopLossPercent;
+      const suggestedProfit = price * (1 + takeProfitPercent / 100);
+      const suggestedLoss = price * (1 - stopLossPercent / 100);
+      /** @type {HTMLInputElement} */ (
+        document.getElementById('add-limit-price-up')
+      ).value = suggestedProfit.toFixed(2);
+      /** @type {HTMLInputElement} */ (
+        document.getElementById('add-limit-price-down')
+      ).value = suggestedLoss.toFixed(2);
+    });
+
+    // Form submission with validation
+    transactionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // --- Get Base Values ---
+      const accountHolder = /** @type {HTMLSelectElement} */ (
+        document.getElementById('add-tx-account-holder')
+      ).value;
+      const transactionDate = /** @type {HTMLInputElement} */ (
+        document.getElementById('transaction-date')
+      ).value;
+      const ticker = /** @type {HTMLInputElement} */ (
+        document.getElementById('ticker')
+      ).value
+        .toUpperCase()
+        .trim();
+      const exchange = /** @type {HTMLSelectElement} */ (
+        document.getElementById('exchange')
+      ).value;
+      const transactionType = /** @type {HTMLSelectElement} */ (
+        document.getElementById('transaction-type')
+      ).value;
+      const quantity = parseFloat(
+        /** @type {HTMLInputElement} */ (document.getElementById('quantity'))
+          .value
+      );
+      const price = parseFloat(
+        /** @type {HTMLInputElement} */ (document.getElementById('price')).value
+      );
+
+      if (
+        !accountHolder ||
+        !transactionDate ||
+        !ticker ||
+        !exchange ||
+        !transactionType ||
+        isNaN(quantity) ||
+        quantity <= 0 ||
+        isNaN(price) ||
+        price <= 0
+      ) {
+        return showToast(
+          'Please fill in all required fields (*) with valid positive numbers for quantity and price.',
+          'error'
+        );
+      }
+
+      // --- Get TP1 Values & Validate ---
+      const isProfitLimitSet = /** @type {HTMLInputElement} */ (
+        document.getElementById('set-profit-limit-checkbox')
+      ).checked;
+      const profitPrice = parseFloat(
+        /** @type {HTMLInputElement} */ (
+          document.getElementById('add-limit-price-up')
+        ).value
+      );
+      const profitExpirationDate = /** @type {HTMLInputElement} */ (
+        document.getElementById('add-limit-up-expiration')
+      ).value;
+      if (isProfitLimitSet && (isNaN(profitPrice) || profitPrice <= price)) {
+        return showToast(
+          'Take Profit 1 price must be a valid number greater than the purchase price.',
+          'error'
+        );
+      }
+      if (isProfitLimitSet && !profitExpirationDate) {
+        return showToast(
+          'A Take Profit 1 limit requires an expiration date.',
+          'error'
+        );
+      }
+
+      // --- Get Stop Loss Values & Validate ---
+      const isLossLimitSet = /** @type {HTMLInputElement} */ (
+        document.getElementById('set-loss-limit-checkbox')
+      ).checked;
+      const lossPrice = parseFloat(
+        /** @type {HTMLInputElement} */ (
+          document.getElementById('add-limit-price-down')
+        ).value
+      );
+      const lossExpirationDate = /** @type {HTMLInputElement} */ (
+        document.getElementById('add-limit-down-expiration')
+      ).value;
+      if (
+        isLossLimitSet &&
+        (isNaN(lossPrice) || lossPrice <= 0 || lossPrice >= price)
+      ) {
+        return showToast(
+          'Stop Loss price must be a valid positive number less than the purchase price.',
+          'error'
+        );
+      }
+      if (isLossLimitSet && !lossExpirationDate) {
+        return showToast(
+          'A Stop Loss limit requires an expiration date.',
+          'error'
+        );
+      }
+
+      // --- Get TP2 Values & Validate ---
+      const isProfitLimit2Set = /** @type {HTMLInputElement} */ (
+        document.getElementById('set-profit-limit-2-checkbox')
+      ).checked;
+      const profitPrice2 = parseFloat(
+        /** @type {HTMLInputElement} */ (
+          document.getElementById('add-limit-price-up-2')
+        ).value
+      );
+      const profitExpirationDate2 = /** @type {HTMLInputElement} */ (
+        document.getElementById('add-limit-up-expiration-2')
+      ).value;
+      if (isProfitLimit2Set && (isNaN(profitPrice2) || profitPrice2 <= price)) {
+        return showToast(
+          'Take Profit 2 price must be a valid number greater than the purchase price.',
+          'error'
+        );
+      }
+      if (
+        isProfitLimit2Set &&
+        isProfitLimitSet &&
+        profitPrice2 <= profitPrice
+      ) {
+        return showToast(
+          'Take Profit 2 price must be greater than Take Profit 1 price.',
+          'error'
+        );
+      }
+      if (isProfitLimit2Set && !profitExpirationDate2) {
+        return showToast(
+          'A Take Profit 2 limit requires an expiration date.',
+          'error'
+        );
+      }
+      // --- End Validation ---
+
+      // --- Get advice_source_id ---
+      const adviceSourceId =
+        /** @type {HTMLSelectElement} */ (
+          document.getElementById('add-tx-advice-source')
+        ).value || null;
+
+      const transaction = {
+        account_holder_id: accountHolder,
+        transaction_date: transactionDate,
+        ticker: ticker,
+        exchange: exchange,
+        transaction_type: transactionType,
+        quantity: quantity,
+        price: price,
+        limit_price_up: isProfitLimitSet ? profitPrice : null,
+        limit_up_expiration: isProfitLimitSet ? profitExpirationDate : null,
+        limit_price_down: isLossLimitSet ? lossPrice : null,
+        limit_down_expiration: isLossLimitSet ? lossExpirationDate : null,
+        limit_price_up_2: isProfitLimit2Set ? profitPrice2 : null,
+        limit_up_expiration_2: isProfitLimit2Set ? profitExpirationDate2 : null,
+        advice_source_id: adviceSourceId,
+      };
+
+      const submitButton = /** @type {HTMLButtonElement} */ (
+        transactionForm.querySelector('button[type="submit"]')
+      );
+      submitButton.disabled = true;
+      try {
+        const response = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(transaction),
         });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || 'Server responded with an error.'
+          );
+        }
+        showToast('Transaction logged successfully!', 'success');
 
-        // Form submission with validation
-        transactionForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        /** @type {HTMLSelectElement} */
+        const accountHolderSelect = /** @type {HTMLSelectElement} */ (
+          document.getElementById('add-tx-account-holder')
+        );
+        /** @type {HTMLSelectElement} */
+        const exchangeSelect = /** @type {HTMLSelectElement} */ (
+          document.getElementById('exchange')
+        );
 
-            // --- Get Base Values ---
-            const accountHolder = (/** @type {HTMLSelectElement} */(document.getElementById('add-tx-account-holder'))).value;
-            const transactionDate = (/** @type {HTMLInputElement} */(document.getElementById('transaction-date'))).value;
-            const ticker = (/** @type {HTMLInputElement} */(document.getElementById('ticker'))).value.toUpperCase().trim();
-            const exchange = (/** @type {HTMLSelectElement} */(document.getElementById('exchange'))).value;
-            const transactionType = (/** @type {HTMLSelectElement} */(document.getElementById('transaction-type'))).value;
-            const quantity = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('quantity'))).value);
-            const price = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('price'))).value);
+        /** @type {string} */
+        const savedAccountHolderValue = accountHolderSelect.value;
+        /** @type {string} */
+        const savedExchangeValue = exchangeSelect.value;
 
-            if (!accountHolder || !transactionDate || !ticker || !exchange || !transactionType || isNaN(quantity) || quantity <= 0 || isNaN(price) || price <= 0) {
-                return showToast('Please fill in all required fields (*) with valid positive numbers for quantity and price.', 'error');
-            }
+        transactionForm.reset(); // Reset the form first
 
-            // --- Get TP1 Values & Validate ---
-            const isProfitLimitSet = (/** @type {HTMLInputElement} */(document.getElementById('set-profit-limit-checkbox'))).checked;
-            const profitPrice = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-up'))).value);
-            const profitExpirationDate = (/** @type {HTMLInputElement} */(document.getElementById('add-limit-up-expiration'))).value;
-            if (isProfitLimitSet && (isNaN(profitPrice) || profitPrice <= price)) {
-                 return showToast('Take Profit 1 price must be a valid number greater than the purchase price.', 'error');
-            }
-            if (isProfitLimitSet && !profitExpirationDate) {
-                return showToast('A Take Profit 1 limit requires an expiration date.', 'error');
-            }
+        // Restore the saved values
+        accountHolderSelect.value = savedAccountHolderValue;
+        exchangeSelect.value = savedExchangeValue;
 
-            // --- Get Stop Loss Values & Validate ---
-            const isLossLimitSet = (/** @type {HTMLInputElement} */(document.getElementById('set-loss-limit-checkbox'))).checked;
-            const lossPrice = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-down'))).value);
-            const lossExpirationDate = (/** @type {HTMLInputElement} */(document.getElementById('add-limit-down-expiration'))).value;
-             if (isLossLimitSet && (isNaN(lossPrice) || lossPrice <= 0 || lossPrice >= price)) {
-                 return showToast('Stop Loss price must be a valid positive number less than the purchase price.', 'error');
-             }
-            if (isLossLimitSet && !lossExpirationDate) {
-                return showToast('A Stop Loss limit requires an expiration date.', 'error');
-            }
+        // --- Clear prefill state on SUCCESS ---
+        if (state.prefillOrderFromSource) {
+          updateState({ prefillOrderFromSource: null });
+        }
+        // --- END ---
 
-            // --- Get TP2 Values & Validate ---
-            const isProfitLimit2Set = (/** @type {HTMLInputElement} */(document.getElementById('set-profit-limit-2-checkbox'))).checked;
-            const profitPrice2 = parseFloat((/** @type {HTMLInputElement} */(document.getElementById('add-limit-price-up-2'))).value);
-            const profitExpirationDate2 = (/** @type {HTMLInputElement} */(document.getElementById('add-limit-up-expiration-2'))).value;
-            if (isProfitLimit2Set && (isNaN(profitPrice2) || profitPrice2 <= price)) {
-                 return showToast('Take Profit 2 price must be a valid number greater than the purchase price.', 'error');
-            }
-            if (isProfitLimit2Set && isProfitLimitSet && (profitPrice2 <= profitPrice)) {
-                 return showToast('Take Profit 2 price must be greater than Take Profit 1 price.', 'error');
-            }
-            if (isProfitLimit2Set && !profitExpirationDate2) {
-                return showToast('A Take Profit 2 limit requires an expiration date.', 'error');
-            }
-            // --- End Validation ---
+        /** @type {HTMLInputElement} */ (
+          document.getElementById('transaction-date')
+        ).value = getCurrentESTDateString();
+        await refreshLedger();
+      } catch (error) {
+        const err = /** @type {Error} */ (error);
+        showToast(`Failed to log transaction: ${err.message}`, 'error');
+      } finally {
+        submitButton.disabled = false;
 
-            // --- Get advice_source_id ---
-            const adviceSourceId = (/** @type {HTMLSelectElement} */(document.getElementById('add-tx-advice-source'))).value || null;
+        // --- MODIFICATION: ALWAYS clear prefill state (if it still exists) and UNLOCK form ---
+        if (state.prefillOrderFromSource) {
+          console.log(
+            '[Orders Form] Clearing prefill state from finally block.'
+          );
+          updateState({ prefillOrderFromSource: null });
+        }
 
-            const transaction = {
-                account_holder_id: accountHolder,
-                transaction_date: transactionDate,
-                ticker: ticker,
-                exchange: exchange,
-                transaction_type: transactionType,
-                quantity: quantity,
-                price: price,
-                limit_price_up: isProfitLimitSet ? profitPrice : null,
-                limit_up_expiration: isProfitLimitSet ? profitExpirationDate : null,
-                limit_price_down: isLossLimitSet ? lossPrice : null,
-                limit_down_expiration: isLossLimitSet ? lossExpirationDate : null,
-                limit_price_up_2: isProfitLimit2Set ? profitPrice2 : null,
-                limit_up_expiration_2: isProfitLimit2Set ? profitExpirationDate2 : null,
-                advice_source_id: adviceSourceId
-            };
+        // Always run the unlock/reset visibility logic in case it was locked
+        const adviceSourceSelectGroup = /** @type {HTMLElement | null} */ (
+          document.getElementById('add-tx-advice-source-group')
+        );
+        const adviceSourceLockedDisplay = /** @type {HTMLElement | null} */ (
+          document.getElementById('add-tx-source-locked-display')
+        );
 
-            const submitButton = /** @type {HTMLButtonElement} */ (transactionForm.querySelector('button[type="submit"]'));
-            submitButton.disabled = true;
-            try {
-                const response = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transaction) });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Server responded with an error.');
-                }
-                showToast('Transaction logged successfully!', 'success');
+        if (adviceSourceSelectGroup && adviceSourceLockedDisplay) {
+          adviceSourceSelectGroup.style.display = ''; // Show dropdown
+          adviceSourceLockedDisplay.style.display = 'none'; // Hide locked display
 
-                /** @type {HTMLSelectElement} */
-                const accountHolderSelect = (/** @type {HTMLSelectElement} */(document.getElementById('add-tx-account-holder')));
-                /** @type {HTMLSelectElement} */
-                const exchangeSelect = (/** @type {HTMLSelectElement} */(document.getElementById('exchange')));
+          // Also unlock other fields
+          const tickerInput = /** @type {HTMLInputElement | null} */ (
+            document.getElementById('ticker')
+          );
+          const priceInputEl = /** @type {HTMLInputElement | null} */ (
+            document.getElementById('price')
+          );
+          const accountSelect = /** @type {HTMLSelectElement | null} */ (
+            document.getElementById('add-tx-account-holder')
+          );
 
-                /** @type {string} */
-                const savedAccountHolderValue = accountHolderSelect.value;
-                /** @type {string} */
-                const savedExchangeValue = exchangeSelect.value;
-
-                transactionForm.reset(); // Reset the form first
-
-                // Restore the saved values
-                accountHolderSelect.value = savedAccountHolderValue;
-                exchangeSelect.value = savedExchangeValue;
-
-                // --- Clear prefill state on SUCCESS ---
-                if (state.prefillOrderFromSource) {
-                    updateState({ prefillOrderFromSource: null });
-                }
-                // --- END ---
-
-                (/** @type {HTMLInputElement} */(document.getElementById('transaction-date'))).value = getCurrentESTDateString();
-                await refreshLedger();
-            } catch (error) {
-                const err = /** @type {Error} */ (error);
-                showToast(`Failed to log transaction: ${err.message}`, 'error');
-            } finally {
-                submitButton.disabled = false;
-                
-                // --- MODIFICATION: ALWAYS clear prefill state (if it still exists) and UNLOCK form ---
-                if (state.prefillOrderFromSource) {
-                    console.log("[Orders Form] Clearing prefill state from finally block.");
-                    updateState({ prefillOrderFromSource: null });
-                }
-                
-                // Always run the unlock/reset visibility logic in case it was locked
-                const adviceSourceSelectGroup = /** @type {HTMLElement | null} */(document.getElementById('add-tx-advice-source-group'));
-                const adviceSourceLockedDisplay = /** @type {HTMLElement | null} */(document.getElementById('add-tx-source-locked-display'));
-                
-                if (adviceSourceSelectGroup && adviceSourceLockedDisplay) {
-                    adviceSourceSelectGroup.style.display = ''; // Show dropdown
-                    adviceSourceLockedDisplay.style.display = 'none'; // Hide locked display
-                    
-                    // Also unlock other fields
-                    const tickerInput = /** @type {HTMLInputElement | null} */(document.getElementById('ticker'));
-                    const priceInputEl = /** @type {HTMLInputElement | null} */(document.getElementById('price'));
-                    const accountSelect = /** @type {HTMLSelectElement | null} */(document.getElementById('add-tx-account-holder'));
-                    
-                    if (tickerInput) tickerInput.readOnly = false;
-                    if (priceInputEl) priceInputEl.readOnly = false;
-                    if (accountSelect) accountSelect.disabled = false;
-                }
-                // --- END MODIFICATION ---
-            }
-        });
-    } else {
-         console.warn("[Orders Init] Add transaction form not found.");
-    }
+          if (tickerInput) tickerInput.readOnly = false;
+          if (priceInputEl) priceInputEl.readOnly = false;
+          if (accountSelect) accountSelect.disabled = false;
+        }
+        // --- END MODIFICATION ---
+      }
+    });
+  } else {
+    console.warn('[Orders Init] Add transaction form not found.');
+  }
 }

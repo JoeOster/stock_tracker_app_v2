@@ -15,19 +15,22 @@ import { handleResponse } from './api-helpers.js';
  * @returns {Promise<void>}
  */
 export async function refreshLedger() {
-    try {
-        const holderId = state.selectedAccountHolderId === 'all' ? 'all' : String(state.selectedAccountHolderId);
-        const res = await fetch(`/api/transactions?holder=${holderId}`);
-        const transactions = await handleResponse(res);
-        updateState({ transactions: transactions }); // Update state
-        renderLedgerPage(state.transactions, state.ledgerSort);
-    } catch (error) {
-        console.error("Failed to refresh ledger:", error);
-        // @ts-ignore
-        showToast(`Failed to refresh ledger: ${error.message}`, 'error');
-        updateState({ transactions: [] }); // Clear state on error
-        renderLedgerPage([], state.ledgerSort); // Render empty ledger
-    }
+  try {
+    const holderId =
+      state.selectedAccountHolderId === 'all'
+        ? 'all'
+        : String(state.selectedAccountHolderId);
+    const res = await fetch(`/api/transactions?holder=${holderId}`);
+    const transactions = await handleResponse(res);
+    updateState({ transactions: transactions }); // Update state
+    renderLedgerPage(state.transactions, state.ledgerSort);
+  } catch (error) {
+    console.error('Failed to refresh ledger:', error);
+    // @ts-ignore
+    showToast(`Failed to refresh ledger: ${error.message}`, 'error');
+    updateState({ transactions: [] }); // Clear state on error
+    renderLedgerPage([], state.ledgerSort); // Render empty ledger
+  }
 }
 
 /**
@@ -38,11 +41,15 @@ export async function refreshLedger() {
  * @returns {Promise<any[]>} A promise resolving to an array of sales transaction objects with calculated P/L.
  */
 export async function fetchSalesForLot(buyId, holderId) {
-    if (!buyId || !holderId || holderId === 'all') {
-        throw new Error("Buy ID and a specific Account Holder ID are required to fetch sales.");
-    }
-    const response = await fetch(`/api/transactions/sales/${buyId}?holder=${holderId}`);
-    return handleResponse(response);
+  if (!buyId || !holderId || holderId === 'all') {
+    throw new Error(
+      'Buy ID and a specific Account Holder ID are required to fetch sales.'
+    );
+  }
+  const response = await fetch(
+    `/api/transactions/sales/${buyId}?holder=${holderId}`
+  );
+  return handleResponse(response);
 }
 
 // --- ADDED: New function for Task 1.3 ---
@@ -54,19 +61,21 @@ export async function fetchSalesForLot(buyId, holderId) {
  * @returns {Promise<any[]>} A promise resolving to a combined array of sales transaction objects with calculated P/L.
  */
 export async function fetchBatchSalesHistory(lotIds, holderId) {
-    if (!lotIds || lotIds.length === 0) {
-        return []; // Nothing to fetch
-    }
-    if (!holderId || holderId === 'all') {
-        throw new Error("A specific Account Holder ID is required to fetch sales history.");
-    }
-    
-    const response = await fetch('/api/transactions/sales/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lotIds: lotIds, holderId: holderId })
-    });
-    return handleResponse(response);
+  if (!lotIds || lotIds.length === 0) {
+    return []; // Nothing to fetch
+  }
+  if (!holderId || holderId === 'all') {
+    throw new Error(
+      'A specific Account Holder ID is required to fetch sales history.'
+    );
+  }
+
+  const response = await fetch('/api/transactions/sales/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lotIds: lotIds, holderId: holderId }),
+  });
+  return handleResponse(response);
 }
 // --- END ADDED ---
 
@@ -78,35 +87,42 @@ export async function fetchBatchSalesHistory(lotIds, holderId) {
  * @returns {Promise<any>} A promise resolving to the transaction object.
  */
 export async function fetchTransactionById(transactionId, holderId) {
-    // We are fetching from the state here, as the backend endpoint for a single transaction doesn't exist yet.
-    // This is sufficient for the modal's needs.
-    console.log(`[API] Fetching Tx ID ${transactionId} for holder ${holderId} from state...`);
-    if (!state.transactions || state.transactions.length === 0) {
-        console.log("[API] State transactions empty, calling refreshLedger...");
-        await refreshLedger(); // Ensure we have transactions
-    }
-    // Find the transaction in the *full* ledger state
-    const tx = state.transactions.find(t => 
-        String(t.id) === String(transactionId) && 
+  // We are fetching from the state here, as the backend endpoint for a single transaction doesn't exist yet.
+  // This is sufficient for the modal's needs.
+  console.log(
+    `[API] Fetching Tx ID ${transactionId} for holder ${holderId} from state...`
+  );
+  if (!state.transactions || state.transactions.length === 0) {
+    console.log('[API] State transactions empty, calling refreshLedger...');
+    await refreshLedger(); // Ensure we have transactions
+  }
+  // Find the transaction in the *full* ledger state
+  const tx = state.transactions.find(
+    (t) =>
+      String(t.id) === String(transactionId) &&
+      String(t.account_holder_id) === String(holderId)
+  );
+
+  if (!tx) {
+    // Fallback: Check dashboard open lots if not found in ledger
+    const dashLot = state.dashboardOpenLots.find(
+      (t) =>
+        String(t.id) === String(transactionId) &&
         String(t.account_holder_id) === String(holderId)
     );
-    
-    if (!tx) {
-        // Fallback: Check dashboard open lots if not found in ledger
-        const dashLot = state.dashboardOpenLots.find(t => 
-            String(t.id) === String(transactionId) && 
-            String(t.account_holder_id) === String(holderId)
-        );
-        if (dashLot) {
-             console.warn(`[API] Found Tx ID ${transactionId} in dashboard state, but not ledger state.`);
-             return dashLot;
-        }
-        
-        throw new Error('Transaction not found or does not belong to this account holder.');
+    if (dashLot) {
+      console.warn(
+        `[API] Found Tx ID ${transactionId} in dashboard state, but not ledger state.`
+      );
+      return dashLot;
     }
-    return tx;
-}
 
+    throw new Error(
+      'Transaction not found or does not belong to this account holder.'
+    );
+  }
+  return tx;
+}
 
 /**
  * Deletes a transaction by its ID.
@@ -116,11 +132,11 @@ export async function fetchTransactionById(transactionId, holderId) {
  * @returns {Promise<any>} A promise resolving to the server's response.
  */
 export async function deleteTransaction(transactionId, holderId) {
-    // The backend route /api/transactions/:id handles the deletion.
-    const response = await fetch(`/api/transactions/${transactionId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account_holder_id: holderId }) 
-    });
-    return handleResponse(response);
+  // The backend route /api/transactions/:id handles the deletion.
+  const response = await fetch(`/api/transactions/${transactionId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ account_holder_id: holderId }),
+  });
+  return handleResponse(response);
 }

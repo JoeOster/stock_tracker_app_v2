@@ -18,7 +18,7 @@ import { getCurrentESTDateString } from '../datetime.js';
  * @returns {string}
  */
 function createAddTickerFormHTML() {
-    return `
+  return `
         <form id="add-watched-ticker-form" class="add-item-form">
             <input type="text" id="add-watched-ticker-input" placeholder="Add Ticker (e.g., AAPL)" required>
             <button type="submit">Add Ticker</button>
@@ -32,11 +32,11 @@ function createAddTickerFormHTML() {
  * @returns {string}
  */
 function createWatchedTableHTML(watchedTickers) {
-    if (watchedTickers.length === 0) {
-        return '<p>No tickers are currently being watched.</p>';
-    }
+  if (watchedTickers.length === 0) {
+    return '<p>No tickers are currently being watched.</p>';
+  }
 
-    let tableHTML = `
+  let tableHTML = `
         <table id="watched-tickers-table" class="data-table">
             <thead>
                 <tr>
@@ -49,34 +49,37 @@ function createWatchedTableHTML(watchedTickers) {
             <tbody>
     `;
 
-    watchedTickers.forEach(item => {
-        const priceData = state.priceCache.get(item.ticker);
-        let priceDisplay = '<i>Fetching...</i>';
-        let changeDisplay = '<i>...</i>';
+  watchedTickers.forEach((item) => {
+    const priceData = state.priceCache.get(item.ticker);
+    let priceDisplay = '<i>Fetching...</i>';
+    let changeDisplay = '<i>...</i>';
 
-        // --- FIX: Manually calculate change and changePercent ---
-        if (priceData && typeof priceData.price === 'number') {
-            priceDisplay = formatAccounting(priceData.price);
+    // --- FIX: Manually calculate change and changePercent ---
+    if (priceData && typeof priceData.price === 'number') {
+      priceDisplay = formatAccounting(priceData.price);
 
-            let change = 0;
-            let changePercent = 0;
+      let change = 0;
+      let changePercent = 0;
 
-            // Only calculate change if previousPrice is also a valid number and not zero
-            if (priceData.previousPrice !== null && typeof priceData.previousPrice === 'number' && priceData.previousPrice > 0) {
-                change = priceData.price - priceData.previousPrice;
-                changePercent = change / priceData.previousPrice; // This is a decimal (e.g., 0.05)
-            }
+      // Only calculate change if previousPrice is also a valid number and not zero
+      if (
+        priceData.previousPrice !== null &&
+        typeof priceData.previousPrice === 'number' &&
+        priceData.previousPrice > 0
+      ) {
+        change = priceData.price - priceData.previousPrice;
+        changePercent = change / priceData.previousPrice; // This is a decimal (e.g., 0.05)
+      }
 
-            const changeClass = change >= 0 ? 'positive' : 'negative';
-            // Pass the calculated decimal to formatPercent
-            changeDisplay = `<span class="${changeClass}">${formatAccounting(change, false)} (${formatPercent(changePercent)})</span>`;
-            
-        } else if (priceData) {
-            priceDisplay = `<span class="negative">${priceData.price}</span>`; // e.g., "Error" or "Invalid"
-        }
-        // --- END FIX ---
+      const changeClass = change >= 0 ? 'positive' : 'negative';
+      // Pass the calculated decimal to formatPercent
+      changeDisplay = `<span class="${changeClass}">${formatAccounting(change, false)} (${formatPercent(changePercent)})</span>`;
+    } else if (priceData) {
+      priceDisplay = `<span class="negative">${priceData.price}</span>`; // e.g., "Error" or "Invalid"
+    }
+    // --- END FIX ---
 
-        tableHTML += `
+    tableHTML += `
             <tr data-id="${item.id}" data-ticker="${item.ticker}">
                 <td>${item.ticker}</td>
                 <td class="numeric">${priceDisplay}</td>
@@ -86,10 +89,10 @@ function createWatchedTableHTML(watchedTickers) {
                 </td>
             </tr>
         `;
-    });
+  });
 
-    tableHTML += '</tbody></table>';
-    return tableHTML;
+  tableHTML += '</tbody></table>';
+  return tableHTML;
 }
 
 /**
@@ -98,31 +101,33 @@ function createWatchedTableHTML(watchedTickers) {
  * @returns {Promise<void>}
  */
 export async function renderWatchedTickers(panelElement) {
-    panelElement.innerHTML = '<h3>Watched Tickers</h3><p>Loading watched tickers...</p>';
-    
-    // @ts-ignore
-    const holderId = state.selectedAccountHolderId;
-    if (!holderId || holderId === 'all') {
-        panelElement.innerHTML = '<h3>Watched Tickers</h3><p>Please select a specific account holder.</p>';
-        return;
-    }
+  panelElement.innerHTML =
+    '<h3>Watched Tickers</h3><p>Loading watched tickers...</p>';
 
-    // Step 1: Fetch the list of tickers
-    const watchedTickers = await fetchSimpleWatchlist(holderId);
+  // @ts-ignore
+  const holderId = state.selectedAccountHolderId;
+  if (!holderId || holderId === 'all') {
+    panelElement.innerHTML =
+      '<h3>Watched Tickers</h3><p>Please select a specific account holder.</p>';
+    return;
+  }
 
-    // Step 2: Fetch prices for those tickers
-    if (watchedTickers.length > 0) {
-        const tickersToFetch = watchedTickers.map(item => item.ticker);
-        // --- MODIFIED: Call the correct function with the date ---
-        await updatePricesForView(getCurrentESTDateString(), tickersToFetch);
-        // --- END MODIFICATION ---
-    }
+  // Step 1: Fetch the list of tickers
+  const watchedTickers = await fetchSimpleWatchlist(holderId);
 
-    // Step 3: Render the form and the table
-    const formHTML = createAddTickerFormHTML();
-    const tableHTML = createWatchedTableHTML(watchedTickers);
+  // Step 2: Fetch prices for those tickers
+  if (watchedTickers.length > 0) {
+    const tickersToFetch = watchedTickers.map((item) => item.ticker);
+    // --- MODIFIED: Call the correct function with the date ---
+    await updatePricesForView(getCurrentESTDateString(), tickersToFetch);
+    // --- END MODIFICATION ---
+  }
 
-    panelElement.innerHTML = `
+  // Step 3: Render the form and the table
+  const formHTML = createAddTickerFormHTML();
+  const tableHTML = createWatchedTableHTML(watchedTickers);
+
+  panelElement.innerHTML = `
         <h3>Watched Tickers</h3>
         ${formHTML}
         <div id="watched-tickers-table-container" style="margin-top: 1.5rem;">

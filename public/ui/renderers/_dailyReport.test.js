@@ -8,26 +8,28 @@
 // Import the correctly named function 'renderDailyReportPage'.
 import { renderDailyReportPage } from './_dailyReport.js';
 import { state } from '../../state.js'; // Assuming state mock is needed
-import { getCurrentESTDateString } from '../datetime.js'; // Import for date checks
 
 // --- Mocks ---
 // Mock state (can be simple for this test)
 jest.mock('../../state.js', () => ({
-    state: {
-        selectedAccountHolderId: '2', // Example ID
-        settings: { theme: 'light' }, // Needed for styling checks maybe
-        priceCache: new Map(), // Mock price cache
-        activityMap: new Map(), // Mock activity map (renderer clears it anyway)
-    },
+  state: {
+    selectedAccountHolderId: '2', // Example ID
+    settings: { theme: 'light' }, // Needed for styling checks maybe
+    priceCache: new Map(), // Mock price cache
+    activityMap: new Map(), // Mock activity map (renderer clears it anyway)
+  },
 }));
 
 // Mock formatters and datetime helpers
 jest.mock('../formatters.js', () => ({
-    formatQuantity: (num) => num?.toString() || '', // Simple mock
-    formatAccounting: (num) => (num !== null && num !== undefined && !isNaN(num) ? `$${Number(num).toFixed(2)}` : '--'), // Simple mock
+  formatQuantity: (num) => num?.toString() || '', // Simple mock
+  formatAccounting: (num) =>
+    num !== null && num !== undefined && !isNaN(num)
+      ? `$${Number(num).toFixed(2)}`
+      : '--', // Simple mock
 }));
 jest.mock('../datetime.js', () => ({
-    getCurrentESTDateString: jest.fn(() => '2025-10-20'), // Mock current date
+  getCurrentESTDateString: jest.fn(() => '2025-10-20'), // Mock current date
 }));
 
 // ---
@@ -35,36 +37,75 @@ jest.mock('../datetime.js', () => ({
 // ---
 // Mock API (not strictly needed if renderer doesn't fetch, but good practice)
 jest.mock('../../api/reporting-api.js', () => ({
-    fetchPositions: jest.fn(),
-    fetchDailyPerformance: jest.fn(),
+  fetchPositions: jest.fn(),
+  fetchDailyPerformance: jest.fn(),
 }));
 jest.mock('../../api/price-api.js', () => ({
-    updatePricesForView: jest.fn(),
+  updatePricesForView: jest.fn(),
 }));
 // ---
 // --- END FIX
 // ---
 
-
 // --- Test Suite ---
 describe('renderDailyReportPage (Historical View)', () => {
+  // Define mock data for a HISTORICAL date
+  const mockHistoricalDate = '2025-10-17'; // Different from mocked getCurrentESTDateString
+  const mockPositionData = {
+    dailyTransactions: [
+      {
+        id: 1,
+        ticker: 'AAPL',
+        exchange: 'Fidelity',
+        transaction_type: 'BUY',
+        quantity: 10,
+        price: 150.0,
+        realizedPL: null,
+        transaction_date: mockHistoricalDate,
+      },
+      {
+        id: 2,
+        ticker: 'GOOG',
+        exchange: 'Fidelity',
+        transaction_type: 'SELL',
+        quantity: 5,
+        price: 2800.0,
+        realizedPL: 500,
+        parent_buy_price: 2700.0,
+        transaction_date: mockHistoricalDate,
+      },
+    ],
+    endOfDayPositions: [
+      {
+        id: 3,
+        ticker: 'AAPL',
+        exchange: 'Fidelity',
+        purchase_date: '2025-10-09',
+        cost_basis: 145.0,
+        original_quantity: 10,
+        quantity_remaining: 10,
+        limit_price_up: 180,
+        limit_price_down: 140,
+        account_holder_id: 2,
+      },
+      {
+        id: 4,
+        ticker: 'MSFT',
+        exchange: 'Robinhood',
+        purchase_date: '2025-10-10',
+        cost_basis: 300.0,
+        original_quantity: 5,
+        quantity_remaining: 5,
+        limit_price_up: null,
+        limit_price_down: null,
+        account_holder_id: 2,
+      },
+    ],
+  };
 
-    // Define mock data for a HISTORICAL date
-    const mockHistoricalDate = '2025-10-17'; // Different from mocked getCurrentESTDateString
-    const mockPositionData = {
-        dailyTransactions: [
-            { id: 1, ticker: 'AAPL', exchange: 'Fidelity', transaction_type: 'BUY', quantity: 10, price: 150.00, realizedPL: null, transaction_date: mockHistoricalDate },
-            { id: 2, ticker: 'GOOG', exchange: 'Fidelity', transaction_type: 'SELL', quantity: 5, price: 2800.00, realizedPL: 500, parent_buy_price: 2700.00, transaction_date: mockHistoricalDate },
-        ],
-        endOfDayPositions: [
-            { id: 3, ticker: 'AAPL', exchange: 'Fidelity', purchase_date: '2025-10-09', cost_basis: 145.00, original_quantity: 10, quantity_remaining: 10, limit_price_up: 180, limit_price_down: 140, account_holder_id: 2 },
-            { id: 4, ticker: 'MSFT', exchange: 'Robinhood', purchase_date: '2025-10-10', cost_basis: 300.00, original_quantity: 5, quantity_remaining: 5, limit_price_up: null, limit_price_down: null, account_holder_id: 2 },
-        ],
-    };
-
-    beforeEach(() => {
-        // --- Setup Simplified DOM based on _dailyReport.html for HISTORICAL view ---
-        document.body.innerHTML = `
+  beforeEach(() => {
+    // --- Setup Simplified DOM based on _dailyReport.html for HISTORICAL view ---
+    document.body.innerHTML = `
             <div id="daily-report-container">
                 <h2 id="table-title"></h2>
                 <div id="daily-performance-summary"></div>
@@ -104,49 +145,66 @@ describe('renderDailyReportPage (Historical View)', () => {
                  </div>
             </div>
         `;
-        // Clear mocks used by the renderer
-        state.activityMap.clear();
-    });
+    // Clear mocks used by the renderer
+    state.activityMap.clear();
+  });
 
-    test('should render historical transaction and position data correctly (no actions/checkbox)', () => {
-        // Pass a historical date and mock data
-        renderDailyReportPage(mockHistoricalDate, state.activityMap, null, mockPositionData);
+  test('should render historical transaction and position data correctly (no actions/checkbox)', () => {
+    // Pass a historical date and mock data
+    renderDailyReportPage(
+      mockHistoricalDate,
+      state.activityMap,
+      null,
+      mockPositionData
+    );
 
-        const logBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('log-body'));
-        const summaryBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('positions-summary-body'));
+    const logBody = /** @type {HTMLTableSectionElement} */ (
+      document.getElementById('log-body')
+    );
+    const summaryBody = /** @type {HTMLTableSectionElement} */ (
+      document.getElementById('positions-summary-body')
+    );
 
-        // Check number of rows rendered
-        expect(logBody.rows.length).toBe(mockPositionData.dailyTransactions.length); // Should render 2 log rows
-        expect(summaryBody.rows.length).toBe(mockPositionData.endOfDayPositions.length); // Should render 2 position rows
+    // Check number of rows rendered
+    expect(logBody.rows.length).toBe(mockPositionData.dailyTransactions.length); // Should render 2 log rows
+    expect(summaryBody.rows.length).toBe(
+      mockPositionData.endOfDayPositions.length
+    ); // Should render 2 position rows
 
-        // Check content (basic checks)
-        expect(logBody.textContent).toContain('AAPL');
-        expect(logBody.textContent).toContain('GOOG');
-        expect(summaryBody.textContent).toContain('AAPL');
-        expect(summaryBody.textContent).toContain('MSFT');
+    // Check content (basic checks)
+    expect(logBody.textContent).toContain('AAPL');
+    expect(logBody.textContent).toContain('GOOG');
+    expect(summaryBody.textContent).toContain('AAPL');
+    expect(summaryBody.textContent).toContain('MSFT');
 
-        // Check that action buttons are NOT present
-        expect(logBody.querySelector('.actions-cell')).toBeNull();
-        expect(summaryBody.querySelector('.actions-cell')).toBeNull();
-        expect(logBody.querySelector('.reconciliation-checkbox-cell')).toBeNull();
-        expect(summaryBody.querySelector('.reconciliation-checkbox-cell')).toBeNull();
+    // Check that action buttons are NOT present
+    expect(logBody.querySelector('.actions-cell')).toBeNull();
+    expect(summaryBody.querySelector('.actions-cell')).toBeNull();
+    expect(logBody.querySelector('.reconciliation-checkbox-cell')).toBeNull();
+    expect(
+      summaryBody.querySelector('.reconciliation-checkbox-cell')
+    ).toBeNull();
 
-        // Check if activityMap remains empty for historical dates
-        expect(state.activityMap.size).toBe(0);
-    });
+    // Check if activityMap remains empty for historical dates
+    expect(state.activityMap.size).toBe(0);
+  });
 
-    test('should display "no data" messages if historical data is null or empty', () => {
-        // Pass historical date and null data
-        renderDailyReportPage(mockHistoricalDate, state.activityMap, null, null);
+  test('should display "no data" messages if historical data is null or empty', () => {
+    // Pass historical date and null data
+    renderDailyReportPage(mockHistoricalDate, state.activityMap, null, null);
 
-        const logBody = document.getElementById('log-body');
-        const summaryBody = document.getElementById('positions-summary-body');
+    const logBody = document.getElementById('log-body');
+    const summaryBody = document.getElementById('positions-summary-body');
 
-        // Check for "No data" messages
-        expect(logBody.textContent).toContain('No transactions logged for this day.');
-        expect(summaryBody.textContent).toContain('No open positions at the end of this day.');
-        // Check colspans (adjust based on historical column count)
-        expect(logBody.querySelector('td')?.colSpan).toBe(7); // Log historical colspan
-        expect(summaryBody.querySelector('td')?.colSpan).toBe(8); // Summary historical colspan
-    });
+    // Check for "No data" messages
+    expect(logBody.textContent).toContain(
+      'No transactions logged for this day.'
+    );
+    expect(summaryBody.textContent).toContain(
+      'No open positions at the end of this day.'
+    );
+    // Check colspans (adjust based on historical column count)
+    expect(logBody.querySelector('td')?.colSpan).toBe(7); // Log historical colspan
+    expect(summaryBody.querySelector('td')?.colSpan).toBe(8); // Summary historical colspan
+  });
 });

@@ -4,9 +4,12 @@
  * @module renderers/_watchlist_real
  */
 
-import { state } from '../../state.js';
+// /public/ui/renderers/_watchlist_real.js
 import { formatAccounting, formatQuantity, formatDate } from '../formatters.js';
-import { loadAndPrepareDashboardData, processFilterAndSortLots } from './_dashboard_data.js';
+import {
+  loadAndPrepareDashboardData,
+  processFilterAndSortLots,
+} from './_dashboard_data.js';
 
 /**
  * Renders the HTML for a single read-only position row.
@@ -14,22 +17,27 @@ import { loadAndPrepareDashboardData, processFilterAndSortLots } from './_dashbo
  * @returns {string} HTML string for the table row.
  */
 function createReadOnlyRowHTML(lot) {
-    const { priceData, unrealizedPL, unrealizedPercent, proximity } = lot;
-    const currentPriceValue = (priceData && typeof priceData.price === 'number') ? priceData.price : null;
+  const { priceData, unrealizedPL, unrealizedPercent, proximity } = lot;
+  const currentPriceValue =
+    priceData && typeof priceData.price === 'number' ? priceData.price : null;
 
-    const plClass = (unrealizedPL >= 0) ? 'positive' : 'negative';
-    let currentPriceDisplay = '--';
-    if (currentPriceValue !== null) {
-        currentPriceDisplay = formatAccounting(currentPriceValue);
-    } else if (priceData?.price) {
-        currentPriceDisplay = `<span class="negative">${priceData.price}</span>`;
-    }
+  const plClass = unrealizedPL >= 0 ? 'positive' : 'negative';
+  let currentPriceDisplay = '--';
+  if (currentPriceValue !== null) {
+    currentPriceDisplay = formatAccounting(currentPriceValue);
+  } else if (priceData?.price) {
+    currentPriceDisplay = `<span class="negative">${priceData.price}</span>`;
+  }
 
-    let proximityIndicator = '';
-    if (proximity === 'up') proximityIndicator = '<span class="limit-proximity-indicator" title="Nearing Take Profit Limit">🔥</span>';
-    else if (proximity === 'down') proximityIndicator = '<span class="limit-proximity-indicator" title="Nearing Stop Loss Limit">❄️</span>';
+  let proximityIndicator = '';
+  if (proximity === 'up')
+    proximityIndicator =
+      '<span class="limit-proximity-indicator" title="Nearing Take Profit Limit">🔥</span>';
+  else if (proximity === 'down')
+    proximityIndicator =
+      '<span class="limit-proximity-indicator" title="Nearing Stop Loss Limit">❄️</span>';
 
-    return `
+  return `
         <tr data-lot-id="${lot.id}">
             <td>${lot.ticker}</td>
             <td>${lot.exchange}</td>
@@ -50,23 +58,26 @@ function createReadOnlyRowHTML(lot) {
  * @returns {Promise<void>}
  */
 export async function renderWatchlistRealPositions(panelElement) {
-    panelElement.innerHTML = '<h3>Real Positions (Info-Only)</h3><p>Loading positions...</p>';
+  panelElement.innerHTML =
+    '<h3>Real Positions (Info-Only)</h3><p>Loading positions...</p>';
 
-    try {
-        // Step 1: Load data (fetches, updates prices, stores in state.dashboardOpenLots)
-        const openLots = await loadAndPrepareDashboardData();
+  try {
+    // Step 1: Load data (fetches, updates prices, stores in state.dashboardOpenLots)
+    const openLots = await loadAndPrepareDashboardData();
 
-        if (openLots.length === 0) {
-            panelElement.innerHTML = '<h3>Real Positions (Info-Only)</h3><p>No open positions found.</p>';
-            return;
-        }
+    if (openLots.length === 0) {
+      panelElement.innerHTML =
+        '<h3>Real Positions (Info-Only)</h3><p>No open positions found.</p>';
+      return;
+    }
 
-        // Step 2: Process data (calculates metrics, filters, sorts)
-        // We use blank/default filter/sort values to get all lots
-        const { individualLotsForTable, totalUnrealizedPL, totalCurrentValue } = processFilterAndSortLots(openLots, '', 'ticker-asc');
+    // Step 2: Process data (calculates metrics, filters, sorts)
+    // We use blank/default filter/sort values to get all lots
+    const { individualLotsForTable, totalUnrealizedPL, totalCurrentValue } =
+      processFilterAndSortLots(openLots, '', 'ticker-asc');
 
-        // Step 3: Render the read-only table
-        let tableHTML = `
+    // Step 3: Render the read-only table
+    let tableHTML = `
             <h3>Real Positions (Info-Only)</h3>
             <table id="watchlist-real-table" class="data-table">
                 <thead>
@@ -92,11 +103,10 @@ export async function renderWatchlistRealPositions(panelElement) {
                  </tfoot>
             </table>
         `;
-        panelElement.innerHTML = tableHTML;
-
-    } catch (error) {
-        console.error("Error rendering Watchlist real positions:", error);
-        // @ts-ignore
-        panelElement.innerHTML = `<h3>Real Positions (Info-Only)</h3><p style="color: var(--negative-color);">Error loading positions: ${error.message}</p>`;
-    }
+    panelElement.innerHTML = tableHTML;
+  } catch (error) {
+    console.error('Error rendering Watchlist real positions:', error);
+    // @ts-ignore
+    panelElement.innerHTML = `<h3>Real Positions (Info-Only)</h3><p style="color: var(--negative-color);">Error loading positions: ${error.message}</p>`;
+  }
 }

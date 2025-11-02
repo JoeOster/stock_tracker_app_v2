@@ -1,25 +1,41 @@
 <div id="sales-history-modal" class="modal">
-    <div class="modal-content modal-large">
-        <span class="close-button">&times;</span>
-        <h2 id="sales-history-title">Sales History for Lot</h2>
-        <div id="sales-history-lot-details" style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--container-border);">
-            <p><strong>Ticker:</strong> <span id="sales-history-ticker">--</span></p>
-            <p><strong>Purchase Date:</strong> <span id="sales-history-buy-date">--</span></p>
-            <p><strong>Original Qty:</strong> <span id="sales-history-buy-qty">--</span> @ <span id="sales-history-buy-price">--</span></p>
-        </div>
-        <h4>Associated Sales:</h4>
-        <table id="sales-history-table">
-            <thead>
-                <tr>
-                    <th>Sale Date</th>
-                    <th class="numeric">Quantity Sold</th>
-                    <th class="numeric">Sale Price</th>
-                    <th class="numeric">Realized P/L</th>
-                </tr>
-            </thead>
-            <tbody id="sales-history-body">
-                <tr><td colspan="4">Loading sales history...</td></tr>
-            </tbody>
-        </table>
+  <div class="modal-content modal-large">
+    <span class="close-button">&times;</span>
+    <h2 id="sales-history-title">Sales History for Lot</h2>
+    <div
+      id="sales-history-lot-details"
+      style="
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--container-border);
+      "
+    >
+      <p><strong>Ticker:</strong> <span id="sales-history-ticker">--</span></p>
+      <p>
+        <strong>Purchase Date:</strong>
+        <span id="sales-history-buy-date">--</span>
+      </p>
+      <p>
+        <strong>Original Qty:</strong>
+        <span id="sales-history-buy-qty">--</span> @
+        <span id="sales-history-buy-price">--</span>
+      </p>
     </div>
+    <h4>Associated Sales:</h4>
+    <table id="sales-history-table">
+      <thead>
+        <tr>
+          <th>Sale Date</th>
+          <th class="numeric">Quantity Sold</th>
+          <th class="numeric">Sale Price</th>
+          <th class="numeric">Realized P/L</th>
+        </tr>
+      </thead>
+      <tbody id="sales-history-body">
+        <tr>
+          <td colspan="4">Loading sales history...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>

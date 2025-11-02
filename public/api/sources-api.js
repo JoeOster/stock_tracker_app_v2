@@ -24,7 +24,7 @@ import { handleResponse } from './api-helpers.js';
  * @property {boolean} [is_active] - Whether the source is active
  */
 
- /**
+/**
  * @typedef {object} AdviceSourcePutBody
  * @property {string} name
  * @property {string} type
@@ -43,15 +43,15 @@ import { handleResponse } from './api-helpers.js';
  * @returns {Promise<any[]>} A promise that resolves to an array of advice source objects.
  */
 export async function fetchAdviceSources(holderId, includeInactive = false) {
-    if (!holderId || holderId === 'all') {
-        return [];
-    }
-    let url = `/api/advice-sources?holder=${holderId}`;
-    if (includeInactive) {
-        url += '&include_inactive=true';
-    }
-    const response = await fetch(url);
-    return handleResponse(response);
+  if (!holderId || holderId === 'all') {
+    return [];
+  }
+  let url = `/api/advice-sources?holder=${holderId}`;
+  if (includeInactive) {
+    url += '&include_inactive=true';
+  }
+  const response = await fetch(url);
+  return handleResponse(response);
 }
 
 /**
@@ -61,12 +61,12 @@ export async function fetchAdviceSources(holderId, includeInactive = false) {
  * @returns {Promise<any>} A promise that resolves to the newly created advice source object.
  */
 export async function addAdviceSource(sourceData) {
-    const response = await fetch('/api/advice-sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sourceData)
-    });
-    return handleResponse(response);
+  const response = await fetch('/api/advice-sources', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sourceData),
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -77,12 +77,12 @@ export async function addAdviceSource(sourceData) {
  * @returns {Promise<any>} A promise that resolves to the server's response message.
  */
 export async function updateAdviceSource(id, sourceData) {
-    const response = await fetch(`/api/advice-sources/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sourceData)
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/advice-sources/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sourceData),
+  });
+  return handleResponse(response);
 }
 
 // --- NEW FUNCTION ---
@@ -94,12 +94,12 @@ export async function updateAdviceSource(id, sourceData) {
  * @returns {Promise<any>} A promise that resolves to the server's response message.
  */
 export async function toggleAdviceSourceActive(id, isActive) {
-    const response = await fetch(`/api/advice-sources/${id}/toggle-active`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: isActive })
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/advice-sources/${id}/toggle-active`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_active: isActive }),
+  });
+  return handleResponse(response);
 }
 // --- END NEW FUNCTION ---
 
@@ -110,10 +110,10 @@ export async function toggleAdviceSourceActive(id, isActive) {
  * @returns {Promise<any>} A promise that resolves to the server's response message.
  */
 export async function deleteAdviceSource(id) {
-    const response = await fetch(`/api/advice-sources/${id}`, {
-        method: 'DELETE'
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/advice-sources/${id}`, {
+    method: 'DELETE',
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -124,36 +124,49 @@ export async function deleteAdviceSource(id) {
  * @returns {Promise<{source: object, journalEntries: any[], watchlistItems: any[], linkedTransactions: any[], documents: any[], sourceNotes: any[], summaryStats: object}>} A promise resolving to the complete details object.
  */
 export async function fetchSourceDetails(sourceId, holderId) {
-    if (!sourceId || !holderId || holderId === 'all') {
-        throw new Error("Source ID and a specific Account Holder ID are required.");
+  if (!sourceId || !holderId || holderId === 'all') {
+    throw new Error('Source ID and a specific Account Holder ID are required.');
+  }
+  const response = await fetch(
+    `/api/sources/${sourceId}/details?holder=${holderId}`
+  );
+  const data = await handleResponse(response);
+
+  // Store watchlist items in state for price updates
+  if (data && data.watchlistItems) {
+    updateState({ researchWatchlistItems: data.watchlistItems });
+  } else {
+    updateState({ researchWatchlistItems: [] }); // Clear if none found
+  }
+
+  // --- ADD THIS BLOCK TO FETCH PRICES ---
+  if (data) {
+    const journalTickers = data.journalEntries
+      ? data.journalEntries.map((j) => j.ticker)
+      : [];
+    const watchlistTickers = data.watchlistItems
+      ? data.watchlistItems.map((w) => w.ticker)
+      : [];
+    const openLots = data.linkedTransactions
+      ? data.linkedTransactions.filter(
+          (tx) =>
+            tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001
+        )
+      : [];
+    const openLotTickers = openLots.map((lot) => lot.ticker);
+
+    const allTickers = [
+      ...new Set([...journalTickers, ...watchlistTickers, ...openLotTickers]),
+    ];
+
+    if (allTickers.length > 0) {
+      // This will populate state.priceCache before the modal renders
+      await updatePricesForView(getCurrentESTDateString(), allTickers);
     }
-    const response = await fetch(`/api/sources/${sourceId}/details?holder=${holderId}`);
-    const data = await handleResponse(response);
-    
-    // Store watchlist items in state for price updates
-    if (data && data.watchlistItems) {
-        updateState({ researchWatchlistItems: data.watchlistItems });
-    } else {
-        updateState({ researchWatchlistItems: [] }); // Clear if none found
-    }
+  }
+  // --- END ADD ---
 
-    // --- ADD THIS BLOCK TO FETCH PRICES ---
-    if (data) {
-        const journalTickers = data.journalEntries ? data.journalEntries.map(j => j.ticker) : [];
-        const watchlistTickers = data.watchlistItems ? data.watchlistItems.map(w => w.ticker) : [];
-        const openLots = data.linkedTransactions ? data.linkedTransactions.filter(tx => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001) : [];
-        const openLotTickers = openLots.map(lot => lot.ticker);
-
-        const allTickers = [...new Set([...journalTickers, ...watchlistTickers, ...openLotTickers])];
-
-        if (allTickers.length > 0) {
-            // This will populate state.priceCache before the modal renders
-            await updatePricesForView(getCurrentESTDateString(), allTickers);
-        }
-    }
-    // --- END ADD ---
-
-    return data;
+  return data;
 }
 
 /**
@@ -165,15 +178,17 @@ export async function fetchSourceDetails(sourceId, holderId) {
  * @returns {Promise<any>} The response from the server (likely the new note object).
  */
 export async function addSourceNote(sourceId, holderId, noteContent) {
-    if (!sourceId || !holderId || !noteContent || holderId === 'all') {
-        throw new Error("Missing required fields: source ID, holder ID, and note content.");
-    }
-    const response = await fetch(`/api/sources/${sourceId}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ holderId: holderId, note_content: noteContent })
-    });
-    return handleResponse(response);
+  if (!sourceId || !holderId || !noteContent || holderId === 'all') {
+    throw new Error(
+      'Missing required fields: source ID, holder ID, and note content.'
+    );
+  }
+  const response = await fetch(`/api/sources/${sourceId}/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ holderId: holderId, note_content: noteContent }),
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -185,16 +200,18 @@ export async function addSourceNote(sourceId, holderId, noteContent) {
  * @returns {Promise<any>} The response from the server.
  */
 export async function deleteSourceNote(sourceId, noteId, holderId) {
-    if (!sourceId || !noteId || !holderId || holderId === 'all') {
-        throw new Error("Missing required fields: source ID, note ID, and holder ID.");
-    }
-     // Pass holderId in the body for verification on the backend
-    const response = await fetch(`/api/sources/${sourceId}/notes/${noteId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ holderId: holderId }) // Pass holderId in body
-    });
-    return handleResponse(response);
+  if (!sourceId || !noteId || !holderId || holderId === 'all') {
+    throw new Error(
+      'Missing required fields: source ID, note ID, and holder ID.'
+    );
+  }
+  // Pass holderId in the body for verification on the backend
+  const response = await fetch(`/api/sources/${sourceId}/notes/${noteId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ holderId: holderId }), // Pass holderId in body
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -206,14 +223,28 @@ export async function deleteSourceNote(sourceId, noteId, holderId) {
  * @param {string} noteContent - The new text content for the note.
  * @returns {Promise<any>} The response from the server.
  */
-export async function updateSourceNote(sourceId, noteId, holderId, noteContent) {
-    if (!sourceId || !noteId || !holderId || holderId === 'all' || noteContent === undefined || noteContent === null) {
-        throw new Error("Missing required fields: source ID, note ID, holder ID, and note content.");
-    }
-    const response = await fetch(`/api/sources/${sourceId}/notes/${noteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ holderId: holderId, note_content: noteContent })
-    });
-    return handleResponse(response);
+export async function updateSourceNote(
+  sourceId,
+  noteId,
+  holderId,
+  noteContent
+) {
+  if (
+    !sourceId ||
+    !noteId ||
+    !holderId ||
+    holderId === 'all' ||
+    noteContent === undefined ||
+    noteContent === null
+  ) {
+    throw new Error(
+      'Missing required fields: source ID, note ID, holder ID, and note content.'
+    );
+  }
+  const response = await fetch(`/api/sources/${sourceId}/notes/${noteId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ holderId: holderId, note_content: noteContent }),
+  });
+  return handleResponse(response);
 }

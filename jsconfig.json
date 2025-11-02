@@ -6,11 +6,7 @@
     "checkJs": true
   },
   "typeAcquisition": {
-    "include": [
-      "jest"
-    ]
+    "include": ["jest"]
   },
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

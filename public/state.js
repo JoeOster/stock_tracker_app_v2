@@ -52,7 +52,7 @@
  * @property {any[]} dashboardOpenLots - Raw array of open lots fetched for the dashboard view.
  *Setting
  * @property {any[]} researchWatchlistItems - Raw array of watchlist items fetched for the source details modal.
-* @property {{sourceId: string, sourceName: string, ticker: string, price: string, tp1: (string | null), tp2: (string | null), sl: (string | null)}|null} prefillOrderFromSource - Temp state for pre-filling the order form. * @property {AppSettings} settings - The user's application settings.
+ * @property {{sourceId: string, sourceName: string, ticker: string, price: string, tp1: (string | null), tp2: (string | null), sl: (string | null)}|null} prefillOrderFromSource - Temp state for pre-filling the order form. * @property {AppSettings} settings - The user's application settings.
  */
 
 /**
@@ -60,40 +60,40 @@
  * @type {AppState}
  */
 export let state = {
-    transactions: [],
-    openOrders: [],
-    // REMOVED: allSnapshots: [],
-    activeAlerts: [],
-    allAccountHolders: [],
-    allExchanges: [],
-    selectedAccountHolderId: 1,
-    currentView: { type: 'dashboard', value: null },
-    priceCache: new Map(),
-    // REMOVED: allTimeChart: null,
-    // REMOVED: fiveDayChart: null,
-    // REMOVED: dateRangeChart: null,
-    // REMOVED: zoomedChart: null,
-    activityMap: new Map(),
-    ledgerSort: { column: 'transaction_date', direction: 'desc' },
-    pendingOrders: [],
-    allAdviceSources: [],
-    journalEntries: null,
-    dashboardOpenLots: [],
-    researchWatchlistItems: [],
-    prefillOrderFromSource: null,
-    settings: {
-        takeProfitPercent: 10,
-        stopLossPercent: 5,
-        theme: 'light',
-        font: 'Inter',
-        notificationCooldown: 15,
-        familyName: '',
-        defaultAccountHolderId: 1,
-        marketHoursInterval: 2,
-        afterHoursInterval: 15,
-        defaultView: 'dashboard',
-        numberOfDateTabs: 1,
-    },
+  transactions: [],
+  openOrders: [],
+  // REMOVED: allSnapshots: [],
+  activeAlerts: [],
+  allAccountHolders: [],
+  allExchanges: [],
+  selectedAccountHolderId: 1,
+  currentView: { type: 'dashboard', value: null },
+  priceCache: new Map(),
+  // REMOVED: allTimeChart: null,
+  // REMOVED: fiveDayChart: null,
+  // REMOVED: dateRangeChart: null,
+  // REMOVED: zoomedChart: null,
+  activityMap: new Map(),
+  ledgerSort: { column: 'transaction_date', direction: 'desc' },
+  pendingOrders: [],
+  allAdviceSources: [],
+  journalEntries: null,
+  dashboardOpenLots: [],
+  researchWatchlistItems: [],
+  prefillOrderFromSource: null,
+  settings: {
+    takeProfitPercent: 10,
+    stopLossPercent: 5,
+    theme: 'light',
+    font: 'Inter',
+    notificationCooldown: 15,
+    familyName: '',
+    defaultAccountHolderId: 1,
+    marketHoursInterval: 2,
+    afterHoursInterval: 15,
+    defaultView: 'dashboard',
+    numberOfDateTabs: 1,
+  },
 };
 
 /**
@@ -102,13 +102,13 @@ export let state = {
  * @returns {void}
  */
 export function updateState(newState) {
-    // Deep merge settings object if present in newState
-    if (newState.settings && typeof newState.settings === 'object') {
-        state.settings = { ...state.settings, ...newState.settings };
-        // Avoid overwriting the whole settings object later
-        delete newState.settings;
-    }
-    // Merge the rest of the state properties
-    state = { ...state, ...newState };
-    // console.log("State updated:", state); // Optional: log state changes
+  // Deep merge settings object if present in newState
+  if (newState.settings && typeof newState.settings === 'object') {
+    state.settings = { ...state.settings, ...newState.settings };
+    // Avoid overwriting the whole settings object later
+    delete newState.settings;
+  }
+  // Merge the rest of the state properties
+  state = { ...state, ...newState };
+  // console.log("State updated:", state); // Optional: log state changes
 }

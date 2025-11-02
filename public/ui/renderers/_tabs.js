@@ -17,15 +17,15 @@ import { state } from '../../state.js'; // --- ADDED: Import state ---
  * @type {TabInfo[]}
  */
 export const staticTabs = [
-    { viewType: 'dashboard', textContent: 'Dashboard' },
-    { viewType: 'sources', textContent: 'Sources' },
-    { viewType: 'watchlist', textContent: 'Watchlist' },
-    // --- REMOVED: { viewType: 'journal', textContent: 'Journal' }, ---
-    { viewType: 'ledger', textContent: 'Ledger' },
-    { viewType: 'orders', textContent: 'Orders' },
-    { viewType: 'alerts', textContent: 'Alerts' },
-    { viewType: 'imports', textContent: 'Imports' },
-    // --- REMOVED: { viewType: 'charts', textContent: 'Charts' }, ---
+  { viewType: 'dashboard', textContent: 'Dashboard' },
+  { viewType: 'sources', textContent: 'Sources' },
+  { viewType: 'watchlist', textContent: 'Watchlist' },
+  // --- REMOVED: { viewType: 'journal', textContent: 'Journal' }, ---
+  { viewType: 'ledger', textContent: 'Ledger' },
+  { viewType: 'orders', textContent: 'Orders' },
+  { viewType: 'alerts', textContent: 'Alerts' },
+  { viewType: 'imports', textContent: 'Imports' },
+  // --- REMOVED: { viewType: 'charts', textContent: 'Charts' }, ---
 ];
 // --- END MODIFICATION ---
 
@@ -35,25 +35,26 @@ export const staticTabs = [
  * @returns {void}
  */
 export function styleActiveTab(currentView) {
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
-        const htmlTab = /** @type {HTMLElement} */ (tab);
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach((tab) => {
+    const htmlTab = /** @type {HTMLElement} */ (tab);
 
-        const typeMatch = htmlTab.dataset.viewType === currentView.type;
+    const typeMatch = htmlTab.dataset.viewType === currentView.type;
 
-        const isStaticTab = htmlTab.dataset.viewValue === undefined;
-        const isStaticView = currentView.value === null;
+    const isStaticTab = htmlTab.dataset.viewValue === undefined;
+    const isStaticView = currentView.value === null;
 
-        const valueMatch = (isStaticTab && isStaticView) || (htmlTab.dataset.viewValue === currentView.value);
+    const valueMatch =
+      (isStaticTab && isStaticView) ||
+      htmlTab.dataset.viewValue === currentView.value;
 
-        if (typeMatch && valueMatch) {
-            htmlTab.classList.add('active');
-        } else {
-            htmlTab.classList.remove('active');
-        }
-    });
+    if (typeMatch && valueMatch) {
+      htmlTab.classList.add('active');
+    } else {
+      htmlTab.classList.remove('active');
+    }
+  });
 }
-
 
 /**
  * Renders the main navigation tabs, including dynamic date tabs and static tabs.
@@ -61,37 +62,42 @@ export function styleActiveTab(currentView) {
  * @returns {void}
  */
 export function renderTabs(currentView) {
-    const tabsContainer = document.getElementById('tabs-container');
-    if (!tabsContainer) return;
+  const tabsContainer = document.getElementById('tabs-container');
+  if (!tabsContainer) return;
 
-    tabsContainer.innerHTML = ''; // Clear existing tabs
+  tabsContainer.innerHTML = ''; // Clear existing tabs
 
-    // --- Dynamic Date Tabs ---
-    // --- MODIFIED: Use state.settings ---
-    const tradingDays = getTradingDays(state.settings.numberOfDateTabs || 1); 
-    const activePersistentDates = getActivePersistentDates();
-    // --- END MODIFIED ---
-    const allDates = [...new Set([...tradingDays, ...activePersistentDates])].sort();
+  // --- Dynamic Date Tabs ---
+  // --- MODIFIED: Use state.settings ---
+  const tradingDays = getTradingDays(state.settings.numberOfDateTabs || 1);
+  const activePersistentDates = getActivePersistentDates();
+  // --- END MODIFIED ---
+  const allDates = [
+    ...new Set([...tradingDays, ...activePersistentDates]),
+  ].sort();
 
-    allDates.forEach(day => {
-        const tab = document.createElement('div');
-        tab.className = 'tab master-tab';
-        tab.dataset.viewType = 'date';
-        tab.dataset.viewValue = day;
-        // Format date as MM/DD
-        tab.textContent = new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
-        tabsContainer.appendChild(tab);
+  allDates.forEach((day) => {
+    const tab = document.createElement('div');
+    tab.className = 'tab master-tab';
+    tab.dataset.viewType = 'date';
+    tab.dataset.viewValue = day;
+    // Format date as MM/DD
+    tab.textContent = new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
     });
+    tabsContainer.appendChild(tab);
+  });
 
-    // --- Static View Tabs ---
-    staticTabs.forEach(tabInfo => {
-        const tab = document.createElement('div');
-        tab.className = 'tab master-tab';
-        tab.dataset.viewType = tabInfo.viewType;
-        tab.textContent = tabInfo.textContent;
-        tabsContainer.appendChild(tab);
-    });
+  // --- Static View Tabs ---
+  staticTabs.forEach((tabInfo) => {
+    const tab = document.createElement('div');
+    tab.className = 'tab master-tab';
+    tab.dataset.viewType = tabInfo.viewType;
+    tab.textContent = tabInfo.textContent;
+    tabsContainer.appendChild(tab);
+  });
 
-    // Apply the 'active' style to the correct tab
-    styleActiveTab(currentView);
+  // Apply the 'active' style to the correct tab
+  styleActiveTab(currentView);
 }

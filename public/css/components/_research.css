@@ -4,517 +4,536 @@
 /* --- Grid Container for Source Cards --- */
 /* --- MODIFIED: This is now a class, not an ID, as there are multiple --- */
 .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
-    gap: 1.5rem; /* Space between cards */
-    margin-bottom: 2rem; /* --- ADDED: Space between groups --- */
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(300px, 1fr)
+  ); /* Responsive grid */
+  gap: 1.5rem; /* Space between cards */
+  margin-bottom: 2rem; /* --- ADDED: Space between groups --- */
 }
 
 /* --- ADDED: Style for group headings --- */
 .source-group-heading {
-    border-bottom: 2px solid var(--primary-color);
-    padding-bottom: 8px;
-    margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 8px;
+  margin-bottom: 1.5rem;
 }
 /* --- END ADDED --- */
 
-
 /* --- Source Card Styles --- */
 .source-card {
-    background-color: var(--container-bg);
-    border: 1px solid var(--container-border);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px var(--shadow-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Prevent content overflow */
-    cursor: pointer; /* Indicate it's clickable */
-    transition: box-shadow 0.2s ease-in-out;
+  background-color: var(--container-bg);
+  border: 1px solid var(--container-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 5px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent content overflow */
+  cursor: pointer; /* Indicate it's clickable */
+  transition: box-shadow 0.2s ease-in-out;
 }
 
 .source-card:hover {
-    box-shadow: 0 4px 10px var(--shadow-color); /* Add hover effect */
+  box-shadow: 0 4px 10px var(--shadow-color); /* Add hover effect */
 }
 
 /* Card Header */
 .source-card .card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 15px;
-    border-bottom: 1px solid var(--container-border);
-    /* --- ADDED: Set min-height for header to align cards --- */
-    min-height: 44px; 
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--container-border);
+  /* --- ADDED: Set min-height for header to align cards --- */
+  min-height: 44px;
 }
 
 /* Thumbnail for image in card list */
 .source-list-thumbnail {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%; /* Circular */
-    margin-right: 0px; /* Space between image and name */
-    object-fit: cover; /* Crop image nicely */
-    vertical-align: middle; /* Align with text */
-    border: 1px solid var(--container-border); /* Subtle border */
-    background-color: var(--info-panel-bg); /* Background if image fails */
-    flex-shrink: 0; /* Prevent shrinking */
+  width: 30px;
+  height: 30px;
+  border-radius: 50%; /* Circular */
+  margin-right: 0px; /* Space between image and name */
+  object-fit: cover; /* Crop image nicely */
+  vertical-align: middle; /* Align with text */
+  border: 1px solid var(--container-border); /* Subtle border */
+  background-color: var(--info-panel-bg); /* Background if image fails */
+  flex-shrink: 0; /* Prevent shrinking */
 }
-
 
 /* --- MODIFIED: Line-clamp and tooltip logic --- */
 .source-card .card-header .source-name {
-    font-size: 1.2em;
-    font-weight: 600;
-    color: var(--heading-color);
-    margin: 0;
-    line-height: 1.3; /* <-- ADJUSTED for wrapping */
-    flex-grow: 1; 
+  font-size: 1.2em;
+  font-weight: 600;
+  color: var(--heading-color);
+  margin: 0;
+  line-height: 1.3; /* <-- ADJUSTED for wrapping */
+  flex-grow: 1;
 
-    /* --- ADDED: Line-clamp styles --- */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2; /* Limit to 2 lines */
-    -webkit-box-orient: vertical;
+  /* --- ADDED: Line-clamp styles --- */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limit to 2 lines */
+  -webkit-box-orient: vertical;
 }
 /* --- END MODIFICATION --- */
 
 .source-card .card-header .source-type {
-    margin-left: auto; 
-    white-space: nowrap;
-    color: var(--text-muted-color);
-    flex-shrink: 0; 
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--text-muted-color);
+  flex-shrink: 0;
 }
 
 /* Card Body (for snippet) */
 .source-card .card-body {
-    padding: 15px;
-    font-size: 0.9em;
-    min-height: 60px; /* Ensure a minimum height */
-    color: var(--text-muted-color);
+  padding: 15px;
+  font-size: 0.9em;
+  min-height: 60px; /* Ensure a minimum height */
+  color: var(--text-muted-color);
 }
- /* Style for the snippet paragraph to limit lines */
+/* Style for the snippet paragraph to limit lines */
 .source-card .card-body p {
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2; /* Limit to 2 lines */
-    -webkit-box-orient: vertical;
-    line-clamp: 2;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limit to 2 lines */
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
 }
 
 /* --- Styles for Source Details Modal --- */
 
 /* Grid layout for Source Details Modal Content (Top Section) */
 #source-details-modal-content .source-details-grid {
-    display: grid;
-    /* Use 1fr for profile, auto for add ticker to let it size naturally */
-    grid-template-columns: 1fr auto;
-    gap: 1.5rem 2rem; /* row-gap column-gap */
-    margin-bottom: 1.5rem; /* Space before the next section below the grid */
-    align-items: start; /* Align items to the top of the grid cell */
+  display: grid;
+  /* Use 1fr for profile, auto for add ticker to let it size naturally */
+  grid-template-columns: 1fr auto;
+  gap: 1.5rem 2rem; /* row-gap column-gap */
+  margin-bottom: 1.5rem; /* Space before the next section below the grid */
+  align-items: start; /* Align items to the top of the grid cell */
 }
 /* Media query for smaller screens to stack the columns */
 @media (max-width: 900px) {
-    #source-details-modal-content .source-details-grid {
-        grid-template-columns: 1fr; /* Stack columns */
-    }
+  #source-details-modal-content .source-details-grid {
+    grid-template-columns: 1fr; /* Stack columns */
+  }
 }
-
 
 /* Styling for sections within the top grid */
 .source-profile-section,
 .add-ticker-section {
-    padding: 1rem;
-    border: 1px solid var(--container-border);
-    border-radius: 8px;
-    background-color: var(--info-panel-bg); /* Slight background difference */
-    min-width: 0; /* Prevent flex item overflow */
+  padding: 1rem;
+  border: 1px solid var(--container-border);
+  border-radius: 8px;
+  background-color: var(--info-panel-bg); /* Slight background difference */
+  min-width: 0; /* Prevent flex item overflow */
 }
 .source-profile-section h4,
 .add-ticker-section h5 {
-    margin-top: 0; /* Remove top margin for first heading in section */
-    margin-bottom: 1rem;
+  margin-top: 0; /* Remove top margin for first heading in section */
+  margin-bottom: 1rem;
 }
 
 /* Profile image styling */
 .profile-image {
-    display: block; 
-    max-width: 100px; 
-    height: 100px;
-    border-radius: 50%; /* Make it circular */
-    object-fit: cover; /* Crop nicely */
-    margin-bottom: 1rem; /* Space below image */
-    border: 2px solid var(--container-border);
-    background-color: var(--container-bg); /* Background if image fails */
+  display: block;
+  max-width: 100px;
+  height: 100px;
+  border-radius: 50%; /* Make it circular */
+  object-fit: cover; /* Crop nicely */
+  margin-bottom: 1rem; /* Space below image */
+  border: 2px solid var(--container-border);
+  background-color: var(--container-bg); /* Background if image fails */
 }
 .source-profile-section p {
-    margin: 0.4rem 0; /* Adjust spacing */
+  margin: 0.4rem 0; /* Adjust spacing */
 }
 
 /* Contact app icon styling (adjust size as needed) */
 .contact-app-icon {
-    width: 18px;
-    height: 18px;
-    vertical-align: middle; /* Align with text */
-    margin-right: 5px; /* Space between icon and text */
-    object-fit: contain;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle; /* Align with text */
+  margin-right: 5px; /* Space between icon and text */
+  object-fit: contain;
 }
 
 /* Styles for the Add Ticker form within its section */
 .add-ticker-section .add-watchlist-item-form {
-     margin-top: 0; 
-     padding-top: 0;
-     border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
-.add-ticker-section .add-watchlist-item-form > div { /* Target the direct child div containing the grid */
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); 
-    gap: 10px 15px;
-    align-items: end;
+.add-ticker-section .add-watchlist-item-form > div {
+  /* Target the direct child div containing the grid */
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 15px;
+  align-items: end;
 }
 .add-ticker-section .add-watchlist-item-form .form-group {
-    margin-bottom: 0; 
+  margin-bottom: 0;
 }
 
 /* Make Ticker span full width */
-.add-ticker-section .add-watchlist-item-form .form-group:has(.add-watchlist-ticker-input) {
-    grid-column: span 2;
+.add-ticker-section
+  .add-watchlist-item-form
+  .form-group:has(.add-watchlist-ticker-input) {
+  grid-column: span 2;
 }
 /* Make Stop Loss span full width */
-.add-ticker-section .add-watchlist-item-form .form-group:has(.add-watchlist-rec-stop-loss-input) {
-    grid-column: span 2;
+.add-ticker-section
+  .add-watchlist-item-form
+  .form-group:has(.add-watchlist-rec-stop-loss-input) {
+  grid-column: span 2;
 }
 .add-ticker-section .add-watchlist-item-form .form-group-with-checkbox {
-    grid-column: 1 / 3;
-    margin-top: 5px;
+  grid-column: 1 / 3;
+  margin-top: 5px;
 }
-.add-ticker-section .add-watchlist-item-form div:has(> .add-watchlist-ticker-button) {
-    grid-column: 2 / 3;
-    text-align: right;
+.add-ticker-section
+  .add-watchlist-item-form
+  div:has(> .add-watchlist-ticker-button) {
+  grid-column: 2 / 3;
+  text-align: right;
 }
 .add-ticker-section .add-watchlist-item-form input,
 .add-ticker-section .add-watchlist-item-form select {
-    padding: 6px 8px;
-    font-size: 0.9em;
+  padding: 6px 8px;
+  font-size: 0.9em;
 }
 .add-ticker-section .add-watchlist-item-form button {
-     padding: 6px 12px;
-     font-size: 0.9em;
+  padding: 6px 12px;
+  font-size: 0.9em;
 }
-
 
 /* --- Styles for content WITHIN source-details-modal-content (Below the top grid) --- */
 #source-details-modal-content h4,
 #source-details-modal-content h5 {
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-    font-size: 1.1em; 
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.1em;
 }
- #source-details-modal-content h4:first-child,
- #source-details-modal-content h5:first-child {
-    margin-top: 0;
+#source-details-modal-content h4:first-child,
+#source-details-modal-content h5:first-child {
+  margin-top: 0;
 }
 
 #source-details-modal-content p {
-    margin: 0.3rem 0;
-    line-height: 1.5;
+  margin: 0.3rem 0;
+  line-height: 1.5;
 }
 
 #source-details-modal-content a {
-    color: var(--primary-color);
-    text-decoration: none;
+  color: var(--primary-color);
+  text-decoration: none;
 }
 #source-details-modal-content a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 /* Container for scrollable tables */
 #source-details-modal-content div:has(> .mini-journal-table),
 #source-details-modal-content div:has(> .recommended-trades-table) {
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid var(--container-border);
-    border-radius: 4px;
-    margin-bottom: 1rem;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--container-border);
+  border-radius: 4px;
+  margin-bottom: 1rem;
 }
 
 /* Mini table styles (shared by journal and recommended) */
 #source-details-modal-content .mini-journal-table,
 #source-details-modal-content .recommended-trades-table {
-    width: 100%;
-    font-size: 0.9em;
-    border-collapse: collapse; 
-    margin-bottom: 0;
-    border: none; 
+  width: 100%;
+  font-size: 0.9em;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  border: none;
 }
 #source-details-modal-content .mini-journal-table th,
 #source-details-modal-content .mini-journal-table td,
 #source-details-modal-content .recommended-trades-table th,
 #source-details-modal-content .recommended-trades-table td {
-    padding: 4px 6px;
-    border: 1px solid var(--container-border);
-    text-align: left;
-    white-space: nowrap;
+  padding: 4px 6px;
+  border: 1px solid var(--container-border);
+  text-align: left;
+  white-space: nowrap;
 }
 #source-details-modal-content .mini-journal-table th,
 #source-details-modal-content .recommended-trades-table th {
-     background-color: var(--table-header-bg);
-     font-weight: 600;
-     position: sticky; 
-     top: 0;
-     z-index: 1;
+  background-color: var(--table-header-bg);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 #source-details-modal-content .mini-journal-table .numeric,
-#source-details-modal-content .recommended-trades-table .numeric { text-align: right; }
+#source-details-modal-content .recommended-trades-table .numeric {
+  text-align: right;
+}
 
 #source-details-modal-content .mini-journal-table .positive,
-#source-details-modal-content .recommended-trades-table .positive { color: var(--positive-color); }
+#source-details-modal-content .recommended-trades-table .positive {
+  color: var(--positive-color);
+}
 
 #source-details-modal-content .mini-journal-table .negative,
-#source-details-modal-content .recommended-trades-table .negative { color: var(--negative-color); }
+#source-details-modal-content .recommended-trades-table .negative {
+  color: var(--negative-color);
+}
 
-#source-details-modal-content .mini-journal-table .text-muted { color: var(--text-muted-color); }
-
+#source-details-modal-content .mini-journal-table .text-muted {
+  color: var(--text-muted-color);
+}
 
 /* --- ADDED: Styles for Technique Image Thumbnail --- */
 .technique-image-thumbnail {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    cursor: pointer;
-    border-radius: 4px;
-    border: 1px solid var(--container-border);
-    transition: border-color 0.2s, opacity 0.2s;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid var(--container-border);
+  transition:
+    border-color 0.2s,
+    opacity 0.2s;
 }
 .technique-image-thumbnail:hover {
-    border-color: var(--primary-color);
-    opacity: 0.8;
+  border-color: var(--primary-color);
+  opacity: 0.8;
 }
 /* --- END ADDED --- */
 
-
 /* --- ADDED: Styles for Trade Idea Actions --- */
 #source-details-modal-content .recommended-trades-table .actions-cell button,
-#source-details-modal-content .recommended-trades-table .actions-cell span[class*="marker-"] {
-    padding: 4px 8px;       /* Consistent padding */
-    font-size: 0.8em;       /* Consistent font size */
-    margin: 0 2px;          /* Consistent spacing */
-    border-radius: 6px;     /* Consistent shape */
-    font-weight: 600;
-    line-height: 1.4;
-    display: inline-block;  /* Ensure spans behave like buttons */
-    vertical-align: middle; /* Align them on the same line */
+#source-details-modal-content
+  .recommended-trades-table
+  .actions-cell
+  span[class*='marker-'] {
+  padding: 4px 8px; /* Consistent padding */
+  font-size: 0.8em; /* Consistent font size */
+  margin: 0 2px; /* Consistent spacing */
+  border-radius: 6px; /* Consistent shape */
+  font-weight: 600;
+  line-height: 1.4;
+  display: inline-block; /* Ensure spans behave like buttons */
+  vertical-align: middle; /* Align them on the same line */
 }
 
 /* Override default button styles if needed */
 #source-details-modal-content .recommended-trades-table .actions-cell button {
-    border: none; /* Remove border from default/blue buttons */
+  border: none; /* Remove border from default/blue buttons */
 }
 
 /* Style delete button specifically */
-#source-details-modal-content .recommended-trades-table .actions-cell .delete-btn {
-    color: #fff; /* Ensure white text */
-    font-weight: 600;
+#source-details-modal-content
+  .recommended-trades-table
+  .actions-cell
+  .delete-btn {
+  color: #fff; /* Ensure white text */
+  font-weight: 600;
 }
 
 /* --- UPDATED: Marker styles to match new button sizing --- */
 #source-details-modal-content .marker-live,
 #source-details-modal-content .marker-paper {
-    font-weight: 600;
-    font-size: 0.8em;
-    padding: 4px 8px;
-    border-radius: 6px;
-    margin-left: 2px;
-    margin-right: 2px;
-    cursor: default; /* Markers aren't clickable */
+  font-weight: 600;
+  font-size: 0.8em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-left: 2px;
+  margin-right: 2px;
+  cursor: default; /* Markers aren't clickable */
 }
 
 #source-details-modal-content .marker-live {
-    background-color: var(--positive-color);
-    color: #fff;
+  background-color: var(--positive-color);
+  color: #fff;
 }
 
 #source-details-modal-content .marker-paper {
-    background-color: var(--primary-color);
-    color: #fff;
+  background-color: var(--primary-color);
+  color: #fff;
 }
 /* --- END UPDATED --- */
-
 
 /* List for documents/notes */
 #source-details-modal-content .linked-items-list,
 #source-details-modal-content .source-notes-list {
-    list-style: none;
-    padding: 0;
-    margin: 0.5rem 0 1rem 0;
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem 0;
 }
 #source-details-modal-content .linked-items-list li,
 #source-details-modal-content .source-notes-list li {
-    padding: 6px 0;
-    border-bottom: 1px dashed var(--container-border);
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--container-border);
 }
- #source-details-modal-content .linked-items-list li:last-child,
- #source-details-modal-content .source-notes-list li:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
- }
+#source-details-modal-content .linked-items-list li:last-child,
+#source-details-modal-content .source-notes-list li:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
 
- /* Input/Textarea styles within the details forms (Add Doc, Add Note) */
- #source-details-modal-content form input[type="text"],
- #source-details-modal-content form input[type="url"],
- #source-details-modal-content form input[type="number"],
- #source-details-modal-content form select,
- #source-details-modal-content form textarea {
-     padding: 6px 8px; 
-     font-size: 0.9em;
-     margin-bottom: 0; 
-     width: 100%; 
-     box-sizing: border-box;
- }
-  #source-details-modal-content form textarea {
-     resize: vertical;
-     min-height: 40px;
-  }
-  #source-details-modal-content form label {
-     margin-bottom: 0; 
-     font-size: 0.8em;
-  }
- /* Ensure buttons in forms use smaller size */
- #source-details-modal-content form button {
-    padding: 5px 10px;
-    font-size: 0.9em;
- }
- /* Styles for note edit/save/cancel */
+/* Input/Textarea styles within the details forms (Add Doc, Add Note) */
+#source-details-modal-content form input[type='text'],
+#source-details-modal-content form input[type='url'],
+#source-details-modal-content form input[type='number'],
+#source-details-modal-content form select,
+#source-details-modal-content form textarea {
+  padding: 6px 8px;
+  font-size: 0.9em;
+  margin-bottom: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+#source-details-modal-content form textarea {
+  resize: vertical;
+  min-height: 40px;
+}
+#source-details-modal-content form label {
+  margin-bottom: 0;
+  font-size: 0.8em;
+}
+/* Ensure buttons in forms use smaller size */
+#source-details-modal-content form button {
+  padding: 5px 10px;
+  font-size: 0.9em;
+}
+/* Styles for note edit/save/cancel */
 #source-details-modal-content .note-actions button,
 #source-details-modal-content .note-content-edit button {
-    padding: 3px 6px !important;
-    font-size: 0.8em !important;
+  padding: 3px 6px !important;
+  font-size: 0.8em !important;
 }
 /* --- Source Modal Dynamic Elements --- */
 .source-modal-profile {
-    font-size: 0.9em;
-    color: var(--text-muted-color);
+  font-size: 0.9em;
+  color: var(--text-muted-color);
 }
 .source-modal-profile p {
-    margin: 0.25rem 0;
+  margin: 0.25rem 0;
 }
 .source-modal-profile strong {
-    color: var(--text-color-medium);
+  color: var(--text-color-medium);
 }
 
 .source-modal-stats {
-    display: flex;
-    justify-content: space-around;
-    background-color: var(--info-panel-bg);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--info-panel-bg);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
 }
 .stat-item {
-    text-align: center;
+  text-align: center;
 }
 .stat-value {
-    display: block;
-    font-size: 1.5em;
-    font-weight: 600;
-    color: var(--heading-color);
+  display: block;
+  font-size: 1.5em;
+  font-weight: 600;
+  color: var(--heading-color);
 }
 .stat-label {
-    font-size: 0.8em;
-    text-transform: uppercase;
-    color: var(--text-muted-color);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  color: var(--text-muted-color);
 }
 
 /* Actions column for journal/techniques table */
 .data-table th.col-actions,
 .data-table td.col-actions {
-    width: 100px; /* Give a fixed width for the new actions column */
-    min-width: 100px;
+  width: 100px; /* Give a fixed width for the new actions column */
+  min-width: 100px;
 }
 
 /* --- Source Modal Dynamic Elements --- */
 .source-modal-profile {
-    font-size: 0.9em;
-    color: var(--text-muted-color);
+  font-size: 0.9em;
+  color: var(--text-muted-color);
 }
 .source-modal-profile p {
-    margin: 0.25rem 0;
+  margin: 0.25rem 0;
 }
 .source-modal-profile strong {
-    color: var(--text-color-medium);
+  color: var(--text-color-medium);
 }
 
 .source-modal-stats {
-    display: flex;
-    justify-content: space-around;
-    background-color: var(--info-panel-bg);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--info-panel-bg);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
 }
 .stat-item {
-    text-align: center;
+  text-align: center;
 }
 .stat-value {
-    display: block;
-    font-size: 1.5em;
-    font-weight: 600;
-    color: var(--heading-color);
+  display: block;
+  font-size: 1.5em;
+  font-weight: 600;
+  color: var(--heading-color);
 }
 .stat-label {
-    font-size: 0.8em;
-    text-transform: uppercase;
-    color: var(--text-muted-color);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  color: var(--text-muted-color);
 }
 
 /* Actions column for journal/techniques table */
 .data-table th.col-actions,
 .data-table td.col-actions {
-    width: 100px; /* Give a fixed width for the new actions column */
-    min-width: 100px;
+  width: 100px; /* Give a fixed width for the new actions column */
+  min-width: 100px;
 }
 
 /* --- Source Modal Dynamic Elements --- */
 .source-modal-profile {
-    font-size: 0.9em;
-    color: var(--text-muted-color);
+  font-size: 0.9em;
+  color: var(--text-muted-color);
 }
 .source-modal-profile p {
-    margin: 0.25rem 0;
+  margin: 0.25rem 0;
 }
 .source-modal-profile strong {
-    color: var(--text-color-medium);
+  color: var(--text-color-medium);
 }
 
 .source-modal-stats {
-    display: flex;
-    justify-content: space-around;
-    background-color: var(--info-panel-bg);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--info-panel-bg);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
 }
 .stat-item {
-    text-align: center;
+  text-align: center;
 }
 .stat-value {
-    display: block;
-    font-size: 1.5em;
-    font-weight: 600;
-    color: var(--heading-color);
+  display: block;
+  font-size: 1.5em;
+  font-weight: 600;
+  color: var(--heading-color);
 }
 .stat-label {
-    font-size: 0.8em;
-    text-transform: uppercase;
-    color: var(--text-muted-color);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  color: var(--text-muted-color);
 }
 
 /* Actions column for journal/techniques table */
 .data-table th.col-actions,
 .data-table td.col-actions {
-    width: 100px; /* Give a fixed width for the new actions column */
-    min-width: 100px;
+  width: 100px; /* Give a fixed width for the new actions column */
+  min-width: 100px;
 }

@@ -14,16 +14,18 @@ import { handleResponse } from './api-helpers.js';
  * @returns {Promise<any[]>} A promise that resolves to an array of journal entry objects.
  */
 export async function fetchJournalEntries(holderId, status = null) {
-    if (!holderId || holderId === 'all') {
-        console.warn("A specific account holder ID is required to fetch journal entries.");
-        return [];
-    }
-    let url = `/api/journal?holder=${holderId}`;
-    if (status) {
-        url += `&status=${status}`;
-    }
-    const response = await fetch(url);
-    return handleResponse(response);
+  if (!holderId || holderId === 'all') {
+    console.warn(
+      'A specific account holder ID is required to fetch journal entries.'
+    );
+    return [];
+  }
+  let url = `/api/journal?holder=${holderId}`;
+  if (status) {
+    url += `&status=${status}`;
+  }
+  const response = await fetch(url);
+  return handleResponse(response);
 }
 
 /**
@@ -33,12 +35,12 @@ export async function fetchJournalEntries(holderId, status = null) {
  * @returns {Promise<any>} A promise that resolves to the newly created journal entry object.
  */
 export async function addJournalEntry(entryData) {
-    const response = await fetch('/api/journal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entryData)
-    });
-    return handleResponse(response);
+  const response = await fetch('/api/journal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entryData),
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -49,12 +51,12 @@ export async function addJournalEntry(entryData) {
  * @returns {Promise<any>} A promise that resolves to the server's response message.
  */
 export async function updateJournalEntry(id, updateData) {
-    const response = await fetch(`/api/journal/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData)
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/journal/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData),
+  });
+  return handleResponse(response);
 }
 
 /**
@@ -68,14 +70,13 @@ export async function updateJournalEntry(id, updateData) {
  * @returns {Promise<any>} A promise that resolves to the server's response (including the new transaction ID).
  */
 export async function executeJournalEntry(id, executionData) {
-     const response = await fetch(`/api/journal/${id}/execute`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(executionData)
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/journal/${id}/execute`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(executionData),
+  });
+  return handleResponse(response);
 }
-
 
 /**
  * Deletes a journal entry.
@@ -84,8 +85,8 @@ export async function executeJournalEntry(id, executionData) {
  * @returns {Promise<any>} A promise that resolves to the server's response message.
  */
 export async function deleteJournalEntry(id) {
-    const response = await fetch(`/api/journal/${id}`, {
-        method: 'DELETE'
-    });
-    return handleResponse(response);
+  const response = await fetch(`/api/journal/${id}`, {
+    method: 'DELETE',
+  });
+  return handleResponse(response);
 }

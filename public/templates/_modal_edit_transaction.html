@@ -1,74 +1,94 @@
 <div id="edit-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <h2 id="edit-modal-title">Edit Transaction</h2>
-        <form id="edit-transaction-form">
-            <input type="hidden" id="edit-id">
-            <div id="edit-core-fields">
-                <div class="form-group">
-                    <label for="edit-date">Date</label>
-                    <input type="date" id="edit-date" required>
-                </div>
-                 <div class="form-group">
-                     <label for="edit-ticker">Ticker</label>
-                     <input type="text" id="edit-ticker" required>
-                 </div>
-                 <div class="form-group">
-                     <label for="edit-exchange">Exchange</label>
-                     <select id="edit-exchange" required></select>
-                 </div>
-                 <div class="form-group">
-                     <label for="edit-type">Type</label>
-                     <select id="edit-type" required>
-                         <option value="BUY">BUY</option>
-                         <option value="SELL">SELL</option>
-                     </select>
-                 </div>
-                 <div class="form-group">
-                     <label for="edit-quantity">Quantity</label>
-                     <input type="number" id="edit-quantity" step="any" required>
-                 </div>
-                 <div class="form-group">
-                     <label for="edit-price">Price</label>
-                     <input type="number" id="edit-price" step="any" required>
-                 </div>
-                 <div class="form-group">
-                     <label for="edit-account-holder">Account Holder</label>
-                     <select id="edit-account-holder" class="account-holder-select" required></select>
-                 </div>
-                 <div class="form-group">
-                    <label for="edit-advice-source">Advice Source (Optional)</label>
-                    <select id="edit-advice-source" class="advice-source-select">
-                        <option value="">(None/Manual Entry)</option>
-                    </select>
-                 </div>
-                 </div>
-            <div id="edit-limit-fields" style="display: none;">
-                <div class="form-group form-group-with-button">
-                    <label for="edit-limit-price-up">Take Profit Price</label>
-                    <input type="number" id="edit-limit-price-up" step="any">
-                    <button type="button" class="clear-limit-btn cancel-btn" data-target="up" style="flex-shrink: 0;">Clear</button>
-                 </div>
-                 <div class="form-group">
-                     <label for="edit-limit-up-expiration">Take Profit Expiration</label>
-                     <input type="date" id="edit-limit-up-expiration">
-                 </div>
-                 <div class="form-group form-group-with-button">
-                     <label for="edit-limit-price-down">Stop Loss Price</label>
-                     <input type="number" id="edit-limit-price-down" step="any">
-                     <button type="button" class="clear-limit-btn cancel-btn" data-target="down" style="flex-shrink: 0;">Clear</button>
-                 </div>
-                 <div class="form-group">
-                     <label for="edit-limit-down-expiration">Stop Loss Expiration</label>
-                     <input type="date" id="edit-limit-down-expiration">
-                 </div>
-            </div>
-            <div class="modal-actions">
-                <button type="button" id="edit-modal-delete-btn" class="delete-btn">Delete</button>
-                <div class="modal-actions-right">
-                    <button type="submit">Save Changes</button>
-                </div>
-            </div>
-            </form>
-    </div>
+  <div class="modal-content">
+    <span class="close-button">&times;</span>
+    <h2 id="edit-modal-title">Edit Transaction</h2>
+    <form id="edit-transaction-form">
+      <input type="hidden" id="edit-id" />
+      <div id="edit-core-fields">
+        <div class="form-group">
+          <label for="edit-date">Date</label>
+          <input type="date" id="edit-date" required />
+        </div>
+        <div class="form-group">
+          <label for="edit-ticker">Ticker</label>
+          <input type="text" id="edit-ticker" required />
+        </div>
+        <div class="form-group">
+          <label for="edit-exchange">Exchange</label>
+          <select id="edit-exchange" required></select>
+        </div>
+        <div class="form-group">
+          <label for="edit-type">Type</label>
+          <select id="edit-type" required>
+            <option value="BUY">BUY</option>
+            <option value="SELL">SELL</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-quantity">Quantity</label>
+          <input type="number" id="edit-quantity" step="any" required />
+        </div>
+        <div class="form-group">
+          <label for="edit-price">Price</label>
+          <input type="number" id="edit-price" step="any" required />
+        </div>
+        <div class="form-group">
+          <label for="edit-account-holder">Account Holder</label>
+          <select
+            id="edit-account-holder"
+            class="account-holder-select"
+            required
+          ></select>
+        </div>
+        <div class="form-group">
+          <label for="edit-advice-source">Advice Source (Optional)</label>
+          <select id="edit-advice-source" class="advice-source-select">
+            <option value="">(None/Manual Entry)</option>
+          </select>
+        </div>
+      </div>
+      <div id="edit-limit-fields" style="display: none">
+        <div class="form-group form-group-with-button">
+          <label for="edit-limit-price-up">Take Profit Price</label>
+          <input type="number" id="edit-limit-price-up" step="any" />
+          <button
+            type="button"
+            class="clear-limit-btn cancel-btn"
+            data-target="up"
+            style="flex-shrink: 0"
+          >
+            Clear
+          </button>
+        </div>
+        <div class="form-group">
+          <label for="edit-limit-up-expiration">Take Profit Expiration</label>
+          <input type="date" id="edit-limit-up-expiration" />
+        </div>
+        <div class="form-group form-group-with-button">
+          <label for="edit-limit-price-down">Stop Loss Price</label>
+          <input type="number" id="edit-limit-price-down" step="any" />
+          <button
+            type="button"
+            class="clear-limit-btn cancel-btn"
+            data-target="down"
+            style="flex-shrink: 0"
+          >
+            Clear
+          </button>
+        </div>
+        <div class="form-group">
+          <label for="edit-limit-down-expiration">Stop Loss Expiration</label>
+          <input type="date" id="edit-limit-down-expiration" />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="edit-modal-delete-btn" class="delete-btn">
+          Delete
+        </button>
+        <div class="modal-actions-right">
+          <button type="submit">Save Changes</button>
+        </div>
+      </div>
+    </form>
+  </div>
 </div>

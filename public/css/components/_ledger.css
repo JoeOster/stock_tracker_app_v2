@@ -5,5 +5,5 @@
 
 /* Style to visually group ledger rows by date */
 .new-date-group td {
-    border-top: 2px solid var(--primary-color) !important;
+  border-top: 2px solid var(--primary-color) !important;
 }

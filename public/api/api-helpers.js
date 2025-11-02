@@ -16,28 +16,32 @@
  * @throws {Error} Throws an error with the server message if the response is not ok.
  */
 export async function handleResponse(response) {
-    if (!response.ok) {
-        // Try to parse JSON error, fallback to status text
-        const errorData = await response.json().catch(() => (
-            { message: response.statusText || `Server responded with status: ${response.status}` }
-        ));
-        throw new Error(errorData.message || 'An unknown error occurred.');
+  if (!response.ok) {
+    // Try to parse JSON error, fallback to status text
+    const errorData = await response
+      .json()
+      .catch(() => ({
+        message:
+          response.statusText ||
+          `Server responded with status: ${response.status}`,
+      }));
+    throw new Error(errorData.message || 'An unknown error occurred.');
+  }
+  // Handle cases where the response might be empty (e.g., successful DELETE with 204 No Content)
+  if (response.status === 204) {
+    return { message: 'Operation successful.' }; // Return a success object
+  }
+  // Handle text/plain responses (like some DELETEs might send)
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('text/plain')) {
+    const text = await response.text();
+    try {
+      // Try to parse if it's JSON disguised as text
+      return JSON.parse(text);
+    } catch {
+      // Return plain text message
+      return { message: text };
     }
-    // Handle cases where the response might be empty (e.g., successful DELETE with 204 No Content)
-    if (response.status === 204) {
-        return { message: 'Operation successful.' }; // Return a success object
-    }
-    // Handle text/plain responses (like some DELETEs might send)
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('text/plain')) {
-        const text = await response.text();
-        try {
-            // Try to parse if it's JSON disguised as text
-            return JSON.parse(text);
-        } catch (e) {
-            // Return plain text message
-            return { message: text };
-        }
-    }
-    return response.json(); // Otherwise, parse JSON body
+  }
+  return response.json(); // Otherwise, parse JSON body
 }

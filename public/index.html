@@ -1,34 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Live Stock Tracker</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lato&family=Open+Sans&family=Roboto&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lato&family=Open+Sans&family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
-</head>
-<body>
+  </head>
+  <body>
     <header class="header">
-        <div class="header-left">
-             <label for="global-account-holder-filter">Viewing:</label>
-             <select id="global-account-holder-filter" class="account-holder-select"></select>
-             <button id="add-date-btn" title="Add Date Tab">📅</button>
-             <input type="date" id="custom-date-picker">
+      <div class="header-left">
+        <label for="global-account-holder-filter">Viewing:</label>
+        <select
+          id="global-account-holder-filter"
+          class="account-holder-select"
+        ></select>
+        <button id="add-date-btn" title="Add Date Tab">📅</button>
+        <input type="date" id="custom-date-picker" />
+      </div>
+      <div class="header-center">
+        <h1 id="app-title">Live Stock Tracker</h1>
+      </div>
+      <div class="header-right">
+        <div id="api-timer-container">
+          Next: <span id="api-timer">--:--</span>
         </div>
-        <div class="header-center">
-            <h1 id="app-title">Live Stock Tracker</h1>
-        </div>
-        <div class="header-right">
-            <div id="api-timer-container">Next: <span id="api-timer">--:--</span></div>
-            <button id="settings-btn" title="Settings">⚙️</button>
-        </div>
+        <button id="settings-btn" title="Settings">⚙️</button>
+      </div>
     </header>
 
     <div id="tabs-container" class="tabs"></div>
@@ -40,5 +50,5 @@
     <div id="toast-container"></div>
 
     <script type="module" src="app-main.js?v=3.0.14" defer></script>
-</body>
+  </body>
 </html>

@@ -9,7 +9,7 @@ import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
  * Loads data for the dashboard page (which triggers the renderer).
  */
 export async function loadDashboardPage() {
-    // Currently, this just calls the main renderer which handles its own data loading.
-    // Kept separate for potential future pre-loading logic.
-    await renderDashboardPage();
+  // Currently, this just calls the main renderer which handles its own data loading.
+  // Kept separate for potential future pre-loading logic.
+  await renderDashboardPage();
 }

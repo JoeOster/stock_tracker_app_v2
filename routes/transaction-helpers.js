@@ -11,11 +11,11 @@
 // INDENTATION IS FIXED: Prettier fixes this.
 // '===' IS FIXED: ESLint fixes this.
 const internalFormatQuantity = (number) => {
-  const num = typeof number === "string" ? parseFloat(number) : number;
+  const num = typeof number === 'string' ? parseFloat(number) : number;
   if (num === null || num === undefined || isNaN(num)) {
-    return "";
+    return '';
   }
-  const formatter = new Intl.NumberFormat("en-US", {
+  const formatter = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 5,
     minimumFractionDigits: 0,
     useGrouping: true,
