@@ -63,18 +63,18 @@ async function initialize() {
     console.log("[App Main] Fetching HTML templates...");
     
     // --- FIX: Add a cache-busting query string ---
-    const cacheBust = '?v=3.0.15'; // Incremented version
+    const cacheBust = '?v=3.0.16'; // Incremented version
     // --- END FIX ---
 
     try {
         // Fetch all templates concurrently
         // --- THIS IS FIX 2 ---
         const [
-            alerts, charts, dailyReport, imports, ledger, orders, watchlist,
+            alerts, dailyReport, imports, ledger, orders, watchlist, // REMOVED: charts
             research, dashboard,
             // Modal templates
             modal_advice, modal_settings, modal_edit_transaction, modal_confirm,
-            modal_sell_from_position, modal_confirm_fill, modal_chart_zoom,
+            modal_sell_from_position, modal_confirm_fill, // REMOVED: modal_chart_zoom
             modal_sales_history,
             modal_selective_sell,
             modal_manage_position,
@@ -82,12 +82,12 @@ async function initialize() {
             modal_image_zoom,
             modal_add_trade_idea,
             modal_add_technique,
-            modal_add_paper_trade // --- ADDED ---
+            modal_add_paper_trade
         ] = /** @type {any[]} */ (await Promise.all([ // <-- Cast to any[] to fix tuple errors
         // --- END FIX 2 ---
             // Page fetches
             fetch('./templates/_alerts.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_alerts.html: ${res.statusText}`)),
-            fetch('./templates/_charts.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_charts.html: ${res.statusText}`)),
+            // REMOVED: fetch('./templates/_charts.html' + cacheBust)...
             fetch('./templates/_dailyReport.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_dailyReport.html: ${res.statusText}`)),
             fetch('./templates/_imports.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_imports.html: ${res.statusText}`)),
             fetch('./templates/_ledger.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_ledger.html: ${res.statusText}`)),
@@ -102,7 +102,7 @@ async function initialize() {
             fetch('./templates/_modal_confirm.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_confirm.html: ${res.statusText}`)),
             fetch('./templates/_modal_sell_from_position.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_sell_from_position.html: ${res.statusText}`)),
             fetch('./templates/_modal_confirm_fill.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_confirm_fill.html: ${res.statusText}`)),
-            fetch('./templates/_modal_chart_zoom.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_chart_zoom.html: ${res.statusText}`)),
+            // REMOVED: fetch('./templates/_modal_chart_zoom.html' + cacheBust)...
             fetch('./templates/_modal_sales_history.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_sales_history.html: ${res.statusText}`)),
             fetch('./templates/_modal_selective_sell.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_selective_sell.html: ${res.statusText}`)),
             fetch('./templates/_modal_manage_position.html' + cacheBust).then(res => res.ok ? res.text() : Promise.reject(`_modal_manage_position.html: ${res.statusText}`)),
@@ -114,7 +114,7 @@ async function initialize() {
        ]));
 
         // Inject page templates
-        mainContent.innerHTML = dashboard + alerts + charts + dailyReport + imports + ledger + orders + watchlist + research;
+        mainContent.innerHTML = dashboard + alerts + dailyReport + imports + ledger + orders + watchlist + research; // REMOVED: charts
         console.log("[App Main] Page templates injected.");
 
         // Inject concatenated modal templates
@@ -125,7 +125,7 @@ async function initialize() {
             modal_sell_from_position +
             modal_advice +
             modal_confirm_fill +
-            modal_chart_zoom +
+            // REMOVED: modal_chart_zoom +
             modal_sales_history +
             modal_selective_sell +
             modal_manage_position +

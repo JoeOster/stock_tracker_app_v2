@@ -2,6 +2,54 @@
     <h2>Transaction Ledger</h2>
     <p class="subtitle">Filter and review your complete transaction history below.</p>
 
+    <div class="pl-summary-grid" style="margin-bottom: 2rem;">
+        <div class="pl-summary-container">
+            <h3>Lifetime Realized P&L Summary</h3>
+            <table id="pl-summary-table" class="data-table" style="min-width: 300px;">
+                <thead>
+                    <tr>
+                        <th>Exchange</th>
+                        <th class="numeric">Realized P/L</th>
+                    </tr>
+                </thead>
+                <tbody id="pl-summary-tbody">
+                    <tr><td colspan="2">Loading...</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td><strong>Total</strong></td>
+                        <td class="numeric" id="pl-summary-total"><strong>--</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="pl-summary-container">
+            <h3>Realized P/L by Date Range</h3>
+            <div class="date-range-inputs filter-bar" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%;">
+                <label for="pl-start-date">From:</label>
+                <input type="date" id="pl-start-date">
+                <label for="pl-end-date">To:</label>
+                <input type="date" id="pl-end-date">
+            </div>
+            <table id="pl-summary-ranged-table" class="data-table" style="min-width: 300px;">
+                <thead>
+                    <tr>
+                        <th>Exchange</th>
+                        <th class="numeric">Realized P/L</th>
+                    </tr>
+                </thead>
+                <tbody id="pl-summary-ranged-tbody">
+                    <tr><td colspan="2">Select dates...</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td><strong>Total</strong></td>
+                        <td class="numeric" id="pl-summary-ranged-total"><strong>--</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
     <div class="filter-bar">
         <input type="text" id="ledger-filter-ticker" placeholder="Filter by Ticker...">
         <label for="ledger-filter-start">From:</label><input type="date" id="ledger-filter-start">
@@ -9,8 +57,6 @@
         <button id="ledger-clear-filters-btn">Clear Filters</button>
     </div>
 
-    <div class="summary-container" id="ledger-summary-container">
-        </div>
     <table id="ledger-table" style="min-width: 900px;">
         <thead>
             <tr>

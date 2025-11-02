@@ -48,18 +48,18 @@ This document breaks down the V3.0 project plan into actionable development task
 ### **Task 0.9: Update Configuration for V3 Standards**
 
 * **Server & Environment:**
-    * [x] Update `server.js` to use port `3003` as the default production port.
-    * [x] Create a `.env.template` or similar example file to instruct users to set `PORT=3111` for development.
+  * [x] Update `server.js` to use port `3003` as the default production port.
+  * [x] Create a `.env.template` or similar example file to instruct users to set `PORT=3111` for development.
 * **Windows Deployment (`deploy.bat`):**
-    * [x] Modify the script to target the `c:\portfolio_managerV3` directory for production files.
-    * [x] Update the backup logic within the script to use `c:\portfolio_manager_bu\v3\prod`.
+  * [x] Modify the script to target the `c:\portfolio_managerV3` directory for production files.
+  * [x] Update the backup logic within the script to use `c:\portfolio_manager_bu\v3\prod`.
 * **Raspberry Pi / Linux Deployment:**
-    * [x] Update the `docs/RASPBERRY_PI_DEPLOYMENT.md` guide to reflect the new production port (`3003`).
-    * [ ] Modify the `docs/setup_pi.sh` script:
-        * Change the default port suggestion to `3003`.
-        * Update the backup script and cron job to use a Linux-appropriate path that mirrors the new standard (e.g., `/home/pi/portfolio_manager_bu/v3/prod`).
+  * [x] Update the `docs/RASPBERRY_PI_DEPLOYMENT.md` guide to reflect the new production port (`3003`).
+  * [ ] Modify the `docs/setup_pi.sh` script:
+    * Change the default port suggestion to `3003`.
+    * Update the backup script and cron job to use a Linux-appropriate path that mirrors the new standard (e.g., `/home/pi/portfolio_manager_bu/v3/prod`).
 * **Development Backup:**
-    * [x] Create a new npm script (e.g., `npm run backup:dev`) that backs up the development database to `c:\portfolio_manager_bu\v3\dev` on Windows.
+  * [x] Create a new npm script (e.g., `npm run backup:dev`) that backs up the development database to `c:\portfolio_manager_bu\v3\dev` on Windows.
 
 ## **Phase 0.5: Application Hardening**
 

@@ -6,8 +6,94 @@
 import { handleResponse } from '../api/api-helpers.js';
 import { refreshLedger } from '../api/transactions-api.js';
 import { state } from '../state.js';
-import { renderLedgerPage } from '../ui/renderers/_ledger.js';
+// --- MODIFIED: Import new renderer ---
+import { renderLedgerPage, renderLedgerPLSummary } from '../ui/renderers/_ledger.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
+
+// --- ADDED: Function to fetch and render ranged P/L summary ---
+/**
+ * Fetches and renders the ranged P/L summary table.
+ * @async
+ */
+async function fetchAndRenderRangedPL() {
+    const startDateEl = /** @type {HTMLInputElement} */ (document.getElementById('pl-start-date'));
+    const endDateEl = /** @type {HTMLInputElement} */ (document.getElementById('pl-end-date'));
+    const tableBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('pl-summary-ranged-tbody'));
+    const totalCell = document.getElementById('pl-summary-ranged-total');
+
+    if (!startDateEl || !endDateEl || !tableBody || !totalCell) {
+        console.warn("Missing ranged P/L elements.");
+        return;
+    }
+
+    const startDate = startDateEl.value;
+    const endDate = endDateEl.value;
+    const holderId = state.selectedAccountHolderId;
+
+    if (!startDate || !endDate || !holderId || holderId === 'all') {
+        tableBody.innerHTML = '<tr><td colspan="2">Select dates...</td></tr>';
+        totalCell.textContent = '--';
+        totalCell.className = 'numeric';
+        return;
+    }
+    
+    tableBody.innerHTML = '<tr><td colspan="2">Loading...</td></tr>';
+    try {
+        const response = await fetch('/api/reporting/realized_pl/summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                startDate: startDate,
+                endDate: endDate,
+                accountHolderId: holderId
+            })
+        });
+        const plData = await handleResponse(response);
+        renderLedgerPLSummary('ranged', plData);
+    } catch (error) {
+        console.error("Failed to render ranged P/L Summary:", error);
+        // @ts-ignore
+        showToast(`Error fetching ranged P/L: ${error.message}`, 'error');
+        tableBody.innerHTML = '<tr><td colspan="2">Error loading.</td></tr>';
+    }
+}
+
+// --- ADDED: Function to fetch and render lifetime P/L summary ---
+/**
+ * Fetches and renders the lifetime P/L summary table.
+ * @async
+ */
+async function fetchAndRenderLifetimePL() {
+    const holderId = state.selectedAccountHolderId;
+    if (!holderId || holderId === 'all') {
+        renderLedgerPLSummary('lifetime', { byExchange: [], total: 0 });
+        return;
+    }
+    try {
+        const response = await fetch(`/api/reporting/realized_pl/summary?holder=${holderId}`);
+        const plData = await handleResponse(response);
+        renderLedgerPLSummary('lifetime', plData);
+    } catch (error) {
+        console.error("Failed to render lifetime P/L Summary:", error);
+        // @ts-ignore
+        showToast(`Error fetching lifetime P/L: ${error.message}`, 'error');
+    }
+}
+
+// --- MODIFIED: Add P/L fetches to refreshLedger ---
+/**
+ * Fetches the latest transactions and P/L data, then re-renders the ledger page.
+ * @async
+ * @returns {Promise<void>}
+ */
+export async function refreshLedgerWithPL() {
+    // Refresh the main transaction list
+    await refreshLedger();
+    // ALSO refresh the P/L summary tables
+    await fetchAndRenderLifetimePL();
+    await fetchAndRenderRangedPL(); // This will re-render based on current date inputs
+}
+
 
 /**
  * Initializes all event listeners for the Transaction Ledger page.
@@ -21,6 +107,15 @@ export function initializeLedgerHandlers() {
     const ledgerFilterEnd = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-end'));
     const ledgerClearFiltersBtn = document.getElementById('ledger-clear-filters-btn');
     const editModal = document.getElementById('edit-modal');
+
+    // --- ADDED: P/L Date Pickers ---
+    const plStartDate = /** @type {HTMLInputElement} */ (document.getElementById('pl-start-date'));
+    const plEndDate = /** @type {HTMLInputElement} */ (document.getElementById('pl-end-date'));
+    
+    if(plStartDate) plStartDate.addEventListener('change', fetchAndRenderRangedPL);
+    if(plEndDate) plEndDate.addEventListener('change', fetchAndRenderRangedPL);
+    // --- END ADDED ---
+
 
     /**
      * Applies the current filter values and re-renders the ledger.
@@ -79,7 +174,8 @@ export function initializeLedgerHandlers() {
                             // handleResponse will throw on error, extracting server message
                             await handleResponse(res);
                             showToast('Transaction deleted.', 'success');
-                            await refreshLedger(); // Refresh data after successful delete
+                            // --- MODIFIED: Call new refresh function ---
+                            await refreshLedgerWithPL(); // Refresh data after successful delete
                         } catch (err) {
                              // Display specific error message
                             showToast(`Failed to delete: ${err instanceof Error ? err.message : String(err)}`, 'error');

@@ -7,66 +7,9 @@ const { brokerageTemplates } = require('../user-settings/importer-templates.js')
 module.exports = (db, log, services) => {
     // The base path for these routes is '/api/utility'
 
-    /**
-     * GET /snapshots
-     * Fetches all account snapshots, optionally filtered by an account holder.
-     */
-    router.get('/snapshots', async (req, res) => {
-        try {
-            const holderId = req.query.holder;
-            let query = 'SELECT * FROM account_snapshots';
-            const params = [];
-            if (holderId && holderId !== 'all') {
-                query += ' WHERE account_holder_id = ?';
-                params.push(holderId);
-            }
-            query += ' ORDER BY snapshot_date DESC';
-            const snapshots = await db.all(query, params);
-            res.json(snapshots);
-        } catch (error) {
-            log(`[ERROR] Failed to fetch snapshots: ${error.message}`);
-            res.status(500).json({ message: "Error fetching snapshots." });
-        }
-    });
-
-    /**
-     * POST /snapshots
-     * Creates a new account value snapshot.
-     */
-    router.post('/snapshots', async (req, res) => {
-        const { snapshot_date, exchange, value, account_holder_id } = req.body;
-        if (!snapshot_date || !exchange || !value || !account_holder_id) {
-            return res.status(400).json({ message: 'Missing required snapshot data.' });
-        }
-        try {
-            await db.run(
-                'INSERT INTO account_snapshots (snapshot_date, exchange, value, account_holder_id) VALUES (?, ?, ?, ?)',
-                [snapshot_date, exchange, value, account_holder_id]
-            );
-            res.status(201).json({ message: 'Snapshot created successfully.' });
-        } catch (error) {
-            log(`[ERROR] Failed to create snapshot: ${error.message}`);
-             if (error.code === 'SQLITE_CONSTRAINT') {
-                res.status(409).json({ message: 'A snapshot for this exchange on this date already exists.' });
-            } else {
-                res.status(500).json({ message: 'Error creating snapshot.' });
-            }
-        }
-    });
-
-    /**
-     * DELETE /snapshots/:id
-     * Deletes an account value snapshot.
-     */
-    router.delete('/snapshots/:id', async (req, res) => {
-        try {
-            await db.run('DELETE FROM account_snapshots WHERE id = ?', req.params.id);
-            res.json({ message: 'Snapshot deleted successfully.' });
-        } catch (error) {
-            log(`[ERROR] Failed to delete snapshot with ID ${req.params.id}: ${error.message}`);
-            res.status(500).json({ message: 'Error deleting snapshot.' });
-        }
-    });
+    // --- REMOVED: GET /snapshots ---
+    // --- REMOVED: POST /snapshots ---
+    // --- REMOVED: DELETE /snapshots/:id ---
 
 
     /**

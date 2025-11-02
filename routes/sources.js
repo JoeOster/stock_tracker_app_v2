@@ -36,9 +36,15 @@ module.exports = (db, log) => {
 
         try {
             // 1. Get the source itself
-            const source = await db.get('SELECT * FROM advice_sources WHERE id = ? AND account_holder_id = ?', [id, holderId]);
+            // This query is correct:
+            const source = await db.get(`
+                SELECT s.* FROM advice_sources s
+                JOIN account_source_links l ON s.id = l.advice_source_id
+                WHERE s.id = ? AND l.account_holder_id = ?
+            `, [id, holderId]);
+            
             if (!source) {
-                return res.status(404).json({ message: 'Advice source not found for this account holder.' });
+                return res.status(404).json({ message: 'Advice source not found or not linked to this account holder.' });
             }
             
             // --- MIGRATE: Parse 'details' JSON ---
@@ -264,21 +270,20 @@ module.exports = (db, log) => {
         }
 
         try {
-            // --- FIX: Verify holderId owns the source ---
-            const source = await db.get('SELECT id FROM advice_sources WHERE id = ? AND account_holder_id = ?', [id, holderId]);
-            if (!source) {
-                return res.status(404).json({ message: 'Advice source not found for this account holder.' });
+            // --- FIX (Bug #2): Verify holderId is *linked* to the source ---
+            const link = await db.get('SELECT 1 FROM account_source_links WHERE advice_source_id = ? AND account_holder_id = ?', [id, holderId]);
+            if (!link) {
+                return res.status(404).json({ message: 'Advice source not found or not linked to this account holder.' });
             }
             // --- END FIX ---
 
             const createdAt = new Date().toISOString();
-            // --- FIX (Bug #2): Add account_holder_id to INSERT ---
+            // This query is correct, as source_notes needs the holderId
             const query = `
                 INSERT INTO source_notes (advice_source_id, note_content, created_at, updated_at, account_holder_id)
                 VALUES (?, ?, ?, ?, ?)
             `;
             const result = await db.run(query, [id, note_content, createdAt, createdAt, holderId]);
-            // --- END FIX ---
             
             const newNoteId = result.lastID;
             const newNote = await db.get('SELECT * FROM source_notes WHERE id = ?', newNoteId);
@@ -310,25 +315,21 @@ module.exports = (db, log) => {
         }
 
         try {
-            // --- FIX: Verify holderId owns the source ---
-            const source = await db.get('SELECT id FROM advice_sources WHERE id = ? AND account_holder_id = ?', [id, holderId]);
-            if (!source) {
-                return res.status(404).json({ message: 'Advice source not found for this account holder.' });
-            }
+            // --- FIX (Bug #3): No verification was done. We only need to check the note itself. ---
+            // The query below is already correct, as it checks all keys.
             // --- END FIX ---
 
             const updatedAt = new Date().toISOString();
-            // --- FIX (Bug #3): Add account_holder_id to WHERE clause ---
+            // This query is correct and sufficient.
             const query = `
                 UPDATE source_notes 
                 SET note_content = ?, updated_at = ?
                 WHERE id = ? AND advice_source_id = ? AND account_holder_id = ?
             `;
             const result = await db.run(query, [note_content, updatedAt, noteId, id, holderId]);
-            // --- END FIX ---
 
             if (result.changes === 0) {
-                return res.status(404).json({ message: 'Note not found.' });
+                return res.status(404).json({ message: 'Note not found or you do not have permission to edit it.' });
             }
 
             res.json({ message: 'Note updated successfully.' });
@@ -357,23 +358,19 @@ module.exports = (db, log) => {
         }
 
         try {
-            // --- FIX: Verify holderId owns the source ---
-            const source = await db.get('SELECT id FROM advice_sources WHERE id = ? AND account_holder_id = ?', [id, holderId]);
-            if (!source) {
-                return res.status(404).json({ message: 'Advice source not found for this account holder.' });
-            }
+            // --- FIX (Bug #4): No verification was done. ---
+            // The query below is already correct, as it checks all keys.
             // --- END FIX ---
 
-            // --- FIX (Bug #4): Add account_holder_id to WHERE clause ---
+            // This query is correct and sufficient.
             const query = `
                 DELETE FROM source_notes
                 WHERE id = ? AND advice_source_id = ? AND account_holder_id = ?
             `;
             const result = await db.run(query, [noteId, id, holderId]);
-            // --- END FIX ---
 
             if (result.changes === 0) {
-                return res.status(404).json({ message: 'Note not found.' });
+                return res.status(404).json({ message: 'Note not found or you do not have permission to delete it.' });
             }
 
             res.json({ message: 'Note deleted successfully.' });

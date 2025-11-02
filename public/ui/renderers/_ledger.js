@@ -5,6 +5,7 @@
  * @module renderers/_ledger
  */
 import { formatAccounting, formatQuantity } from '../formatters.js';
+
 /**
  * Renders the transaction ledger into the table.
  * @param {Array<object>} transactions - The transactions to render.
@@ -64,4 +65,47 @@ export function renderLedgerPage(transactions, sort) {
             </td>
         `;
     });
+}
+
+/**
+ * --- ADDED: Renders the P/L summary tables on the ledger page ---
+ * @param {'lifetime' | 'ranged'} type - Which table to render.
+ * @param {object} plData - The data from the API ({byExchange: [], total: 0}).
+ */
+export function renderLedgerPLSummary(type, plData) {
+    let tableBody, totalCell;
+
+    if (type === 'lifetime') {
+        tableBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('pl-summary-tbody'));
+        totalCell = document.getElementById('pl-summary-total');
+    } else {
+        tableBody = /** @type {HTMLTableSectionElement} */ (document.getElementById('pl-summary-ranged-tbody'));
+        totalCell = document.getElementById('pl-summary-ranged-total');
+    }
+
+    if (!tableBody || !totalCell) {
+        console.warn(`Could not find P/L summary elements for type: ${type}`);
+        return;
+    }
+
+    if (!plData || !plData.byExchange || plData.byExchange.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="2">No data.</td></tr>`;
+        totalCell.textContent = formatAccounting(0);
+        totalCell.className = 'numeric';
+        return;
+    }
+
+    tableBody.innerHTML = plData.byExchange
+        .map(row => `
+            <tr>
+                <td>${row.exchange}</td>
+                <td class="numeric ${row.total_pl >= 0 ? 'positive' : 'negative'}">
+                    ${formatAccounting(row.total_pl)}
+                </td>
+            </tr>
+        `)
+        .join('');
+    
+    totalCell.textContent = formatAccounting(plData.total);
+    totalCell.className = `numeric ${plData.total >= 0 ? 'positive' : 'negative'}`;
 }

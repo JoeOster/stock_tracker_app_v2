@@ -71,6 +71,13 @@ export function initializeModalHandlers() {
                 }
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
                 
+                // --- ADDED: Clear zoomed chart if this is the one being closed ---
+                if (modal.id === 'image-zoom-modal') {
+                    const zoomImage = document.getElementById('zoomed-image-content');
+                    if (zoomImage) (/** @type {HTMLImageElement} */ (zoomImage)).src = '';
+                }
+                // --- END ADDED ---
+                
                 modal.classList.remove('visible');
             }
         })
@@ -96,6 +103,13 @@ export function initializeModalHandlers() {
                     await saveSettingsOnClose();
                 }
                 clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
+
+                // --- ADDED: Clear zoomed chart if this is the one being closed ---
+                if (modal.id === 'image-zoom-modal') {
+                    const zoomImage = document.getElementById('zoomed-image-content');
+                    if (zoomImage) (/** @type {HTMLImageElement} */ (zoomImage)).src = '';
+                }
+                // --- END ADDED ---
                 
                 modal.classList.remove('visible');
             }

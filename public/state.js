@@ -36,17 +36,12 @@
  * @typedef {object} AppState
  * @property {Array<object>} transactions - All transactions for the selected account.
  * @property {Array<object>} openOrders - Deprecated? (Consider removing or clarifying usage)
- * @property {Array<object>} allSnapshots - All historical portfolio snapshots.
  * @property {Array<object>} activeAlerts - All unread notifications.
  * @property {Array<object>} allAccountHolders - All account holders in the system.
  * @property {Array<object>} allExchanges - All exchanges in the system.
  * @property {string|number} selectedAccountHolderId - The ID of the currently selected account holder ('all' or number).
  * @property {{type: string, value: string|null}} currentView - The current active view.
  * @property {Map<string, PriceData>} priceCache - A cache for recently fetched stock prices.
- * @property {import('chart.js').Chart | null} allTimeChart - The instance of the 'All Time' chart.
- * @property {import('chart.js').Chart | null} fiveDayChart - The instance of the 'Five Day' chart.
- * @property {import('chart.js').Chart | null} dateRangeChart - The instance of the 'Date Range' chart.
- * @property {import('chart.js').Chart | null} zoomedChart - The instance of the zoomed-in chart.
  * @property {Map<string, object>} activityMap - A map of open positions for the current daily view ('date' viewType).
  * @property {object} ledgerSort - The current sort state for the transaction ledger.
  * @property {string} ledgerSort.column - The column to sort by.
@@ -67,17 +62,17 @@
 export let state = {
     transactions: [],
     openOrders: [],
-    allSnapshots: [],
+    // REMOVED: allSnapshots: [],
     activeAlerts: [],
     allAccountHolders: [],
     allExchanges: [],
     selectedAccountHolderId: 1,
     currentView: { type: 'dashboard', value: null },
     priceCache: new Map(),
-    allTimeChart: null,
-    fiveDayChart: null,
-    dateRangeChart: null,
-    zoomedChart: null,
+    // REMOVED: allTimeChart: null,
+    // REMOVED: fiveDayChart: null,
+    // REMOVED: dateRangeChart: null,
+    // REMOVED: zoomedChart: null,
     activityMap: new Map(),
     ledgerSort: { column: 'transaction_date', direction: 'desc' },
     pendingOrders: [],

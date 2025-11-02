@@ -25,7 +25,7 @@ export const staticTabs = [
     { viewType: 'orders', textContent: 'Orders' },
     { viewType: 'alerts', textContent: 'Alerts' },
     { viewType: 'imports', textContent: 'Imports' },
-    { viewType: 'charts', textContent: 'Charts' },
+    // --- REMOVED: { viewType: 'charts', textContent: 'Charts' }, ---
 ];
 // --- END MODIFICATION ---
 

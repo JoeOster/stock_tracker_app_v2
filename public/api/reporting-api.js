@@ -36,13 +36,4 @@ export async function fetchPositions(date, holderId) {
     return data;
 }
 
-/**
- * Fetches all account value snapshots for a given account holder.
- * @async
- * @param {string|number} holderId - The ID of the account holder ('all' for everyone).
- * @returns {Promise<any[]>} A promise that resolves to an array of snapshot objects.
- */
-export async function fetchSnapshots(holderId) {
-    const response = await fetch(`/api/utility/snapshots?holder=${holderId}`);
-    return handleResponse(response);
-}
+// --- REMOVED: fetchSnapshots function ---

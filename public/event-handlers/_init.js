@@ -5,7 +5,6 @@
  */
 
 import { initializeAlertsHandlers } from './_alerts.js';
-import { initializeChartsHandlers } from './_charts.js';
 import { initializeDailyReportHandlers } from './_dailyReport.js';
 import { initializeImportHandlers } from './_imports.js';
 import { initializeLedgerHandlers } from './_ledger.js';

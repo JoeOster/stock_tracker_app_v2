@@ -9,11 +9,19 @@ DELETE FROM pending_orders WHERE account_holder_id > 1;
 DELETE FROM account_snapshots WHERE account_holder_id > 1;
 DELETE FROM notifications WHERE account_holder_id > 1;
 DELETE FROM watchlist WHERE account_holder_id > 1;
-DELETE FROM documents WHERE journal_entry_id IN (SELECT id FROM journal_entries WHERE account_holder_id > 1);
-DELETE FROM documents WHERE advice_source_id IN (SELECT id FROM advice_sources WHERE account_holder_id > 1);
 DELETE FROM journal_entries WHERE account_holder_id > 1;
 DELETE FROM source_notes WHERE account_holder_id > 1;
-DELETE FROM advice_sources WHERE account_holder_id > 1;
+
+-- MODIFIED: Updated DELETE logic for new schema
+DELETE FROM documents WHERE advice_source_id IN (
+    SELECT advice_source_id FROM account_source_links WHERE account_holder_id > 1
+);
+DELETE FROM advice_sources WHERE id IN (
+    SELECT advice_source_id FROM account_source_links WHERE account_holder_id > 1
+);
+DELETE FROM account_source_links WHERE account_holder_id > 1;
+-- END MODIFICATION
+
 DELETE FROM account_holders WHERE id > 1;
 
 -- Ensure test account holders exist (Use IDs 2-6)
@@ -23,13 +31,22 @@ INSERT OR IGNORE INTO account_holders (id, name) VALUES (4, 'Test 3 (A.Z Penn)')
 INSERT OR IGNORE INTO account_holders (id, name) VALUES (5, 'Test 4');
 INSERT OR IGNORE INTO account_holders (id, name) VALUES (6, 'Test 5 (Anabella)');
 
--- === Advice Sources (1 per test user) ===
-INSERT INTO advice_sources (account_holder_id, name, type, description, is_active, image_path, details) VALUES
-(2, 'Source A', 'Website', 'Financial News Site', 1, NULL, NULL),
-(3, 'Source B (Emily)', 'Person', 'Investment Advisor', 1, '/images/contacts/Emily.png', '{"contact_app_type": "Signal", "contact_app_handle": "+1234567890"}'),
-(4, 'Source C (A.Z Penn)', 'Book', 'Classic Investing Book', 1, '/images/contacts/A_Z_Penn_Swing Trading.jpg', '{"author": "A.Z Penn", "isbn": "978-1234567890"}'),
-(5, 'Source D', 'Service', 'Subscription Newsletter', 0, NULL, NULL), -- Inactive
-(6, 'Source E (Anabella)', 'Group', 'Local Investment Club', 1, '/images/contacts/anabella.png', '{"contact_person": "Anabella", "contact_app_type": "WhatsApp"}');
+-- === Advice Sources (MODIFIED: Removed account_holder_id) ===
+INSERT INTO advice_sources (name, type, description, is_active, image_path, details) VALUES
+('Source A', 'Website', 'Financial News Site', 1, NULL, NULL),
+('Source B (Emily)', 'Person', 'Investment Advisor', 1, '/images/contacts/Emily.png', '{"contact_app_type": "Signal", "contact_app_handle": "+1234567890"}'),
+('Source C (A.Z Penn)', 'Book', 'Classic Investing Book', 1, '/images/contacts/A_Z_Penn_Swing Trading.jpg', '{"author": "A.Z Penn", "isbn": "978-1234567890"}'),
+('Source D', 'Service', 'Subscription Newsletter', 0, NULL, NULL), -- Inactive
+('Source E (Anabella)', 'Group', 'Local Investment Club', 1, '/images/contacts/anabella.png', '{"contact_person": "Anabella", "contact_app_type": "WhatsApp"}');
+
+-- === ADDED: Link Sources to Test Users ===
+INSERT OR IGNORE INTO account_source_links (account_holder_id, advice_source_id) VALUES
+(2, (SELECT id FROM advice_sources WHERE name = 'Source A')),
+(3, (SELECT id FROM advice_sources WHERE name = 'Source B (Emily)')),
+(4, (SELECT id FROM advice_sources WHERE name = 'Source C (A.Z Penn)')),
+(5, (SELECT id FROM advice_sources WHERE name = 'Source D')),
+(6, (SELECT id FROM advice_sources WHERE name = 'Source E (Anabella)'));
+
 
 -- === Transactions (Unchanged) ===
 INSERT INTO transactions (ticker, exchange, transaction_type, quantity, price, transaction_date, original_quantity, quantity_remaining, account_holder_id) VALUES ('AAPL', 'Fidelity', 'BUY', 10, 170.50, '2025-10-10', 10, 10, 2);
@@ -78,17 +95,17 @@ INSERT INTO account_snapshots (exchange, snapshot_date, value, account_holder_id
 
 -- === Journal Entries (Unchanged) ===
 INSERT INTO journal_entries (account_holder_id, entry_date, ticker, exchange, direction, quantity, entry_price, target_price, stop_loss_price, status, advice_source_id, entry_reason) VALUES 
-(2, '2025-10-13', 'JPM', 'Fidelity', 'BUY', 10, 155.00, 165.00, 150.00, 'OPEN', (SELECT id FROM advice_sources WHERE account_holder_id=2 LIMIT 1), 'News catalyst');
+(2, '2025-10-13', 'JPM', 'Fidelity', 'BUY', 10, 155.00, 165.00, 150.00, 'OPEN', (SELECT id FROM advice_sources WHERE name='Source A' LIMIT 1), 'News catalyst');
 INSERT INTO journal_entries (account_holder_id, entry_date, ticker, exchange, direction, quantity, entry_price, target_price, stop_loss_price, status, entry_reason) VALUES 
 (3, '2025-10-14', 'META', 'Robinhood', 'BUY', 5, 338.00, 355.00, 330.00, 'OPEN', 'From Emily, looks bullish');
 INSERT INTO journal_entries (account_holder_id, entry_date, ticker, exchange, direction, quantity, entry_price, target_price, target_price_2, stop_loss_price, status, advice_source_id, image_path, entry_reason, notes) VALUES 
-(4, '2025-10-15', 'N/A', 'Paper', 'BUY', 0, 0, 235.00, 250.00, 220.00, 'OPEN', (SELECT id FROM advice_sources WHERE account_holder_id=4 LIMIT 1), '/images/book/AZPenn_BollingerBand.png', 'Bollinger Band Squeeze (Ch. 4)', 'Chart Type: 1D Candle\n\nWait for bands to squeeze tight, then buy on breakout above upper band.');
+(4, '2025-10-15', 'N/A', 'Paper', 'BUY', 0, 0, 235.00, 250.00, 220.00, 'OPEN', (SELECT id FROM advice_sources WHERE name='Source C (A.Z Penn)' LIMIT 1), '/images/book/AZPenn_BollingerBand.png', 'Bollinger Band Squeeze (Ch. 4)', 'Chart Type: 1D Candle\n\nWait for bands to squeeze tight, then buy on breakout above upper band.');
 INSERT INTO journal_entries (account_holder_id, entry_date, ticker, exchange, direction, quantity, entry_price, target_price, stop_loss_price, status, entry_reason) VALUES 
 (5, '2025-10-16', 'JNJ', 'Other', 'BUY', 20, 160.00, 170.00, 157.00, 'OPEN', 'Newsletter recommendation');
 INSERT INTO journal_entries (account_holder_id, entry_date, ticker, exchange, direction, quantity, entry_price, target_price, stop_loss_price, status, advice_source_id, entry_reason) VALUES 
-(6, '2025-10-17', 'AAPL', 'Fidelity', 'BUY', 5, 176.00, 185.00, 172.00, 'OPEN', (SELECT id FROM advice_sources WHERE account_holder_id=6 LIMIT 1), 'Anabella''s group pick');
+(6, '2025-10-17', 'AAPL', 'Fidelity', 'BUY', 5, 176.00, 185.00, 172.00, 'OPEN', (SELECT id FROM advice_sources WHERE name='Source E (Anabella)' LIMIT 1), 'Anabella''s group pick');
 INSERT INTO journal_entries (account_holder_id, entry_date, ticker, exchange, direction, quantity, entry_price, status, exit_date, exit_price, pnl, advice_source_id) VALUES 
-(2, '2025-09-01', 'TSLA', 'Fidelity', 'BUY', 2, 680.00, 'CLOSED', '2025-09-15', 720.00, 80.00, (SELECT id FROM advice_sources WHERE account_holder_id=2 LIMIT 1));
+(2, '2025-09-01', 'TSLA', 'Fidelity', 'BUY', 2, 680.00, 'CLOSED', '2025-09-15', 720.00, 80.00, (SELECT id FROM advice_sources WHERE name='Source A' LIMIT 1));
 INSERT INTO journal_entries (account_holder_id, entry_date, ticker, exchange, direction, quantity, entry_price, status, exit_date, exit_price, pnl) VALUES 
 (4, '2025-09-05', 'AMZN', 'E-Trade', 'BUY', 1, 3250.00, 'CLOSED', '2025-09-20', 3150.00, -100.00);
 INSERT INTO journal_entries (account_holder_id, entry_date, ticker, exchange, direction, quantity, entry_price, status, exit_date, exit_price, pnl) VALUES 
@@ -108,9 +125,9 @@ INSERT INTO watchlist (account_holder_id, ticker, type, status) VALUES (4, 'PYPL
 INSERT INTO watchlist (account_holder_id, ticker, type, status) VALUES (5, 'SQ', 'WATCH', 'OPEN');
 INSERT INTO watchlist (account_holder_id, ticker, type, status) VALUES (6, 'UBER', 'WATCH', 'OPEN');
 INSERT INTO watchlist (account_holder_id, ticker, type, status, advice_source_id, rec_entry_low, rec_entry_high, rec_tp1, rec_stop_loss) 
-VALUES (3, 'PYPL', 'IDEA', 'OPEN', (SELECT id FROM advice_sources WHERE account_holder_id=3 LIMIT 1), 55.00, 58.00, 65.00, 52.00);
+VALUES (3, 'PYPL', 'IDEA', 'OPEN', (SELECT id FROM advice_sources WHERE name='Source B (Emily)' LIMIT 1), 55.00, 58.00, 65.00, 52.00);
 INSERT INTO watchlist (account_holder_id, ticker, type, status, advice_source_id, journal_entry_id, rec_entry_low, rec_tp1, rec_stop_loss) 
-VALUES (4, 'V', 'IDEA', 'OPEN', (SELECT id FROM advice_sources WHERE account_holder_id=4 LIMIT 1), (SELECT id FROM journal_entries WHERE account_holder_id=4 AND ticker='N/A' LIMIT 1), 225.00, 235.00, 220.00);
+VALUES (4, 'V', 'IDEA', 'OPEN', (SELECT id FROM advice_sources WHERE name='Source C (A.Z Penn)' LIMIT 1), (SELECT id FROM journal_entries WHERE account_holder_id=4 AND ticker='N/A' LIMIT 1), 225.00, 235.00, 220.00);
 
 
 -- === Notifications (Unchanged) ===
@@ -122,13 +139,13 @@ INSERT INTO notifications (account_holder_id, message, status, created_at) VALUE
 
 -- === Source Notes (Unchanged) ===
 INSERT INTO source_notes (advice_source_id, account_holder_id, note_content, created_at) VALUES
-((SELECT id FROM advice_sources WHERE account_holder_id=3 LIMIT 1), 3, 'Emily mentioned PYPL as a buy-on-dip opportunity. Watch for 55-58 entry.', '2025-10-16 09:00:00'),
-((SELECT id FROM advice_sources WHERE account_holder_id=3 LIMIT 1), 3, 'Second note, just for testing.', '2025-10-17 10:00:00'),
-((SELECT id FROM advice_sources WHERE account_holder_id=4 LIMIT 1), 4, 'Chapter 4 on Bollinger Bands is the most useful.', '2025-10-15 11:00:00'),
-((SELECT id FROM advice_sources WHERE account_holder_id=6 LIMIT 1), 6, 'Group is also looking at UBER next.', '2025-10-17 14:00:00');
+((SELECT id FROM advice_sources WHERE name='Source B (Emily)' LIMIT 1), 3, 'Emily mentioned PYPL as a buy-on-dip opportunity. Watch for 55-58 entry.', '2025-10-16 09:00:00'),
+((SELECT id FROM advice_sources WHERE name='Source B (Emily)' LIMIT 1), 3, 'Second note, just for testing.', '2025-10-17 10:00:00'),
+((SELECT id FROM advice_sources WHERE name='Source C (A.Z Penn)' LIMIT 1), 4, 'Chapter 4 on Bollinger Bands is the most useful.', '2025-10-15 11:00:00'),
+((SELECT id FROM advice_sources WHERE name='Source E (Anabella)' LIMIT 1), 6, 'Group is also looking at UBER next.', '2025-10-17 14:00:00');
 
 -- === Documents (FIXED) ===
 -- REMOVED account_holder_id from the INSERT statement
 INSERT INTO documents (advice_source_id, journal_entry_id, title, document_type, external_link, description) VALUES
 (NULL, (SELECT id FROM journal_entries WHERE account_holder_id=4 AND ticker='N/A' LIMIT 1), 'Bollinger Band PDF Guide', 'PDF', 'http://example.com/bb_guide.pdf', 'External guide for Ch. 4 technique'),
-((SELECT id FROM advice_sources WHERE account_holder_id=3 LIMIT 1), NULL, 'Emily''s 2025 Watchlist', 'Google Sheet', 'http://example.com/emily_watchlist', 'List of all her picks for the year.');
+((SELECT id FROM advice_sources WHERE name='Source B (Emily)' LIMIT 1), NULL, 'Emily''s 2025 Watchlist', 'Google Sheet', 'http://example.com/emily_watchlist', 'List of all her picks for the year.');

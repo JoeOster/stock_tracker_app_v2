@@ -10,8 +10,10 @@ import { showToast } from '../ui/helpers.js';
 import { loadDailyReportPage } from './_dailyReport.js';
 import { loadOrdersPage } from './_orders.js';
 import { loadAlertsPage } from './_alerts.js';
-import { loadChartsPage } from './_charts.js';
-import { refreshLedger } from '../api/transactions-api.js';
+// REMOVED: import { loadChartsPage } from './_charts.js';
+// --- MODIFIED: Import new ledger function ---
+import { refreshLedgerWithPL } from './_ledger.js';
+// --- END MODIFIED ---
 import { loadResearchPage } from './_research.js';
 import { loadDashboardPage } from './_dashboard_loader.js';
 // --- REMOVED: import { loadJournalPage } ---
@@ -61,7 +63,7 @@ export async function switchView(viewType, viewValue = null, forceReload = false
     const containerIdMap = {
         'dashboard': 'dashboard-page-container', 'ledger': 'ledger-page-container',
         'orders': 'orders-page-container', 'alerts': 'alerts-page-container',
-        'imports': 'imports-page-container', 'charts': 'charts-container',
+        'imports': 'imports-page-container', // REMOVED: 'charts': 'charts-container',
         'date': 'daily-report-container', 
         'watchlist': 'watchlist-page-container',
         'sources': 'research-page-container'
@@ -108,8 +110,12 @@ export async function switchView(viewType, viewValue = null, forceReload = false
                 if (viewValue) await loadDailyReportPage(viewValue);
                 else console.warn("[Navigation] Date view selected without a date value.");
                 break;
-            case 'charts': await loadChartsPage(); break;
-            case 'ledger': await refreshLedger(); break;
+            // REMOVED: case 'charts': await loadChartsPage(); break;
+            case 'ledger': 
+                // --- MODIFIED: Call new function ---
+                await refreshLedgerWithPL(); 
+                break;
+                // --- END MODIFIED ---
             case 'orders': await loadOrdersPage(); break;
             case 'alerts': await loadAlertsPage(); break;
             case 'sources': await loadResearchPage(); break;
