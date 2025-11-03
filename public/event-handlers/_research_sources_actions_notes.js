@@ -152,11 +152,16 @@ export async function handleDeleteClick(
   modalHolderId,
   refreshDetailsCallback
 ) {
+  // --- THIS IS THE FIX ---
+  // Added dataset.journalId to the list of possible ID sources
   const itemId =
     /** @type {HTMLElement} */ (target).dataset.id ||
     /** @type {HTMLElement} */ (target).dataset.docId ||
     /** @type {HTMLElement} */ (target).dataset.noteId ||
-    /** @type {HTMLElement} */ (target).dataset.itemId;
+    /** @type {HTMLElement} */ (target).dataset.itemId ||
+    /** @type {HTMLElement} */ (target).dataset.journalId;
+  // --- END FIX ---
+
   if (!itemId) return;
 
   // --- Case 1: Delete Watchlist "Trade Idea" ---
@@ -190,7 +195,7 @@ export async function handleDeleteClick(
       'Are you sure you want to archive this technique? This will close it.',
       async () => {
         try {
-          await deleteJournalEntry(itemId);
+          await deleteJournalEntry(itemId); // This function uses the correct 'itemId'
           showToast(`Technique archived.`, 'success');
           await refreshDetailsCallback();
         } catch (error) {

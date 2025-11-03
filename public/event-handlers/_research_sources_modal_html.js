@@ -124,15 +124,12 @@ export function _renderModalActionsPanel(source) {
             </button>
         `;
   } else {
-    // --- THIS IS THE FIX ---
     // For Book/Website/Other, ONLY show "Add Technique"
-    // The "Add Trade Idea" button is now correctly on the technique row itself.
     html += `
             <button id="add-technique-btn" data-source-id="${sourceId}" data-source-name="${sourceName}" style="width: 100%;">
                 Add Technique
             </button>
         `;
-    // --- END FIX ---
   }
 
   html += '</div>';
@@ -239,10 +236,13 @@ export function _renderModalTradeIdeas(
         buyOrLiveHTML =
           '<span class="marker-live" title="This idea is linked to a live trade.">✔ Live</span>';
       } else {
+        // --- THIS IS THE FIX ---
+        // Added data-entry-low and data-entry-high to the button
         buyOrLiveHTML = `
                     <button class="create-buy-order-btn" 
                         data-ticker="${escapeHTML(item.ticker)}" 
-                        data-price=""
+                        data-entry-low="${item.rec_entry_low || ''}"
+                        data-entry-high="${item.rec_entry_high || ''}"
                         data-tp1="${item.rec_tp1 || ''}"
                         data-tp2="${item.rec_tp2 || ''}"
                         data-sl="${item.rec_stop_loss || ''}"
@@ -250,6 +250,7 @@ export function _renderModalTradeIdeas(
                         data-source-name="${escapeHTML(source.name)}" 
                         title="Create Buy Order from this Idea">Buy</button>
                 `;
+        // --- END FIX ---
       }
 
       if (isLinkedToPaperTrade) {
@@ -397,7 +398,6 @@ export function _renderModalRealTrades(linkedTransactions) {
 }
 
 /**
- * --- MODIFIED FUNCTION ---
  * Renders the "Tracked Paper Trades" (Open) table.
  * Title changes to "Techniques / Methods" for non-person source types.
  * @param {any[]} journalEntries - Array of journal entry objects.
@@ -477,7 +477,6 @@ export function _renderModalPaperTrades_Open(
 }
 
 /**
- * --- MODIFIED FUNCTION ---
  * Renders the "Completed Paper Trades" (Closed) table.
  * Title changes to "Completed Techniques" for non-person source types.
  * @param {any[]} journalEntries - Array of journal entry objects.
@@ -490,10 +489,6 @@ export function _renderModalPaperTrades_Closed(
 ) {
   let html = '';
   const isPersonOrGroup = sourceType === 'Person' || sourceType === 'Group';
-  // ---
-  // --- THIS IS THE FIX ---
-  // Changed 'isPersonOrStop' to 'isPersonOrGroup'
-  // ---
   const completedTradeTitle = isPersonOrGroup
     ? 'Completed Paper Trades'
     : 'Completed Techniques';
@@ -616,7 +611,7 @@ export function _renderModalNotes(sourceNotes, source) {
       const updatedDateStr = new Date(note.updated_at).toLocaleString();
       const editedMarker =
         note.updated_at > note.created_at ? ` (edited ${updatedDateStr})` : '';
-      html += `<li style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--container-border);" data-note-id="${note.id}"> <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;"> <small><i>${createdDateStr}${editedMarker}</i></small> <div class="note-actions"> <button class="edit-source-note-button" title="Edit Note" style="padding: 2px 5px; font-size: 0.8em; margin-left: 5px;">Edit</button> <button class="delete-source-note-button delete-btn" data-note-id="${note.id}" title="Delete Note" style="padding: 2px 5px; font-size: 0.8em; margin-left: 5px;">X</button> </div> </div> <div class="note-content-display">${escapedNoteContent.replace(/\n/g, '<br>')}</div> <div class="note-content-edit" style="display: none;"> <textarea class="edit-note-textarea" rows="3" style="width: 100%; box-sizing: border-box;">${escapedNoteContent}</textarea> <div style="text-align: right; margin-top: 5px;"> <button class="cancel-edit-note-button cancel-btn" style="padding: 3px 6px; font-size: 0.8em; margin-right: 5px;">Cancel</button> <button class="save-edit-note-button" style="padding: 3px 6px; font-size: 0.8em;">Save</button> </div> </div> </li>`;
+      html += `<li style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--container-border);" data-note-id="${note.id}"> <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;"> <small><i>${createdDateStr}${editedMarker}</i></small> <div class="note-actions"> <button class="edit-source-note-button" title="Edit Note" style="padding: 2px 5px; font-size: 0.8em; margin-left: 5px;">Edit</button> <button class="delete-source-note-button delete-btn" data-note-id="${note.id}" title="Delete Note" style="padding: 2px 5px; font-size: 0.8em; margin-left: 5px;">X</button> </div> </div> <div class="note-content-display">${escapedNoteContent.replace(/\n/g, '<br>')}</div> <div class="note-content-edit" style="display: none;"> <textarea class="edit-note-textarea" rows="3" style="width: 100%; box-sizing: border-box;">${escapedNoteContent}</textarea> <div style="text-align: right; margin-top: 5px;"> <button class="cancel-edit-note-button cancel-btn" style="padding: 3px 6px; font-size: 0.8em; margin-right: 5px;">Cancel</button> <button class'="save-edit-note-button" style="padding: 3px 6px; font-size: 0.8em;">Save</button> </div> </div> </li>`;
     });
     html += `</ul>`;
   } else {

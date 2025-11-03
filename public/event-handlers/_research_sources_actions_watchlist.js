@@ -64,7 +64,7 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
         addIdeaModal.querySelector('#idea-form-rec-tp2')
       ).value;
       const rec_stop_loss = /** @type {HTMLInputElement} */ (
-        addIdeaModal.querySelector('#idea-form-stop-loss')
+        addIdeaModal.querySelector('#idea-form-rec-stop-loss') // <-- WAS: '#idea-form-stop-loss'
       ).value;
       // --- END FIX ---
 
@@ -101,7 +101,10 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
         addIdeaForm.reset();
         addIdeaModal.classList.remove('visible');
 
-        await refreshDetailsCallback();
+        // --- THIS IS THE FIX ---
+        // Dispatch the global event instead of using the (stale) callback
+        document.dispatchEvent(new CustomEvent('journalUpdated'));
+        // --- END FIX ---
       } catch (error) {
         console.error('Failed to add watchlist idea:', error);
         const err = /** @type {Error} */ (error);
@@ -187,8 +190,6 @@ function openAddTradeIdeaModal(
 
   // Set default values if provided (from a technique)
   if (defaults) {
-    // --- THIS IS THE FIX (Part 2) ---
-    // Use the *correct* IDs (with 'rec-' prefix)
     // @ts-ignore
     safeSetInputValue('idea-form-rec-entry-low', defaults.entry || '');
     // @ts-ignore
@@ -197,7 +198,6 @@ function openAddTradeIdeaModal(
     safeSetInputValue('idea-form-rec-tp2', defaults.tp2 || '');
     // @ts-ignore
     safeSetInputValue('idea-form-rec-stop-loss', defaults.sl || '');
-    // --- END FIX ---
   }
 
   // Show the modal
@@ -312,7 +312,8 @@ export async function handleCreateTradeIdeaFromTechnique(
   );
 }
 
-// ... (rest of file: handleCreateBuyOrderFromIdea, handleCreatePaperTradeFromIdea, handleCloseWatchlistIdea are unchanged) ...
+// ... in public/event-handlers/_research_sources_actions_watchlist.js
+
 export async function handleCreateBuyOrderFromIdea(target) {
   const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId, sourceName } =
     target.dataset;
@@ -330,8 +331,17 @@ export async function handleCreateBuyOrderFromIdea(target) {
   updateState({ prefillOrderFromSource: prefillData });
   await switchView('orders');
 
+  // --- THIS IS THE FIX ---
+  // Manually close the source details modal so you can see the Orders page
+  const detailsModal = document.getElementById('source-details-modal');
+  if (detailsModal) {
+    detailsModal.classList.remove('visible');
+  }
+  // --- END FIX ---
+
   showToast(`Prefilling "Log Trade" form for ${ticker}...`, 'info');
 }
+
 export async function handleCreatePaperTradeFromIdea(target) {
   const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId } =
     target.dataset;

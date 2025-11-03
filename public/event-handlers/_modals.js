@@ -314,7 +314,8 @@ export async function handleCreateTradeIdeaFromTechnique(
   );
 }
 
-// ... (rest of file: handleCreateBuyOrderFromIdea, handleCreatePaperTradeFromIdea, handleCloseWatchlistIdea are unchanged) ...
+// ... inside public/event-handlers/_modals.js
+
 export async function handleCreateBuyOrderFromIdea(target) {
   const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId, sourceName } =
     target.dataset;
@@ -332,8 +333,19 @@ export async function handleCreateBuyOrderFromIdea(target) {
   updateState({ prefillOrderFromSource: prefillData });
   await switchView('orders');
 
+  // --- THIS IS THE FIX ---
+  // Manually close the source details modal so you can see the Orders page
+  const detailsModal = document.getElementById('source-details-modal');
+  if (detailsModal) {
+    detailsModal.classList.remove('visible');
+  }
+  // --- END FIX ---
+
   showToast(`Prefilling "Log Trade" form for ${ticker}...`, 'info');
 }
+
+// ...
+
 export async function handleCreatePaperTradeFromIdea(target) {
   const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId } =
     target.dataset;
@@ -423,4 +435,40 @@ export async function handleCloseWatchlistIdea(
       }
     }
   );
+}
+// /public/event-handlers/_modals.js
+/**
+ * @file Initializes all general modal event handlers (like close buttons).
+ * @module event-handlers/_modals
+ */
+
+/**
+ * Initializes global click handlers for closing modals.
+ * @returns {void}
+ */
+export function initializeModalHandlers() {
+  console.log('[Modals] Initializing global modal close handlers...');
+
+  // Use event delegation on the document body
+  document.body.addEventListener('click', (e) => {
+    const target = /** @type {HTMLElement} */ (e.target);
+
+    // Check for a .close-button OR a .cancel-btn that ALSO has .close-modal-btn
+    // This targets the 'X' button and any "Cancel" button in a modal footer.
+    const isCloseButton = target.matches(
+      '.close-button, .cancel-btn.close-modal-btn'
+    );
+
+    if (isCloseButton) {
+      const modal = target.closest('.modal');
+      if (modal) {
+        modal.classList.remove('visible');
+        console.log(`[Modals] Closed modal: #${modal.id}`);
+      } else {
+        console.warn(
+          '[Modals] Close button clicked, but no parent .modal found.'
+        );
+      }
+    }
+  });
 }

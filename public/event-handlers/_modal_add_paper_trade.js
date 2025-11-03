@@ -4,10 +4,10 @@
  * @module event-handlers/_modal_add_paper_trade
  */
 
-import { state } from '../state.js';
-import { showToast } from '../ui/helpers.js';
 import { addJournalEntry } from '../api/journal-api.js';
+import { state } from '../state.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
+import { showToast } from '../ui/helpers.js';
 
 /**
  * Initializes the event listeners for the "Add Paper Trade" modal form.
@@ -198,6 +198,14 @@ export function initializeAddPaperTradeModalHandler() {
           document.getElementById('journal-entry-date')
         ).value = getCurrentESTDateString(); // Reset date to today
         addJournalModal.classList.remove('visible');
+
+        // --- THIS IS THE FIX ---
+        // Also close the Source Details modal that is open underneath
+        const detailsModal = document.getElementById('source-details-modal');
+        if (detailsModal) {
+          detailsModal.classList.remove('visible');
+        }
+        // --- END FIX ---
 
         // Dispatch a custom event to notify other parts of the app (like the new Watchlist)
         document.dispatchEvent(new CustomEvent('journalUpdated'));

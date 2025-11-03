@@ -1,4 +1,4 @@
-﻿// public/event-handlers/_research_sources_listeners.js
+﻿// /public/event-handlers/_research_sources_listeners.js
 /**
  * @file Initializes listeners for Research Sources cards and modal actions.
  * @module event-handlers/_research_sources_listeners
@@ -29,6 +29,12 @@ import {
 } from './_research_sources_actions_journal.js';
 // --- END MODIFICATION ---
 
+// --- ADDED: Imports needed for new Edit Technique functionality ---
+import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
+// --- FIX: Removed unused import ---
+// import { getCurrentESTDateString } from '../ui/datetime.js';
+// --- END FIX ---
+
 /** @type {EventListener | null} */
 let currentSourcesListClickHandler = null;
 /** @type {EventListener | null} */
@@ -37,6 +43,97 @@ let currentModalActionHandler = null;
 let isAddTradeIdeaModalHandlerInitialized = false;
 /** @type {boolean} */
 let isAddTechniqueModalHandlerInitialized = false; // --- ADDED ---
+
+/**
+ * --- ADDED: Helper function to populate the paper trade modal for editing ---
+ * (Based on the logic from /_watchlist.js)
+ * @param {object} entry - The journal entry to edit.
+ */
+async function _populatePaperTradeModalForEdit(entry) {
+  if (!entry) {
+    return showToast('Error: Could not find entry data to edit.', 'error');
+  }
+
+  const modal = document.getElementById('add-paper-trade-modal');
+  const form = /** @type {HTMLFormElement} */ (
+    document.getElementById('add-journal-entry-form')
+  );
+  if (!modal || !form) {
+    return showToast('Error: Could not find paper trade modal.', 'error');
+  }
+
+  form.reset();
+  /** @type {HTMLElement} */ (
+    document.getElementById('add-paper-trade-modal-title')
+  ).textContent = `Edit Entry: ${entry.ticker || 'Technique'}`;
+  /** @type {HTMLButtonElement} */ (
+    document.getElementById('add-journal-entry-btn')
+  ).textContent = 'Save Changes';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-form-entry-id')
+  ).value = entry.id;
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-entry-date')
+  ).value = entry.entry_date;
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-ticker')
+  ).value = entry.ticker;
+  /** @type {HTMLSelectElement} */ (
+    document.getElementById('journal-exchange')
+  ).value = entry.exchange;
+  /** @type {HTMLSelectElement} */ (
+    document.getElementById('journal-direction')
+  ).value = entry.direction;
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-quantity')
+  ).value = String(entry.quantity);
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-entry-price')
+  ).value = String(entry.entry_price);
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-target-price')
+  ).value = entry.target_price || '';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-target-price-2')
+  ).value = entry.target_price_2 || '';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-stop-loss-price')
+  ).value = entry.stop_loss_price || '';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-advice-details')
+  ).value = entry.advice_source_details || '';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-entry-reason')
+  ).value = entry.entry_reason || '';
+
+  // Handle combined notes
+  const notes = entry.notes || '';
+  if (notes.startsWith('Chart Type:')) {
+    const match = notes.match(/^Chart Type: (.*?)\n\n(.*)$/s);
+    if (match) {
+      // (This form doesn't have a chart-type field, so just put it all in notes for now)
+      // Or, we could just put the notes part in.
+      /** @type {HTMLTextAreaElement} */ (
+        document.getElementById('journal-notes')
+      ).value = match[2] || '';
+    } else {
+      /** @type {HTMLTextAreaElement} */ (
+        document.getElementById('journal-notes')
+      ).value = notes;
+    }
+  } else {
+    /** @type {HTMLTextAreaElement} */ (
+      document.getElementById('journal-notes')
+    ).value = notes;
+  }
+
+  await populateAllAdviceSourceDropdowns();
+  /** @type {HTMLSelectElement} */ (
+    document.getElementById('journal-advice-source')
+  ).value = entry.advice_source_id || '';
+  modal.classList.add('visible');
+}
+// --- END ADDED HELPER ---
 
 /**
  * Attaches event listeners specifically for actions *within* the source details modal content area.
@@ -117,6 +214,21 @@ function initializeModalActionHandlers(
       );
       // --- MODIFIED: This function will now be correctly imported ---
       await handleOpenAddTechniqueModal(target);
+
+      // --- THIS IS THE FIX (Bug 1: Edit Technique Button) ---
+    } else if (target.closest('.edit-journal-technique-btn')) {
+      console.log(
+        '[Modal Actions] Delegating to _populatePaperTradeModalForEdit'
+      );
+      const button = target.closest('.edit-journal-technique-btn');
+      const journalId = /** @type {HTMLElement} */ (button).dataset.journalId;
+      if (journalId) {
+        const entry = details.journalEntries.find(
+          (j) => String(j.id) === journalId
+        );
+        await _populatePaperTradeModalForEdit(entry);
+      }
+      // --- END FIX ---
 
       // --- All other handlers ---
     } else if (target.matches('.add-document-button')) {
@@ -300,6 +412,36 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
       detailsModal.dataset.holderId = String(holderId);
       detailsModal.classList.add('visible');
 
+      // --- THIS IS THE FIX (Bug 4: Refresh on Paper Trade submit) ---
+      // Define the listener function
+      const refreshOnJournalUpdate = () => {
+        if (detailsModal.classList.contains('visible')) {
+          console.log(
+            '[journalUpdated] Event caught by Source Details modal. Refreshing...'
+          );
+          refreshDetails();
+        }
+      };
+      // Add the listener
+      document.addEventListener('journalUpdated', refreshOnJournalUpdate);
+
+      // Add a one-time listener to the close button to clean up our event listener
+      const closeButton = detailsModal.querySelector('.close-button');
+      closeButton?.addEventListener(
+        'click',
+        () => {
+          console.log(
+            "[Source Modal Close] Removing 'journalUpdated' listener."
+          );
+          document.removeEventListener(
+            'journalUpdated',
+            refreshOnJournalUpdate
+          );
+        },
+        { once: true }
+      );
+      // --- END FIX ---
+
       try {
         const holderIdParam =
           typeof holderId === 'number' ? String(holderId) : holderId;
@@ -329,6 +471,9 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
         if (modalContentArea)
           modalContentArea.innerHTML =
             '<p style="color: var(--negative-color);">Error loading details.</p>';
+        // --- ADDED: Clean up listener on error ---
+        document.removeEventListener('journalUpdated', refreshOnJournalUpdate);
+        // --- END ADDED ---
       }
     }
   };

@@ -8,7 +8,9 @@ import { initializeAlertsHandlers } from './_alerts.js';
 import { initializeDailyReportHandlers } from './_dailyReport.js';
 import { initializeImportHandlers } from './_imports.js';
 import { initializeLedgerHandlers } from './_ledger.js';
+// --- FIX: Restore correct import ---
 import { initializeModalHandlers } from './_modals.js';
+// --- END FIX ---
 import { initializeNavigationHandlers } from './_navigation.js';
 import { initializeOrdersHandlers } from './_orders.js';
 import { initializeSettingsModalHandlers } from './_settings_modal.js';
@@ -32,7 +34,9 @@ export function initializeAllEventHandlers() {
     );
 
     initializeNavigationHandlers();
-    initializeModalHandlers();
+    // --- FIX: Restore correct function call ---
+    initializeModalHandlers(); // This adds the global close button listeners
+    // --- END FIX ---
     initializeSettingsModalHandlers();
 
     // Defer page-specific handlers slightly
