@@ -19,7 +19,7 @@ import { initializeHolderManagementHandlers } from './_settings_holders.js';
 import { initializeJournalSettingsHandlers } from './_journal_settings.js';
 import { initializeResearchHandlers } from './_research.js';
 import { initializeDashboardHandlers } from './_dashboard_init.js';
-import { initializeWatchlistHandlers } from './_watchlist.js';
+import { initializeWatchlist } from './_watchlist.js';
 // --- REMOVED: Imports for _journal and _journal_tabs ---
 
 /**
@@ -56,7 +56,7 @@ export function initializeAllEventHandlers() {
         // --- REMOVED: initializeChartsHandlers(); ---
         initializeResearchHandlers(); // This is now for "Sources"
         initializeDashboardHandlers();
-        initializeWatchlistHandlers();
+        initializeWatchlist();
         // --- REMOVED: initializeJournalHandlers() and initializeJournalSubTabHandlers() ---
         console.log('All event handlers initialized.');
       } catch (deferredError) {

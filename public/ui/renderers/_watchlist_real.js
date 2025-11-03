@@ -5,7 +5,9 @@
  */
 
 import { state } from '../../state.js';
-import { fetchOpenPositions } from '../../api/transactions-api.js';
+// --- *** THIS IS THE FIX: Import from the correct file *** ---
+import { fetchOpenPositions } from '../../api/reporting-api.js';
+// --- *** END FIX *** ---
 import { updatePricesForView } from '../../api/price-api.js';
 import {
   formatAccounting,
@@ -66,7 +68,7 @@ function createRealTableHTML(openPositions) {
                 <td class="numeric">${formatQuantity(item.total_quantity)}</td>
                 <td class="numeric">${formatAccounting(item.average_cost)}</td>
                 <td class="numeric">${priceDisplay}</td>
-                <td class->${plDisplay}</td>
+                <td class="numeric">${plDisplay}</td>
                 <td>${item.exchange}</td>
             </tr>
         `;
