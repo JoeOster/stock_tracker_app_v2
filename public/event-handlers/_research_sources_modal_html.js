@@ -124,15 +124,15 @@ export function _renderModalActionsPanel(source) {
             </button>
         `;
   } else {
-    // For Book/Website/etc., show "Add Technique" and "Add Trade Idea"
+    // --- THIS IS THE FIX ---
+    // For Book/Website/Other, ONLY show "Add Technique"
+    // The "Add Trade Idea" button is now correctly on the technique row itself.
     html += `
             <button id="add-technique-btn" data-source-id="${sourceId}" data-source-name="${sourceName}" style="width: 100%;">
                 Add Technique
             </button>
-            <button id="add-idea-from-source-btn" data-source-id="${sourceId}" data-source-name="${sourceName}" style="width: 100%;">
-                Add Trade Idea
-            </button>
         `;
+    // --- END FIX ---
   }
 
   html += '</div>';

@@ -15,8 +15,37 @@ export function getCurrentESTDateString() {
 }
 
 /**
+ * Gets the current date and time as a string in 'YYYY-MM-DDTHH:MM' format for the America/New_York timezone.
+ * @returns {string} The current datetime-local string.
+ */
+export function getCurrentESTDateTimeLocalString() {
+  const now = new Date();
+  const estDate = new Date(
+    now.toLocaleString('en-US', { timeZone: 'America/New_York' })
+  );
+
+  // Get the "wall time" parts from the EST-localized date
+  const year = estDate.getFullYear();
+  const month = estDate.getMonth(); // 0-11
+  const day = estDate.getDate();
+  const hour = estDate.getHours();
+  const minute = estDate.getMinutes();
+
+  // Create a *local* date object using those EST wall time parts
+  const localDateWithESTParts = new Date(year, month, day, hour, minute);
+
+  // Manually format to 'YYYY-MM-DDTHH:MM'
+  const yyyy = localDateWithESTParts.getFullYear();
+  const mm = String(localDateWithESTParts.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+  const dd = String(localDateWithESTParts.getDate()).padStart(2, '0');
+  const hh = String(localDateWithESTParts.getHours()).padStart(2, '0');
+  const min = String(localDateWithESTParts.getMinutes()).padStart(2, '0');
+
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+/**
  * Gets an array containing only the most recent trading day (Mon-Fri) in 'YYYY-MM-DD' format.
- * @param {number} [c=1] - The number of trading days to retrieve (modified to default to 1).
  * @returns {string[]} An array containing a single date string.
  */
 export function getTradingDays() {
@@ -37,7 +66,7 @@ export function getTradingDays() {
       cd.setUTCDate(cd.getUTCDate() - 1);
     }
   }
-  // No need to reverse since we only get one day
+  // No need to reverse since we only get one
   return d;
   // --- END MODIFIED LOGIC ---
 
@@ -51,6 +80,8 @@ export function getTradingDays() {
     }
     return d.reverse();
     */
+  // --- THIS STRAY BRACE WAS THE SYNTAX ERROR ---
+  // }  <-- REMOVED
 }
 
 /**

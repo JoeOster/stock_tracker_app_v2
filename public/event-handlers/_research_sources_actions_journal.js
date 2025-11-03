@@ -23,9 +23,20 @@ export function initializeAddTechniqueModalHandler(refreshDetailsCallback) {
   if (addTechniqueForm && addTechniqueModal) {
     addTechniqueForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // --- THIS IS THE FIX (Same as the Trade Idea modal) ---
+      // 'e.target' IS the form that was submitted.
+      const form = /** @type {HTMLFormElement} */ (e.target);
       const addButton = /** @type {HTMLButtonElement} */ (
-        document.getElementById('add-technique-submit-btn')
+        form.querySelector('#add-technique-submit-btn') // Find the button *inside* the submitted form
       );
+      // --- END FIX ---
+
+      if (!addButton) {
+        console.error('Could not find submit button inside form!');
+        return;
+      }
+
       const holderId = state.selectedAccountHolderId;
 
       // Get context from hidden field

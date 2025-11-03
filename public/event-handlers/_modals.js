@@ -1,204 +1,426 @@
-﻿// public/event-handlers/_modals.js
+﻿// /public/event-handlers/_research_sources_actions_watchlist.js
 /**
- * @file Initializes all event listeners related to modal dialogs.
- * @module event-handlers/_modals
+ * @file Contains action handlers for the Watchlist (Trade Ideas) panel in the Source Details modal.
+ * @module event-handlers/_research_sources_actions_watchlist
  */
 
-import { initializeSelectiveSellModalHandler } from './_modal_selective_sell.js';
-import { initializeSellFromPositionModalHandler } from './_modal_sell_from_position.js';
-import { initializeEditTransactionModalHandler } from './_modal_edit_transaction.js';
-import { initializeManagePositionModalHandler } from './_modal_manage_position.js';
-import { initializeAddPaperTradeModalHandler } from './_modal_add_paper_trade.js';
-// --- MODIFIED: Import the correct handler name ---
-import { initializeSubscriptionPanelHandlers } from './_modal_manage_subscriptions.js';
-// --- ADDED: Static imports to resolve TS/linting errors ---
-import { saveSettings } from '../ui/settings.js';
+import { state, updateState } from '../state.js';
+import { switchView } from './_navigation.js';
+import { showToast, showConfirmationModal } from '../ui/helpers.js';
+import {
+  populateAllAdviceSourceDropdowns,
+  getSourceNameFromId,
+} from '../ui/dropdowns.js';
+import {
+  getCurrentESTDateString,
+  getCurrentESTDateTimeLocalString,
+} from '../ui/datetime.js';
+import { addWatchlistIdea, closeWatchlistIdea } from '../api/watchlist-api.js';
 
 /**
- * --- MODIFIED: Helper function to save settings on modal close ---
- * Now async and awaits the async saveSettings() function.
- * @returns {Promise<void>}
- */
-async function saveSettingsOnClose() {
-  try {
-    // Use the statically imported functions
-    // saveSettings() will show its own toast on success
-    await saveSettings();
-  } catch (err) {
-    console.error('Error saving settings on close:', err);
-    // showToast(`Error saving settings: ${err.message}`, 'error'); // Error already shown by saveSettings
-  }
-}
-
-/**
- * --- NEW: Helper function to clear source details modal ---
- * @param {HTMLElement} modal
+ * Initializes the submit handler for the "Add Trade Idea" modal.
+ * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
  * @returns {void}
  */
-function clearSourceDetailsModal(modal) {
-  if (modal.id === 'source-details-modal') {
-    const contentArea = modal.querySelector('#source-details-modal-content');
-    if (contentArea) contentArea.innerHTML = '<p><i>Loading details...</i></p>'; // Reset content
-    const titleArea = modal.querySelector('#source-details-modal-title');
-    if (titleArea) titleArea.textContent = 'Source Details: --'; // Reset title
-  }
-}
-
-/**
- * Initializes all event listeners for modal dialogs.
- * This function handles generic "close" events and delegates
- * form-specific logic to imported initializers.
- * @returns {void}
- */
-export function initializeModalHandlers() {
-  // Top-right 'X' button
-  document.querySelectorAll('.modal .close-button').forEach((btn) =>
-    btn.addEventListener('click', async (e) => {
-      // Made async
-      const modal = /** @type {HTMLElement} */ (e.target).closest('.modal');
-      if (modal) {
-        if (modal.id === 'settings-modal') {
-          try {
-            await saveSettingsOnClose(); // Added await
-          } catch {
-            console.log(
-              '[Modal Close] saveSettings failed, preventing modal close.'
-            );
-            return; // Do not close modal if save fails
-          }
-        }
-        clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
-
-        if (modal.id === 'image-zoom-modal') {
-          const zoomImage = document.getElementById('zoomed-image-content');
-          if (zoomImage) /** @type {HTMLImageElement} */ (zoomImage).src = '';
-        }
-
-        modal.classList.remove('visible');
-      }
-    })
+export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
+  const addIdeaModal = document.getElementById('add-trade-idea-modal');
+  const addIdeaForm = /** @type {HTMLFormElement} */ (
+    document.getElementById('add-trade-idea-form')
   );
 
-  // Bottom 'Close' or 'Cancel' buttons
-  document
-    .querySelectorAll('.modal .cancel-btn, .modal .close-modal-btn')
-    .forEach((btn) =>
-      btn.addEventListener('click', (e) => {
-        const modal = /** @type {HTMLElement} */ (e.target).closest('.modal');
-        if (modal) {
-          // --- FIX: Don't close modal if this is an inline cancel button ---
-          if (
-            btn.classList.contains('cancel-holder-btn') ||
-            btn.classList.contains('cancel-exchange-btn')
-          ) {
-            return;
-          }
-          // --- END FIX ---
+  if (addIdeaForm && addIdeaModal) {
+    addIdeaForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const addButton = /** @type {HTMLButtonElement} */ (
+        addIdeaModal.querySelector('#add-idea-submit-btn')
+      );
+      const holderId = state.selectedAccountHolderId;
 
-          clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
-          modal.classList.remove('visible');
-        }
-      })
-    );
+      // Get context from hidden fields
+      const formSourceId = /** @type {HTMLInputElement} */ (
+        addIdeaModal.querySelector('#idea-form-source-id')
+      ).value;
+      const formJournalId = /** @type {HTMLInputElement} */ (
+        addIdeaModal.querySelector('#idea-form-journal-id')
+      ).value;
+      const formTicker = /** @type {HTMLInputElement} */ (
+        addIdeaModal.querySelector('#idea-form-ticker')
+      ).value
+        .trim()
+        .toUpperCase();
 
-  // Background click
-  document.querySelectorAll('.modal').forEach((modal) => {
-    modal.addEventListener('click', async (e) => {
-      // Made async
-      if (e.target === modal) {
-        if (modal.id === 'settings-modal') {
-          try {
-            await saveSettingsOnClose(); // Added await
-          } catch {
-            console.log(
-              '[Modal Close] saveSettings failed, preventing modal close.'
-            );
-            return; // Do not close modal if save fails
-          }
-        }
-        clearSourceDetailsModal(/** @type {HTMLElement} */ (modal));
+      // --- THIS IS THE FIX (Part 1) ---
+      // Get form values using the *correct* IDs (with 'rec-' prefix)
+      const rec_entry_low = /** @type {HTMLInputElement} */ (
+        addIdeaModal.querySelector('#idea-form-rec-entry-low')
+      ).value;
+      const rec_entry_high = /** @type {HTMLInputElement} */ (
+        addIdeaModal.querySelector('#idea-form-rec-entry-high')
+      ).value;
+      const rec_tp1 = /** @type {HTMLInputElement} */ (
+        addIdeaModal.querySelector('#idea-form-rec-tp1')
+      ).value;
+      const rec_tp2 = /** @type {HTMLInputElement} */ (
+        addIdeaModal.querySelector('#idea-form-rec-tp2')
+      ).value;
+      const rec_stop_loss = /** @type {HTMLInputElement} */ (
+        addIdeaModal.querySelector('#idea-form-stop-loss')
+      ).value;
+      // --- END FIX ---
 
-        if (modal.id === 'image-zoom-modal') {
-          const zoomImage = document.getElementById('zoomed-image-content');
-          if (zoomImage) /** @type {HTMLImageElement} */ (zoomImage).src = '';
-        }
+      // --- Validation ---
+      if (holderId === 'all' || !formSourceId) {
+        return showToast('Error: Account or Source ID is missing.', 'error');
+      }
+      if (!formTicker || formTicker === 'N/A') {
+        return showToast('Ticker is required and cannot be "N/A".', 'error');
+      }
+      if (!rec_entry_low && !rec_entry_high && !rec_tp1 && !rec_stop_loss) {
+        return showToast(
+          'Please enter at least one guideline (Entry, TP, or SL).',
+          'error'
+        );
+      }
 
-        modal.classList.remove('visible');
+      const ideaData = {
+        account_holder_id: holderId,
+        ticker: formTicker,
+        advice_source_id: formSourceId,
+        journal_entry_id: formJournalId || null,
+        rec_entry_low: rec_entry_low || null,
+        rec_entry_high: rec_entry_high || null,
+        rec_tp1: rec_tp1 || null,
+        rec_tp2: rec_tp2 || null,
+        rec_stop_loss: rec_stop_loss || null,
+      };
+
+      if (addButton) addButton.disabled = true;
+      try {
+        await addWatchlistIdea(ideaData);
+        showToast('New trade idea added!', 'success');
+        addIdeaForm.reset();
+        addIdeaModal.classList.remove('visible');
+
+        await refreshDetailsCallback();
+      } catch (error) {
+        console.error('Failed to add watchlist idea:', error);
+        const err = /** @type {Error} */ (error);
+        showToast(`Error: ${err.message}`, 'error');
+      } finally {
+        if (addButton) addButton.disabled = false;
       }
     });
-  });
+  }
+}
 
-  // --- ADDED: Global Escape Key Handler (Task UX.4) ---
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      // Find all visible modals
-      const visibleModals = /** @type {NodeListOf<HTMLElement>} */ (
-        document.querySelectorAll('.modal.visible')
+/**
+ * Prefills and shows the "Add Trade Idea" modal.
+ * @param {string} sourceId - The ID of the source.
+ * @param {string} sourceName - The name of the source.
+ * @param {string} [ticker=''] - The ticker symbol (optional).
+ * @param {string} [journalId] - Optional: The ID of the technique (journal entry) it's derived from.
+ * @param {object} [defaults] - Optional: Default values from a technique (entry, tp1, tp2, sl).
+ */
+function openAddTradeIdeaModal(
+  sourceId,
+  sourceName,
+  ticker = '',
+  journalId = '',
+  defaults = {}
+) {
+  const addIdeaModal = document.getElementById('add-trade-idea-modal');
+  const addIdeaForm = /** @type {HTMLFormElement} */ (
+    document.getElementById('add-trade-idea-form')
+  );
+
+  if (!addIdeaModal || !addIdeaForm) {
+    return showToast(
+      'UI Error: Could not find the "Add Trade Idea" modal.',
+      'error'
+    );
+  }
+
+  // Reset form
+  addIdeaForm.reset();
+
+  // --- THIS IS THE FIX (Part 2) ---
+  // Helper function for safe value setting, now scoped to the modal
+  const safeSetInputValue = (id, value) => {
+    const el = /** @type {HTMLInputElement} */ (
+      addIdeaModal.querySelector(`#${id}`)
+    );
+    if (el) {
+      el.value = value;
+    } else {
+      console.error(
+        `openAddTradeIdeaModal: Element with ID "${id}" not found INSIDE modal.`
       );
-      if (visibleModals.length === 0) return; // No modals open
+    }
+    return el; // Return the element (or null) for further use
+  };
+  // --- END FIX ---
 
-      // Find the top-most modal
-      let topModal = visibleModals[0];
-      let maxZ = parseInt(window.getComputedStyle(topModal).zIndex || '0', 10);
+  // Set new context (linking to the source and ticker)
+  safeSetInputValue('idea-form-source-id', sourceId);
+  safeSetInputValue('idea-form-journal-id', journalId);
 
-      visibleModals.forEach((modal) => {
-        const z = parseInt(window.getComputedStyle(modal).zIndex || '0', 10);
-        if (z > maxZ) {
-          topModal = modal;
-          maxZ = z;
-        }
-      });
+  // Handle optional/N/A ticker
+  const tickerInput = safeSetInputValue(
+    'idea-form-ticker',
+    ticker === 'N/A' ? '' : ticker
+  );
+  const isTickerReadOnly = !!ticker && ticker !== 'N/A';
+  if (tickerInput) {
+    tickerInput.readOnly = isTickerReadOnly;
+  }
 
-      // Trigger its close button
-      const closeButton = /** @type {HTMLElement | null} */ (
-        topModal.querySelector('.close-button')
-      );
-      if (closeButton) {
-        closeButton.click(); // This will trigger the async saveSettingsOnClose if it's the settings modal
-      } else {
-        // Fallback if no 'X' button (shouldn't happen)
-        topModal.classList.remove('visible');
+  // Set the link display text
+  const linkDisplaySpan = addIdeaModal.querySelector(
+    '#idea-form-link-display span'
+  );
+  if (linkDisplaySpan) {
+    linkDisplaySpan.textContent = `Source: "${sourceName}"${
+      isTickerReadOnly ? ` | Ticker: ${ticker}` : ''
+    }`;
+  }
+
+  // Set default date/time to now
+  safeSetInputValue('idea-form-date', getCurrentESTDateTimeLocalString());
+
+  // Set default values if provided (from a technique)
+  if (defaults) {
+    // --- THIS IS THE FIX (Part 3) ---
+    // Use the *correct* IDs (with 'rec-' prefix)
+    // @ts-ignore
+    safeSetInputValue('idea-form-rec-entry-low', defaults.entry || '');
+    // @ts-ignore
+    safeSetInputValue('idea-form-rec-tp1', defaults.tp1 || '');
+    // @ts-ignore
+    safeSetInputValue('idea-form-rec-tp2', defaults.tp2 || '');
+    // @ts-ignore
+    safeSetInputValue('idea-form-rec-stop-loss', defaults.sl || '');
+    // --- END FIX ---
+  }
+
+  // Show the modal
+  addIdeaModal.classList.add('visible');
+
+  // Focus logic
+  if (!isTickerReadOnly) {
+    if (tickerInput) tickerInput.focus();
+  } else {
+    const entryLowInput = addIdeaModal.querySelector(
+      '#idea-form-rec-entry-low' // Use correct ID for focus
+    );
+    if (entryLowInput) {
+      /** @type {HTMLInputElement} */ (entryLowInput).focus();
+    }
+  }
+}
+
+/**
+ * Handles click on "Add Trade Idea" from a Person/Group source.
+ * @param {HTMLElement} target - The button element that was clicked.
+ * @returns {Promise<void>}
+ */
+export async function handleCreateTradeIdeaFromSource(target) {
+  const { sourceId, sourceName } = target.dataset;
+
+  if (!sourceId || !sourceName) {
+    return showToast('Error: Missing data from source button.', 'error');
+  }
+
+  openAddTradeIdeaModal(sourceId, sourceName);
+}
+
+/**
+ * Handles click on "Add Trade Idea" from a Book/Website/etc. source.
+ * @param {HTMLElement} target - The button element that was clicked.
+ * @param {any[]} journalEntries - The list of techniques to choose from.
+ * @returns {Promise<void>}
+ */
+export async function handleCreateTradeIdeaFromBook(target, journalEntries) {
+  const { sourceId, sourceName } = target.dataset;
+  if (!sourceId || !sourceName) {
+    return showToast('Error: Missing data from source button.', 'error');
+  }
+
+  const openTechniques = journalEntries.filter((j) => j.status === 'OPEN');
+  if (openTechniques.length === 0) {
+    return showToast(
+      'Please add a "Technique" first, then you can develop an idea from it.',
+      'info',
+      5000
+    );
+  }
+
+  if (openTechniques.length === 1) {
+    const technique = openTechniques[0];
+    const defaults = {
+      entry: technique.entry_price,
+      tp1: technique.target_price,
+      tp2: technique.target_price_2,
+      sl: technique.stop_loss_price,
+    };
+    openAddTradeIdeaModal(
+      sourceId,
+      sourceName,
+      technique.ticker,
+      String(technique.id),
+      defaults
+    );
+  } else {
+    showToast(
+      'Opening blank idea. Or, click "Add Idea" on a specific technique row below.',
+      'info',
+      5000
+    );
+    openAddTradeIdeaModal(sourceId, sourceName); // Open blank
+  }
+}
+
+/**
+ * Handles click on "Add Idea" from a specific Technique row.
+ * @param {HTMLElement} target - The button element that was clicked.
+ * @param {any[]} journalEntries - The list of techniques.
+ * @returns {Promise<void>}
+ */
+export async function handleCreateTradeIdeaFromTechnique(
+  target,
+  journalEntries
+) {
+  const { journalId, ticker, entry, tp1, tp2, sl } = target.dataset;
+
+  const technique = journalEntries.find((j) => String(j.id) === journalId);
+  if (!technique || !technique.advice_source_id) {
+    return showToast(
+      'Error: Could not find linked source for this technique.',
+      'error'
+    );
+  }
+
+  const sourceName = getSourceNameFromId(technique.advice_source_id);
+  if (!sourceName) {
+    return showToast('Error: Could not find source data.', 'error');
+  }
+
+  const defaults = { entry, tp1, tp2, sl };
+  openAddTradeIdeaModal(
+    String(technique.advice_source_id),
+    sourceName,
+    ticker,
+    journalId,
+    defaults
+  );
+}
+
+// ... (rest of file: handleCreateBuyOrderFromIdea, handleCreatePaperTradeFromIdea, handleCloseWatchlistIdea are unchanged) ...
+export async function handleCreateBuyOrderFromIdea(target) {
+  const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId, sourceName } =
+    target.dataset;
+
+  const prefillData = {
+    sourceId: sourceId,
+    sourceName: sourceName,
+    ticker: ticker,
+    price: entryHigh || entryLow || '',
+    tp1: tp1 || null,
+    tp2: tp2 || null,
+    sl: sl || null,
+  };
+
+  updateState({ prefillOrderFromSource: prefillData });
+  await switchView('orders');
+
+  showToast(`Prefilling "Log Trade" form for ${ticker}...`, 'info');
+}
+export async function handleCreatePaperTradeFromIdea(target) {
+  const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId } =
+    target.dataset;
+  if (!ticker) {
+    return showToast('Error: Ticker not found.', 'error');
+  }
+
+  // Find the modal and form
+  const addJournalModal = document.getElementById('add-paper-trade-modal');
+  const addJournalForm = /** @type {HTMLFormElement} */ (
+    document.getElementById('add-journal-entry-form')
+  );
+  if (!addJournalModal || !addJournalForm) {
+    return showToast('Error: Could not find paper trade modal.', 'error');
+  }
+
+  // Reset form
+  addJournalForm.reset();
+
+  // Set title and context
+  /** @type {HTMLElement} */ (
+    document.getElementById('add-paper-trade-modal-title')
+  ).textContent = `Convert Idea to Paper Trade: ${ticker}`;
+  /** @type {HTMLButtonElement} */ (
+    document.getElementById('add-journal-entry-btn')
+  ).textContent = 'Add Journal Entry';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-form-entry-id')
+  ).value = ''; // Ensure it's a new entry
+
+  // Pre-fill data
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-entry-date')
+  ).value = getCurrentESTDateString();
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-ticker')
+  ).value = ticker;
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-quantity')
+  ).value = '0'; // User must enter quantity
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-entry-price')
+  ).value = entryLow || entryHigh || '';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-target-price')
+  ).value = tp1 || '';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-target-price-2')
+  ).value = tp2 || '';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-stop-loss-price')
+  ).value = sl || '';
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-entry-reason')
+  ).value = 'Converted from Watchlist Trade Idea';
+
+  // Pre-fill and load advice source dropdown
+  await populateAllAdviceSourceDropdowns();
+  /** @type {HTMLSelectElement} */ (
+    document.getElementById('journal-advice-source')
+  ).value = sourceId || '';
+
+  // Show the modal
+  addJournalModal.classList.add('visible');
+  /** @type {HTMLInputElement} */ (
+    document.getElementById('journal-quantity')
+  ).focus();
+}
+export async function handleCloseWatchlistIdea(
+  itemId,
+  ticker,
+  refreshDetailsCallback
+) {
+  if (!itemId) return;
+
+  showConfirmationModal(
+    `Archive ${ticker} Idea?`,
+    'Are you sure you want to close this trade idea? This will hide it from the list.',
+    async () => {
+      try {
+        await closeWatchlistIdea(itemId);
+        showToast(`Trade idea for ${ticker} archived.`, 'success');
+        await refreshDetailsCallback(); // Refresh the modal
+      } catch (error) {
+        // @ts-ignore
+        showToast(`Error: ${error.message}`, 'error');
       }
     }
-  });
-  // --- END ADDED ---
-
-  // --- Initialize Form-Specific Modal Handlers ---
-  try {
-    initializeSelectiveSellModalHandler();
-  } catch (e) {
-    console.error('Error initializing SelectiveSellModalHandler:', e);
-  }
-
-  try {
-    initializeSellFromPositionModalHandler();
-  } catch (e) {
-    console.error('Error initializing SellFromPositionModalHandler:', e);
-  }
-
-  try {
-    initializeEditTransactionModalHandler();
-  } catch (e) {
-    console.error('Error initializing EditTransactionModalHandler:', e);
-  }
-
-  try {
-    initializeManagePositionModalHandler();
-  } catch (e) {
-    console.error('Error initializing ManagePositionModalHandler:', e);
-  }
-
-  try {
-    initializeAddPaperTradeModalHandler();
-  } catch (e) {
-    console.error('Error initializing AddPaperTradeModalHandler:', e);
-  }
-
-  // --- MODIFIED: Call correct function name ---
-  try {
-    initializeSubscriptionPanelHandlers();
-  } catch (e) {
-    console.error('Error initializing ManageSubscriptionsModalHandler:', e);
-  }
-  // --- END MODIFIED ---
-} // End of initializeModalHandlers function
+  );
+}

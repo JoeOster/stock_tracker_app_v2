@@ -1,4 +1,4 @@
-﻿// public/event-handlers/_research_sources_actions_watchlist.js
+﻿// /public/event-handlers/_research_sources_actions_watchlist.js
 /**
  * @file Contains action handlers for the Watchlist (Trade Ideas) panel in the Source Details modal.
  * @module event-handlers/_research_sources_actions_watchlist
@@ -11,7 +11,10 @@ import {
   populateAllAdviceSourceDropdowns,
   getSourceNameFromId,
 } from '../ui/dropdowns.js';
-import { getCurrentESTDateString } from '../ui/datetime.js';
+import {
+  getCurrentESTDateString,
+  getCurrentESTDateTimeLocalString,
+} from '../ui/datetime.js';
 import { addWatchlistIdea, closeWatchlistIdea } from '../api/watchlist-api.js';
 
 /**
@@ -29,51 +32,49 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
     addIdeaForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const addButton = /** @type {HTMLButtonElement} */ (
-        document.getElementById('add-idea-submit-btn')
+        addIdeaModal.querySelector('#add-idea-submit-btn')
       );
       const holderId = state.selectedAccountHolderId;
 
       // Get context from hidden fields
       const formSourceId = /** @type {HTMLInputElement} */ (
-        document.getElementById('idea-form-source-id')
+        addIdeaModal.querySelector('#idea-form-source-id')
       ).value;
       const formJournalId = /** @type {HTMLInputElement} */ (
-        document.getElementById('idea-form-journal-id')
+        addIdeaModal.querySelector('#idea-form-journal-id')
       ).value;
-      // --- MODIFICATION: Read ticker from the (now-editable) input ---
       const formTicker = /** @type {HTMLInputElement} */ (
-        document.getElementById('idea-form-ticker')
+        addIdeaModal.querySelector('#idea-form-ticker')
       ).value
         .trim()
         .toUpperCase();
-      // --- END MODIFICATION ---
 
-      // Get form values
+      // --- THIS IS THE FIX (Part 1) ---
+      // Get form values using the *correct* IDs (with 'rec-' prefix)
       const rec_entry_low = /** @type {HTMLInputElement} */ (
-        document.getElementById('idea-form-rec-entry-low')
+        addIdeaModal.querySelector('#idea-form-rec-entry-low')
       ).value;
       const rec_entry_high = /** @type {HTMLInputElement} */ (
-        document.getElementById('idea-form-rec-entry-high')
+        addIdeaModal.querySelector('#idea-form-rec-entry-high')
       ).value;
       const rec_tp1 = /** @type {HTMLInputElement} */ (
-        document.getElementById('idea-form-rec-tp1')
+        addIdeaModal.querySelector('#idea-form-rec-tp1')
       ).value;
       const rec_tp2 = /** @type {HTMLInputElement} */ (
-        document.getElementById('idea-form-rec-tp2')
+        addIdeaModal.querySelector('#idea-form-rec-tp2')
       ).value;
       const rec_stop_loss = /** @type {HTMLInputElement} */ (
-        document.getElementById('idea-form-rec-stop-loss')
+        addIdeaModal.querySelector('#idea-form-stop-loss')
       ).value;
+      // --- END FIX ---
 
       // --- Validation ---
       if (holderId === 'all' || !formSourceId) {
         return showToast('Error: Account or Source ID is missing.', 'error');
       }
-      // --- ADDED: Ticker validation ---
-      if (!formTicker) {
-        return showToast('Ticker is required.', 'error');
+      if (!formTicker || formTicker === 'N/A') {
+        return showToast('Ticker is required and cannot be "N/A".', 'error');
       }
-      // --- END ADDED ---
       if (!rec_entry_low && !rec_entry_high && !rec_tp1 && !rec_stop_loss) {
         return showToast(
           'Please enter at least one guideline (Entry, TP, or SL).',
@@ -93,7 +94,7 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
         rec_stop_loss: rec_stop_loss || null,
       };
 
-      addButton.disabled = true;
+      if (addButton) addButton.disabled = true;
       try {
         await addWatchlistIdea(ideaData);
         showToast('New trade idea added!', 'success');
@@ -106,14 +107,13 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
         const err = /** @type {Error} */ (error);
         showToast(`Error: ${err.message}`, 'error');
       } finally {
-        addButton.disabled = false;
+        if (addButton) addButton.disabled = false;
       }
     });
   }
 }
 
 /**
- * --- MODIFIED: Ticker is now optional ---
  * Prefills and shows the "Add Trade Idea" modal.
  * @param {string} sourceId - The ID of the source.
  * @param {string} sourceName - The name of the source.
@@ -143,70 +143,80 @@ function openAddTradeIdeaModal(
   // Reset form
   addIdeaForm.reset();
 
-  // Set new context (linking to the source and ticker)
-  /** @type {HTMLInputElement} */ (
-    document.getElementById('idea-form-source-id')
-  ).value = sourceId;
-  /** @type {HTMLInputElement} */ (
-    document.getElementById('idea-form-journal-id')
-  ).value = journalId;
+  // Helper function for safe value setting, now scoped to the modal
+  const safeSetInputValue = (id, value) => {
+    const el = /** @type {HTMLInputElement} */ (
+      addIdeaModal.querySelector(`#${id}`)
+    );
+    if (el) {
+      el.value = value;
+    } else {
+      console.error(
+        `openAddTradeIdeaModal: Element with ID "${id}" not found INSIDE modal.`
+      );
+    }
+    return el; // Return the element (or null) for further use
+  };
 
-  // --- MODIFICATION: Handle optional ticker ---
-  const tickerInput = /** @type {HTMLInputElement} */ (
-    document.getElementById('idea-form-ticker')
+  // Set new context (linking to the source and ticker)
+  safeSetInputValue('idea-form-source-id', sourceId);
+  safeSetInputValue('idea-form-journal-id', journalId);
+
+  // Handle optional/N/A ticker
+  const tickerInput = safeSetInputValue(
+    'idea-form-ticker',
+    ticker === 'N/A' ? '' : ticker
   );
-  tickerInput.value = ticker;
-  // If ticker is pre-filled (from a technique), make it read-only
-  // If it's empty (from Person/Group), make it editable
-  tickerInput.readOnly = !!ticker;
-  // --- END MODIFICATION ---
+  const isTickerReadOnly = !!ticker && ticker !== 'N/A';
+  if (tickerInput) {
+    tickerInput.readOnly = isTickerReadOnly;
+  }
 
   // Set the link display text
-  const linkDisplaySpan = document.querySelector(
+  const linkDisplaySpan = addIdeaModal.querySelector(
     '#idea-form-link-display span'
   );
   if (linkDisplaySpan) {
-    // --- MODIFICATION: Update text to reflect optional ticker ---
-    linkDisplaySpan.textContent = `Source: "${sourceName}"${ticker ? ` | Ticker: ${ticker}` : ''}`;
-    // --- END MODIFICATION ---
+    linkDisplaySpan.textContent = `Source: "${sourceName}"${
+      isTickerReadOnly ? ` | Ticker: ${ticker}` : ''
+    }`;
   }
+
+  // Set default date/time to now
+  safeSetInputValue('idea-form-date', getCurrentESTDateTimeLocalString());
 
   // Set default values if provided (from a technique)
   if (defaults) {
+    // --- THIS IS THE FIX (Part 2) ---
+    // Use the *correct* IDs (with 'rec-' prefix)
     // @ts-ignore
-    /** @type {HTMLInputElement} */ (
-      document.getElementById('idea-form-rec-entry-low')
-    ).value = defaults.entry || '';
+    safeSetInputValue('idea-form-rec-entry-low', defaults.entry || '');
     // @ts-ignore
-    /** @type {HTMLInputElement} */ (
-      document.getElementById('idea-form-rec-tp1')
-    ).value = defaults.tp1 || '';
+    safeSetInputValue('idea-form-rec-tp1', defaults.tp1 || '');
     // @ts-ignore
-    /** @type {HTMLInputElement} */ (
-      document.getElementById('idea-form-rec-tp2')
-    ).value = defaults.tp2 || '';
+    safeSetInputValue('idea-form-rec-tp2', defaults.tp2 || '');
     // @ts-ignore
-    /** @type {HTMLInputElement} */ (
-      document.getElementById('idea-form-rec-stop-loss')
-    ).value = defaults.sl || '';
+    safeSetInputValue('idea-form-rec-stop-loss', defaults.sl || '');
+    // --- END FIX ---
   }
 
   // Show the modal
   addIdeaModal.classList.add('visible');
 
-  // --- MODIFICATION: Focus ticker input if it's empty, otherwise focus entry-low ---
-  if (!ticker) {
-    tickerInput.focus();
+  // Focus logic
+  if (!isTickerReadOnly) {
+    if (tickerInput) tickerInput.focus();
   } else {
-    /** @type {HTMLInputElement} */ (
-      document.getElementById('idea-form-rec-entry-low')
-    ).focus();
+    const entryLowInput = addIdeaModal.querySelector(
+      '#idea-form-rec-entry-low' // Use correct ID for focus
+    );
+    if (entryLowInput) {
+      /** @type {HTMLInputElement} */ (entryLowInput).focus();
+    }
   }
-  // --- END MODIFICATION ---
 }
 
 /**
- * --- MODIFIED: This function no longer uses prompt() ---
  * Handles click on "Add Trade Idea" from a Person/Group source.
  * @param {HTMLElement} target - The button element that was clicked.
  * @returns {Promise<void>}
@@ -218,10 +228,7 @@ export async function handleCreateTradeIdeaFromSource(target) {
     return showToast('Error: Missing data from source button.', 'error');
   }
 
-  // --- THIS IS THE FIX ---
-  // Open the modal directly, allowing the user to fill in the ticker.
   openAddTradeIdeaModal(sourceId, sourceName);
-  // --- END FIX ---
 }
 
 /**
@@ -262,15 +269,11 @@ export async function handleCreateTradeIdeaFromBook(target, journalEntries) {
     );
   } else {
     showToast(
-      'Please click "Add Idea" on a specific technique row below.',
+      'Opening blank idea. Or, click "Add Idea" on a specific technique row below.',
       'info',
       5000
     );
-    document.getElementById('source-details-modal-content')?.scrollTo({
-      // @ts-ignore
-      top: document.getElementById('paper-trades-open-table')?.offsetTop || 0,
-      behavior: 'smooth',
-    });
+    openAddTradeIdeaModal(sourceId, sourceName); // Open blank
   }
 }
 
