@@ -1,6 +1,6 @@
 # joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Watchlist/docs/Portfolio Manager Implementation Guide.md
 
-# Portfolio Manager Implementation Guide
+## Portfolio Manager Implementation Guide
 
 A high-level overview of the application's architecture, implementation details, and areas for future improvement.
 

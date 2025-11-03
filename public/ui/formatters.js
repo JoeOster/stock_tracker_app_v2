@@ -1,4 +1,4 @@
-// /public/ui/formatters.js
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Watchlist/public/ui/formatters.js
 // Version Updated
 /**
  * @file Contains all UI helper functions for formatting data for display.
@@ -76,7 +76,7 @@ export function formatAccounting(number, isCurrency = true) {
  * @param {number | string | null | undefined} number - The number to format (e.g., 0.05 for 5%).
  * @returns {string} The formatted percentage string.
  */
-export function formatPercentage(number) {
+export function formatPercent(number) {
   const num = typeof number === 'string' ? parseFloat(number) : number;
   if (num === null || num === undefined || isNaN(num)) {
     return '';
@@ -114,3 +114,7 @@ export function formatDate(dateString) {
   }
 }
 // --- END ADDED ---
+
+// --- *** THIS IS THE FIX: Removed extra closing brace *** ---
+// }
+// --- *** END FIX *** ---

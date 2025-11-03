@@ -1,439 +1,229 @@
-// /public/event-handlers/_watchlist.js
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Watchlist/public/event-handlers/_watchlist.js
 /**
- * @file Manages the "Watchlist" page, including sub-tab switching and content loading.
+ * @file Main event handler for the Watchlist view.
  * @module event-handlers/_watchlist
  */
 
-import { state, updateState } from '../state.js';
-import {
-  showToast,
-  showConfirmationModal,
-  sortTableByColumn,
-} from '../ui/helpers.js';
-import { setActiveTab } from './_settings_modal.js';
-import { renderWatchlistRealPositions } from '../ui/renderers/_watchlist_real.js';
-// --- ADDED: Journal-related imports ---
-import { fetchJournalEntries } from '../api/journal-api.js';
-import { renderJournalPage } from '../ui/renderers/_journal.js';
-import { initializeJournalFilterHandlers } from './_journal_filters.js';
-import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
-import { getCurrentESTDateString } from '../ui/datetime.js';
-// --- ADDED: Watched Ticker imports ---
+// --- *** THIS IS THE FIX: Removed unused 'updateState' *** ---
+import { state } from '../state.js';
+// --- *** END FIX *** ---
 import { renderWatchedTickers } from '../ui/renderers/_watchlist_watched.js';
+import { renderRealTickers } from '../ui/renderers/_watchlist_real.js';
+import { showToast, showConfirmationModal } from '../ui/helpers.js';
+// --- *** THIS IS THE FIX: Corrected spelling of 'Watched' *** ---
 import {
   addSimpleWatchedTicker,
   deleteSimpleWatchedTicker,
+  closeWatchlistIdea,
 } from '../api/watchlist-api.js';
-// --- END ADDED ---
+// --- *** END FIX *** ---
+import { renderWatchlistIdeas } from '../ui/renderers/_watchlist_ideas.js';
 
 /**
- * --- NEW: Fetches and renders the Paper Trades sub-tab ---
- * This logic is moved from the old loadJournalPage.
- * @param {HTMLDivElement} panelElement - The panel element to render into.
- * @returns {Promise<void>}
+ * Stores the currently active sub-tab ('watched', 'ideas', 'real').
+ * @type {string}
  */
-async function renderWatchlistPaperTrades(panelElement) {
-  const openTableBody = panelElement.querySelector('#journal-open-body');
-  const closedTableBody = panelElement.querySelector('#journal-closed-body');
-
-  if (!openTableBody || !closedTableBody) {
-    panelElement.innerHTML =
-      '<h3>Paper Trades</h3><p style="color: var(--negative-color);">Error: Table body elements not found.</p>';
-    return;
-  }
-
-  openTableBody.innerHTML =
-    '<tr><td colspan="11">Loading open entries...</td></tr>';
-  closedTableBody.innerHTML =
-    '<tr><td colspan="10">Loading closed entries...</td></tr>';
-
-  let openEntries = [];
-  let closedEntriesCombined = [];
-
-  try {
-    const holderId =
-      state.selectedAccountHolderId === 'all' || !state.selectedAccountHolderId
-        ? null
-        : String(state.selectedAccountHolderId);
-
-    if (holderId) {
-      openEntries = await fetchJournalEntries(holderId, 'OPEN');
-      const results = await Promise.allSettled([
-        fetchJournalEntries(holderId, 'CLOSED'),
-        fetchJournalEntries(holderId, 'EXECUTED'),
-        fetchJournalEntries(holderId, 'CANCELLED'),
-      ]);
-      results.forEach((result) => {
-        if (result.status === 'fulfilled')
-          closedEntriesCombined.push(...result.value);
-      });
-      closedEntriesCombined.sort((a, b) =>
-        (b.exit_date || b.entry_date).localeCompare(a.exit_date || a.entry_date)
-      );
-    } else {
-      if (openTableBody)
-        openTableBody.innerHTML =
-          '<tr><td colspan="11">Please select an account holder to view journal entries.</td></tr>';
-      if (closedTableBody)
-        closedTableBody.innerHTML =
-          '<tr><td colspan="10">Please select an account holder.</td></tr>';
-    }
-
-    updateState({
-      journalEntries: {
-        openEntries: openEntries,
-        closedEntries: closedEntriesCombined,
-      },
-    });
-    renderJournalPage(
-      { openEntries, closedEntries: closedEntriesCombined },
-      true
-    ); // true = readOnly
-  } catch (error) {
-    console.error('Error loading paper trades for watchlist:', error);
-    // @ts-ignore
-    showToast(`Error loading paper trades: ${error.message}`, 'error');
-    if (openTableBody)
-      openTableBody.innerHTML =
-        '<tr><td colspan="11">Error loading open entries.</td></tr>';
-    if (closedTableBody)
-      closedTableBody.innerHTML =
-        '<tr><td colspan="10">Error loading closed entries.</td></tr>';
-  }
-}
+let activeSubTab = 'watched';
 
 /**
- * Loads data and renders content based on the active sub-tab for the Watchlist page.
- * @async
+ * Refreshes the content of the currently active sub-tab.
  * @returns {Promise<void>}
  */
-export async function loadWatchlistPage() {
-  const watchlistContainer = document.getElementById(
-    'watchlist-page-container'
+async function refreshActiveSubTab() {
+  const panelElement = /** @type {HTMLDivElement} */ (
+    document.getElementById('watchlist-content-panel')
   );
-  if (!watchlistContainer) {
-    console.error('[Watchlist Loader] Watchlist page container not found.');
-    return;
-  }
-
-  const activeSubTabButton = watchlistContainer.querySelector(
-    '.watchlist-sub-tabs .sub-tab.active'
-  );
-  const activeSubTabId =
-    activeSubTabButton instanceof HTMLElement
-      ? activeSubTabButton.dataset.subTab
-      : 'watchlist-real-panel';
-
-  console.log(
-    `[Watchlist Loader] Preparing to load content for sub-tab: ${activeSubTabId}`
-  );
-
-  const realPanel = /** @type {HTMLDivElement | null} */ (
-    document.getElementById('watchlist-real-panel')
-  );
-  const paperPanel = /** @type {HTMLDivElement | null} */ (
-    document.getElementById('watchlist-paper-panel')
-  );
-  const watchedPanel = /** @type {HTMLDivElement | null} */ (
-    document.getElementById('watchlist-watched-panel')
-  );
+  if (!panelElement) return;
 
   try {
-    switch (activeSubTabId) {
-      case 'watchlist-real-panel':
-        if (realPanel) {
-          await renderWatchlistRealPositions(realPanel);
-        }
-        break;
-      case 'watchlist-paper-panel':
-        if (paperPanel) {
-          await renderWatchlistPaperTrades(paperPanel);
-        }
-        break;
-      // --- MODIFIED: Call the new render function ---
-      case 'watchlist-watched-panel':
-        if (watchedPanel) {
-          await renderWatchedTickers(watchedPanel);
-        }
-        break;
-      // --- END MODIFICATION ---
+    if (activeSubTab === 'watched') {
+      await renderWatchedTickers(panelElement);
+    } else if (activeSubTab === 'ideas') {
+      await renderWatchlistIdeas(panelElement);
+    } else if (activeSubTab === 'real') {
+      await renderRealTickers(panelElement);
     }
   } catch (error) {
     console.error(
-      `[Watchlist Loader] Error loading content for ${activeSubTabId}:`,
+      `Error refreshing watchlist sub-tab '${activeSubTab}':`,
       error
     );
     // @ts-ignore
-    showToast(`Failed to load content: ${error.message}`, 'error');
-    const errorPanel = document.getElementById(activeSubTabId);
-    if (errorPanel) {
-      errorPanel.innerHTML =
-        '<p style="color: var(--negative-color);">Error loading content.</p>';
-    }
+    showToast(`Error loading ${activeSubTab} list: ${error.message}`, 'error');
   }
 }
 
 /**
- * Handles clicks on "Add Paper Trade" and "Edit" buttons.
+ * Handles clicks on the sub-tabs ('Watched', 'Trade Ideas', 'From Real Trades').
  * @param {Event} e - The click event.
+ * @returns {Promise<void>}
  */
-async function handlePaperTradeActions(e) {
+async function handleSubTabClick(e) {
+  const target = /** @type {HTMLElement} */ (e.target);
+  if (!target.classList.contains('sub-tab')) return;
+
+  const newSubTab = target.dataset.tab;
+  if (!newSubTab || newSubTab === activeSubTab) return;
+
+  activeSubTab = newSubTab;
+
+  // Update active class
+  document.querySelectorAll('.sub-tab').forEach((tab) => {
+    tab.classList.remove('active');
+  });
+  target.classList.add('active');
+
+  await refreshActiveSubTab();
+}
+
+/**
+ * Handles all click events within the watchlist panel, delegating to sub-handlers.
+ * @param {Event} e - The click event.
+ * @returns {Promise<void>}
+ */
+async function handleWatchlistClicks(e) {
   const target = /** @type {HTMLElement} */ (e.target);
 
-  // --- Handle "Add Paper Trade" Button ---
-  if (target.matches('#watchlist-add-paper-trade-btn')) {
-    const modal = document.getElementById('add-paper-trade-modal');
-    const form = /** @type {HTMLFormElement} */ (
-      document.getElementById('add-journal-entry-form')
-    );
-    if (modal && form) {
-      form.reset();
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-entry-date')
-      ).value = getCurrentESTDateString();
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-form-entry-id')
-      ).value = '';
-      /** @type {HTMLElement} */ (
-        document.getElementById('add-paper-trade-modal-title')
-      ).textContent = 'Add New Journal Entry / Idea';
-      /** @type {HTMLButtonElement} */ (
-        document.getElementById('add-journal-entry-btn')
-      ).textContent = 'Add Journal Entry';
-      await populateAllAdviceSourceDropdowns();
-      modal.classList.add('visible');
-    }
+  // --- Delegate to "Watched" tickers handler ---
+  if (target.matches('#add-watched-ticker-form button[type="submit"]')) {
+    e.preventDefault();
+    await handleAddWatchedTicker();
+  } else if (target.classList.contains('delete-watched-ticker-btn')) {
+    await handleDeleteWatchedTicker(target);
   }
 
-  // --- Handle "Edit" Button (from table) ---
-  if (target.matches('.journal-edit-btn')) {
-    const journalId = target.dataset.id;
-    if (!journalId) return;
-
-    // @ts-ignore
-    const openEntry = state.journalEntries?.openEntries.find(
-      (e) => String(e.id) === journalId
-    );
-    // @ts-ignore
-    const closedEntry = state.journalEntries?.closedEntries.find(
-      (e) => String(e.id) === journalId
-    );
-    const entry = openEntry || closedEntry;
-
-    if (!entry) {
-      return showToast('Error: Could not find entry data to edit.', 'error');
-    }
-
-    const modal = document.getElementById('add-paper-trade-modal');
-    const form = /** @type {HTMLFormElement} */ (
-      document.getElementById('add-journal-entry-form')
-    );
-    if (modal && form) {
-      form.reset();
-      /** @type {HTMLElement} */ (
-        document.getElementById('add-paper-trade-modal-title')
-      ).textContent = `Edit Entry: ${entry.ticker}`;
-      /** @type {HTMLButtonElement} */ (
-        document.getElementById('add-journal-entry-btn')
-      ).textContent = 'Save Changes';
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-form-entry-id')
-      ).value = entry.id;
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-entry-date')
-      ).value = entry.entry_date;
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-ticker')
-      ).value = entry.ticker;
-      /** @type {HTMLSelectElement} */ (
-        document.getElementById('journal-exchange')
-      ).value = entry.exchange;
-      /** @type {HTMLSelectElement} */ (
-        document.getElementById('journal-direction')
-      ).value = entry.direction;
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-quantity')
-      ).value = String(entry.quantity);
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-entry-price')
-      ).value = String(entry.entry_price);
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-target-price')
-      ).value = entry.target_price || '';
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-target-price-2')
-      ).value = entry.target_price_2 || '';
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-stop-loss-price')
-      ).value = entry.stop_loss_price || '';
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-advice-details')
-      ).value = entry.advice_source_details || '';
-      /** @type {HTMLInputElement} */ (
-        document.getElementById('journal-entry-reason')
-      ).value = entry.entry_reason || '';
-      /** @type {HTMLTextAreaElement} */ (
-        document.getElementById('journal-notes')
-      ).value = entry.notes || '';
-      await populateAllAdviceSourceDropdowns();
-      /** @type {HTMLSelectElement} */ (
-        document.getElementById('journal-advice-source')
-      ).value = entry.advice_source_id || '';
-      modal.classList.add('visible');
-    }
+  // --- Delegate to "Trade Ideas" handler ---
+  if (target.classList.contains('delete-watchlist-idea-btn')) {
+    await handleDeleteWatchlistIdea(target);
   }
 }
 
-// --- ADDED: Handler for 'Watched Tickers' actions ---
 /**
- * Handles form submission and delete clicks for the "Watched Tickers" sub-tab.
- * @param {Event} e - The event (click or submit).
+ * Handles submission of the "Add Ticker" form.
+ * @returns {Promise<void>}
  */
-async function handleWatchedTickerActions(e) {
-  const target = /** @type {HTMLElement} */ (e.target);
+async function handleAddWatchedTicker() {
+  const input = /** @type {HTMLInputElement} */ (
+    document.getElementById('add-watched-ticker-input')
+  );
+  const ticker = input.value.trim().toUpperCase();
+  // @ts-ignore
+  const holderId = state.selectedAccountHolderId;
 
-  // --- Handle "Add Ticker" Form Submit ---
-  if (
-    target.matches('#add-watched-ticker-form') ||
-    target.closest('#add-watched-ticker-form')
-  ) {
-    e.preventDefault(); // Prevent form submission
-    const input = /** @type {HTMLInputElement} */ (
-      document.getElementById('add-watched-ticker-input')
-    );
-    const ticker = input.value.trim().toUpperCase();
-    if (!ticker) {
-      return showToast('Please enter a ticker symbol.', 'error');
-    }
-
-    try {
-      const result = await addSimpleWatchedTicker(
-        ticker,
-        state.selectedAccountHolderId
-      );
-      showToast(result.message, 'success');
-      input.value = ''; // Clear input
-      // Refresh this sub-tab
-      await renderWatchedTickers(
-        /** @type {HTMLDivElement} */ (
-          document.getElementById('watchlist-watched-panel')
-        )
-      );
-    } catch (error) {
-      // @ts-ignore
-      showToast(`Error: ${error.message}`, 'error');
-    }
+  if (!ticker) {
+    showToast('Ticker cannot be empty.', 'error');
+    return;
+  }
+  if (!holderId || holderId === 'all') {
+    showToast('Please select a specific account holder.', 'error');
+    return;
   }
 
-  // --- Handle "Delete" Button ---
-  if (target.matches('.delete-watched-ticker-btn')) {
-    const itemId = target.dataset.id;
-    const ticker = target.closest('tr')?.dataset.ticker || 'this ticker';
-    if (!itemId) return;
+  try {
+    // --- *** THIS IS THE FIX: Corrected spelling *** ---
+    await addSimpleWatchedTicker(holderId, ticker);
+    // --- *** END FIX *** ---
+    showToast(`Ticker ${ticker} added to watchlist.`, 'success');
+    input.value = '';
+    await refreshActiveSubTab(); // Refresh to show the new ticker
+  } catch (error) {
+    console.error('Failed to add watched ticker:', error);
+    // @ts-ignore
+    showToast(`Error: ${error.message}`, 'error');
+  }
+}
 
-    showConfirmationModal(
-      `Stop watching ${ticker}?`,
-      'Are you sure you want to remove this ticker from your watched list?',
-      async () => {
-        try {
-          await deleteSimpleWatchedTicker(itemId);
-          showToast(`${ticker} removed from watched list.`, 'success');
-          // Refresh this sub-tab
-          await renderWatchedTickers(
-            /** @type {HTMLDivElement} */ (
-              document.getElementById('watchlist-watched-panel')
-            )
-          );
-        } catch (error) {
-          // @ts-ignore
-          showToast(`Error: ${error.message}`, 'error');
-        }
+/**
+ * Handles click on the "Delete" (X) button for a watched ticker.
+ * @param {HTMLElement} target - The delete button element.
+ * @returns {Promise<void>}
+ */
+async function handleDeleteWatchedTicker(target) {
+  const id = target.dataset.id;
+  const row = target.closest('tr');
+  const ticker = row?.dataset.ticker;
+  // @ts-ignore
+  const holderId = state.selectedAccountHolderId;
+
+  if (!id || !ticker || !holderId || holderId === 'all') {
+    showToast('Error: Missing data for deletion.', 'error');
+    return;
+  }
+
+  showConfirmationModal(
+    `Remove ${ticker}?`,
+    `Are you sure you want to remove ${ticker} from your watchlist?`,
+    async () => {
+      try {
+        // --- *** THIS IS THE FIX: Corrected spelling *** ---
+        await deleteSimpleWatchedTicker(holderId, id);
+        // --- *** END FIX *** ---
+        showToast(`${ticker} removed from watchlist.`, 'success');
+        await refreshActiveSubTab(); // Refresh to remove the ticker
+      } catch (error) {
+        console.error('Failed to delete watched ticker:', error);
+        // @ts-ignore
+        showToast(`Error: ${error.message}`, 'error');
       }
-    );
-  }
+    }
+  );
 }
-// --- END ADDED ---
 
 /**
- * Initializes event handlers for the Watchlist page.
+ * Handles click on the "Delete" (X) button for a trade idea.
+ * @param {HTMLElement} target - The delete button element.
+ * @returns {Promise<void>}
+ */
+async function handleDeleteWatchlistIdea(target) {
+  const id = target.dataset.id;
+  const row = target.closest('tr');
+  const ticker = row?.dataset.ticker;
+
+  if (!id || !ticker) {
+    showToast('Error: Missing data for deletion.', 'error');
+    return;
+  }
+
+  showConfirmationModal(
+    `Archive ${ticker} Idea?`,
+    `Are you sure you want to archive this trade idea?`,
+    async () => {
+      try {
+        await closeWatchlistIdea(id);
+        showToast(`${ticker} idea archived.`, 'success');
+        await refreshActiveSubTab(); // Refresh to remove the idea
+      } catch (error) {
+        console.error('Failed to archive trade idea:', error);
+        // @ts-ignore
+        showToast(`Error: ${error.message}`, 'error');
+      }
+    }
+  );
+}
+
+/**
+ * Initializes all event listeners for the Watchlist view.
  * @returns {void}
  */
-export function initializeWatchlistHandlers() {
-  const watchlistContainer = document.getElementById(
-    'watchlist-page-container'
+export function initializeWatchlist() {
+  const subTabs = /** @type {HTMLElement} */ (
+    document.getElementById('watchlist-sub-tabs')
   );
-  const watchlistSubTabsContainer = watchlistContainer?.querySelector(
-    '.watchlist-sub-tabs'
+  const panel = /** @type {HTMLElement} */ (
+    document.getElementById('watchlist-content-panel')
   );
 
-  if (watchlistSubTabsContainer && watchlistContainer) {
-    // --- Sub-Tab Switching ---
-    watchlistSubTabsContainer.addEventListener('click', async (e) => {
-      const target = /** @type {HTMLElement} */ (e.target);
-      if (
-        target.classList.contains('sub-tab') &&
-        !target.classList.contains('active')
-      ) {
-        setActiveTab(
-          watchlistSubTabsContainer,
-          target,
-          watchlistContainer,
-          '.sub-tab-panel',
-          'data-sub-tab',
-          '#'
-        );
-        await loadWatchlistPage(); // Reload content for the new tab
-      }
-    });
-
-    // --- Initialize Handlers for Sub-Tab Content ---
-    initializeJournalFilterHandlers(); // For the paper trade filters
-
-    // --- Event Delegation for All Actions ---
-    // --- MODIFIED: Added 'submit' listener for the new form ---
-    watchlistContainer.addEventListener('click', async (e) => {
-      await handlePaperTradeActions(e);
-      await handleWatchedTickerActions(e);
-
-      // Handle table sorting
-      const target = /** @type {HTMLElement} */ (e.target);
-      const th = /** @type {HTMLTableCellElement} */ (
-        target.closest('th[data-sort]')
-      );
-      if (th) {
-        const table = /** @type {HTMLTableElement} */ (th.closest('table'));
-        const tbody = table?.querySelector('tbody');
-        if (tbody) {
-          sortTableByColumn(th, tbody);
-        }
-      }
-    });
-    watchlistContainer.addEventListener('submit', (e) => {
-      handleWatchedTickerActions(e); // Handle form submission
-    });
-    // --- END MODIFICATION ---
-
-    // --- Listen for journal updates from modals ---
-    document.addEventListener('journalUpdated', async () => {
-      console.log(
-        "[Watchlist] 'journalUpdated' event detected. Refreshing paper trades..."
-      );
-
-      // --- THIS IS THE FIX ---
-      const activeSubTabButton = /** @type {HTMLElement | null} */ (
-        watchlistContainer.querySelector('.watchlist-sub-tabs .sub-tab.active')
-      );
-      // --- END FIX ---
-
-      // Only refresh if the paper panel is currently active
-      if (activeSubTabButton?.dataset.subTab === 'watchlist-paper-panel') {
-        // <-- This line will now work
-        await renderWatchlistPaperTrades(
-          /** @type {HTMLDivElement} */ (
-            document.getElementById('watchlist-paper-panel')
-          )
-        );
-      }
-    });
+  if (subTabs) {
+    subTabs.addEventListener('click', handleSubTabClick);
   }
+  if (panel) {
+    panel.addEventListener('click', handleWatchlistClicks);
+  }
+
+  // This listener refreshes the "Paper Trades" (ideas) tab
+  // when a new one is created from the "Source Details" modal.
+  document.addEventListener('journalUpdated', refreshActiveSubTab);
+
+  // Load the default tab
+  refreshActiveSubTab();
 }

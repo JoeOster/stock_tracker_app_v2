@@ -1,12 +1,12 @@
-// public/event-handlers/_research_sources_modal.js
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Watchlist/public/event-handlers/_research_sources_modal.js
 /**
- * @file Assembles the HTML for the Source Details modal content.
+ * @file Orchestrates the rendering of the Source Details modal by calling partial HTML functions.
  * @module event-handlers/_research_sources_modal
  */
 
 import {
   _renderModalProfile,
-  _renderModalActionsPanel, // --- MODIFIED ---
+  _renderModalActionsPanel,
   _renderModalSummaryStats,
   _renderModalTradeIdeas,
   _renderModalRealTrades,
@@ -15,67 +15,105 @@ import {
   _renderModalDocuments,
   _renderModalNotes,
 } from './_research_sources_modal_html.js';
+import { state } from '../state.js'; // Needed for price cache
 
 /**
- * Renders the detailed view HTML for a selected advice source inside the modal.
- * Assembles partial HTML strings from _research_sources_modal_html.js
- * @param {object} details - The fetched details object.
- * @returns {string} The HTML string for the details content.
+ * Generates the complete HTML content for the Source Details modal.
+ * @param {object} details - The aggregated data from the API.
+ * @returns {string} The full HTML string for the modal's content.
  */
 export function generateSourceDetailsHTML(details) {
+  // Destructure all the data we need
   const {
     source,
-    journalEntries,
+    summaryStats,
     watchlistItems,
     linkedTransactions,
+    journalEntries,
     documents,
     sourceNotes,
-    summaryStats,
   } = details;
 
-  // --- Create Sets for checking links ---
-  // Only consider a trade "Live" if there is an OPEN BUY lot.
-  const openBuyTransactions = (linkedTransactions || []).filter(
-    (tx) => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001
+  // --- Create sets for efficient lookups ---
+  // Tickers from open 'BUY' transactions
+  const linkedTxTickers = new Set(
+    linkedTransactions
+      .filter(
+        (tx) => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0
+      )
+      .map((tx) => tx.ticker)
   );
-  const linkedTxTickers = new Set(openBuyTransactions.map((tx) => tx.ticker));
+
+  // Tickers from open 'journal_entries' (paper trades)
   const paperTradeTickers = new Set(
-    journalEntries.map((entry) => entry.ticker)
+    journalEntries
+      .filter((entry) => entry.status === 'OPEN')
+      .map((entry) => entry.ticker)
   );
 
-  // --- Assemble HTML Sections ---
-  let detailsHTML = '<div class="source-details-grid">';
+  // --- Render all partials ---
+  const profileHtml = _renderModalProfile(source);
+  const actionsHtml = _renderModalActionsPanel(source);
+  const summaryHtml = _renderModalSummaryStats(summaryStats);
 
-  // Top Grid: Profile and (Conditional) Add Idea/Technique Form
-  detailsHTML += _renderModalProfile(source);
-
-  // --- MODIFIED: Render the new universal actions panel ---
-  detailsHTML += _renderModalActionsPanel(source);
-  // --- END MODIFIED ---
-
-  detailsHTML += '</div>'; // End source-details-grid
-
-  // Summary Stats
-  detailsHTML += _renderModalSummaryStats(summaryStats);
-  detailsHTML += '<hr style="margin: 1.5rem 0;">';
-
-  // --- REORDERED LINKED SECTIONS ---
-  detailsHTML += _renderModalPaperTrades_Open(journalEntries, source.type); // Techniques / Methods
-  detailsHTML += _renderModalTradeIdeas(
+  // --- *** THIS IS THE FIX: Pass journalEntries to _renderModalTradeIdeas *** ---
+  const tradeIdeasHtml = _renderModalTradeIdeas(
     watchlistItems,
     linkedTxTickers,
     paperTradeTickers,
-    source
-  ); // Trade Ideas
-  detailsHTML += _renderModalRealTrades(linkedTransactions); // Linked Real Trades (Open & History)
+    source,
+    journalEntries // <-- ADDED
+  );
+  // --- *** END FIX *** ---
 
-  detailsHTML += '<hr style="margin: 1.5rem 0;">';
-  detailsHTML += _renderModalPaperTrades_Closed(journalEntries, source.type); // Completed Techniques
+  const realTradesHtml = _renderModalRealTrades(linkedTransactions);
+  const paperOpenHtml = _renderModalPaperTrades_Open(
+    journalEntries,
+    source.type
+  );
+  const paperClosedHtml = _renderModalPaperTrades_Closed(
+    journalEntries,
+    source.type
+  );
+  const documentsHtml = _renderModalDocuments(documents, source);
+  const notesHtml = _renderModalNotes(sourceNotes, source);
 
-  detailsHTML += '<hr style="margin: 1.5rem 0;">';
-  detailsHTML += _renderModalDocuments(documents, source); // Documents
-  detailsHTML += _renderModalNotes(sourceNotes, source); // Notes
-  // --- END REORDER ---
+  // --- Assemble the final HTML ---
+  return `
+        <div class="modal-grid">
+            <div class="modal-grid-left">
+                ${profileHtml}
+            </div>
+            <div class="modal-grid-right">
+                ${actionsHtml}
+            </div>
+        </div>
+        
+        ${summaryHtml}
 
-  return detailsHTML;
+        <div class="modal-section">
+            ${tradeIdeasHtml}
+        </div>
+        
+        <div class="modal-section">
+            ${paperOpenHtml}
+        </div>
+        
+        <div class="modal-section">
+            ${paperClosedHtml}
+        </div>
+
+        <div class="modal-section">
+            ${realTradesHtml}
+        </div>
+        
+        <div class="modal-grid-bottom">
+            <div class="modal-grid-left">
+                ${documentsHtml}
+            </div>
+            <div class="modal-grid-right">
+                ${notesHtml}
+            </div>
+        </div>
+    `;
 }

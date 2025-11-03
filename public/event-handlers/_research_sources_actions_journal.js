@@ -192,9 +192,11 @@ export async function handleCreateTradeIdeaFromTechnique(
   target,
   journalEntries
 ) {
+  // --- *** THIS IS THE FIX (Item #4) *** ---
   // We only get the journalId and ticker. We ignore the technique's
-  // entry, tp, and sl values, per your request.
+  // entry, tp, and sl values.
   const { journalId, ticker } = target.dataset;
+  // --- *** END FIX *** ---
 
   const technique = journalEntries.find((j) => String(j.id) === journalId);
   if (!technique || !technique.advice_source_id) {
@@ -209,8 +211,10 @@ export async function handleCreateTradeIdeaFromTechnique(
     return showToast('Error: Could not find source data.', 'error');
   }
 
-  // Pass an empty object so the form is blank.
+  // --- *** THIS IS THE FIX (Item #4) *** ---
+  // Pass an empty object so the form is blank, as requested.
   const defaults = {};
+  // --- *** END FIX *** ---
 
   openAddTradeIdeaModal(
     String(technique.advice_source_id),
