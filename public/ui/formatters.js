@@ -76,7 +76,7 @@ export function formatAccounting(number, isCurrency = true) {
  * @param {number | string | null | undefined} number - The number to format (e.g., 0.05 for 5%).
  * @returns {string} The formatted percentage string.
  */
-export function formatPercent(number) {
+export function formatPercentage(number) {
   const num = typeof number === 'string' ? parseFloat(number) : number;
   if (num === null || num === undefined || isNaN(num)) {
     return '';

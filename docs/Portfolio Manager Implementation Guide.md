@@ -1,83 +1,83 @@
-# Portfolio Manager V3 - Active Roadmap
+# joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Watchlist/docs/Portfolio Manager Implementation Guide.md
 
-**Last Updated:** 2025-11-01
+# Portfolio Manager Implementation Guide
 
-This document outlines the remaining active tasks for the Portfolio Tracker application, organized into a logical development pathway.
+A high-level overview of the application's architecture, implementation details, and areas for future improvement.
 
----
+## Core Concepts
 
-## **Phase 1: Backend & Architectural Enhancements**
+- **Holders & Exchanges**: The app is multi-tenant, supporting different "Account Holders" (e.g., "Fidelity," "E-Trade"). Each holder has "Exchanges" (e.g., "Brokerage," "IRA"). All data is tied to a `holder_id` and `exchange_id`.
+- **Transactions (The Ledger)**: The core data model. Everything flows from the `transactions` table.
+  - `BUY` transactions are the "source of truth" for cost basis and quantity.
+  - `SELL` transactions are linked to `BUY` transactions via the `linked_buy_id` column.
+  - `FIFO` (First-In, First-Out) is the default accounting method, handled by `transaction-sell-logic.js`.
+- **Journal Entries (Paper Trading)**: The `journal_entries` table is used for paper trades, tracking strategies, and managing "Techniques" from research sources.
+- **State Management**: A simple global `state.js` object holds client-side state, such as the `selectedAccountHolderId` and cached data.
+- **Event-Driven UI**: The app uses custom events (`journalUpdated`, `dashboardUpdated`) to trigger UI refreshes between different modules.
 
-**Goal:** Improve data collection, stability, and maintainability before building new UI features.
+## Key Modules & Files
 
-- **Task 1.1: Enhance Historical Price Tracking**
-  - [ ] Modify the `captureEodPrices` cron job in `services/cronJobs.js` to capture EOD prices for _all currently held_ tickers (`transaction_type = 'BUY'` and `quantity_remaining > 0`), not just recently sold ones.
-- **Task 1.2: Implement Robust Backend Validation & Refactoring**
-  - [ ] Review all backend API routes (`routes/` directory) and add stricter validation for incoming request bodies and URL parameters (e.g., check for non-empty strings, valid numbers, correct data types).
-  - [ ] **Refactor for Reusability:**
-    - [ ] Merge duplicate endpoints in `routes/reporting.js` (e.g., `realized_pl/summary`) into a single endpoint that uses an optional date range.
-    - [ ] Break down large, complex route handlers (like `GET /api/sources/:id/details`) into smaller, reusable helper functions (similar to the `transaction-*-logic.js` pattern).
-- **Task 1.3: Centralize Backend Error Handling**
-  - [ ] Create Express middleware to catch errors and send consistent JSON error responses from the API (e.g., `{ "message": "Error details" }`).
-- **Task 1.4: Centralize Application Configuration**
-  - [ ] Implement a more robust configuration system beyond just `.env` for non-secret settings (e.g., a `config.js` file).
-- **Task 1.5: Revisit & Expand Testing**
-  - [ ] Investigate and fix the skipped UI tests in `_settings.ui.test.js`.
-  - [ ] Add further unit tests where practical (e.g., for `importer-helpers.js`).
+### 1. API (`/public/api/`)
 
----
+- Contains all `fetch` wrappers for communicating with the backend.
+- `api-helpers.js`: Provides the core `fetchApi` function, which handles headers, error parsing, and JWT tokens (if they were implemented).
 
-## **Phase 2: Position Management & UX Refinements**
+### 2. Event Handlers (`/public/event-handlers/`)
 
-**Goal:** Build the new "Manage Position" page (as decided in UX.4) and address all remaining UI/UX tasks.
+- This is the "controller" layer of the frontend.
+- `_init.js`: The main entry point. Sets up all top-level event listeners.
+- `_navigation.js`: Handles switching between the main app "views" (Dashboard, Orders, etc.).
+- `_dashboard_init.js`: Main loader for the Dashboard, orchestrates all data fetching and rendering.
+- `_research_sources_listeners.js`: The "router" for the complex "Source Details" modal, delegating clicks to:
+  - `_research_sources_actions_journal.js` (Techniques)
+  - `_research_sources_actions_watchlist.js` (Trade Ideas)
+  - `_research_sources_actions_realtrades.js` (Linked Real Trades)
+  - `_research_sources_actions_notes.js` (Notes)
+  - `_research_sources_actions_docs.js` (Documents)
 
-- **Task 2.1: Integrate Finnhub Data (Company & News)**
-  - [ ] **One-Time Fetch:** When a ticker is first added (e.g., to watchlist or a position), create a backend job to fetch and store static data from Finnhub's `/stock/profile2` endpoint (Company Name, Logo, Industry, Website).
-  - [ ] **Daily Fetch (EOD/BOD):** Create a new cron job to run End-of-Day or Before-Open-Day that:
-    - Fetches `/company-news` for all currently held and watched tickers.
-    - Fetches `/stock/metric` for basic financials (P/E, EPS, 52-week high/low, dividend yield).
-    - Fetches `/recommendation` for analyst price targets.
-- **Task 2.2: Implement "Manage Position" Page**
-  - [ ] Create a new page template (e.g., `_position_details.html`) to serve as a dedicated view for a single position.
-  - [ ] Update the "Manage" button on dashboard cards to navigate to this new view (e.g., `switchView('position', { ticker: 'AAPL' })`).
-  - [ ] **UI Integration:** On this new page, render:
-    - A header with ticker/exchange info and the company data from **Task 2.1**.
-    - A list of individual open lots.
-    - The combined sales history (using the completed batch sales API endpoint).
-    - A section/tab for Company News (from **Task 2.1**).
-    - A section/tab for Financials/Metrics (from **Task 2.1**).
-  - [ ] Add event listeners for per-lot "Edit" / "Limits" buttons.
-- **Task 2.3: Integrate Journal Links**
-  - [ ] Fetch related journal entries on the backend.
-  - [ ] Add links/data into the new "Manage Position" page.
-- **Task 2.4: Implement Advanced Charting**
-  - [ ] Implement Spark Charts on Dashboard Cards.
-  - [ ] (Future) Refactor/re-introduce a Charts tab for Realized Gains analysis, etc.
-- **Task 2.5: Loading States & Feedback**
-  - [ ] Review loading feedback (tab switching, price refresh, CSV commit).
-  - [ ] Add spinners or disable buttons during processing where needed.
-- **Task 2.6: Importer Workflow Clarity**
-  - [ ] Add more descriptive text/visual cues during reconciliation.
-  - [ ] Enhance alert messages for skipped imports to include CSV row details.
-  - [ ] Implement detection for uploading a seemingly identical CSV file.
-- **Task 2.7: Add UI Settings**
-  - [ ] Add settings for "Default View" (e.g., Dashboard, Sources) to `public/templates/_modal_settings.html`.
-  - [ ] Add setting for "Number of Date Tabs" to `public/templates/_modal_settings.html`.
-  - [ ] Update `app-main.js` and `_tabs.js` to use these new settings from `state.settings`.
-- **Task 2.8: Review Data Collection**
-  - [ ] After **Task 2.1** is implemented, review the newly collected data (News, Metrics, Profile).
-  - [ ] Determine if all data points are useful and should be added to the "Manage Position" page UI, or if collection for some unused fields should be stopped.
-- **Task 2.9: Enhance Dashboard Filtering**
-  - [x] Add an "Exchange" dropdown to the Dashboard filter bar, next to the Ticker filter.
-  - [x] Update the `processFilterAndSortLots` function in `_dashboard_data.js` to filter by both ticker and the selected exchange.
+### 3. UI Renderers (`/public/ui/renderers/`)
 
----
+- This is the "view" layer of the frontend.
+- These files are responsible for generating HTML.
+- `_dashboard_html.js` / `_dashboard_render.js`: Build the main dashboard tables.
+- `_research_sources_modal_html.js`: Builds the complex HTML for the "Source Details" modal.
+- `_tabs.js`: Contains the `generateTable` helper, a generic function used to build almost every table in the app.
 
-## **Phase 3: Authentication & Documentation**
+### 4. Backend Routes (`/routes/`)
 
-**Goal:** Secure the application and finalize all documentation.
+- The Node.js/Express API backend.
+- `server.js`: The main Express server entry point.
+- `transactions.js`: Handles all BUY/SELL/UPDATE/DELETE logic for transactions. This is the most complex route, relying on helper files:
+  - `transaction-buy-logic.js`
+  - `transaction-sell-logic.js` (handles FIFO)
+  - `transaction-update-logic.js`
+- `sources.js`: Backs the "Research Sources" module, including the complex data aggregation for the details modal.
+- `reporting.js`: Handles complex SQL queries for P/L reporting and the "Ledger" view.
 
-- **Task 3.1:** Implement backend user authentication (e.g., username/password hashing, session management).
-- **Task 3.2:** Create frontend login page and integrate the login/logout flow.
-- **Task 3.3:** Refine Account Holder Management (logic for deleting primary holder, default reassignment, etc.).
-- **Task 3.4:** Maintain Documentation (keep all guides updated as these phases are completed).
+## General To-Do & Bug List
+
+### High Priority
+
+- [ ] **BUG - Sell Modal:** After selling from the "Manage Position" modal, the main dashboard table doesn't refresh automatically. It requires a manual refresh. This is confusing. The `dashboardUpdated` event is not firing or being listened to correctly.
+- [ ] **BUG - P/L Calculation:** P/L on closed positions (in "Ledger") seems to sometimes double-count. Need to verify the logic in `routes/reporting.js` (`/calculate-pl`).
+- [ ] **BUG - Order Form Reset:** The "Log Executed Trade" form does not properly clear the `data-buy-id` or `data-sell-id` after a successful partial sale, leading to subsequent "Log Sale" clicks failing.
+
+### Medium Priority
+
+- [ ] **Refactor - Settings:** The "Settings" modal (`_settings_modal.js`) is monolithic and handles both Holders and Exchanges. This logic should be split into `_settings_holders.js` and `_settings_exchanges.js` to be cleaner.
+- [ ] **Feature - Alerts:** Implement email/SMS alerts using a third-party service when an alert price is hit. This requires a new API endpoint and a job runner.
+- [ ] **Refactor - Dashboard P/L:** The dashboard P/L calculation is complex. Consolidate logic into `_dashboard_data.js` and ensure all paths (open, closed, with/without sales) are handled.
+
+### Low Priority / Future Ideas
+
+- [ ] **UI - Themes:** Add more themes (e.g., "High Contrast") to `_themes.css`.
+- [ ] **Feature - Dividends:** Add a new transaction type for "Dividend" to be logged in the "Orders" tab. This will require DB schema changes.
+- [ ] **Feature - Stock Splits:** Add a "Log Stock Split" feature in the "Manage Position" modal.
+
+### Research Sources Module
+
+- [ ] **Feature - Technique Fields:** Add "Page Number" and "Chapter" fields to the "Technique / Method" creation and edit process. This will involve updating:
+  - `_modal_add_technique.html` (add form fields)
+  - `_research_sources_actions_journal.js` (update `initializeAddTechniqueModalHandler` and `handleOpenEditTechniqueModal` to save/load the new fields)
+  - `_research_sources_modal_html.js` (add "Pg#" and "Ch" columns to the `_renderJournalEntriesTable` function)
+  - DB: The `journal_entries` table will likely need new columns (e.g., `page_number`, `chapter_title`). This will require a new migration.

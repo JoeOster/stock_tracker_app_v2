@@ -1,12 +1,10 @@
-﻿// /public/event-handlers/_research_sources_actions_notes.js
+﻿// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Watchlist/public/event-handlers/_research_sources_actions_notes.js
 /**
  * @file Contains action handlers for the Notes and Documents panel in the Source Details modal.
  * @module event-handlers/_research_sources_actions_notes
  */
 
-// --- MODIFIED: Added 'state' import ---
 import { state } from '../state.js';
-// --- END MODIFICATION ---
 import {
   addSourceNote,
   updateSourceNote,
@@ -14,7 +12,6 @@ import {
 } from '../api/sources-api.js';
 import { deleteDocument } from '../api/documents-api.js';
 import { deleteJournalEntry } from '../api/journal-api.js';
-import { closeWatchlistIdea } from '../api/watchlist-api.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 /**
@@ -25,30 +22,36 @@ import { showToast, showConfirmationModal } from '../ui/helpers.js';
  */
 export async function handleAddNoteSubmit(e, refreshDetailsCallback) {
   e.preventDefault();
-  const form = /** @type {HTMLFormElement} */ (e.target);
+  const form = /** @type {HTMLFormElement} */ (
+    /** @type {HTMLElement} */ (e.target).closest('form')
+  );
   if (!form) return;
+  const addButton = /** @type {HTMLButtonElement | null} */ (
+    form.querySelector('.add-source-note-button')
+  );
+  if (!addButton) return;
 
-  const sourceId = form.dataset.sourceId;
-  const textarea = /** @type {HTMLTextAreaElement} */ (
+  const holderId = state.selectedAccountHolderId;
+  const formSourceId = form.dataset.sourceId;
+  const textarea = /** @type {HTMLTextAreaElement | null} */ (
     form.querySelector('.add-note-content-textarea')
   );
-  const content = textarea.value.trim();
+  const content = textarea?.value.trim();
 
-  if (!sourceId || !content) {
+  if (!formSourceId || !content) {
     return showToast('Note content cannot be empty.', 'error');
   }
 
-  const addButton = /** @type {HTMLButtonElement} */ (
-    form.querySelector('.add-source-note-button')
-  );
+  if (holderId === 'all') {
+    return showToast('Context missing or "All Accounts" selected.', 'error');
+  }
+
   addButton.disabled = true;
 
   try {
-    // --- MODIFIED: Added state.selectedAccountHolderId ---
-    await addSourceNote(sourceId, state.selectedAccountHolderId, content);
-    // --- END MODIFICATION ---
+    await addSourceNote(formSourceId, holderId, content);
     showToast('Note added!', 'success');
-    textarea.value = ''; // Clear textarea
+    if (textarea) textarea.value = ''; // Clear textarea
     await refreshDetailsCallback();
   } catch (error) {
     console.error('Failed to add source note:', error);
@@ -93,24 +96,15 @@ export async function handleNoteEditActions(
     return console.warn('Could not find note edit elements.', noteLi);
   }
 
-  // --- Handle "Edit" button click ---
   if (target.matches('.edit-source-note-button')) {
     displayDiv.style.display = 'none';
     editDiv.style.display = 'block';
     editTextArea.focus();
-    // Ensure text area has the latest content (in case of stale HTML)
     editTextArea.value = displayDiv.textContent || '';
-  }
-
-  // --- Handle "Cancel" button click ---
-  else if (target.matches('.cancel-edit-note-button')) {
+  } else if (target.matches('.cancel-edit-note-button')) {
     displayDiv.style.display = 'block';
     editDiv.style.display = 'none';
-    // No save, just revert UI
-  }
-
-  // --- Handle "Save" button click ---
-  else if (target.matches('.save-edit-note-button')) {
+  } else if (target.matches('.save-edit-note-button')) {
     const newContent = editTextArea.value.trim();
     if (!newContent) {
       return showToast('Note content cannot be empty.', 'error');
@@ -118,16 +112,12 @@ export async function handleNoteEditActions(
 
     /** @type {HTMLButtonElement} */ (target).disabled = true;
     try {
-      // --- MODIFIED: Added modalSourceId and modalHolderId ---
       await updateSourceNote(modalSourceId, noteId, modalHolderId, newContent);
-      // --- END MODIFICATION ---
       showToast('Note updated!', 'success');
-      // Update display div immediately
       displayDiv.innerHTML = newContent.replace(/\n/g, '<br>');
       displayDiv.style.display = 'block';
       editDiv.style.display = 'none';
-      // We can do a full refresh, or just update the timestamps manually
-      await refreshDetailsCallback(); // Easiest way to ensure all data is fresh
+      await refreshDetailsCallback();
     } catch (error) {
       console.error('Failed to update source note:', error);
       // @ts-ignore
@@ -152,41 +142,17 @@ export async function handleDeleteClick(
   modalHolderId,
   refreshDetailsCallback
 ) {
-  // --- THIS IS THE FIX ---
-  // Added dataset.journalId to the list of possible ID sources
   const itemId =
     /** @type {HTMLElement} */ (target).dataset.id ||
     /** @type {HTMLElement} */ (target).dataset.docId ||
     /** @type {HTMLElement} */ (target).dataset.noteId ||
     /** @type {HTMLElement} */ (target).dataset.itemId ||
     /** @type {HTMLElement} */ (target).dataset.journalId;
-  // --- END FIX ---
 
   if (!itemId) return;
 
-  // --- Case 1: Delete Watchlist "Trade Idea" ---
-  if (target.matches('.delete-watchlist-item-button')) {
-    const ticker =
-      target.closest('tr')?.querySelector('td:first-child')?.textContent ||
-      'this idea';
-    showConfirmationModal(
-      `Archive ${ticker} Idea?`,
-      'Are you sure you want to close this trade idea? This will hide it from the list.',
-      async () => {
-        try {
-          await closeWatchlistIdea(itemId);
-          showToast(`Trade idea for ${ticker} archived.`, 'success');
-          await refreshDetailsCallback(); // Refresh the modal
-        } catch (error) {
-          // @ts-ignore
-          showToast(`Error: ${error.message}`, 'error');
-        }
-      }
-    );
-  }
-
-  // --- Case 2: Delete "Technique" (Journal Entry) ---
-  else if (target.matches('.delete-journal-btn')) {
+  // --- Case 1: Delete "Technique" (Journal Entry) ---
+  if (target.matches('.delete-journal-btn')) {
     const ticker =
       target.closest('tr')?.querySelector('td:nth-child(3)')?.textContent ||
       'this technique';
@@ -195,7 +161,7 @@ export async function handleDeleteClick(
       'Are you sure you want to archive this technique? This will close it.',
       async () => {
         try {
-          await deleteJournalEntry(itemId); // This function uses the correct 'itemId'
+          await deleteJournalEntry(itemId);
           showToast(`Technique archived.`, 'success');
           await refreshDetailsCallback();
         } catch (error) {
@@ -206,7 +172,7 @@ export async function handleDeleteClick(
     );
   }
 
-  // --- Case 3: Delete Linked Document ---
+  // --- Case 2: Delete Linked Document ---
   else if (target.matches('.delete-document-button')) {
     showConfirmationModal(
       'Delete Document Link?',
@@ -224,16 +190,14 @@ export async function handleDeleteClick(
     );
   }
 
-  // --- Case 4: Delete Source Note ---
+  // --- Case 3: Delete Source Note ---
   else if (target.matches('.delete-source-note-button')) {
     showConfirmationModal(
       'Delete Note?',
       'Are you sure you want to permanently delete this note?',
       async () => {
         try {
-          // --- MODIFIED: Added modalSourceId and modalHolderId ---
           await deleteSourceNote(modalSourceId, itemId, modalHolderId);
-          // --- END MODIFICATION ---
           showToast('Note deleted.', 'success');
           await refreshDetailsCallback();
         } catch (error) {

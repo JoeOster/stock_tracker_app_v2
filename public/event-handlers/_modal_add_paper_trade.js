@@ -1,16 +1,18 @@
-// /public/event-handlers/_modal_add_paper_trade.js
+// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Watchlist/public/event-handlers/_modal_add_paper_trade.js
 /**
  * @file Initializes event handlers for the "Add/Edit Paper Trade" (Journal Entry) modal.
+ * This modal is used by the "Watchlist" page and by the "Source Details" modal.
  * @module event-handlers/_modal_add_paper_trade
  */
 
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
-import { addJournalEntry } from '../api/journal-api.js';
+import { addJournalEntry, updateJournalEntry } from '../api/journal-api.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 
 /**
  * Initializes the event listeners for the "Add Paper Trade" modal form.
+ * This handler now supports both ADDING and EDITING entries.
  * @returns {void}
  */
 export function initializeAddPaperTradeModalHandler() {
@@ -20,7 +22,6 @@ export function initializeAddPaperTradeModalHandler() {
   );
 
   if (addJournalEntryForm && addJournalModal) {
-    // --- Logic moved from _journal.js ---
     addJournalEntryForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const addButton = /** @type {HTMLButtonElement | null} */ (
@@ -28,11 +29,16 @@ export function initializeAddPaperTradeModalHandler() {
       );
       if (!addButton) return;
 
-      // ... (all the validation code from lines 30-160) ...
+      const entryId = /** @type {HTMLInputElement} */ (
+        document.getElementById('journal-form-entry-id')
+      ).value;
+      const isEditing = !!entryId;
+
       const accountHolderId =
         state.selectedAccountHolderId === 'all'
           ? null
           : String(state.selectedAccountHolderId);
+
       const entryDate = /** @type {HTMLInputElement} */ (
         document.getElementById('journal-entry-date')
       ).value;
@@ -64,7 +70,8 @@ export function initializeAddPaperTradeModalHandler() {
       ).value;
 
       // --- Validation ---
-      if (!accountHolderId) {
+      if (!accountHolderId && !isEditing) {
+        // Account holder is only required on create
         return showToast('Please select a specific account holder.', 'error');
       }
       if (!entryDate || !ticker || !exchange || !direction) {
@@ -94,6 +101,7 @@ export function initializeAddPaperTradeModalHandler() {
       }
       if (
         targetPrice !== null &&
+        entryPrice > 0 &&
         targetPrice <= entryPrice &&
         direction === 'BUY'
       ) {
@@ -123,6 +131,7 @@ export function initializeAddPaperTradeModalHandler() {
       if (
         targetPrice === null &&
         targetPrice2 !== null &&
+        entryPrice > 0 &&
         targetPrice2 <= entryPrice &&
         direction === 'BUY'
       ) {
@@ -146,6 +155,7 @@ export function initializeAddPaperTradeModalHandler() {
       }
       if (
         stopLossPrice !== null &&
+        entryPrice > 0 &&
         stopLossPrice >= entryPrice &&
         direction === 'BUY'
       ) {
@@ -155,6 +165,20 @@ export function initializeAddPaperTradeModalHandler() {
         );
       }
       // --- End Validation ---
+
+      const chartType = /** @type {HTMLInputElement} */ (
+        document.getElementById('technique-form-chart-type')
+      ).value.trim();
+      const imagePath = /** @type {HTMLInputElement} */ (
+        document.getElementById('technique-form-image-path')
+      ).value.trim();
+      const notes = /** @type {HTMLTextAreaElement} */ (
+        document.getElementById('journal-notes')
+      ).value.trim();
+
+      const combinedNotes = chartType
+        ? `Chart Type: ${chartType}\n\n${notes}`
+        : notes || null;
 
       const entryData = {
         account_holder_id: accountHolderId,
@@ -179,35 +203,40 @@ export function initializeAddPaperTradeModalHandler() {
           /** @type {HTMLInputElement} */ (
             document.getElementById('journal-entry-reason')
           ).value.trim() || null,
-        notes:
-          /** @type {HTMLTextAreaElement} */ (
-            document.getElementById('journal-notes')
-          ).value.trim() || null,
+        notes: combinedNotes,
+        image_path: imagePath || null,
       };
+
+      if (isEditing) {
+        // Don't update account holder on edit
+        delete entryData.account_holder_id;
+      }
 
       addButton.disabled = true;
       try {
-        await addJournalEntry(entryData);
-        showToast('Journal entry added!', 'success');
+        if (isEditing) {
+          await updateJournalEntry(entryId, entryData);
+          showToast('Journal entry updated!', 'success');
+        } else {
+          await addJournalEntry(entryData);
+          showToast('Journal entry added!', 'success');
+        }
+
         addJournalEntryForm.reset();
         /** @type {HTMLInputElement} */ (
           document.getElementById('journal-entry-date')
-        ).value = getCurrentESTDateString(); // Reset date to today
+        ).value = getCurrentESTDateString();
         addJournalModal.classList.remove('visible');
 
-        // --- THIS IS THE FIX (Bug #4) ---
-        // Also close the Source Details modal that is open underneath
         const detailsModal = document.getElementById('source-details-modal');
         if (detailsModal) {
           detailsModal.classList.remove('visible');
         }
-        // --- END FIX ---
 
-        // Dispatch a custom event to notify other parts of the app (like the new Watchlist)
         document.dispatchEvent(new CustomEvent('journalUpdated'));
       } catch (error) {
         // @ts-ignore
-        showToast(`Error adding entry: ${error.message}`, 'error');
+        showToast(`Error saving entry: ${error.message}`, 'error');
       } finally {
         addButton.disabled = false;
       }

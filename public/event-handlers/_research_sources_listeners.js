@@ -1,6 +1,7 @@
-﻿// public/event-handlers/_research_sources_listeners.js
+﻿// joeoster/stock_tracker_app_v2/stock_tracker_app_v2-Watchlist/public/event-handlers/_research_sources_listeners.js
 /**
  * @file Initializes listeners for Research Sources cards and modal actions.
+ * This file acts as a "router" delegating clicks to specialized action files.
  * @module event-handlers/_research_sources_listeners
  */
 
@@ -8,25 +9,33 @@ import { fetchSourceDetails } from '../api/sources-api.js';
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
 import { generateSourceDetailsHTML } from './_research_sources_modal.js';
+
+// --- Import all action handlers from specialized files ---
 import {
   handleCreateBuyOrderFromIdea,
   handleCreatePaperTradeFromIdea,
-  handleCreateTradeIdeaFromTechnique,
   initializeAddTradeIdeaModalHandler,
   handleCreateTradeIdeaFromSource,
   handleCreateTradeIdeaFromBook,
+  handleCloseWatchlistIdea,
 } from './_research_sources_actions_watchlist.js';
+
 import { handleAddDocumentSubmit } from './_research_sources_actions_docs.js';
+
 import {
   handleAddNoteSubmit,
   handleDeleteClick,
   handleNoteEditActions,
 } from './_research_sources_actions_notes.js';
+
 import {
   initializeAddTechniqueModalHandler,
   handleOpenAddTechniqueModal,
+  handleOpenEditTechniqueModal,
+  handleCreateTradeIdeaFromTechnique,
 } from './_research_sources_actions_journal.js';
-import { populateSellFromPositionModal } from './_modal_sell_from_position.js';
+
+import { handleSellFromLotSource } from './_research_sources_actions_realtrades.js';
 
 /** @type {EventListener | null} */
 let currentSourcesListClickHandler = null;
@@ -39,7 +48,6 @@ let isAddTechniqueModalHandlerInitialized = false;
 
 /**
  * Attaches event listeners specifically for actions *within* the source details modal content area.
- * Ensures only one listener is active at a time.
  * @param {HTMLElement} modalContentArea - The content area element (`#source-details-modal-content`).
  * @param {object} details - The full details object (needed to pass journalEntries to handlers).
  * @param {function(): Promise<void>} refreshDetailsCallback - Function to refresh the details view on success.
@@ -57,7 +65,6 @@ function initializeModalActionHandlers(
     console.log('[Modal Actions] Removed previous modal action handler.');
   }
 
-  // --- Initialize modal submit handlers (if not already done) ---
   if (!isAddTradeIdeaModalHandlerInitialized) {
     initializeAddTradeIdeaModalHandler(refreshDetailsCallback);
     isAddTradeIdeaModalHandlerInitialized = true;
@@ -87,40 +94,41 @@ function initializeModalActionHandlers(
       return;
     }
 
+    // --- This is the "Router" logic ---
+
     if (target.matches('#add-idea-from-source-btn')) {
       if (details.source.type === 'Person' || details.source.type === 'Group') {
-        console.log(
-          '[Modal Actions] Delegating to handleCreateTradeIdeaFromSource (Person/Group)'
-        );
         await handleCreateTradeIdeaFromSource(target);
       } else {
-        console.log(
-          '[Modal Actions] Delegating to handleCreateTradeIdeaFromBook (Book/Etc)'
-        );
         await handleCreateTradeIdeaFromBook(target, details.journalEntries);
       }
     } else if (target.matches('.develop-trade-idea-btn')) {
-      console.log(
-        '[Modal Actions] Delegating to handleCreateTradeIdeaFromTechnique (Technique Row)'
-      );
       await handleCreateTradeIdeaFromTechnique(target, details.journalEntries);
     } else if (target.matches('#add-technique-btn')) {
-      console.log(
-        '[Modal Actions] Delegating to handleOpenAddTechniqueModal (Book/Etc)'
-      );
       await handleOpenAddTechniqueModal(target);
+    } else if (target.closest('.edit-journal-technique-btn')) {
+      await handleOpenEditTechniqueModal(target, details.journalEntries);
     } else if (target.matches('.add-document-button')) {
-      console.log('[Modal Actions] Delegating to handleAddDocumentSubmit');
       await handleAddDocumentSubmit(e, refreshDetailsCallback);
     } else if (target.matches('.add-source-note-button')) {
-      console.log('[Modal Actions] Delegating to handleAddNoteSubmit');
       await handleAddNoteSubmit(e, refreshDetailsCallback);
+    } else if (target.closest('.delete-watchlist-item-button')) {
+      console.log('[Modal Actions] Delegating to handleCloseWatchlistIdea');
+      const itemId = target.dataset.itemId; // This button uses data-item-id
+      const ticker =
+        target.closest('tr')?.querySelector('td:first-child')?.textContent ||
+        'this idea';
+      if (itemId) {
+        await handleCloseWatchlistIdea(itemId, ticker, refreshDetailsCallback);
+      }
     } else if (
       target.closest(
-        '.delete-watchlist-item-button, .delete-document-button, .delete-source-note-button, .delete-journal-btn'
+        '.delete-document-button, .delete-source-note-button, .delete-journal-btn'
       )
     ) {
-      console.log('[Modal Actions] Delegating to handleDeleteClick');
+      console.log(
+        '[Modal Actions] Delegating to handleDeleteClick (Notes/Docs/Journal)'
+      );
       await handleDeleteClick(
         target,
         modalSourceId,
@@ -146,24 +154,7 @@ function initializeModalActionHandlers(
       );
       await handleCreatePaperTradeFromIdea(target);
     } else if (target.closest('.sell-from-lot-btn-source')) {
-      console.log(
-        '[Modal Actions] Delegating to populateSellFromPositionModal'
-      );
-      const sellBtn = target.closest('.sell-from-lot-btn-source');
-      const buyId = sellBtn.dataset.buyId;
-
-      const lotData = details.linkedTransactions.find(
-        (lot) => String(lot.id) === buyId
-      );
-
-      if (lotData) {
-        populateSellFromPositionModal(lotData);
-      } else {
-        console.error(
-          `[Modal Actions] Could not find lot data for ID ${buyId}`
-        );
-        showToast('Error: Could not find lot data to sell.', 'error');
-      }
+      await handleSellFromLotSource(target, details);
     } else if (target.closest('.technique-image-thumbnail')) {
       console.log('[Modal Actions] Opening Image Zoom Modal');
       const imgElement = target.closest('.technique-image-thumbnail');
@@ -306,8 +297,6 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
       detailsModal.dataset.holderId = String(holderId);
       detailsModal.classList.add('visible');
 
-      // --- START FIX (Bug #1 & #4 Co-fix) ---
-      // Listen for both the 'sell' and 'journal' update events
       const refreshOnSellHandler = () => {
         console.log(
           '[Grid Listener] Detected sourceDetailsShouldRefresh event, refreshing details...'
@@ -325,15 +314,14 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
         'sourceDetailsShouldRefresh',
         refreshOnSellHandler
       );
-      document.addEventListener('journalUpdated', refreshOnJournalHandler); // <-- ADDED THIS
+      document.addEventListener('journalUpdated', refreshOnJournalHandler);
 
-      // We need to clean up *both* listeners when the modal closes
       const cleanup = () => {
         document.removeEventListener(
           'sourceDetailsShouldRefresh',
           refreshOnSellHandler
         );
-        document.removeEventListener('journalUpdated', refreshOnJournalHandler); // <-- ADDED THIS
+        document.removeEventListener('journalUpdated', refreshOnJournalHandler);
 
         const closeBtn = detailsModal?.querySelector('.close-button');
         const cancelBtn = detailsModal?.querySelector(
@@ -358,7 +346,6 @@ export function initializeSourcesListClickListener(sourcesListContainer) {
       if (cancelBtn)
         cancelBtn.addEventListener('click', cleanup, { once: true });
       detailsModal.addEventListener('click', cleanupOnBgClick);
-      // --- END FIX ---
 
       try {
         const holderIdParam =

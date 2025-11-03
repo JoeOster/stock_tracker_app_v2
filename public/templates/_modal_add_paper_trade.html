@@ -46,7 +46,7 @@
           type="number"
           id="journal-entry-price"
           step="any"
-          min="0.01"
+          min="0"
           placeholder="e.g., 150.25"
           required
         />
@@ -71,7 +71,7 @@
           placeholder="Optional 2nd target"
         />
       </div>
-      <div class="form-group form-group-span-2">
+      <div class="form-group">
         <label for="journal-stop-loss-price">Stop Loss Price</label>
         <input
           type="number"
@@ -81,6 +81,24 @@
           placeholder="Optional"
         />
       </div>
+
+      <div class="form-group">
+        <label for="technique-form-chart-type">Chart Type (Optional)</label>
+        <input
+          type="text"
+          id="technique-form-chart-type"
+          placeholder="e.g., '5-min Heikin Ashi'"
+        />
+      </div>
+      <div class="form-group">
+        <label for="technique-form-image-path">Image Path (Optional)</label>
+        <input
+          type="text"
+          id="technique-form-image-path"
+          placeholder="e.g., /images/book/chart1.png"
+        />
+      </div>
+
       <div class="form-group">
         <label for="journal-advice-source" class="advice-source-select"
           >Advice Source</label
