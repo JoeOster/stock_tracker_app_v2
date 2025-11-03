@@ -12,6 +12,8 @@ import { refreshLedger } from '../api/transactions-api.js';
 // import { switchView } from './_navigation.js'; // No longer needed
 import { loadDashboardPage } from './_dashboard_loader.js'; // <-- ADDED
 import { loadDailyReportPage } from './_dailyReport.js'; // <-- ADDED
+import { loadWatchlistPage } from './_watchlist.js'; // <-- ADDED
+// --- END MODIFIED IMPORTS ---
 // --- MODIFIED: Import the correct function name ---
 import { openAndPopulateManageModal } from './_dashboard_init.js';
 // --- END MODIFIED IMPORTS ---
@@ -156,15 +158,16 @@ export function initializeSellFromPositionModalHandler() {
 
         sellFromPositionModal?.classList.remove('visible'); // Close sell modal
 
-        // --- THIS IS THE FIX ---
+        // --- THIS IS THE FIX: Refresh all relevant views, not just the current one ---
         // Refresh underlying view by calling its specific loader
         if (state.currentView.type === 'dashboard') {
           await loadDashboardPage(); // <-- Call dashboard loader directly
         } else if (state.currentView.type === 'date') {
           await loadDailyReportPage(state.currentView.value); // <-- Call daily report loader
-        } else if (state.currentView.type === 'ledger') {
-          await refreshLedger();
         }
+        // Always refresh ledger and watchlist data in the background
+        await refreshLedger();
+        await loadWatchlistPage();
         // --- END FIX ---
       } catch (error) {
         const err = /** @type {Error} */ (error);

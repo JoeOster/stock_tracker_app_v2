@@ -32,12 +32,27 @@
  * @property {number} [numberOfDateTabs]
  */
 
+// --- *** THIS IS THE FIX (Part 3) *** ---
+/**
+ * @typedef {object} PrefillOrderData
+ * @property {string} sourceId
+ * @property {string} sourceName
+ * @property {string} ticker
+ * @property {string} price
+ * @property {string | null} tp1
+ * @property {string | null} tp2
+ * @property {string | null} sl
+ * @property {string | null} journalId - The ID of the journal entry (technique) it came from.
+ */
+// --- *** END FIX *** ---
+
 /**
  * @typedef {object} AppState
  * @property {Array<object>} transactions - All transactions for the selected account.
  * @property {Array<object>} openOrders - Deprecated? (Consider removing or clarifying usage)
  * @property {Array<object>} activeAlerts - All unread notifications.
  * @property {Array<object>} allAccountHolders - All account holders in the system.
+ *Setting
  * @property {Array<object>} allExchanges - All exchanges in the system.
  * @property {string|number} selectedAccountHolderId - The ID of the currently selected account holder ('all' or number).
  * @property {{type: string, value: string|null}} currentView - The current active view.
@@ -50,9 +65,9 @@
  * @property {any[]} allAdviceSources - All advice sources for the selected account.
  * @property {JournalEntriesState | null} journalEntries - Holds fetched journal entries (open and closed).
  * @property {any[]} dashboardOpenLots - Raw array of open lots fetched for the dashboard view.
- *Setting
  * @property {any[]} researchWatchlistItems - Raw array of watchlist items fetched for the source details modal.
- * @property {{sourceId: string, sourceName: string, ticker: string, price: string, tp1: (string | null), tp2: (string | null), sl: (string | null)}|null} prefillOrderFromSource - Temp state for pre-filling the order form. * @property {AppSettings} settings - The user's application settings.
+ * @property {PrefillOrderData|null} prefillOrderFromSource - Temp state for pre-filling the order form.
+ * @property {AppSettings} settings - The user's application settings.
  */
 
 /**

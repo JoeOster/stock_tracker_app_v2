@@ -8,13 +8,13 @@
 import { state, updateState } from '../state.js';
 import { showToast } from '../ui/helpers.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
+import { loadWatchlistPage } from './_watchlist.js';
 
 /**
  * Initializes event listeners for the "Log Executed Trade" form.
  * @returns {void}
  */
 export function initializeOrdersFormHandlers() {
-  // <-- ADDED 'export'
   const transactionForm = /** @type {HTMLFormElement | null} */ (
     document.getElementById('add-transaction-form')
   );
@@ -26,9 +26,7 @@ export function initializeOrdersFormHandlers() {
 
     // Suggest limits based on price input
     priceInput.addEventListener('change', () => {
-      // --- MODIFICATION: Check if readOnly before suggesting ---
       if (priceInput.readOnly) return; // Don't suggest if pre-filled
-      // --- END MODIFICATION ---
 
       const price = parseFloat(priceInput.value);
       if (!price || isNaN(price) || price <= 0) return;
@@ -186,6 +184,13 @@ export function initializeOrdersFormHandlers() {
           document.getElementById('add-tx-advice-source')
         ).value || null;
 
+      // --- *** THIS IS THE FIX: Read from the hidden form input *** ---
+      const linkedJournalId =
+        /** @type {HTMLInputElement} */ (
+          document.getElementById('add-tx-linked-journal-id')
+        ).value || null;
+      // --- *** END FIX *** ---
+
       const transaction = {
         account_holder_id: accountHolder,
         transaction_date: transactionDate,
@@ -201,6 +206,7 @@ export function initializeOrdersFormHandlers() {
         limit_price_up_2: isProfitLimit2Set ? profitPrice2 : null,
         limit_up_expiration_2: isProfitLimit2Set ? profitExpirationDate2 : null,
         advice_source_id: adviceSourceId,
+        linked_journal_id: linkedJournalId,
       };
 
       const submitButton = /** @type {HTMLButtonElement} */ (
@@ -242,6 +248,7 @@ export function initializeOrdersFormHandlers() {
         exchangeSelect.value = savedExchangeValue;
 
         // --- Clear prefill state on SUCCESS ---
+        // This is now the *only* place we clear the state.
         if (state.prefillOrderFromSource) {
           updateState({ prefillOrderFromSource: null });
         }
@@ -250,17 +257,21 @@ export function initializeOrdersFormHandlers() {
         /** @type {HTMLInputElement} */ (
           document.getElementById('transaction-date')
         ).value = getCurrentESTDateString();
+
+        // Refresh other views
         await refreshLedger();
+        await loadWatchlistPage();
       } catch (error) {
         const err = /** @type {Error} */ (error);
         showToast(`Failed to log transaction: ${err.message}`, 'error');
       } finally {
         submitButton.disabled = false;
 
-        // --- MODIFICATION: ALWAYS clear prefill state (if it still exists) and UNLOCK form ---
+        // --- ALWAYS clear prefill state (if it still exists) and UNLOCK form ---
+        // This catch-all ensures the form is usable even if a prefilled submission fails
         if (state.prefillOrderFromSource) {
           console.log(
-            '[Orders Form] Clearing prefill state from finally block.'
+            '[Orders Form] Clearing prefill state from finally block after error.'
           );
           updateState({ prefillOrderFromSource: null });
         }
@@ -287,6 +298,12 @@ export function initializeOrdersFormHandlers() {
           const accountSelect = /** @type {HTMLSelectElement | null} */ (
             document.getElementById('add-tx-account-holder')
           );
+          // --- *** ADDED: Clear hidden journal ID *** ---
+          const linkedJournalIdInput = /** @type {HTMLInputElement | null} */ (
+            document.getElementById('add-tx-linked-journal-id')
+          );
+          if (linkedJournalIdInput) linkedJournalIdInput.value = '';
+          // --- *** END ADDED *** ---
 
           if (tickerInput) tickerInput.readOnly = false;
           if (priceInputEl) priceInputEl.readOnly = false;

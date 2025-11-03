@@ -4,6 +4,10 @@
  * @module routes/transaction-buy-logic
  */
 
+// --- *** ADDED IMPORT *** ---
+const { archiveWatchlistItem } = require('./transaction-helpers.js');
+// --- *** END IMPORT *** ---
+
 /**
  * Handles the creation of a single BUY transaction.
  * Assumes validation has already been passed.
@@ -13,7 +17,8 @@
  * @returns {Promise<void>}
  * @throws {Error} Throws an error if the quantity is invalid.
  */
-async function handleBuyTransaction(db, txData, createdAt) {
+async function handleBuyTransaction(db, log, txData, createdAt) {
+  // <-- Added 'log'
   const {
     ticker,
     exchange,
@@ -72,6 +77,12 @@ async function handleBuyTransaction(db, txData, createdAt) {
     advice_source_id || null,
     linked_journal_id || null,
   ]);
+
+  // --- *** ADDED THIS CALL *** ---
+  // Now, archive the associated watchlist item
+  // We pass txData as the "BUY" object
+  await archiveWatchlistItem(db, log, txData, account_holder_id, ticker);
+  // --- *** END ADDED CALL *** ---
 }
 
 module.exports = {

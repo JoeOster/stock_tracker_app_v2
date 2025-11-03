@@ -9,9 +9,14 @@ import {
   _renderModalActionsPanel,
   _renderModalSummaryStats,
   _renderModalTradeIdeas,
-  _renderModalRealTrades,
+  // --- MODIFIED: Import new/renamed functions ---
+  _renderModalTechniques_Open,
+  _renderModalTechniques_Closed,
   _renderModalPaperTrades_Open,
   _renderModalPaperTrades_Closed,
+  _renderModalRealTrades_Open,
+  _renderModalRealTrades_Closed,
+  // --- END MODIFIED ---
   _renderModalDocuments,
   _renderModalNotes,
 } from './_research_sources_modal_html.js';
@@ -44,9 +49,16 @@ export function generateSourceDetailsHTML(details) {
       .map((tx) => tx.ticker)
   );
 
+  // --- MODIFIED: Split journal entries into Techniques and Paper Trades ---
+  const techniques = journalEntries.filter(
+    (j) => !j.quantity || j.quantity === 0
+  );
+  const paperTrades = journalEntries.filter((j) => j.quantity > 0);
+  // --- END MODIFIED ---
+
   // Tickers from open 'journal_entries' (paper trades)
   const paperTradeTickers = new Set(
-    journalEntries
+    paperTrades
       .filter((entry) => entry.status === 'OPEN')
       .map((entry) => entry.ticker)
   );
@@ -56,29 +68,56 @@ export function generateSourceDetailsHTML(details) {
   const actionsHtml = _renderModalActionsPanel(source);
   const summaryHtml = _renderModalSummaryStats(summaryStats);
 
-  // --- *** THIS IS THE FIX: Pass journalEntries to _renderModalTradeIdeas *** ---
+  // --- MODIFIED: Build sections based on new logic ---
+
+  // 1. Techniques (Book/Website only)
+  let techniquesHtml = '';
+  if (source.type === 'Book' || source.type === 'Website') {
+    const openTechniques = techniques.filter((t) => t.status === 'OPEN');
+    const closedTechniques = techniques.filter(
+      (t) => t.status !== 'OPEN' // e.g., 'CLOSED', 'CANCELLED'
+    );
+    // Note: Techniques don't have a "historical" section, just open/closed.
+    techniquesHtml =
+      _renderModalTechniques_Open(openTechniques) +
+      _renderModalTechniques_Closed(closedTechniques);
+  }
+
+  // 2. Trade Ideas (All source types)
   const tradeIdeasHtml = _renderModalTradeIdeas(
     watchlistItems,
     linkedTxTickers,
     paperTradeTickers,
     source,
-    journalEntries // <-- ADDED
+    journalEntries // Pass *all* journal entries so ideas can find their technique
   );
-  // --- *** END FIX *** ---
 
-  const realTradesHtml = _renderModalRealTrades(linkedTransactions);
-  const paperOpenHtml = _renderModalPaperTrades_Open(
-    journalEntries,
-    source.type
+  // 3. Paper Trades (All source types)
+  const openPaperTrades = paperTrades.filter((p) => p.status === 'OPEN');
+  const closedPaperTrades = paperTrades.filter(
+    (p) => p.status !== 'OPEN' // e.g., 'CLOSED', 'EXECUTED'
   );
-  const paperClosedHtml = _renderModalPaperTrades_Closed(
-    journalEntries,
-    source.type
+
+  const paperOpenHtml = _renderModalPaperTrades_Open(openPaperTrades);
+  const paperClosedHtml = _renderModalPaperTrades_Closed(closedPaperTrades);
+
+  // 4. Real Trades (All source types)
+  const openRealTrades = linkedTransactions.filter(
+    (tx) => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001
   );
+  const closedRealTrades = linkedTransactions.filter(
+    (tx) => tx.transaction_type === 'SELL'
+  );
+
+  const realOpenHtml = _renderModalRealTrades_Open(openRealTrades);
+  const realClosedHtml = _renderModalRealTrades_Closed(closedRealTrades);
+
+  // 5. Documents and Notes (All source types)
   const documentsHtml = _renderModalDocuments(documents, source);
   const notesHtml = _renderModalNotes(sourceNotes, source);
+  // --- END MODIFICATION ---
 
-  // --- Assemble the final HTML ---
+  // --- *** THIS IS THE FIX: Assemble the final HTML in the requested order *** ---
   return `
         <div class="modal-grid">
             <div class="modal-grid-left">
@@ -86,11 +125,12 @@ export function generateSourceDetailsHTML(details) {
             </div>
             <div class="modal-grid-right">
                 ${actionsHtml}
+                ${summaryHtml}
+                
+                ${techniquesHtml} 
             </div>
         </div>
         
-        ${summaryHtml}
-
         <div class="modal-section">
             ${tradeIdeasHtml}
         </div>
@@ -98,22 +138,29 @@ export function generateSourceDetailsHTML(details) {
         <div class="modal-section">
             ${paperOpenHtml}
         </div>
+
+        <div class="modal-section">
+            ${realOpenHtml}
+        </div>
         
+        <hr style="margin: 2rem 0 1rem 0;">
+
         <div class="modal-section">
             ${paperClosedHtml}
         </div>
 
         <div class="modal-section">
-            ${realTradesHtml}
+            ${realClosedHtml}
         </div>
         
         <div class="modal-grid-bottom">
             <div class="modal-grid-left">
                 ${documentsHtml}
             </div>
-            <div class="modal-grid-right">
+            <div class.modal-grid-right">
                 ${notesHtml}
             </div>
         </div>
     `;
+  // --- *** END FIX *** ---
 }

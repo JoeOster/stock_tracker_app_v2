@@ -98,19 +98,20 @@ module.exports = (db, log, captureEodPrices) => {
       parseFloat(price) <= 0 ||
       !account_holder_id
     ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            'Invalid input. Ensure ticker, exchange, type, date, price, and holder ID are valid.',
-        });
+      return res.status(400).json({
+        message:
+          'Invalid input. Ensure ticker, exchange, type, date, price, and holder ID are valid.',
+      });
     }
 
     try {
       await db.exec('BEGIN TRANSACTION');
 
       if (transaction_type === 'BUY') {
-        await handleBuyTransaction(db, req.body, createdAt);
+        // --- *** THIS IS THE FIX *** ---
+        // Added the 'log' argument
+        await handleBuyTransaction(db, log, req.body, createdAt);
+        // --- *** END FIX *** ---
       } else if (transaction_type === 'SELL') {
         await handleSellTransaction(
           db,
@@ -254,7 +255,6 @@ module.exports = (db, log, captureEodPrices) => {
     }
   });
 
-  // --- ADDED: New route for Task 1.2 ---
   /**
    * @route POST /api/transactions/sales/batch
    * @group Transactions - Operations for transactions
@@ -326,7 +326,6 @@ module.exports = (db, log, captureEodPrices) => {
       res.status(500).json({ message: 'Server error fetching sales history.' });
     }
   });
-  // --- END ADDED ---
 
   return router;
 };

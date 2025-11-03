@@ -1,9 +1,10 @@
-﻿// /public/event-handlers/_research_sources_actions_watchlist.js
+﻿// /public/event-handlers/_modals.js
 /**
- * @file Contains action handlers for the Watchlist (Trade Ideas) panel in the Source Details modal.
- * @module event-handlers/_research_sources_actions_watchlist
+ * @file Initializes all general modal event handlers (like close buttons).
+ * @module event-handlers/_modals
  */
 
+// --- Imports from _research_sources_actions_watchlist.js ---
 import { state, updateState } from '../state.js';
 import { switchView } from './_navigation.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
@@ -49,8 +50,6 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
         .trim()
         .toUpperCase();
 
-      // --- THIS IS THE FIX (Part 1) ---
-      // Get form values using the *correct* IDs (with 'rec-' prefix)
       const rec_entry_low = /** @type {HTMLInputElement} */ (
         addIdeaModal.querySelector('#idea-form-rec-entry-low')
       ).value;
@@ -63,8 +62,10 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
       const rec_tp2 = /** @type {HTMLInputElement} */ (
         addIdeaModal.querySelector('#idea-form-rec-tp2')
       ).value;
+
+      // --- THIS IS THE FIX (Part 1 - Corrected ID) ---
       const rec_stop_loss = /** @type {HTMLInputElement} */ (
-        addIdeaModal.querySelector('#idea-form-stop-loss')
+        addIdeaModal.querySelector('#idea-form-rec-stop-loss')
       ).value;
       // --- END FIX ---
 
@@ -143,8 +144,6 @@ function openAddTradeIdeaModal(
   // Reset form
   addIdeaForm.reset();
 
-  // --- THIS IS THE FIX (Part 2) ---
-  // Helper function for safe value setting, now scoped to the modal
   const safeSetInputValue = (id, value) => {
     const el = /** @type {HTMLInputElement} */ (
       addIdeaModal.querySelector(`#${id}`)
@@ -156,9 +155,8 @@ function openAddTradeIdeaModal(
         `openAddTradeIdeaModal: Element with ID "${id}" not found INSIDE modal.`
       );
     }
-    return el; // Return the element (or null) for further use
+    return el;
   };
-  // --- END FIX ---
 
   // Set new context (linking to the source and ticker)
   safeSetInputValue('idea-form-source-id', sourceId);
@@ -189,8 +187,6 @@ function openAddTradeIdeaModal(
 
   // Set default values if provided (from a technique)
   if (defaults) {
-    // --- THIS IS THE FIX (Part 3) ---
-    // Use the *correct* IDs (with 'rec-' prefix)
     // @ts-ignore
     safeSetInputValue('idea-form-rec-entry-low', defaults.entry || '');
     // @ts-ignore
@@ -199,7 +195,6 @@ function openAddTradeIdeaModal(
     safeSetInputValue('idea-form-rec-tp2', defaults.tp2 || '');
     // @ts-ignore
     safeSetInputValue('idea-form-rec-stop-loss', defaults.sl || '');
-    // --- END FIX ---
   }
 
   // Show the modal
@@ -245,7 +240,9 @@ export async function handleCreateTradeIdeaFromBook(target, journalEntries) {
     return showToast('Error: Missing data from source button.', 'error');
   }
 
-  const openTechniques = journalEntries.filter((j) => j.status === 'OPEN');
+  const openTechniques = journalEntries.filter(
+    (j) => j.status === 'OPEN' && j.quantity === 0
+  );
   if (openTechniques.length === 0) {
     return showToast(
       'Please add a "Technique" first, then you can develop an idea from it.',
@@ -257,10 +254,10 @@ export async function handleCreateTradeIdeaFromBook(target, journalEntries) {
   if (openTechniques.length === 1) {
     const technique = openTechniques[0];
     const defaults = {
-      entry: technique.entry_price,
-      tp1: technique.target_price,
-      tp2: technique.target_price_2,
-      sl: technique.stop_loss_price,
+      // entry: technique.entry_price, // Per user request, do not pre-fill
+      // tp1: technique.target_price,
+      // tp2: technique.target_price_2,
+      // sl: technique.stop_loss_price,
     };
     openAddTradeIdeaModal(
       sourceId,
@@ -314,13 +311,28 @@ export async function handleCreateTradeIdeaFromTechnique(
   );
 }
 
-// ... inside public/event-handlers/_modals.js
-
+/**
+ * Handles click on "Buy" button from a Trade Idea row.
+ * @param {HTMLElement} target
+ * @returns {Promise<void>}
+ */
 export async function handleCreateBuyOrderFromIdea(target) {
-  const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId, sourceName } =
-    target.dataset;
+  // --- *** THIS IS THE FIX (Part 2) *** ---
+  // Destructure the new journalId
+  const {
+    ticker,
+    entryLow,
+    entryHigh,
+    tp1,
+    tp2,
+    sl,
+    sourceId,
+    sourceName,
+    journalId, // <-- Read the new data attribute
+  } = target.dataset;
 
   const prefillData = {
+    // <-- This is line 333
     sourceId: sourceId,
     sourceName: sourceName,
     ticker: ticker,
@@ -328,24 +340,26 @@ export async function handleCreateBuyOrderFromIdea(target) {
     tp1: tp1 || null,
     tp2: tp2 || null,
     sl: sl || null,
+    journalId: journalId || null, // <-- Add the journalId here
   };
+  // --- *** END FIX *** ---
 
   updateState({ prefillOrderFromSource: prefillData });
   await switchView('orders');
 
-  // --- THIS IS THE FIX ---
-  // Manually close the source details modal so you can see the Orders page
   const detailsModal = document.getElementById('source-details-modal');
   if (detailsModal) {
     detailsModal.classList.remove('visible');
   }
-  // --- END FIX ---
 
   showToast(`Prefilling "Log Trade" form for ${ticker}...`, 'info');
 }
 
-// ...
-
+/**
+ * Handles click on "Paper" button from a Trade Idea row.
+ * @param {HTMLElement} target
+ * @returns {Promise<void>}
+ */
 export async function handleCreatePaperTradeFromIdea(target) {
   const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId } =
     target.dataset;
@@ -414,6 +428,14 @@ export async function handleCreatePaperTradeFromIdea(target) {
     document.getElementById('journal-quantity')
   ).focus();
 }
+
+/**
+ * Handles click on "Archive" (X) button from a Trade Idea row.
+ * @param {string} itemId
+ * @param {string} ticker
+ * @param {function(): Promise<void>} refreshDetailsCallback
+ * @returns {Promise<void>}
+ */
 export async function handleCloseWatchlistIdea(
   itemId,
   ticker,
@@ -436,11 +458,6 @@ export async function handleCloseWatchlistIdea(
     }
   );
 }
-// /public/event-handlers/_modals.js
-/**
- * @file Initializes all general modal event handlers (like close buttons).
- * @module event-handlers/_modals
- */
 
 /**
  * Initializes global click handlers for closing modals.

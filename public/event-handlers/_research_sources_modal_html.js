@@ -5,7 +5,13 @@
  */
 
 import { state } from '../state.js'; // Needed for price cache
-import { formatAccounting, formatQuantity } from '../ui/formatters.js';
+import {
+  formatAccounting,
+  formatQuantity,
+  formatDate,
+  formatPercent,
+} from '../ui/formatters.js';
+import { getSourceNameFromId } from '../ui/dropdowns.js';
 
 /**
  * Escapes HTML special characters in a string.
@@ -40,17 +46,14 @@ export function _renderModalProfile(source) {
   if (source.url)
     html += `<p><strong>URL:</strong> <a href="${escapeHTML(source.url)}" target="_blank" class="source-url-link">${escapeHTML(source.url)}</a></p>`;
 
-  // --- MODIFIED: Split 'Person' and 'Group' contact info display ---
   if (source.type === 'Person') {
     html += `<h5 style="margin-top: 1rem;">Contact Info</h5>`;
-    // --- REMOVED: Redundant 'Person:' display ---
     if (source.details?.contact_email)
       html += `<p><strong>Email:</strong> ${escapeHTML(source.details.contact_email)}</p>`;
     if (source.details?.contact_phone)
       html += `<p><strong>Phone:</strong> ${escapeHTML(source.details.contact_phone)}</p>`;
   } else if (source.type === 'Group') {
     html += `<h5 style="margin-top: 1rem;">Contact Info</h5>`;
-    // Use "Primary Contact" label for groups
     if (source.details?.contact_person)
       html += `<p><strong>Primary Contact:</strong> ${escapeHTML(source.details.contact_person)}</p>`;
     if (source.details?.contact_email)
@@ -59,7 +62,6 @@ export function _renderModalProfile(source) {
       html += `<p><strong>Phone:</strong> ${escapeHTML(source.details.contact_phone)}</p>`;
   }
 
-  // This part remains common for both Person and Group
   if (source.type === 'Person' || source.type === 'Group') {
     let appIconHTML = '';
     const appType = source.details?.contact_app_type?.toLowerCase();
@@ -73,9 +75,7 @@ export function _renderModalProfile(source) {
       html += `<p><strong>App:</strong> ${appIconHTML}${escapeHTML(source.details.contact_app_type)}: ${appHandle || 'N/A'}</p>`;
     }
   }
-  // --- END MODIFICATION ---
 
-  // --- ADD: Display links from Book type ---
   if (source.type === 'Book') {
     if (source.details?.websites && source.details.websites.length > 0) {
       html += `<h5 style="margin-top: 1rem;">Websites</h5>`;
@@ -96,24 +96,20 @@ export function _renderModalProfile(source) {
         .join('');
     }
   }
-  // --- END ADD ---
 
   html += '</div>';
   return html;
 }
 
 /**
- * --- NEW FUNCTION ---
- * Renders the top-right "Actions" panel, which changes based on source type.
+ * Renders the top-right "Actions" panel, with conditional buttons based on source type.
  * @param {object} source - The advice source data.
  * @returns {string} HTML string.
  */
 export function _renderModalActionsPanel(source) {
-  // Per your feedback, the titles are removed for a cleaner look.
   let html = `<div class="add-ticker-section" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1rem;">`;
 
   const sourceId = source.id;
-  // Escape the source name for safe use in the data-attribute
   const sourceName = escapeHTML(source.name);
 
   if (source.type === 'Person' || source.type === 'Group') {
@@ -124,15 +120,12 @@ export function _renderModalActionsPanel(source) {
             </button>
         `;
   } else {
-    // --- THIS IS THE FIX ---
-    // For Book/Website/Other, ONLY show "Add Technique"
-    // The "Add Trade Idea" button is now correctly on the technique row itself.
+    // For Book/Website/Other, show "Add Technique"
     html += `
             <button id="add-technique-btn" data-source-id="${sourceId}" data-source-name="${sourceName}" style="width: 100%;">
                 Add Technique
             </button>
         `;
-    // --- END FIX ---
   }
 
   html += '</div>';
@@ -140,17 +133,26 @@ export function _renderModalActionsPanel(source) {
 }
 
 /**
- * Renders the Summary Stats header section.
+ * --- MODIFIED FUNCTION ---
+ * Renders the Summary Stats panel.
  * @param {object} stats - The summary stats object.
  * @returns {string} HTML string.
  */
 export function _renderModalSummaryStats(stats) {
-  let html = `<div class="summary-container source-summary-header" style="margin-top: 1.5rem; justify-content: space-around;">`;
-  html += `<div class="summary-item"><h3>Total Ideas</h3><p>${stats.totalTrades}</p></div>`;
-  html += `<div class="summary-item"><h3>Investment (Open)</h3><p>${formatAccounting(stats.totalInvestment)}</p></div>`;
-  html += `<div class="summary-item"><h3>Unrealized P/L (Open)</h3><p class="${stats.totalUnrealizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(stats.totalUnrealizedPL)}</p></div>`;
-  html += `<div class="summary-item"><h3>Realized P/L (Closed)</h3><p class="${stats.totalRealizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(stats.totalRealizedPL)}</p></div>`;
+  // --- THIS IS THE FIX ---
+  // Use 'source-profile-section' class for consistent styling with the profile
+  // Add margin-top to separate it from the action button above it.
+  let html = `<div class="source-profile-section" style="margin-top: 1.5rem;">`;
+  // Add a title "Summary"
+  html += `<h4 style="margin-top: 0; margin-bottom: 1rem;">Summary</h4>`;
+
+  // Use the same <p> styling as the profile
+  html += `<p style="margin: 0.4rem 0;"><strong>Total Ideas:</strong> ${stats.totalTrades}</p>`;
+  html += `<p style="margin: 0.4rem 0;"><strong>Investment (Open):</strong> ${formatAccounting(stats.totalInvestment)}</p>`;
+  html += `<p style="margin: 0.4rem 0;"><strong>Unrealized P/L (Open):</strong> <span class="${stats.totalUnrealizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(stats.totalUnrealizedPL)}</span></p>`;
+  html += `<p style="margin: 0.4rem 0;"><strong>Realized P/L (Closed):</strong> <span class="${stats.totalRealizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(stats.totalRealizedPL)}</span></p>`;
   html += `</div>`;
+  // --- END FIX ---
   return html;
 }
 
@@ -168,7 +170,7 @@ export function _renderModalTradeIdeas(
   linkedTxTickers,
   paperTradeTickers,
   source,
-  journalEntries // <-- ADDED
+  journalEntries
 ) {
   let html = `<h4 style="margin-top: 1rem;">Trade Ideas (${watchlistItems.length})</h4>`;
   if (watchlistItems.length > 0) {
@@ -234,14 +236,12 @@ export function _renderModalTradeIdeas(
       const isLinkedToRealTrade = linkedTxTickers.has(item.ticker);
       const isLinkedToPaperTrade = paperTradeTickers.has(item.ticker);
 
-      // --- *** THIS IS THE FIX: Find the technique name *** ---
       const technique = item.journal_entry_id
         ? journalEntries.find((j) => j.id === item.journal_entry_id)
         : null;
       const techniqueName = technique
         ? escapeHTML(technique.entry_reason)
         : '--';
-      // --- *** END FIX *** ---
 
       let buyOrLiveHTML = '';
       let paperOrPaperMarkerHTML = '';
@@ -258,7 +258,8 @@ export function _renderModalTradeIdeas(
                         data-tp2="${item.rec_tp2 || ''}"
                         data-sl="${item.rec_stop_loss || ''}"
                         data-source-id="${source.id}" 
-                        data-source-name="${escapeHTML(source.name)}" 
+                        data-source-name="${escapeHTML(source.name)}"
+                        data-journal-id="${item.journal_entry_id || ''}"
                         title="Create Buy Order from this Idea">Buy</button>
                 `;
       }
@@ -290,7 +291,7 @@ export function _renderModalTradeIdeas(
                     <td>${escapeHTML(item.ticker)}</td> 
                     <td style="white-space: normal; min-width: 150px;">${techniqueName}</td>
                     <td class="numeric">${entryRange}</td> 
-                    <td class="numeric">${currentPrice ? formatAccounting(currentPrice) : '--'}</td> 
+                    <td class_numeric">${currentPrice ? formatAccounting(currentPrice) : '--'}</td> 
                     <td class="numeric ${distClass}">${distance}</td> 
                     <td class="numeric">${recLimits}</td>
                     <td class="center-align actions-cell">
@@ -306,141 +307,16 @@ export function _renderModalTradeIdeas(
 }
 
 /**
- * Renders the "Linked Real Trades" (Open and History) tables.
- * @param {any[]} linkedTransactions - Array of transaction objects.
+ * Renders the "Techniques / Methods" (Open) table.
+ * @param {any[]} journalEntries - Array of *pre-filtered* journal entries (qty 0, status OPEN).
  * @returns {string} HTML string.
  */
-export function _renderModalRealTrades(linkedTransactions) {
+export function _renderModalTechniques_Open(journalEntries) {
   let html = '';
-  const openRealTrades = linkedTransactions
-    .filter(
-      (tx) => tx.transaction_type === 'BUY' && tx.quantity_remaining > 0.00001
-    )
-    .sort(
-      (a, b) =>
-        new Date(b.transaction_date).getTime() -
-        new Date(a.transaction_date).getTime()
-    );
+  const paperTradeTitle = 'Techniques / Methods'; // Hardcoded title
 
-  const closedRealTrades = linkedTransactions
-    .filter((tx) => tx.transaction_type === 'SELL')
-    .sort(
-      (a, b) =>
-        new Date(b.transaction_date).getTime() -
-        new Date(a.transaction_date).getTime()
-    );
-
-  html += `<h4 style="margin-top: 1rem;">Linked Real Trades (Open) (${openRealTrades.length})</h4>`;
-  if (openRealTrades.length > 0) {
-    html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
-            <thead>
-                <tr>
-                    <th>Date</th> <th>Ticker</th> <th class="numeric">Entry $</th> <th class="numeric">Rem. Qty</th> <th class="numeric">Current $</th> <th class="numeric">Unrealized P/L</th> <th>Status</th>
-                    <th class="center-align actions-cell">Actions</th>
-                </tr>
-            </thead><tbody>`;
-    openRealTrades.forEach((entry) => {
-      const pnl = entry.unrealized_pnl;
-      const pnlClass =
-        pnl !== null && pnl !== undefined
-          ? pnl >= 0
-            ? 'positive'
-            : 'negative'
-          : '';
-      const pnlDisplay =
-        pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
-      const currentPriceDisplay = entry.current_price
-        ? formatAccounting(entry.current_price)
-        : '--';
-
-      html += `
-                <tr>
-                    <td>${escapeHTML(entry.transaction_date) || 'N/A'}</td> 
-                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td> 
-                    <td class="numeric">${formatAccounting(entry.price)}</td> 
-                    <td class="numeric">${formatQuantity(entry.quantity_remaining)}</td> 
-                    <td class="numeric">${currentPriceDisplay}</td> 
-                    <td class="numeric ${pnlClass}">${pnlDisplay}</td> 
-                    <td>Open Lot</td>
-                    <td class="center-align actions-cell">
-                        <button class="sell-from-lot-btn-source" 
-                            data-buy-id="${entry.id}" 
-                            data-ticker="${escapeHTML(entry.ticker)}" 
-                            data-exchange="${escapeHTML(entry.exchange)}" 
-                            data-quantity="${entry.quantity_remaining}"
-                            title="Sell from this lot">Sell</button>
-                    </td>
-                </tr>`;
-    });
-    html += `</tbody></table></div>`;
-  } else {
-    html += `<p>No open real-money trades linked to this source.</p>`;
-  }
-
-  html += `<h4 style="margin-top: 1rem;">Linked Real Trades (History) (${closedRealTrades.length})</h4>`;
-  if (closedRealTrades.length > 0) {
-    html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
-            <thead>
-                <tr>
-                    <th>Date</th> <th>Ticker</th> <th>Type</th> <th class="numeric">Price</th> <th class="numeric">Qty</th> <th class="numeric">Realized P/L</th> <th>Status</th>
-                </tr>
-            </thead><tbody>`;
-
-    // Note: Realized P/L for SELLs is calculated on the backend in the /api/sources/:id/details route
-    closedRealTrades.forEach((entry) => {
-      let pnl = entry.realized_pnl; // This comes from the backend calculation
-      let statusDisplay = 'SELL';
-
-      const pnlClass =
-        pnl !== null && pnl !== undefined
-          ? pnl >= 0
-            ? 'positive'
-            : 'negative'
-          : '';
-      const pnlDisplay =
-        pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
-      html += `
-                <tr class="text-muted">
-                    <td>${escapeHTML(entry.transaction_date) || 'N/A'}</td> 
-                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td> 
-                    <td>${statusDisplay}</td>
-                    <td class="numeric">${formatAccounting(entry.price)}</td> 
-                    <td class="numeric">${formatQuantity(entry.quantity)}</td> 
-                    <td class="numeric ${pnlClass}">${pnlDisplay}</td> 
-                    <td>Sold</td>
-                </tr>`;
-    });
-    html += `</tbody></table></div>`;
-  } else {
-    html += `<p>No closed or sold real-money trades linked to this source.</p>`;
-  }
-  return html;
-}
-
-/**
- * --- MODIFIED FUNCTION ---
- * Renders the "Tracked Paper Trades" (Open) table.
- * Title changes to "Techniques / Methods" for non-person source types.
- * @param {any[]} journalEntries - Array of journal entry objects.
- * @param {string} [sourceType='Person'] - The type of the source.
- * @returns {string} HTML string.
- */
-export function _renderModalPaperTrades_Open(
-  journalEntries,
-  sourceType = 'Person'
-) {
-  let html = '';
-  const isPersonOrGroup = sourceType === 'Person' || sourceType === 'Group';
-  const paperTradeTitle = isPersonOrGroup
-    ? 'Tracked Paper Trades'
-    : 'Techniques / Methods';
-
-  const openJournalEntries = journalEntries.filter(
-    (entry) => entry.status === 'OPEN'
-  );
-
-  html += `<h4 style="margin-top: 1rem;">${paperTradeTitle} (${openJournalEntries.length})</h4>`;
-  if (openJournalEntries.length > 0) {
+  html += `<h4 style="margin-top: 1rem;">${paperTradeTitle} (${journalEntries.length})</h4>`;
+  if (journalEntries.length > 0) {
     html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
                 <tr>
@@ -450,7 +326,7 @@ export function _renderModalPaperTrades_Open(
                     <th class="center-align">Actions</th>
                 </tr>
             </thead><tbody>`;
-    openJournalEntries.forEach((entry) => {
+    journalEntries.forEach((entry) => {
       let chartThumbnail = '--';
       if (entry.image_path) {
         chartThumbnail = `<img src="${escapeHTML(entry.image_path)}" alt="Technique Chart" class="technique-image-thumbnail">`;
@@ -484,35 +360,19 @@ export function _renderModalPaperTrades_Open(
     });
     html += `</tbody></table></div>`;
   } else {
-    html += `<p>No ${isPersonOrGroup ? 'paper trades' : 'techniques'} are being tracked for this source.</p>`;
+    html += `<p>No ${paperTradeTitle.toLowerCase()} are being tracked for this source.</p>`;
   }
   return html;
 }
 
 /**
- * --- MODIFIED FUNCTION ---
- * Renders the "Completed Paper Trades" (Closed) table.
- * Title changes to "Completed Techniques" for non-person source types.
- * @param {any[]} journalEntries - Array of journal entry objects.
- * @param {string} [sourceType='Person'] - The type of the source.
+ * Renders the "Completed Techniques" (Closed) table.
+ * @param {any[]} journalEntries - Array of *pre-filtered* journal entries (qty 0, status != OPEN).
  * @returns {string} HTML string.
  */
-export function _renderModalPaperTrades_Closed(
-  journalEntries,
-  sourceType = 'Person'
-) {
-  let html = '';
-  const isPersonOrGroup = sourceType === 'Person' || sourceType === 'Group';
-  const completedTradeTitle = isPersonOrGroup
-    ? 'Completed Paper Trades'
-    : 'Completed Techniques';
-
-  const closedJournalEntries = journalEntries.filter((entry) =>
-    ['CLOSED', 'EXECUTED'].includes(entry.status)
-  );
-
-  html += `<h4 style="margin-top: 1rem;">${completedTradeTitle} (${closedJournalEntries.length})</h4>`;
-  if (closedJournalEntries.length > 0) {
+export function _renderModalTechniques_Closed(journalEntries) {
+  let html = `<h4 style="margin-top: 1rem;">Completed Techniques (${journalEntries.length})</h4>`;
+  if (journalEntries.length > 0) {
     html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
             <thead>
                 <tr>
@@ -524,7 +384,7 @@ export function _renderModalPaperTrades_Closed(
                     <th class="center-align">Actions</th>
                 </tr>
             </thead><tbody>`;
-    closedJournalEntries.forEach((entry) => {
+    journalEntries.forEach((entry) => {
       const statusDisplay =
         entry.status === 'EXECUTED' && entry.linked_trade_id
           ? `Executed (Tx #${entry.linked_trade_id})`
@@ -564,7 +424,228 @@ export function _renderModalPaperTrades_Closed(
     });
     html += `</tbody></table></div>`;
   } else {
-    html += `<p>No completed ${isPersonOrGroup ? 'paper trades' : 'techniques'} linked to this source.</p>`;
+    html += `<p>No completed techniques linked to this source.</p>`;
+  }
+  return html;
+}
+
+/**
+ * Renders the "Tracked Paper Trades" (Open) table.
+ * @param {any[]} journalEntries - Array of *pre-filtered* journal entries (qty > 0, status OPEN).
+ * @returns {string} HTML string.
+ */
+export function _renderModalPaperTrades_Open(journalEntries) {
+  let html = `<h4 style="margin-top: 1rem;">Tracked Paper Trades (${journalEntries.length})</h4>`;
+  if (journalEntries.length > 0) {
+    html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Date</th> 
+                    <th>Ticker</th> 
+                    <th class="numeric">Entry $</th> 
+                    <th class="numeric">Qty</th> 
+                    <th class="numeric">Current $</th> 
+                    <th class="numeric">Unrealized P/L</th> 
+                    <th class="center-align">Actions</th>
+                </tr>
+            </thead><tbody>`;
+
+    journalEntries.forEach((entry) => {
+      const priceData = state.priceCache.get(entry.ticker);
+      let currentPL = 0;
+      let plClass = '';
+
+      if (
+        priceData &&
+        typeof priceData.price === 'number' &&
+        priceData.price > 0
+      ) {
+        if (entry.direction === 'BUY') {
+          currentPL = (priceData.price - entry.entry_price) * entry.quantity;
+        } else {
+          currentPL = (entry.entry_price - priceData.price) * entry.quantity;
+        }
+        plClass = currentPL >= 0 ? 'positive' : 'negative';
+      }
+
+      const currentPriceDisplay =
+        priceData && typeof priceData.price === 'number'
+          ? formatAccounting(priceData.price)
+          : priceData?.price || '--';
+
+      const actionButtons = `
+                <button class="journal-edit-btn" data-id="${entry.id}" title="Edit Entry">✏️</button>
+                <button class="journal-delete-btn delete-btn" data-id="${entry.id}" title="Delete Entry">🗑️</button>
+            `;
+
+      html += `
+                <tr>
+                    <td>${formatDate(entry.entry_date)}</td>
+                    <td>${escapeHTML(entry.ticker)}</td>
+                    <td class="numeric">${formatAccounting(entry.entry_price)}</td>
+                    <td class="numeric">${formatQuantity(entry.quantity)}</td>
+                    <td class-="numeric">${currentPriceDisplay}</td>
+                    <td class="numeric ${plClass}">${formatAccounting(currentPL)}</td>
+                    <td class="center-align actions-cell">${actionButtons}</td>
+                </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  } else {
+    html += `<p>No open paper trades linked to this source.</p>`;
+  }
+  return html;
+}
+
+/**
+ * Renders the "Completed Paper Trades" (Closed/Executed) table.
+ * @param {any[]} journalEntries - Array of *pre-filtered* journal entries (qty > 0, status != OPEN).
+ * @returns {string} HTML string.
+ */
+export function _renderModalPaperTrades_Closed(journalEntries) {
+  let html = `<h4 style="margin-top: 1rem;">Completed Paper Trades (${journalEntries.length})</h4>`;
+  if (journalEntries.length > 0) {
+    html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Entry Date</th> 
+                    <th>Exit Date</th> 
+                    <th>Ticker</th> 
+                    <th class="numeric">Entry $</th> 
+                    <th class="numeric">Exit $</th> 
+                    <th class="numeric">Qty</th> 
+                    <th class="numeric">Realized P/L</th> 
+                    <th>Status</th>
+                    <th class="center-align">Actions</th>
+                </tr>
+            </thead><tbody>`;
+    journalEntries.forEach((entry) => {
+      const pl = entry.pnl ?? 0;
+      const plClass = pl >= 0 ? 'positive' : 'negative';
+      const statusText =
+        entry.status === 'EXECUTED'
+          ? `Executed (Tx #${entry.linked_trade_id})`
+          : escapeHTML(entry.status);
+
+      const actionButtons = `
+                <button class="journal-edit-btn" data-id="${entry.id}" title="Edit Entry">✏️</button>
+                <button class="journal-delete-btn delete-btn" data-id="${entry.id}" title="Delete Entry">🗑️</button>
+            `;
+
+      html += `
+                <tr class="text-muted">
+                    <td>${formatDate(entry.entry_date)}</td>
+                    <td>${formatDate(entry.exit_date)}</td>
+                    <td>${escapeHTML(entry.ticker)}</td>
+                    <td class="numeric">${formatAccounting(entry.entry_price)}</td>
+                    <td class="numeric">${formatAccounting(entry.exit_price)}</td>
+                    <td class="numeric">${formatQuantity(entry.quantity)}</td>
+                    <td class="numeric ${plClass}">${formatAccounting(pl)}</td>
+                    <td>${statusText}</td>
+                    <td class="center-align actions-cell">${actionButtons}</td>
+                </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  } else {
+    html += `<p>No completed paper trades linked to this source.</p>`;
+  }
+  return html;
+}
+
+/**
+ * Renders the "Linked Real Trades" (Open) table.
+ * @param {any[]} openRealTrades - Array of open transaction objects.
+ * @returns {string} HTML string.
+ */
+export function _renderModalRealTrades_Open(openRealTrades) {
+  let html = `<h4 style="margin-top: 1rem;">Linked Real Trades (Open) (${openRealTrades.length})</h4>`;
+  if (openRealTrades.length > 0) {
+    html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Date</th> <th>Ticker</th> <th class="numeric">Entry $</th> <th class="numeric">Rem. Qty</th> <th class="numeric">Current $</th> <th class="numeric">Unrealized P/L</th> 
+                    <th class="center-align actions-cell">Actions</th>
+                </tr>
+            </thead><tbody>`;
+    openRealTrades.forEach((entry) => {
+      const pnl = entry.unrealized_pnl;
+      const pnlClass =
+        pnl !== null && pnl !== undefined
+          ? pnl >= 0
+            ? 'positive'
+            : 'negative'
+          : '';
+      const pnlDisplay =
+        pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
+      const currentPriceDisplay = entry.current_price
+        ? formatAccounting(entry.current_price)
+        : '--';
+
+      html += `
+                <tr>
+                    <td>${escapeHTML(entry.transaction_date) || 'N/A'}</td> 
+                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td> 
+                    <td class="numeric">${formatAccounting(entry.price)}</td> 
+                    <td class="numeric">${formatQuantity(entry.quantity_remaining)}</td> 
+                    <td class="numeric">${currentPriceDisplay}</td> 
+                    <td class="numeric ${pnlClass}">${pnlDisplay}</td> 
+                    <td class="center-align actions-cell">
+                        <button class="sell-from-lot-btn-source" 
+                            data-buy-id="${entry.id}" 
+                            data-ticker="${escapeHTML(entry.ticker)}" 
+                            data-exchange="${escapeHTML(entry.exchange)}" 
+                            data-quantity="${entry.quantity_remaining}"
+                            title="Sell from this lot">Sell</button>
+                    </td>
+                </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  } else {
+    html += `<p>No open real-money trades linked to this source.</p>`;
+  }
+  return html;
+}
+
+/**
+ * Renders the "Linked Real Trades" (History) table.
+ * @param {any[]} closedRealTrades - Array of SELL transaction objects.
+ * @returns {string} HTML string.
+ */
+export function _renderModalRealTrades_Closed(closedRealTrades) {
+  let html = `<h4 style="margin-top: 1rem;">Linked Real Trades (History) (${closedRealTrades.length})</h4>`;
+  if (closedRealTrades.length > 0) {
+    html += `<div style="max-height: 200px; overflow-y: auto;"><table class="mini-journal-table" style="width: 100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Date</th> <th>Ticker</th> <th>Type</th> <th class="numeric">Price</th> <th class="numeric">Qty</th> <th class="numeric">Realized P/L</th> <th>Status</th>
+                </tr>
+            </thead><tbody>`;
+
+    closedRealTrades.forEach((entry) => {
+      let pnl = entry.realized_pnl; // This comes from the backend calculation
+      let statusDisplay = 'SELL';
+
+      const pnlClass =
+        pnl !== null && pnl !== undefined
+          ? pnl >= 0
+            ? 'positive'
+            : 'negative'
+          : '';
+      const pnlDisplay =
+        pnl !== null && pnl !== undefined ? formatAccounting(pnl) : '--';
+      html += `
+                <tr class="text-muted">
+                    <td>${escapeHTML(entry.transaction_date) || 'N/A'}</td> 
+                    <td>${escapeHTML(entry.ticker) || 'N/A'}</td> 
+                    <td>${statusDisplay}</td>
+                    <td class="numeric">${formatAccounting(entry.price)}</td> 
+                    <td class="numeric">${formatQuantity(entry.quantity)}</td> 
+                    <td class="numeric ${pnlClass}">${pnlDisplay}</td> 
+                    <td>Sold</td>
+                </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  } else {
+    html += `<p>No closed or sold real-money trades linked to this source.</p>`;
   }
   return html;
 }
@@ -626,7 +707,3 @@ export function _renderModalNotes(sourceNotes, source) {
   html += `<form class="add-source-note-form" data-source-id="${source.id}" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--container-border);"> <h5>Add New Note</h5> <textarea class="add-note-content-textarea" placeholder="Enter your note..." required rows="3" style="width: 100%; box-sizing: border-box; margin-bottom: 5px;"></textarea> <div style="text-align: right;"> <button type="submit" class="add-source-note-button">Add Note</button> </div> </form>`;
   return html;
 }
-
-// --- *** THIS IS THE FIX: Removed the extra closing brace *** ---
-// }
-// --- *** END FIX *** ---

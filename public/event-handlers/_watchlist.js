@@ -25,11 +25,13 @@ import { renderWatchlistIdeas } from '../ui/renderers/_watchlist_ideas.js';
  */
 let activeSubTab = 'watched';
 
+// --- *** THIS IS THE FIX: Renamed 'refreshActiveSubTab' to 'loadWatchlistPage' and exported it *** ---
 /**
  * Refreshes the content of the currently active sub-tab.
  * @returns {Promise<void>}
  */
-async function refreshActiveSubTab() {
+export async function loadWatchlistPage() {
+  // --- *** END FIX *** ---
   const panelElement = /** @type {HTMLDivElement} */ (
     document.getElementById('watchlist-content-panel')
   );
@@ -73,7 +75,9 @@ async function handleSubTabClick(e) {
   });
   target.classList.add('active');
 
-  await refreshActiveSubTab();
+  // --- *** THIS IS THE FIX: Call renamed function *** ---
+  await loadWatchlistPage();
+  // --- *** END FIX *** ---
 }
 
 /**
@@ -125,7 +129,9 @@ async function handleAddWatchedTicker() {
     // --- *** END FIX *** ---
     showToast(`Ticker ${ticker} added to watchlist.`, 'success');
     input.value = '';
-    await refreshActiveSubTab(); // Refresh to show the new ticker
+    // --- *** THIS IS THE FIX: Call renamed function *** ---
+    await loadWatchlistPage(); // Refresh to show the new ticker
+    // --- *** END FIX --- ---
   } catch (error) {
     console.error('Failed to add watched ticker:', error);
     // @ts-ignore
@@ -159,7 +165,9 @@ async function handleDeleteWatchedTicker(target) {
         await deleteSimpleWatchedTicker(holderId, id);
         // --- *** END FIX *** ---
         showToast(`${ticker} removed from watchlist.`, 'success');
-        await refreshActiveSubTab(); // Refresh to remove the ticker
+        // --- *** THIS IS THE FIX: Call renamed function *** ---
+        await loadWatchlistPage(); // Refresh to remove the ticker
+        // --- *** END FIX --- ---
       } catch (error) {
         console.error('Failed to delete watched ticker:', error);
         // @ts-ignore
@@ -191,7 +199,9 @@ async function handleDeleteWatchlistIdea(target) {
       try {
         await closeWatchlistIdea(id);
         showToast(`${ticker} idea archived.`, 'success');
-        await refreshActiveSubTab(); // Refresh to remove the idea
+        // --- *** THIS IS THE FIX: Call renamed function *** ---
+        await loadWatchlistPage(); // Refresh to remove the idea
+        // --- *** END FIX --- ---
       } catch (error) {
         console.error('Failed to archive trade idea:', error);
         // @ts-ignore
@@ -222,8 +232,12 @@ export function initializeWatchlist() {
 
   // This listener refreshes the "Paper Trades" (ideas) tab
   // when a new one is created from the "Source Details" modal.
-  document.addEventListener('journalUpdated', refreshActiveSubTab);
+  // --- *** THIS IS THE FIX: Call renamed function *** ---
+  document.addEventListener('journalUpdated', loadWatchlistPage);
+  // --- *** END FIX --- ---
 
+  // --- *** THIS IS THE FIX: Removed initial load, as switchView will handle it *** ---
   // Load the default tab
-  refreshActiveSubTab();
+  // loadWatchlistPage(); // Initial load is handled by switchView
+  // --- *** END FIX --- ---
 }

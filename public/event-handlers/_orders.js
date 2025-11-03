@@ -13,7 +13,9 @@ import { getCurrentESTDateString } from '../ui/datetime.js';
 // --- REFACFOR: Import new handler functions ---
 import { initializeOrdersFormHandlers } from './_orders_form.js';
 import { initializeOrdersTableHandlers } from './_orders_table.js';
+// --- *** THIS IS THE FIX *** ---
 import { initializeOrdersModalHandlers } from './_orders_modals.js';
+// --- *** END FIX *** ---
 // --- END REFACTOR ---
 
 /**
@@ -65,6 +67,12 @@ export async function loadOrdersPage() {
       document.getElementById('add-tx-advice-source')
     ); // Still need the select itself
 
+    // --- *** ADDED: Get new hidden input *** ---
+    const linkedJournalIdInput = /** @type {HTMLInputElement | null} */ (
+      document.getElementById('add-tx-linked-journal-id')
+    );
+    // --- *** END ADDED *** ---
+
     // --- ADDED: Get Limit Inputs ---
     const limitUpInput = /** @type {HTMLInputElement | null} */ (
       document.getElementById('add-limit-price-up')
@@ -86,9 +94,10 @@ export async function loadOrdersPage() {
       accountSelect: !!accountSelect,
       dateInput: !!dateInput,
       adviceSourceSelect: !!adviceSourceSelect,
-      limitUpInput: !!limitUpInput, // --- ADDED ---
-      limitUp2Input: !!limitUp2Input, // --- ADDED ---
-      limitDownInput: !!limitDownInput, // --- ADDED ---
+      linkedJournalIdInput: !!linkedJournalIdInput, // --- ADDED ---
+      limitUpInput: !!limitUpInput,
+      limitUp2Input: !!limitUp2Input,
+      limitDownInput: !!limitDownInput,
     });
 
     // --- Check for all necessary elements ---
@@ -101,6 +110,7 @@ export async function loadOrdersPage() {
       !accountSelect ||
       !dateInput ||
       !adviceSourceSelect ||
+      !linkedJournalIdInput || // --- ADDED ---
       !limitUpInput ||
       !limitUp2Input ||
       !limitDownInput
@@ -119,40 +129,26 @@ export async function loadOrdersPage() {
     if (state.prefillOrderFromSource) {
       console.log('[loadOrdersPage - Delayed] Applying prefill data...');
       // --- MODIFIED: Destructure new fields ---
-      const { sourceId, sourceName, ticker, price, tp1, tp2, sl } =
+      const { sourceId, sourceName, ticker, price, tp1, tp2, sl, journalId } =
         state.prefillOrderFromSource;
 
       // --- Populate values ---
       tickerInput.value = ticker;
-      console.log(
-        `[loadOrdersPage - Delayed] Set tickerInput.value to: ${tickerInput.value}`
-      );
       priceInput.value = price;
-      console.log(
-        `[loadOrdersPage - Delayed] Set priceInput.value to: ${priceInput.value}`
-      );
 
       // --- ADDED: Populate limit fields ---
       if (tp1) limitUpInput.value = tp1;
       if (tp2) limitUp2Input.value = tp2;
       if (sl) limitDownInput.value = sl;
-      console.log(
-        `[loadOrdersPage - Delayed] Set limits: TP1=${tp1}, TP2=${tp2}, SL=${sl}`
-      );
       // --- END ADDED ---
 
-      adviceSourceSelect.value = sourceId; // Still set the hidden dropdown value for submission
-      console.log(
-        `[loadOrdersPage - Delayed] Set adviceSourceSelect.value to: ${adviceSourceSelect.value} (target was ${sourceId})`
-      );
+      adviceSourceSelect.value = sourceId; // Set hidden dropdown value
       accountSelect.value = String(state.selectedAccountHolderId);
-      console.log(
-        `[loadOrdersPage - Delayed] Set accountSelect.value to: ${accountSelect.value} (target was ${state.selectedAccountHolderId})`
-      );
       dateInput.value = getCurrentESTDateString();
-      console.log(
-        `[loadOrdersPage - Delayed] Set dateInput.value to: ${dateInput.value}`
-      );
+
+      // --- *** ADDED: Set the new hidden input *** ---
+      linkedJournalIdInput.value = journalId || '';
+      // --- *** END ADDED *** ---
 
       // --- Lock fields ---
       tickerInput.readOnly = true;
@@ -165,18 +161,10 @@ export async function loadOrdersPage() {
       adviceSourceLockedDisplay.style.display = 'block'; // Show dedicated display
       // --- END MODIFICATION ---
 
-      console.log(
-        '[loadOrdersPage - Delayed] Locked fields (except price) and adjusted source display.'
-      );
-
       // Dispatch change event to trigger limit suggestions (if priceInput isn't readOnly, but good to keep)
       priceInput.dispatchEvent(new Event('change'));
-      console.log(
-        "[loadOrdersPage - Delayed] Dispatched 'change' event on priceInput."
-      );
 
       document.getElementById('quantity')?.focus();
-      console.log('[loadOrdersPage - Delayed] Focused quantity input.');
     } else {
       console.log(
         '[loadOrdersPage - Delayed] No prefill state, ensuring form defaults.'
@@ -194,12 +182,11 @@ export async function loadOrdersPage() {
 
       // --- Reset values ---
       adviceSourceSelect.value = ''; // Reset dropdown
+      // --- *** ADDED: Clear the hidden input *** ---
+      linkedJournalIdInput.value = '';
+      // --- *** END ADDED *** ---
       if (dateInput) {
         dateInput.value = getCurrentESTDateString();
-        console.log(
-          '[loadOrdersPage - Delayed] Set default dateInput.value to: ' +
-            dateInput.value
-        );
       }
     }
   }, 0); // Use setTimeout with 0 delay

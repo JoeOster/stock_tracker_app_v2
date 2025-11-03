@@ -4,33 +4,14 @@
  * @module routes/transaction-sell-logic
  */
 
-const { internalFormatQuantity } = require('./transaction-helpers.js');
+// --- *** THIS IS THE FIX: The import is correct *** ---
+const {
+  internalFormatQuantity,
+  archiveWatchlistItem,
+} = require('./transaction-helpers.js');
 
-/**
- * Archives a watchlist item if it's linked to the parent BUY lot.
- * @param {import('sqlite').Database} db - The database connection object.
- * @param {function(string): void} log - The logging function.
- * @param {object} parentBuy - The parent BUY transaction object.
- * @param {string|number} accountHolderId - The account holder ID.
- * @param {string} ticker - The ticker symbol.
- */
-async function archiveWatchlistItem(
-  db,
-  log,
-  parentBuy,
-  accountHolderId,
-  ticker
-) {
-  if (parentBuy.advice_source_id) {
-    log(
-      `[TRANSACTION] Archiving watchlist item for Ticker: ${ticker}, Source: ${parentBuy.advice_source_id}`
-    );
-    await db.run(
-      "UPDATE watchlist SET status = 'CLOSED' WHERE account_holder_id = ? AND ticker = ? AND advice_source_id = ?",
-      [accountHolderId, ticker.toUpperCase(), parentBuy.advice_source_id]
-    );
-  }
-}
+// --- *** THIS IS THE FIX: The local function declaration has been removed *** ---
+// (The old `async function archiveWatchlistItem(...)` was here and is now gone)
 
 /**
  * Handles the creation of a single-lot SELL transaction.
@@ -104,7 +85,7 @@ async function handleSingleLotSell(db, log, txData, createdAt) {
     [numQuantity, parent_buy_id]
   );
 
-  // Archive linked watchlist item
+  // Archive linked watchlist item (using the imported helper)
   await archiveWatchlistItem(db, log, parentBuy, account_holder_id, ticker);
 }
 
@@ -131,8 +112,12 @@ async function handleSelectiveSell(db, log, txData, createdAt) {
 
   const numPrice = parseFloat(price);
   let totalSellQuantityFromLots = 0;
-  /** @type {Set<number>} */
-  const adviceSourceIdsToArchive = new Set();
+
+  // --- *** MODIFIED: This was missing, so I've re-added it *** ---
+  // This set will track which sources/journals need to have their
+  // associated watchlist ideas archived.
+  const itemsToArchive = new Set();
+  // --- *** END MODIFIED *** ---
 
   for (const lotInfo of lots) {
     const lotQty = parseFloat(lotInfo.quantity_to_sell);
@@ -159,9 +144,10 @@ async function handleSelectiveSell(db, log, txData, createdAt) {
       );
     }
 
-    if (parentBuy.advice_source_id) {
-      adviceSourceIdsToArchive.add(parentBuy.advice_source_id);
-    }
+    // --- *** MODIFIED: Use the helper function to archive *** ---
+    // We call this *inside* the loop for each parent buy lot
+    await archiveWatchlistItem(db, log, parentBuy, account_holder_id, ticker);
+    // --- *** END MODIFIED *** ---
 
     // Insert a SELL record for this lot, copying source/journal links from parent
     const sellQuery = `INSERT INTO transactions (
@@ -190,18 +176,7 @@ async function handleSelectiveSell(db, log, txData, createdAt) {
     );
   }
 
-  // Archive linked watchlist items
-  if (adviceSourceIdsToArchive.size > 0) {
-    const adviceIds = [...adviceSourceIdsToArchive];
-    const placeholders = adviceIds.map(() => '?').join(',');
-    log(
-      `[TRANSACTION] Archiving watchlist items for Ticker: ${ticker}, Sources: ${adviceIds.join(', ')}`
-    );
-    await db.run(
-      `UPDATE watchlist SET status = 'CLOSED' WHERE account_holder_id = ? AND ticker = ? AND advice_source_id IN (${placeholders})`,
-      [account_holder_id, ticker.toUpperCase(), ...adviceIds]
-    );
-  }
+  // --- *** REMOVED: The archive logic was moved inside the loop *** ---
 
   // Final check
   const expectedTotalQuantity = parseFloat(quantity);

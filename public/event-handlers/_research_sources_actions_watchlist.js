@@ -7,7 +7,10 @@
 import { state, updateState } from '../state.js';
 import { switchView } from './_navigation.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
-import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
+import {
+  populateAllAdviceSourceDropdowns,
+  getSourceNameFromId,
+} from '../ui/dropdowns.js';
 import {
   getCurrentESTDateString,
   getCurrentESTDateTimeLocalString,
@@ -33,6 +36,7 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
       );
       const holderId = state.selectedAccountHolderId;
 
+      // Get context from hidden fields
       const formSourceId = /** @type {HTMLInputElement} */ (
         addIdeaModal.querySelector('#idea-form-source-id')
       ).value;
@@ -61,6 +65,7 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
         addIdeaModal.querySelector('#idea-form-rec-stop-loss')
       ).value;
 
+      // --- Validation ---
       if (holderId === 'all' || !formSourceId) {
         return showToast('Error: Account or Source ID is missing.', 'error');
       }
@@ -223,7 +228,9 @@ export async function handleCreateTradeIdeaFromBook(target, journalEntries) {
     return showToast('Error: Missing data from source button.', 'error');
   }
 
-  const openTechniques = journalEntries.filter((j) => j.status === 'OPEN');
+  const openTechniques = journalEntries.filter(
+    (j) => j.status === 'OPEN' && j.quantity === 0
+  );
   if (openTechniques.length === 0) {
     return showToast(
       'Please add a "Technique" first, then you can develop an idea from it.',
@@ -263,8 +270,19 @@ export async function handleCreateTradeIdeaFromBook(target, journalEntries) {
  * @returns {Promise<void>}
  */
 export async function handleCreateBuyOrderFromIdea(target) {
-  const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId, sourceName } =
-    target.dataset;
+  // --- *** THIS IS THE FIX (Part 2) *** ---
+  // Destructure the new journalId
+  const {
+    ticker,
+    entryLow,
+    entryHigh,
+    tp1,
+    tp2,
+    sl,
+    sourceId,
+    sourceName,
+    journalId,
+  } = target.dataset;
 
   const prefillData = {
     sourceId: sourceId,
@@ -274,7 +292,9 @@ export async function handleCreateBuyOrderFromIdea(target) {
     tp1: tp1 || null,
     tp2: tp2 || null,
     sl: sl || null,
+    journalId: journalId || null, // <-- Add the journalId here
   };
+  // --- *** END FIX *** ---
 
   updateState({ prefillOrderFromSource: prefillData });
   await switchView('orders');
