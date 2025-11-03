@@ -4,10 +4,10 @@
  * @module event-handlers/_modal_add_paper_trade
  */
 
-import { addJournalEntry } from '../api/journal-api.js';
 import { state } from '../state.js';
-import { getCurrentESTDateString } from '../ui/datetime.js';
 import { showToast } from '../ui/helpers.js';
+import { addJournalEntry } from '../api/journal-api.js';
+import { getCurrentESTDateString } from '../ui/datetime.js';
 
 /**
  * Initializes the event listeners for the "Add Paper Trade" modal form.
@@ -28,6 +28,7 @@ export function initializeAddPaperTradeModalHandler() {
       );
       if (!addButton) return;
 
+      // ... (all the validation code from lines 30-160) ...
       const accountHolderId =
         state.selectedAccountHolderId === 'all'
           ? null
@@ -182,15 +183,10 @@ export function initializeAddPaperTradeModalHandler() {
           /** @type {HTMLTextAreaElement} */ (
             document.getElementById('journal-notes')
           ).value.trim() || null,
-        // These fields will be populated from the modal's hidden inputs when we add "Edit"
-        // source_id: (/** @type {HTMLInputElement} */(document.getElementById('journal-form-source-id'))).value || null,
-        // entry_id: (/** @type {HTMLInputElement} */(document.getElementById('journal-form-entry-id'))).value || null,
       };
 
       addButton.disabled = true;
       try {
-        // TODO: Add logic here to check for 'journal-form-entry-id'. If it exists, call 'updateJournalEntry' instead.
-
         await addJournalEntry(entryData);
         showToast('Journal entry added!', 'success');
         addJournalEntryForm.reset();
@@ -199,7 +195,7 @@ export function initializeAddPaperTradeModalHandler() {
         ).value = getCurrentESTDateString(); // Reset date to today
         addJournalModal.classList.remove('visible');
 
-        // --- THIS IS THE FIX ---
+        // --- THIS IS THE FIX (Bug #4) ---
         // Also close the Source Details modal that is open underneath
         const detailsModal = document.getElementById('source-details-modal');
         if (detailsModal) {

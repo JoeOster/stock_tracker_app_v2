@@ -139,6 +139,10 @@ export function initializeSellFromPositionModalHandler() {
         await handleResponse(response);
         showToast('Sale logged successfully!', 'success');
 
+        // --- START FIX: Dispatch a global event so the source modal knows to refresh ---
+        document.dispatchEvent(new CustomEvent('sourceDetailsShouldRefresh'));
+        // --- END FIX ---
+
         // Refresh Manage Modal if Open
         if (managePositionModal?.classList.contains('visible')) {
           if (typeof openAndPopulateManageModal === 'function') {

@@ -64,7 +64,7 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
         addIdeaModal.querySelector('#idea-form-rec-tp2')
       ).value;
       const rec_stop_loss = /** @type {HTMLInputElement} */ (
-        addIdeaModal.querySelector('#idea-form-rec-stop-loss') // <-- WAS: '#idea-form-stop-loss'
+        addIdeaModal.querySelector('#idea-form-rec-stop-loss')
       ).value;
       // --- END FIX ---
 
@@ -101,10 +101,7 @@ export function initializeAddTradeIdeaModalHandler(refreshDetailsCallback) {
         addIdeaForm.reset();
         addIdeaModal.classList.remove('visible');
 
-        // --- THIS IS THE FIX ---
-        // Dispatch the global event instead of using the (stale) callback
-        document.dispatchEvent(new CustomEvent('journalUpdated'));
-        // --- END FIX ---
+        await refreshDetailsCallback();
       } catch (error) {
         console.error('Failed to add watchlist idea:', error);
         const err = /** @type {Error} */ (error);
@@ -190,6 +187,8 @@ function openAddTradeIdeaModal(
 
   // Set default values if provided (from a technique)
   if (defaults) {
+    // --- THIS IS THE FIX (Part 2) ---
+    // Use the *correct* IDs (with 'rec-' prefix)
     // @ts-ignore
     safeSetInputValue('idea-form-rec-entry-low', defaults.entry || '');
     // @ts-ignore
@@ -198,6 +197,7 @@ function openAddTradeIdeaModal(
     safeSetInputValue('idea-form-rec-tp2', defaults.tp2 || '');
     // @ts-ignore
     safeSetInputValue('idea-form-rec-stop-loss', defaults.sl || '');
+    // --- END FIX ---
   }
 
   // Show the modal
@@ -312,8 +312,7 @@ export async function handleCreateTradeIdeaFromTechnique(
   );
 }
 
-// ... in public/event-handlers/_research_sources_actions_watchlist.js
-
+// ... (rest of file: handleCreateBuyOrderFromIdea, handleCreatePaperTradeFromIdea, handleCloseWatchlistIdea are unchanged) ...
 export async function handleCreateBuyOrderFromIdea(target) {
   const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId, sourceName } =
     target.dataset;
@@ -341,7 +340,6 @@ export async function handleCreateBuyOrderFromIdea(target) {
 
   showToast(`Prefilling "Log Trade" form for ${ticker}...`, 'info');
 }
-
 export async function handleCreatePaperTradeFromIdea(target) {
   const { ticker, entryLow, entryHigh, tp1, tp2, sl, sourceId } =
     target.dataset;
@@ -365,9 +363,13 @@ export async function handleCreatePaperTradeFromIdea(target) {
   /** @type {HTMLElement} */ (
     document.getElementById('add-paper-trade-modal-title')
   ).textContent = `Convert Idea to Paper Trade: ${ticker}`;
+
+  // --- FIX for Bug #2 ---
   /** @type {HTMLButtonElement} */ (
     document.getElementById('add-journal-entry-btn')
-  ).textContent = 'Add Journal Entry';
+  ).textContent = 'Add Paper Trade'; // <-- Renamed button
+  // --- END FIX ---
+
   /** @type {HTMLInputElement} */ (
     document.getElementById('journal-form-entry-id')
   ).value = ''; // Ensure it's a new entry
@@ -379,9 +381,15 @@ export async function handleCreatePaperTradeFromIdea(target) {
   /** @type {HTMLInputElement} */ (
     document.getElementById('journal-ticker')
   ).value = ticker;
-  /** @type {HTMLInputElement} */ (
+
+  // --- FIX for Bug #3 ---
+  const quantityInput = /** @type {HTMLInputElement} */ (
     document.getElementById('journal-quantity')
-  ).value = '0'; // User must enter quantity
+  );
+  quantityInput.value = ''; // Clear value
+  quantityInput.placeholder = '0'; // Set placeholder
+  // --- END FIX ---
+
   /** @type {HTMLInputElement} */ (
     document.getElementById('journal-entry-price')
   ).value = entryLow || entryHigh || '';
