@@ -296,12 +296,9 @@ module.exports = (db, log) => {
     const holderId = req.query.holder; // --- FIX: Get holderId from query ---
 
     if (!holderId || holderId === 'all') {
-      return res
-        .status(400)
-        .json({
-          message:
-            'A specific account holder ID is required to remove a source.',
-        });
+      return res.status(400).json({
+        message: 'A specific account holder ID is required to remove a source.',
+      });
     }
 
     try {

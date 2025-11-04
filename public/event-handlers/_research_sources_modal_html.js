@@ -9,9 +9,7 @@ import {
   formatAccounting,
   formatQuantity,
   formatDate,
-  formatPercent,
 } from '../ui/formatters.js';
-import { getSourceNameFromId } from '../ui/dropdowns.js';
 
 /**
  * Escapes HTML special characters in a string.
@@ -34,15 +32,26 @@ const escapeHTML = (str) => {
  * @returns {string} HTML string.
  */
 export function _renderModalProfile(source) {
+  // --- THIS IS THE FIX ---
+  // The class 'source-profile-section' is used for the main container.
+  // The image gets a 'profile-image' class with specific styling.
   let html = '<div class="source-profile-section">';
   html += `<h4>Profile</h4>`;
+
   const imagePath = source.image_path
     ? escapeHTML(source.image_path)
-    : '/images/contacts/default.png'; // Default path
-  html += `<img src="${imagePath}" alt="${escapeHTML(source.name)}" class="profile-image">`;
+    : '/images/contacts/default.png';
+
+  // Added style to the image for max-width and margin
+  html += `<img src="${imagePath}" alt="${escapeHTML(
+    source.name
+  )}" class="profile-image" style="max-width: 150px; margin-bottom: 1rem;">`;
+  // --- END FIX ---
+
   html += `<p><strong>Name:</strong> ${escapeHTML(source.name)}</p>`;
   html += `<p><strong>Type:</strong> ${escapeHTML(source.type)}</p>`;
   html += `<p><strong>Description:</strong> ${escapeHTML(source.description) || 'N/A'}</p>`;
+
   if (source.url)
     html += `<p><strong>URL:</strong> <a href="${escapeHTML(source.url)}" target="_blank" class="source-url-link">${escapeHTML(source.url)}</a></p>`;
 
@@ -107,7 +116,7 @@ export function _renderModalProfile(source) {
  * @returns {string} HTML string.
  */
 export function _renderModalActionsPanel(source) {
-  let html = `<div class="add-ticker-section" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1rem;">`;
+  let html = `<div class="add-ticker-section">`;
 
   const sourceId = source.id;
   const sourceName = escapeHTML(source.name);
@@ -142,7 +151,7 @@ export function _renderModalSummaryStats(stats) {
   // --- THIS IS THE FIX ---
   // Use 'source-profile-section' class for consistent styling with the profile
   // Add margin-top to separate it from the action button above it.
-  let html = `<div class="source-profile-section" style="margin-top: 1.5rem;">`;
+  let html = `<div class="source-profile-section">`;
   // Add a title "Summary"
   html += `<h4 style="margin-top: 0; margin-bottom: 1rem;">Summary</h4>`;
 

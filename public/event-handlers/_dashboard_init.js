@@ -5,10 +5,7 @@ import { fetchPositions } from '../api/reporting-api.js';
 import { fetchSalesForLot } from '../api/transactions-api.js';
 import { updateAllPrices } from '../api/price-api.js';
 import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
-import {
-  showToast,
-  sortTableByColumn,
-} from '../ui/helpers.js';
+import { showToast, sortTableByColumn } from '../ui/helpers.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
@@ -158,9 +155,7 @@ export function initializeDashboardHandlers() {
 
     // --- Sell Button Logic (Individual Lot) ---
     if (sellBtn) {
-      const { buyId } = /** @type {HTMLElement} */ (
-        sellBtn
-      ).dataset;
+      const { buyId } = /** @type {HTMLElement} */ (sellBtn).dataset;
       const lotData = state.dashboardOpenLots.find(
         (lot) => String(lot.id) === buyId
       );

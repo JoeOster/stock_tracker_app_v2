@@ -332,7 +332,7 @@ export function initializeSettingsModalHandlers() {
             );
             if (
               container &&
-              !/** @type {HTMLElement} */ (container).dataset.holderId
+              !(/** @type {HTMLElement} */ (container).dataset.holderId)
             ) {
               const subPanelTitle = document.getElementById(
                 'subscriptions-panel-title'

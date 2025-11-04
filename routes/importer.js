@@ -53,20 +53,16 @@ const createImporterRouter = (db, log, importSessions) => {
 
     const { accountHolderId, brokerageTemplate } = req.body;
     if (!accountHolderId || !brokerageTemplate) {
-      return res
-        .status(400)
-        .json({
-          message: 'Account Holder and Brokerage Template are required.',
-        });
+      return res.status(400).json({
+        message: 'Account Holder and Brokerage Template are required.',
+      });
     }
 
     if (!brokerageTemplates) {
       log('[ERROR] Brokerage templates are not loaded.');
-      return res
-        .status(500)
-        .json({
-          message: 'Internal Server Error: Brokerage templates not found.',
-        });
+      return res.status(500).json({
+        message: 'Internal Server Error: Brokerage templates not found.',
+      });
     }
 
     const template = brokerageTemplates[brokerageTemplate];
@@ -106,12 +102,10 @@ const createImporterRouter = (db, log, importSessions) => {
       }
 
       if (combinedData.length === 0) {
-        return res
-          .status(400)
-          .json({
-            message:
-              'No valid transactions found in the CSV. Please check the brokerage template settings and the file content.',
-          });
+        return res.status(400).json({
+          message:
+            'No valid transactions found in the CSV. Please check the brokerage template settings and the file content.',
+        });
       }
 
       const existingTransactions = await db.all(

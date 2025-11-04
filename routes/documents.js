@@ -50,20 +50,16 @@ module.exports = (db, log = console.log) => {
       advice_source_id !== null && advice_source_id !== undefined;
 
     if (!journalIdProvided && !sourceIdProvided) {
-      return res
-        .status(400)
-        .json({
-          message:
-            'Document must be linked to either a Journal Entry ID or an Advice Source ID.',
-        });
+      return res.status(400).json({
+        message:
+          'Document must be linked to either a Journal Entry ID or an Advice Source ID.',
+      });
     }
     if (journalIdProvided && sourceIdProvided) {
-      return res
-        .status(400)
-        .json({
-          message:
-            'Document cannot be linked to both a Journal Entry ID and an Advice Source ID simultaneously.',
-        });
+      return res.status(400).json({
+        message:
+          'Document cannot be linked to both a Journal Entry ID and an Advice Source ID simultaneously.',
+      });
     }
     // --- End Validation ---
 
@@ -95,17 +91,13 @@ module.exports = (db, log = console.log) => {
       // @ts-ignore
       if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
         if (journalIdProvided) {
-          return res
-            .status(404)
-            .json({
-              message: `Journal Entry with ID ${journal_entry_id} not found.`,
-            });
+          return res.status(404).json({
+            message: `Journal Entry with ID ${journal_entry_id} not found.`,
+          });
         } else if (sourceIdProvided) {
-          return res
-            .status(404)
-            .json({
-              message: `Advice Source with ID ${advice_source_id} not found.`,
-            });
+          return res.status(404).json({
+            message: `Advice Source with ID ${advice_source_id} not found.`,
+          });
         }
       }
       // @ts-ignore

@@ -771,10 +771,7 @@ export function initializeHolderManagementHandlers() {
               await renderAccountHolderManagementList(); // <-- FIX: Call local function
               showToast('Account holder deleted.', 'success');
             } catch (_) {
-              showToast(
-                `Error deleting account holder: ${_.message}`,
-                'error'
-              );
+              showToast(`Error deleting account holder: ${_.message}`, 'error');
             }
           }
         );
@@ -906,7 +903,6 @@ export async function saveSettings() {
     switchView('charts', null);
   }
 }
-
 
 /**
  * Applies the theme and font settings to the document body and page title.

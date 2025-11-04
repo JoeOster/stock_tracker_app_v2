@@ -110,7 +110,7 @@ export async function switchView(
 
   document
     .querySelectorAll('.page-container')
-    .forEach((c) => (/** @type {HTMLElement} */ (c).style.display = 'none'));
+    .forEach((c) => /** @type {HTMLElement} */ (c.style.display = 'none'));
 
   if (targetPageContainer) {
     targetPageContainer.style.display = 'block';

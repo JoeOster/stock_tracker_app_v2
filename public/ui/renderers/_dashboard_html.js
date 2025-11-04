@@ -190,7 +190,7 @@ export function createAggregatedCardHTML(aggData) {
                 <div class="card-stats">
                     ${statsHTML}
                 </div>
-                <div class="card-performance">
+                <div class.card-performance">
                     ${performanceHTML}
                 </div>
             </div>
@@ -210,12 +210,7 @@ export function createAggregatedCardHTML(aggData) {
  */
 export function createTableRowHTML(lot) {
   // ... (full code for createTableRowHTML function as it was in _dashboard.js) ...
-  const {
-    priceData,
-    unrealizedPL,
-    unrealizedPercent,
-    proximity,
-  } = lot; // Use processed data
+  const { priceData, unrealizedPL, unrealizedPercent, proximity } = lot; // Use processed data
   const currentPriceValue =
     priceData && typeof priceData.price === 'number' ? priceData.price : null;
   const previousPriceValue =
@@ -288,6 +283,83 @@ export function createTableRowHTML(lot) {
                 <button class="set-limit-btn" data-id="${lot.id}">Limits</button>
                 <button class="edit-buy-btn" data-id="${lot.id}">Edit</button>
             </td>
+        </tr>
+    `;
+}
+
+// --- *** THIS IS THE FIX: Added the missing function *** ---
+/**
+ * Creates the HTML for a single position table row *without* action buttons or checkboxes.
+ * Used for info-only views like the Watchlist "Real Positions" tab.
+ * @param {object} lot - The processed position lot data including metrics and priceData.
+ * @returns {string} HTML string for the table row.
+ */
+export function createTableRowHTML_InfoOnly(lot) {
+  // This logic is identical to createTableRowHTML, just the return string is different.
+  const { priceData, unrealizedPL, unrealizedPercent, proximity } = lot; // Use processed data
+  const currentPriceValue =
+    priceData && typeof priceData.price === 'number' ? priceData.price : null;
+  const previousPriceValue =
+    priceData && typeof priceData.previousPrice === 'number'
+      ? priceData.previousPrice
+      : null;
+  const priceStatus =
+    priceData && typeof priceData.price !== 'number' ? priceData.price : null;
+
+  const plClass = unrealizedPL >= 0 ? 'positive' : 'negative';
+  const logoSrc = exchangeLogoMap[lot.exchange] || defaultLogo;
+
+  let trendIndicator = '';
+  if (currentPriceValue !== null && previousPriceValue !== null) {
+    if (currentPriceValue > previousPriceValue)
+      trendIndicator = ' <span class="trend-up positive">▲</span>';
+    else if (currentPriceValue < previousPriceValue)
+      trendIndicator = ' <span class="trend-down negative">▼</span>';
+  }
+
+  const limitUpText = lot.limit_price_up
+    ? `Up: ${formatAccounting(lot.limit_price_up, false)}`
+    : '';
+  const limitDownText = lot.limit_price_down
+    ? `Down: ${formatAccounting(lot.limit_price_down, false)}`
+    : '';
+  let limitsCombinedText = '';
+  if (limitUpText && limitDownText) {
+    limitsCombinedText = `${limitUpText} / ${limitDownText}`;
+  } else {
+    limitsCombinedText = limitUpText || limitDownText;
+  }
+
+  let proximityIndicator = '';
+  if (proximity === 'up')
+    proximityIndicator =
+      '<span class="limit-proximity-indicator" title="Nearing Take Profit Limit">🔥</span>';
+  else if (proximity === 'down')
+    proximityIndicator =
+      '<span class="limit-proximity-indicator" title="Nearing Stop Loss Limit">❄️</span>';
+
+  let currentPriceDisplay;
+  if (currentPriceValue !== null)
+    currentPriceDisplay = formatAccounting(currentPriceValue);
+  else if (priceStatus === 'invalid')
+    currentPriceDisplay = '<span class="negative">Invalid</span>';
+  else if (priceStatus === 'error')
+    currentPriceDisplay = '<span class="negative">Error</span>';
+  else currentPriceDisplay = '--';
+
+  // Return the 8-cell row (no checkbox, no actions cell)
+  return `
+        <tr data-lot-id="${lot.id}" data-key="lot-${lot.id}">
+            <td class="sticky-col col-ticker">${lot.ticker}</td>
+            <td class="col-exchange"><img src="${logoSrc}" alt="${lot.exchange}" title="${lot.exchange}" class="exchange-logo-small"> ${lot.exchange}</td>
+            <td class="col-date">${lot.purchase_date}</td>
+            <td class="numeric col-price">${formatAccounting(lot.cost_basis)}</td>
+            <td class="numeric col-qty center-align">${formatQuantity(lot.quantity_remaining)}</td>
+            <td class="numeric current-price col-price">${currentPriceDisplay}</td>
+            <td class="numeric unrealized-pl-combined col-pl ${plClass}">
+                ${formatAccounting(unrealizedPL)} | ${unrealizedPercent.toFixed(2)}% ${proximityIndicator}${trendIndicator}
+            </td>
+            <td class="numeric col-limits">${limitsCombinedText}</td>
         </tr>
     `;
 }

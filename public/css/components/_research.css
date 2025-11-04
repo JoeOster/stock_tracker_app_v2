@@ -108,10 +108,9 @@
 /* --- Styles for Source Details Modal --- */
 
 /* Grid layout for Source Details Modal Content (Top Section) */
-#source-details-modal-content .source-details-grid {
+#source-details-modal-content .modal-grid {
   display: grid;
-  /* Use 1fr for profile, auto for add ticker to let it size naturally */
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 2fr 1fr; /* Use 2fr 1fr for profile and actions/summary */
   gap: 1.5rem 2rem; /* row-gap column-gap */
   margin-bottom: 1.5rem; /* Space before the next section below the grid */
   align-items: start; /* Align items to the top of the grid cell */

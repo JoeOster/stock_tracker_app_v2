@@ -134,7 +134,7 @@ export async function saveSubscriptions() {
     renderAdviceSourceManagementList(userSources);
 
     // --- MODIFICATION: Clear the holderId from the dataset after saving ---
-    delete /** @type {HTMLElement} */ (container).dataset.holderId;
+    delete (/** @type {HTMLElement} */ (container).dataset.holderId);
     console.log('[saveSubscriptions] Subscriptions updated!');
     // --- END MODIFICATION ---
   } catch (error) {

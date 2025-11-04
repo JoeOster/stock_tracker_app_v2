@@ -380,3 +380,26 @@
 .management-list li .source-edit > input {
   grid-column: 2 / 4; /* Make single inputs span */
 }
+
+/* --- ADDED: Grid layout for Source Details Modal --- */
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two equal columns */
+  gap: 2rem; /* Space between columns */
+  align-items: start; /* Align items to the top of their cells */
+}
+
+.modal-grid-left {
+  grid-column: 1 / 2;
+}
+
+.modal-grid-right {
+  grid-column: 2 / 3;
+}
+
+.modal-grid-bottom {
+  grid-column: 1 / -1; /* Span both columns */
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--container-border);
+}

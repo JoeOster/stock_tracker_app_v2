@@ -113,12 +113,6 @@ async function handleSelectiveSell(db, log, txData, createdAt) {
   const numPrice = parseFloat(price);
   let totalSellQuantityFromLots = 0;
 
-  // --- *** MODIFIED: This was missing, so I've re-added it *** ---
-  // This set will track which sources/journals need to have their
-  // associated watchlist ideas archived.
-  const itemsToArchive = new Set();
-  // --- *** END MODIFIED *** ---
-
   for (const lotInfo of lots) {
     const lotQty = parseFloat(lotInfo.quantity_to_sell);
     if (isNaN(lotQty) || lotQty <= 0) continue; // Skip invalid or zero

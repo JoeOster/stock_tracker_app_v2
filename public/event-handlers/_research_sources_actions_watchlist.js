@@ -7,10 +7,7 @@
 import { state, updateState } from '../state.js';
 import { switchView } from './_navigation.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
-import {
-  populateAllAdviceSourceDropdowns,
-  getSourceNameFromId,
-} from '../ui/dropdowns.js';
+import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
 import {
   getCurrentESTDateString,
   getCurrentESTDateTimeLocalString,

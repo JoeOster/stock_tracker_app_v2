@@ -49,12 +49,10 @@ module.exports = (db, log) => {
       );
 
       if (!source) {
-        return res
-          .status(404)
-          .json({
-            message:
-              'Advice source not found or not linked to this account holder.',
-          });
+        return res.status(404).json({
+          message:
+            'Advice source not found or not linked to this account holder.',
+        });
       }
 
       // --- MIGRATE: Parse 'details' JSON ---
@@ -327,12 +325,10 @@ module.exports = (db, log) => {
         [id, holderId]
       );
       if (!link) {
-        return res
-          .status(404)
-          .json({
-            message:
-              'Advice source not found or not linked to this account holder.',
-          });
+        return res.status(404).json({
+          message:
+            'Advice source not found or not linked to this account holder.',
+        });
       }
       // --- END FIX ---
 
@@ -407,11 +403,9 @@ module.exports = (db, log) => {
       ]);
 
       if (result.changes === 0) {
-        return res
-          .status(404)
-          .json({
-            message: 'Note not found or you do not have permission to edit it.',
-          });
+        return res.status(404).json({
+          message: 'Note not found or you do not have permission to edit it.',
+        });
       }
 
       res.json({ message: 'Note updated successfully.' });
@@ -456,12 +450,9 @@ module.exports = (db, log) => {
       const result = await db.run(query, [noteId, id, holderId]);
 
       if (result.changes === 0) {
-        return res
-          .status(404)
-          .json({
-            message:
-              'Note not found or you do not have permission to delete it.',
-          });
+        return res.status(404).json({
+          message: 'Note not found or you do not have permission to delete it.',
+        });
       }
 
       res.json({ message: 'Note deleted successfully.' });

@@ -12,7 +12,7 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': ['error', { 'caughtErrors': 'none' }],
+      'no-unused-vars': ['error', { caughtErrors: 'none' }],
     },
   },
 ];

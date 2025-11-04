@@ -184,13 +184,11 @@ module.exports = (db, log) => {
                 VALUES (?, ?, 'WATCH', 'OPEN', CURRENT_TIMESTAMP)
             `;
       const result = await db.run(sql, [account_holder_id, upperTicker]);
-      res
-        .status(201)
-        .json({
-          id: result.lastID,
-          ticker: upperTicker,
-          message: `${upperTicker} added to watched list.`,
-        });
+      res.status(201).json({
+        id: result.lastID,
+        ticker: upperTicker,
+        message: `${upperTicker} added to watched list.`,
+      });
     } catch (error) {
       log(`[ERROR] Failed to add simple watched ticker: ${error.message}`);
       res.status(500).json({ message: 'Server error adding watched ticker.' });

@@ -12,15 +12,12 @@ import {
   // --- MODIFIED: Import new/renamed functions ---
   _renderModalTechniques_Open,
   _renderModalTechniques_Closed,
-  _renderModalPaperTrades_Open,
-  _renderModalPaperTrades_Closed,
   _renderModalRealTrades_Open,
   _renderModalRealTrades_Closed,
   // --- END MODIFIED ---
   _renderModalDocuments,
   _renderModalNotes,
 } from './_research_sources_modal_html.js';
-import { state } from '../state.js'; // Needed for price cache
 
 /**
  * Generates the complete HTML content for the Source Details modal.
@@ -53,15 +50,16 @@ export function generateSourceDetailsHTML(details) {
   const techniques = journalEntries.filter(
     (j) => !j.quantity || j.quantity === 0
   );
-  const paperTrades = journalEntries.filter((j) => j.quantity > 0);
+  // const paperTrades = journalEntries.filter((j) => j.quantity > 0);
   // --- END MODIFIED ---
 
   // Tickers from open 'journal_entries' (paper trades)
-  const paperTradeTickers = new Set(
-    paperTrades
-      .filter((entry) => entry.status === 'OPEN')
-      .map((entry) => entry.ticker)
-  );
+  const paperTradeTickers = new Set();
+  // const paperTradeTickers = new Set(
+  //   paperTrades
+  //     .filter((entry) => entry.status === 'OPEN')
+  //     .map((entry) => entry.ticker)
+  // );
 
   // --- Render all partials ---
   const profileHtml = _renderModalProfile(source);
@@ -93,13 +91,13 @@ export function generateSourceDetailsHTML(details) {
   );
 
   // 3. Paper Trades (All source types)
-  const openPaperTrades = paperTrades.filter((p) => p.status === 'OPEN');
-  const closedPaperTrades = paperTrades.filter(
-    (p) => p.status !== 'OPEN' // e.g., 'CLOSED', 'EXECUTED'
-  );
+  // const openPaperTrades = paperTrades.filter((p) => p.status === 'OPEN');
+  // const closedPaperTrades = paperTrades.filter(
+  //   (p) => p.status !== 'OPEN' // e.g., 'CLOSED', 'EXECUTED'
+  // );
 
-  const paperOpenHtml = _renderModalPaperTrades_Open(openPaperTrades);
-  const paperClosedHtml = _renderModalPaperTrades_Closed(closedPaperTrades);
+  // const paperOpenHtml = _renderModalPaperTrades_Open(openPaperTrades);
+  // const paperClosedHtml = _renderModalPaperTrades_Closed(closedPaperTrades);
 
   // 4. Real Trades (All source types)
   const openRealTrades = linkedTransactions.filter(
@@ -126,9 +124,11 @@ export function generateSourceDetailsHTML(details) {
             <div class="modal-grid-right">
                 ${actionsHtml}
                 ${summaryHtml}
-                
-                ${techniquesHtml} 
             </div>
+        </div>
+
+        <div class="modal-section">
+            ${techniquesHtml}
         </div>
         
         <div class="modal-section">
@@ -136,18 +136,10 @@ export function generateSourceDetailsHTML(details) {
         </div>
         
         <div class="modal-section">
-            ${paperOpenHtml}
-        </div>
-
-        <div class="modal-section">
             ${realOpenHtml}
         </div>
         
         <hr style="margin: 2rem 0 1rem 0;">
-
-        <div class="modal-section">
-            ${paperClosedHtml}
-        </div>
 
         <div class="modal-section">
             ${realClosedHtml}
@@ -157,9 +149,9 @@ export function generateSourceDetailsHTML(details) {
             <div class="modal-grid-left">
                 ${documentsHtml}
             </div>
-            <div class.modal-grid-right">
+            <div class="modal-grid-right">
                 ${notesHtml}
-            </div>
+            }
         </div>
     `;
   // --- *** END FIX *** ---

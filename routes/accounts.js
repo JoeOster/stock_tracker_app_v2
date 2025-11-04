@@ -94,23 +94,19 @@ module.exports = (db, log) => {
     try {
       const id = req.params.id;
       if (id === '1' || parseInt(id, 10) === 1) {
-        return res
-          .status(400)
-          .json({
-            message: 'Cannot delete the default Primary account holder.',
-          });
+        return res.status(400).json({
+          message: 'Cannot delete the default Primary account holder.',
+        });
       }
       const inUse = await db.get(
         'SELECT 1 FROM transactions WHERE account_holder_id = ? LIMIT 1',
         id
       );
       if (inUse) {
-        return res
-          .status(400)
-          .json({
-            message:
-              'Cannot delete an account holder that is in use by transactions.',
-          });
+        return res.status(400).json({
+          message:
+            'Cannot delete an account holder that is in use by transactions.',
+        });
       }
       // --- FIX: Also check link table ---
       const inUseLinks = await db.get(
@@ -323,12 +319,10 @@ module.exports = (db, log) => {
           oldExchange.name
         );
         if (inUse) {
-          return res
-            .status(400)
-            .json({
-              message:
-                'Cannot delete an exchange that is currently in use by transactions.',
-            });
+          return res.status(400).json({
+            message:
+              'Cannot delete an exchange that is currently in use by transactions.',
+          });
         }
       }
       await db.run('DELETE FROM exchanges WHERE id = ?', req.params.id);

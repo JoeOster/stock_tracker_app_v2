@@ -62,11 +62,9 @@ module.exports = (db, log) => {
         !quantity ||
         !created_date
       ) {
-        return res
-          .status(400)
-          .json({
-            message: 'Invalid input. Ensure all required fields are provided.',
-          });
+        return res.status(400).json({
+          message: 'Invalid input. Ensure all required fields are provided.',
+        });
       }
 
       const query = `

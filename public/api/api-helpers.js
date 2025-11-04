@@ -18,13 +18,11 @@
 export async function handleResponse(response) {
   if (!response.ok) {
     // Try to parse JSON error, fallback to status text
-    const errorData = await response
-      .json()
-      .catch(() => ({
-        message:
-          response.statusText ||
-          `Server responded with status: ${response.status}`,
-      }));
+    const errorData = await response.json().catch(() => ({
+      message:
+        response.statusText ||
+        `Server responded with status: ${response.status}`,
+    }));
     throw new Error(errorData.message || 'An unknown error occurred.');
   }
   // Handle cases where the response might be empty (e.g., successful DELETE with 204 No Content)

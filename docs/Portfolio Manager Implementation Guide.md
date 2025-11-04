@@ -67,6 +67,7 @@ A high-level overview of the application's architecture, implementation details,
 - [ ] **Refactor - Settings:** The "Settings" modal (`_settings_modal.js`) is monolithic and handles both Holders and Exchanges. This logic should be split into `_settings_holders.js` and `_settings_exchanges.js` to be cleaner.
 - [ ] **Feature - Alerts:** Implement email/SMS alerts using a third-party service when an alert price is hit. This requires a new API endpoint and a job runner.
 - [ ] **Refactor - Dashboard P/L:** The dashboard P/L calculation is complex. Consolidate logic into `_dashboard_data.js` and ensure all paths (open, closed, with/without sales) are handled.
+- [ ] **Refactor - Watchlist Paper Trades:** The "Paper Trades" sub-tab on the Watchlist page was removed or broken during a refactor. It needs to be properly re-implemented, likely by reusing the components from the old "Journal" page.
 
 ### Low Priority / Future Ideas
 

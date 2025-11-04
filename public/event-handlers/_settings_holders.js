@@ -312,8 +312,7 @@ export function initializeHolderManagementHandlers() {
             'Inline save failed, error was already shown by saveHolderChange.'
           );
         }
-      }
-      else if (deleteBtn && target === deleteBtn) {
+      } else if (deleteBtn && target === deleteBtn) {
         // ... (Delete logic is unchanged) ...
         const holderName = nameLabel.textContent;
         if (String(state.selectedAccountHolderId) === id) {
