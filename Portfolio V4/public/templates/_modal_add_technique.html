@@ -1,0 +1,108 @@
+<div id="add-technique-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-button">&times;</span>
+    <h2 id="add-technique-modal-title">Add Technique / Method</h2>
+
+    <form id="add-technique-form">
+      <input type="hidden" id="technique-form-source-id" />
+      <input type="hidden" id="technique-form-entry-id" />
+
+      <p
+        id="technique-form-link-display"
+        style="
+          font-weight: bold;
+          color: var(--text-muted-color);
+          margin-top: 0;
+          margin-bottom: 1rem;
+          background-color: var(--info-panel-bg);
+          padding: 8px;
+          border-radius: 4px;
+          border: 1px solid var(--container-border);
+        "
+      >
+        Linking to: <span id="technique-form-link-text">--</span>
+      </p>
+
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px 15px;
+          align-items: end;
+        "
+      >
+        <div class="form-group" style="grid-column: span 2; margin-bottom: 0">
+          <label for="technique-form-entry-reason">Description*</label>
+          <input
+            type="text"
+            id="technique-form-entry-reason"
+            class="tech-entry-reason-input"
+            placeholder="e.g., 'Chapter 5 Breakout Strategy'"
+            required
+          />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0">
+          <label for="technique-form-chart-type">Chart Type (Optional)</label>
+          <input
+            type="text"
+            id="technique-form-chart-type"
+            class="tech-chart-type-input"
+            placeholder="e.g., '5-min Heikin Ashi'"
+          />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0">
+          <label for="technique-form-image-path">Image Path (Optional)</label>
+          <input
+            type="text"
+            id="technique-form-image-path"
+            class="tech-image-path-input"
+            placeholder="e.g., /images/book/chart1.png"
+          />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0">
+          <label for="technique-form-page-number">Page Number (Optional)</label>
+          <input
+            type="number"
+            id="technique-form-page-number"
+            class="tech-page-number-input"
+            placeholder="e.g., 123"
+          />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0">
+          <label for="technique-form-chapter">Chapter (Optional)</label>
+          <input
+            type="text"
+            id="technique-form-chapter"
+            class="tech-chapter-input"
+            placeholder="e.g., 'Risk Management'"
+          />
+        </div>
+
+        <div class="form-group form-group-span-2" style="margin-bottom: 0">
+          <label for="technique-form-notes">Notes</label>
+          <textarea
+            id="technique-form-notes"
+            class="tech-notes-input"
+            rows="2"
+            placeholder="Additional observations..."
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <div class="modal-actions-right">
+          <button type="button" class="cancel-btn close-modal-btn">
+            Cancel
+          </button>
+          <button type="submit" id="add-technique-submit-btn">
+            Add Technique
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

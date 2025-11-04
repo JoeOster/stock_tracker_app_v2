@@ -114,6 +114,8 @@ async function initialize() {
       modal_add_trade_idea,
       modal_add_technique,
       modal_add_paper_trade,
+      // --- ADD _modal_edit_source HERE (from user's previous request) ---
+      modal_edit_source,
     ] = /** @type {any[]} */ (
       await Promise.all([
         // <-- Cast to any[] to fix tuple errors
@@ -245,6 +247,12 @@ async function initialize() {
               ? res.text()
               : Promise.reject(`_modal_add_paper_trade.html: ${res.statusText}`)
         ), // --- ADDED ---
+        // --- ADD THE FETCH FOR THE NEW FILE (from user's previous request) ---
+        fetch('./templates/_modal_edit_source.html' + cacheBust).then((res) =>
+          res.ok
+            ? res.text()
+            : Promise.reject(`_modal_edit_source.html: ${res.statusText}`)
+        ),
       ])
     );
 
@@ -263,6 +271,8 @@ async function initialize() {
     // Inject concatenated modal templates
     modalContainer.innerHTML =
       modal_settings +
+      // --- ADD THE NEW MODAL TO THE INJECTION STRING ---
+      modal_edit_source +
       modal_edit_transaction +
       modal_confirm +
       modal_sell_from_position +

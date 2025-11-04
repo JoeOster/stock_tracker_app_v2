@@ -155,7 +155,17 @@ export async function saveHolderChange(li) {
  * Initializes event listeners for Account Holder Management.
  * @returns {void}
  */
+/**
+ * Loads and renders the account holder management settings.
+ * @returns {Promise<void>}
+ */
+export async function loadHolderSettings() {
+  await fetchAndPopulateAccountHolders();
+  renderAccountHolderManagementList();
+}
+
 export function initializeHolderManagementHandlers() {
+  loadHolderSettings();
   const accountHolderList = document.getElementById('account-holder-list');
   const addAccountHolderBtn = /** @type {HTMLButtonElement | null} */ (
     document.getElementById('add-account-holder-btn')

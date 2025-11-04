@@ -44,6 +44,8 @@ app.use(
   })
 );
 
+app.use(express.static(path.join(__dirname, 'Portfolio V4', 'public')));
+
 app.use(fileUpload()); // Middleware for handling file uploads
 
 /**

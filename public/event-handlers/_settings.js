@@ -1,12 +1,12 @@
 ﻿import { refreshLedger } from '../api/transactions-api.js';
 // public/event-handlers/_settings.js
 import { state } from '../state.js';
-import { showToast, showConfirmationModal } from '../ui/helpers.js';
+import { showConfirmationModal, showToast } from '../ui/helpers.js';
 import {
-  saveSettings,
-  renderExchangeManagementList,
-  renderAccountHolderManagementList,
   applyAppearanceSettings,
+  renderAccountHolderManagementList,
+  renderExchangeManagementList,
+  saveSettings,
 } from '../ui/settings.js';
 //import { switchView } from '../event-handlers/_navigation.js';
 /**

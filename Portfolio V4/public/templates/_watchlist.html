@@ -1,0 +1,49 @@
+<div class="sub-tab-content">
+  <div id="watchlist-real-panel" class="sub-tab-panel active">
+    <h3>Real Positions (Info-Only)</h3>
+    <p class="subtitle" style="text-align: left; margin: 0 0 10px 0">
+      This is an info-only view of your open lots, identical to the Dashboard
+      Table View.
+    </p>
+
+    <table id="watchlist-real-table">
+      <thead>
+        <tr>
+          <th data-sort="ticker" class="sticky-col">Ticker</th>
+          <th data-sort="exchange">Exchange</th>
+          <th data-sort="purchase_date">Purchase Date</th>
+          <th class="numeric" data-sort="cost_basis" data-type="numeric">
+            Basis
+          </th>
+          <th
+            class="numeric"
+            data-sort="quantity_remaining"
+            data-type="numeric"
+          >
+            Qty
+          </th>
+          <th class="numeric" data-sort="current-price" data-type="numeric">
+            Current Price
+          </th>
+          <th
+            class="numeric"
+            data-sort="unrealized-pl-dollar"
+            data-type="numeric"
+          >
+            Unr. P/L ($ | %)
+          </th>
+          <th class="numeric">Limits</th>
+        </tr>
+      </thead>
+      <tbody id="watchlist-real-tbody">
+        <tr>
+          <td colspan="8">Loading real positions...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="watchlist-paper-panel" class="sub-tab-panel"></div>
+
+  <div id="watchlist-watched-panel" class="sub-tab-panel"></div>
+</div>

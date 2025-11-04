@@ -42,6 +42,7 @@ export function renderAdviceSourceManagementList(sources) {
   );
 
   sortedSources.forEach((source) => {
+    if (!source) return; // Skip if source is undefined
     const li = document.createElement('li');
     li.dataset.id = String(source.id);
     // --- STYLE INACTIVE ITEMS ---

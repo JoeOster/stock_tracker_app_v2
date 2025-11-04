@@ -42,6 +42,25 @@ export async function loadDailyReportPage(viewValue) {
     ]);
     renderDailyReportPage(viewValue, state.activityMap, null, positionData);
 
+    const realizedGainsSummary = document.querySelector(
+      '#realized-gains-summary span'
+    );
+    if (
+      realizedGainsSummary &&
+      positionData &&
+      positionData.dailyTransactions
+    ) {
+      const totalRealizedGains = positionData.dailyTransactions.reduce(
+        (total, tx) => {
+          return total + (tx.realizedPL || 0);
+        },
+        0
+      );
+      realizedGainsSummary.textContent = formatAccounting(totalRealizedGains);
+      realizedGainsSummary.className =
+        totalRealizedGains >= 0 ? 'positive' : 'negative';
+    }
+
     const tickersToUpdate = [
       ...new Set(
         Array.from(state.activityMap.values()).map((lot) => lot.ticker)

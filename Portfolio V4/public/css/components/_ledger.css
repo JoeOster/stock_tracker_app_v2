@@ -1,0 +1,9 @@
+/* public/css/components/_ledger.css */
+/* Contains styles specific to the Ledger page. */
+
+/* #ledger-summary-container { ... } REMOVED - Using generic .summary-container */
+
+/* Style to visually group ledger rows by date */
+.new-date-group td {
+  border-top: 2px solid var(--primary-color) !important;
+}

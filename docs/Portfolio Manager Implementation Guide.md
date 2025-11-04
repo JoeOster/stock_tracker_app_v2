@@ -14,6 +14,7 @@ A high-level overview of the application's architecture, implementation details,
 - **Journal Entries (Paper Trading)**: The `journal_entries` table is used for paper trades, tracking strategies, and managing "Techniques" from research sources.
 - **State Management**: A simple global `state.js` object holds client-side state, such as the `selectedAccountHolderId` and cached data.
 - **Event-Driven UI**: The app uses custom events (`journalUpdated`, `dashboardUpdated`) to trigger UI refreshes between different modules.
+- **SPA Rendering Strategy**: The application loads all HTML templates into the DOM at startup. Tab navigation is achieved by showing/hiding relevant page containers using CSS `display` properties. This approach requires careful management to ensure content from inactive tabs does not inadvertently become visible or interfere with active tabs.
 
 ## Key Modules & Files
 
@@ -61,6 +62,8 @@ A high-level overview of the application's architecture, implementation details,
 - [ ] **BUG - Sell Modal:** After selling from the "Manage Position" modal, the main dashboard table doesn't refresh automatically. It requires a manual refresh. This is confusing. The `dashboardUpdated` event is not firing or being listened to correctly.
 - [ ] **BUG - P/L Calculation:** P/L on closed positions (in "Ledger") seems to sometimes double-count. Need to verify the logic in `routes/reporting.js` (`/calculate-pl`).
 - [ ] **BUG - Order Form Reset:** The "Log Executed Trade" form does not properly clear the `data-buy-id` or `data-sell-id` after a successful partial sale, leading to subsequent "Log Sale" clicks failing.
+- [ ] **BUG - Cross-Tab Content Leakage:** Content from one tab (e.g., "Real Positions" from Watchlist) can sometimes appear on another tab (e.g., Sources) due to incorrect visibility management or unintended DOM manipulation. This needs to be thoroughly investigated and fixed to ensure tabs are truly independent.
+- [ ] **Refactor - Imports Tab Loader:** The "Imports" tab currently lacks a dedicated JavaScript loader function and associated event handlers. Implement `loadImportsPage()` to manage its state and interactions, aligning it with other tabs. **IMPORTANT**: Add a 5-second delay between each step of the refactoring process to avoid overloading the system.
 
 ### Medium Priority
 

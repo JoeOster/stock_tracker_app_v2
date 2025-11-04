@@ -6,7 +6,7 @@
 
 import { initializeAlertsHandlers } from './_alerts.js';
 import { initializeDailyReportHandlers } from './_dailyReport.js';
-import { initializeImportHandlers } from './_imports.js';
+
 import { initializeLedgerHandlers } from './_ledger.js';
 // --- FIX: Restore correct import ---
 import { initializeModalHandlers } from './_modals.js';
@@ -52,7 +52,7 @@ export function initializeAllEventHandlers() {
         initializeLedgerHandlers();
         initializeAlertsHandlers();
         initializeDailyReportHandlers();
-        initializeImportHandlers();
+
         // --- REMOVED: initializeChartsHandlers(); ---
         initializeResearchHandlers(); // This is now for "Sources"
         initializeDashboardHandlers();

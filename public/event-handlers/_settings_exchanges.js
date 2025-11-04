@@ -164,7 +164,17 @@ export async function saveExchangeChange(li) {
  * Initializes event listeners for Exchange Management.
  * @returns {void}
  */
+/**
+ * Loads and renders the exchange management settings.
+ * @returns {Promise<void>}
+ */
+export async function loadExchangeSettings() {
+  await fetchAndRenderExchanges();
+  renderExchangeManagementList();
+}
+
 export function initializeExchangeManagementHandlers() {
+  loadExchangeSettings();
   // ... (Add Exchange unchanged) ...
   const exchangeList = document.getElementById('exchange-list');
   const addExchangeBtn = /** @type {HTMLButtonElement | null} */ (

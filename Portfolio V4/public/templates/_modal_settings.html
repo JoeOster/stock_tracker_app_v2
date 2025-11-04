@@ -1,0 +1,581 @@
+﻿<div id="settings-modal" class="modal">
+  <div class="modal-content modal-large">
+    <span class="close-button">&times;</span>
+    <div class="settings-layout">
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="appearance">
+          Appearance
+        </button>
+        <button class="settings-tab" data-tab="data">Data Management</button>
+        <button class="settings-tab" data-tab="general">General</button>
+        <button class="settings-tab" data-tab="user-management">
+          User Management
+        </button>
+        <button class="settings-tab" data-tab="corporate-actions">
+          Corporate Actions
+        </button>
+      </div>
+      <div class="settings-content">
+        <div id="general-settings-panel" class="settings-panel">
+          <h3>General Settings</h3>
+          <form id="general-settings-form" class="settings-grid">
+            <div class="form-group">
+              <label for="family-name">Family Name (App Title)</label>
+              <input type="text" id="family-name" />
+              <label for="take-profit-percent" style="margin-top: 1rem"
+                >Default Take Profit %</label
+              >
+              <input type="number" id="take-profit-percent" step="1" min="0" />
+              <label for="stop-loss-percent" style="margin-top: 1rem"
+                >Default Stop Loss %</label
+              >
+              <input type="number" id="stop-loss-percent" step="1" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="notification-cooldown" style="margin-top: 1rem"
+                >Notification Cooldown (Min)</label
+              >
+              <input
+                type="number"
+                id="notification-cooldown"
+                step="1"
+                min="1"
+              />
+            </div>
+          </form>
+        </div>
+
+        <div id="appearance-settings-panel" class="settings-panel active">
+          <h3>Appearance</h3>
+          <form id="appearance-settings-form" class="settings-grid">
+            <div class="form-group">
+              <label for="theme-selector">Theme</label>
+              <select id="theme-selector">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="sepia">Sepia</option>
+                <option value="contrast">High Contrast (Dark)</option>
+                <option value="high-contrast">High Contrast (Light)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="font-selector">Font</label>
+              <select id="font-selector">
+                <option value="Inter">Inter (Default)</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Lato">Lato</option>
+                <option value="Open Sans">Open Sans</option>
+                <option value="System">System</option>
+              </select>
+            </div>
+          </form>
+        </div>
+
+        <div id="data-settings-panel" class="settings-panel">
+          <div class="sub-tabs">
+            <button class="sub-tab active" data-sub-tab="sources-panel">
+              Advice Sources
+            </button>
+            <button class="sub-tab" data-sub-tab="exchanges-panel">
+              Exchanges
+            </button>
+          </div>
+          <div class="sub-tab-content">
+            <div id="sources-panel" class="sub-tab-panel active">
+              <h4>Manage Advice Sources</h4>
+              <form id="add-new-source-form" class="form-grid">
+                <div class="form-group form-group-span-2">
+                  <label for="new-source-name">Source Name</label>
+                  <input type="text" id="new-source-name" required />
+                </div>
+                <div class="form-group">
+                  <label for="new-source-type">Source Type</label>
+                  <select id="new-source-type" required>
+                    <option value="">-- Select Type --</option>
+                    <option value="Person">Person</option>
+                    <option value="Group">Group</option>
+                    <option value="Book">Book</option>
+                    <option value="Website">Website</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="new-source-url">URL (Optional)</label>
+                  <input
+                    type="text"
+                    id="new-source-url"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div class="form-group form-group-span-2">
+                  <label for="new-source-description"
+                    >Description (Optional)</label
+                  >
+                  <textarea id="new-source-description" rows="2"></textarea>
+                </div>
+
+                <div class="form-group form-group-span-2">
+                  <label for="new-source-image-path"
+                    >Image Path (Optional)</label
+                  >
+                  <input
+                    type="text"
+                    id="new-source-image-path"
+                    placeholder="e.g., /images/contacts/default.png"
+                  />
+                </div>
+                <div id="new-source-panel-person" class="dynamic-source-panel">
+                  <div class="form-group">
+                    <label for="new-source-contact-email"
+                      >Contact Email (Optional)</label
+                    >
+                    <input type="email" id="new-source-contact-email" />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-source-contact-phone"
+                      >Contact Phone (Optional)</label
+                    >
+                    <input type="tel" id="new-source-contact-phone" />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-source-contact-app-type"
+                      >Contact App (Optional)</label
+                    >
+                    <select id="new-source-contact-app-type">
+                      <option value="">-- None --</option>
+                      <option value="Signal">Signal</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="Telegram">Telegram</option>
+                      <option value="Discord">Discord</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div class="form-group form-group-span-2">
+                    <label for="new-source-contact-app-handle"
+                      >App Handle (Optional)</label
+                    >
+                    <input
+                      type="text"
+                      id="new-source-contact-app-handle"
+                      placeholder="e.g., @username or +1234567890"
+                    />
+                  </div>
+                </div>
+                <div id="new-source-panel-group" class="dynamic-source-panel">
+                  <div class="form-group">
+                    <label for="new-source-group-person"
+                      >Primary Contact (Optional)</label
+                    >
+                    <input type="text" id="new-source-group-person" />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-source-group-email"
+                      >Contact Email (Optional)</label
+                    >
+                    <input type="email" id="new-source-group-email" />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-source-group-phone"
+                      >Contact Phone (Optional)</label
+                    >
+                    <input type="tel" id="new-source-group-phone" />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-source-group-app-type"
+                      >Contact App (Optional)</label
+                    >
+                    <select id="new-source-group-app-type">
+                      <option value="">-- None --</option>
+                      <option value="Signal">Signal</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="Telegram">Telegram</option>
+                      <option value="Discord">Discord</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div class="form-group form-group-span-2">
+                    <label for="new-source-group-app-handle"
+                      >App Handle (Optional)</label
+                    >
+                    <input
+                      type="text"
+                      id="new-source-group-app-handle"
+                      placeholder="e.g., @username or +1234567890"
+                    />
+                  </div>
+                </div>
+                <div id="new-source-panel-book" class="dynamic-source-panel">
+                  <div class="form-group">
+                    <label for="new-source-book-author"
+                      >Author (Optional)</label
+                    >
+                    <input type="text" id="new-source-book-author" />
+                  </div>
+                  <div class="form-group">
+                    <label for="new-source-book-isbn">ISBN (Optional)</label>
+                    <input type="text" id="new-source-book-isbn" />
+                  </div>
+                  <div class="form-group form-group-span-2">
+                    <label for="new-source-book-websites"
+                      >Website Links (Optional, one per line)</label
+                    >
+                    <textarea id="new-source-book-websites" rows="3"></textarea>
+                  </div>
+                  <div class="form-group form-group-span-2">
+                    <label for="new-source-book-pdfs"
+                      >PDF/Document Links (Optional, one per line)</label
+                    >
+                    <textarea id="new-source-book-pdfs" rows="3"></textarea>
+                  </div>
+                </div>
+                <div id="new-source-panel-website" class="dynamic-source-panel">
+                  <div class="form-group form-group-span-2">
+                    <label for="new-source-website-websites"
+                      >Relevant Links (Optional, one per line)</label
+                    >
+                    <textarea
+                      id="new-source-website-websites"
+                      rows="3"
+                      placeholder="e.g., Specific articles, tools..."
+                    ></textarea>
+                  </div>
+                  <div class="form-group form-group-span-2">
+                    <label for="new-source-website-pdfs"
+                      >Saved Documents (Optional, one per line)</label
+                    >
+                    <textarea
+                      id="new-source-website-pdfs"
+                      rows="3"
+                      placeholder="e.g., Links to saved charts, reports..."
+                    ></textarea>
+                  </div>
+                </div>
+                <div
+                  class="form-group form-group-span-2"
+                  style="text-align: right; margin-top: 1rem"
+                >
+                  <button type="submit">Add Source</button>
+                </div>
+              </form>
+              <hr />
+              <h4>Existing Sources</h4>
+              <div id="advice-source-list-container">
+                <ul id="advice-source-list" class="management-list">
+                  <li>Loading...</li>
+                </ul>
+              </div>
+            </div>
+
+            <div id="exchanges-panel" class="sub-tab-panel">
+              <h4>Manage Exchanges</h4>
+              <form id="add-exchange-form" class="add-item-form">
+                <input
+                  type="text"
+                  id="new-exchange-name"
+                  placeholder="New Exchange Name"
+                  required
+                />
+                <button type="button" id="add-exchange-btn">
+                  Add Exchange
+                </button>
+              </form>
+              <ul
+                id="exchange-list"
+                class="management-list"
+                style="margin-top: 1rem"
+              ></ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="user-management-settings-panel" class="settings-panel">
+          <div class="sub-tabs">
+            <button class="sub-tab active" data-sub-tab="users-panel">
+              Users
+            </button>
+            <button
+              class="sub-tab"
+              data-sub-tab="subscriptions-panel"
+              style="display: none"
+            >
+              Subscriptions
+            </button>
+          </div>
+          <div class="sub-tab-content">
+            <div id="users-panel" class="sub-tab-panel active">
+              <h4>Manage Account Holders</h4>
+              <form id="add-holder-form" class="add-item-form">
+                <input
+                  type="text"
+                  id="new-holder-name"
+                  placeholder="New Account Holder Name"
+                  required
+                />
+                <button type="button" id="add-account-holder-btn">
+                  Add Account Holder
+                </button>
+              </form>
+              <label
+                style="
+                  font-weight: 500;
+                  font-size: 0.9em;
+                  color: var(--text-muted-color);
+                  margin-top: 1.5rem;
+                  display: block;
+                "
+              >
+                Select default user and manage existing users:
+              </label>
+              <div id="account-holder-list-container" style="padding-top: 10px">
+                <ul id="account-holder-list" class="management-list">
+                  <li>Loading...</li>
+                </ul>
+              </div>
+            </div>
+            <div id="subscriptions-panel" class="sub-tab-panel">
+              <h2 id="subscriptions-panel-title">
+                Manage Subscribed Sources for --
+              </h2>
+              <p
+                class="subtitle"
+                style="text-align: left; margin: -10px 0 15px 0"
+              >
+                Select the global sources you want to see for this user.
+              </p>
+              <div
+                id="subscriptions-panel-list-container"
+                style="
+                  max-height: 50vh;
+                  overflow-y: auto;
+                  border: 1px solid var(--container-border);
+                  border-radius: 6px;
+                  padding: 10px;
+                  background-color: var(--info-panel-bg);
+                "
+              >
+                <p>
+                  Select a user from the 'Users' tab and click 'Subscriptions'
+                  to manage them here.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="corporate-actions-settings-panel" class="settings-panel">
+          <h3>Corporate Actions</h3>
+          <form id="stock-split-form" class="settings-grid">
+            <h4>Log Stock Split</h4>
+            <div class="form-group">
+              <label for="split-ticker">Ticker</label>
+              <input type="text" id="split-ticker" required />
+            </div>
+            <div class="form-group">
+              <label for="split-date">Split Date</label>
+              <input type="date" id="split-date" required />
+            </div>
+            <div class="form-group">
+              <label for="split-from">Split Ratio (From)</label>
+              <input
+                type="number"
+                id="split-from"
+                step="any"
+                min="0.00001"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="split-to">Split Ratio (To)</label>
+              <input
+                type="number"
+                id="split-to"
+                step="any"
+                min="0.00001"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="split-account-holder">Account Holder</label>
+              <select
+                id="split-account-holder"
+                class="account-holder-select"
+                required
+              ></select>
+            </div>
+            <div
+              class="form-group form-group-span-2"
+              style="text-align: right; margin-top: 1rem"
+            >
+              <button type="submit">Log Split</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal-actions"
+      style="
+        border-top: 1px solid var(--container-border);
+        padding-top: 1.5rem;
+        margin-top: 1.5rem;
+      "
+    >
+      <div class="modal-actions-right">
+        <button id="save-settings-button">Save & Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="edit-source-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-button">&times;</span>
+    <h2>Edit Advice Source</h2>
+    <form id="edit-source-form" class="form-grid">
+      <input type="hidden" id="edit-source-id" />
+      <div class="form-group form-group-span-2">
+        <label for="edit-source-name">Source Name</label>
+        <input type="text" id="edit-source-name" required />
+      </div>
+      <div class="form-group">
+        <label for="edit-source-type">Source Type</label>
+        <select id="edit-source-type" required>
+          <option value="">-- Select Type --</option>
+          <option value="Person">Person</option>
+          <option value="Group">Group</option>
+          <option value="Book">Book</option>
+          <option value="Website">Website</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="edit-source-url">URL (Optional)</label>
+        <input type="text" id="edit-source-url" placeholder="https://..." />
+      </div>
+      <div class="form-group form-group-span-2">
+        <label for="edit-source-description">Description (Optional)</label>
+        <textarea id="edit-source-description" rows="2"></textarea>
+      </div>
+      <div class="form-group form-group-span-2">
+        <label for="edit-source-image-path">Image Path (Optional)</label>
+        <input
+          type="text"
+          id="edit-source-image-path"
+          placeholder="e.g., /images/contacts/default.png"
+        />
+      </div>
+      <div id="edit-source-panel-person" class="dynamic-source-panel">
+        <div class="form-group">
+          <label for="edit-source-contact-email"
+            >Contact Email (Optional)</label
+          >
+          <input type="email" id="edit-source-contact-email" />
+        </div>
+        <div class="form-group">
+          <label for="edit-source-contact-phone"
+            >Contact Phone (Optional)</label
+          >
+          <input type="tel" id="edit-source-contact-phone" />
+        </div>
+        <div class="form-group">
+          <label for="edit-source-contact-app-type"
+            >Contact App (Optional)</label
+          >
+          <select id="edit-source-contact-app-type">
+            <option value="">-- None --</option>
+            <option value="Signal">Signal</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Telegram">Telegram</option>
+            <option valueD="" isabled>Discord</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group form-group-span-2">
+          <label for="edit-source-contact-app-handle"
+            >App Handle (Optional)</label
+          >
+          <input
+            type="text"
+            id="edit-source-contact-app-handle"
+            placeholder="e.g., @username or +1234567890"
+          />
+        </div>
+      </div>
+      <div id="edit-source-panel-group" class="dynamic-source-panel">
+        <div class="form-group">
+          <label for="edit-source-group-person"
+            >Primary Contact (Optional)</label
+          >
+          <input type="text" id="edit-source-group-person" />
+        </div>
+        <div class="form-group">
+          <label for="edit-source-group-email">Contact Email (Optional)</label>
+          <input type="email" id="edit-source-group-email" />
+        </div>
+        <div class="form-group">
+          <label for="edit-source-group-phone">Contact Phone (Optional)</label>
+          <input type="tel" id="edit-source-group-phone" />
+        </div>
+        <div class="form-group">
+          <label for="edit-source-group-app-type">Contact App (Optional)</label>
+          <select id="edit-source-group-app-type">
+            <option value="">-- None --</option>
+            <option value="Signal">Signal</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Telegram">Telegram</option>
+            <option value="Discord">Discord</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group form-group-span-2">
+          <label for="edit-source-group-app-handle"
+            >App Handle (Optional)</label
+          >
+          <input
+            type="text"
+            id="edit-source-group-app-handle"
+            placeholder="e.g., @username or +1234567890"
+          />
+        </div>
+      </div>
+      <div id="edit-source-panel-book" class="dynamic-source-panel">
+        <div class="form-group">
+          <label for="edit-source-book-author">Author (Optional)</label>
+          <input type="text" id="edit-source-book-author" />
+        </div>
+        <div class="form-group">
+          <label for="edit-source-book-isbn">ISBN (Optional)</label>
+          <input type="text" id="edit-source-book-isbn" />
+        </div>
+        <div class="form-group form-group-span-2">
+          <label for="edit-source-book-websites"
+            >Website Links (Optional, one per line)</label
+          >
+          <textarea id="edit-source-book-websites" rows="3"></textarea>
+        </div>
+        <div class="form-group form-group-span-2">
+          <label for="edit-source-book-pdfs"
+            >PDF/Document Links (Optional, one per line)</label
+          >
+          <textarea id="edit-source-book-pdfs" rows="3"></textarea>
+        </div>
+      </div>
+      <div id="edit-source-panel-website" class="dynamic-source-panel">
+        <div class="form-group form-group-span-2">
+          <label for="edit-source-website-websites"
+            >Relevant Links (Optional, one per line)</label
+          >
+          <textarea id="edit-source-website-websites" rows="3"></textarea>
+        </div>
+        <div class="form-group form-group-span-2">
+          <label for="edit-source-website-pdfs"
+            >Saved Documents (Optional, one per line)</label
+          >
+          <textarea id="edit-source-website-pdfs" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions form-group-span-2">
+        <button type="button" class="cancel-btn close-modal-btn">Cancel</button>
+        <button type="submit">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>

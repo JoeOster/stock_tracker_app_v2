@@ -20,6 +20,23 @@ export function initializeOrdersFormHandlers() {
   );
 
   if (transactionForm) {
+    const transactionTypeSelect = /** @type {HTMLSelectElement} */ (
+      document.getElementById('transaction-type')
+    );
+    const limitOrderGroups = document.querySelectorAll('.limit-order-group');
+
+    transactionTypeSelect.addEventListener('change', () => {
+      if (transactionTypeSelect.value === 'DIVIDEND') {
+        limitOrderGroups.forEach(
+          (group) => (/** @type {HTMLElement} */ (group).style.display = 'none')
+        );
+      } else {
+        limitOrderGroups.forEach(
+          (group) => (/** @type {HTMLElement} */ (group).style.display = '')
+        );
+      }
+    });
+
     const priceInput = /** @type {HTMLInputElement} */ (
       document.getElementById('price')
     );
@@ -89,95 +106,6 @@ export function initializeOrdersFormHandlers() {
         );
       }
 
-      // --- Get TP1 Values & Validate ---
-      const isProfitLimitSet = /** @type {HTMLInputElement} */ (
-        document.getElementById('set-profit-limit-checkbox')
-      ).checked;
-      const profitPrice = parseFloat(
-        /** @type {HTMLInputElement} */ (
-          document.getElementById('add-limit-price-up')
-        ).value
-      );
-      const profitExpirationDate = /** @type {HTMLInputElement} */ (
-        document.getElementById('add-limit-up-expiration')
-      ).value;
-      if (isProfitLimitSet && (isNaN(profitPrice) || profitPrice <= price)) {
-        return showToast(
-          'Take Profit 1 price must be a valid number greater than the purchase price.',
-          'error'
-        );
-      }
-      if (isProfitLimitSet && !profitExpirationDate) {
-        return showToast(
-          'A Take Profit 1 limit requires an expiration date.',
-          'error'
-        );
-      }
-
-      // --- Get Stop Loss Values & Validate ---
-      const isLossLimitSet = /** @type {HTMLInputElement} */ (
-        document.getElementById('set-loss-limit-checkbox')
-      ).checked;
-      const lossPrice = parseFloat(
-        /** @type {HTMLInputElement} */ (
-          document.getElementById('add-limit-price-down')
-        ).value
-      );
-      const lossExpirationDate = /** @type {HTMLInputElement} */ (
-        document.getElementById('add-limit-down-expiration')
-      ).value;
-      if (
-        isLossLimitSet &&
-        (isNaN(lossPrice) || lossPrice <= 0 || lossPrice >= price)
-      ) {
-        return showToast(
-          'Stop Loss price must be a valid positive number less than the purchase price.',
-          'error'
-        );
-      }
-      if (isLossLimitSet && !lossExpirationDate) {
-        return showToast(
-          'A Stop Loss limit requires an expiration date.',
-          'error'
-        );
-      }
-
-      // --- Get TP2 Values & Validate ---
-      const isProfitLimit2Set = /** @type {HTMLInputElement} */ (
-        document.getElementById('set-profit-limit-2-checkbox')
-      ).checked;
-      const profitPrice2 = parseFloat(
-        /** @type {HTMLInputElement} */ (
-          document.getElementById('add-limit-price-up-2')
-        ).value
-      );
-      const profitExpirationDate2 = /** @type {HTMLInputElement} */ (
-        document.getElementById('add-limit-up-expiration-2')
-      ).value;
-      if (isProfitLimit2Set && (isNaN(profitPrice2) || profitPrice2 <= price)) {
-        return showToast(
-          'Take Profit 2 price must be a valid number greater than the purchase price.',
-          'error'
-        );
-      }
-      if (
-        isProfitLimit2Set &&
-        isProfitLimitSet &&
-        profitPrice2 <= profitPrice
-      ) {
-        return showToast(
-          'Take Profit 2 price must be greater than Take Profit 1 price.',
-          'error'
-        );
-      }
-      if (isProfitLimit2Set && !profitExpirationDate2) {
-        return showToast(
-          'A Take Profit 2 limit requires an expiration date.',
-          'error'
-        );
-      }
-      // --- End Validation ---
-
       // --- Get advice_source_id ---
       const adviceSourceId =
         /** @type {HTMLSelectElement} */ (
@@ -199,15 +127,115 @@ export function initializeOrdersFormHandlers() {
         transaction_type: transactionType,
         quantity: quantity,
         price: price,
-        limit_price_up: isProfitLimitSet ? profitPrice : null,
-        limit_up_expiration: isProfitLimitSet ? profitExpirationDate : null,
-        limit_price_down: isLossLimitSet ? lossPrice : null,
-        limit_down_expiration: isLossLimitSet ? lossExpirationDate : null,
-        limit_price_up_2: isProfitLimit2Set ? profitPrice2 : null,
-        limit_up_expiration_2: isProfitLimit2Set ? profitExpirationDate2 : null,
         advice_source_id: adviceSourceId,
         linked_journal_id: linkedJournalId,
       };
+
+      if (transactionType !== 'DIVIDEND') {
+        // --- Get TP1 Values & Validate ---
+        const isProfitLimitSet = /** @type {HTMLInputElement} */ (
+          document.getElementById('set-profit-limit-checkbox')
+        ).checked;
+        const profitPrice = parseFloat(
+          /** @type {HTMLInputElement} */ (
+            document.getElementById('add-limit-price-up')
+          ).value
+        );
+        const profitExpirationDate = /** @type {HTMLInputElement} */ (
+          document.getElementById('add-limit-up-expiration')
+        ).value;
+        if (isProfitLimitSet && (isNaN(profitPrice) || profitPrice <= price)) {
+          return showToast(
+            'Take Profit 1 price must be a valid number greater than the purchase price.',
+            'error'
+          );
+        }
+        if (isProfitLimitSet && !profitExpirationDate) {
+          return showToast(
+            'A Take Profit 1 limit requires an expiration date.',
+            'error'
+          );
+        }
+
+        // --- Get Stop Loss Values & Validate ---
+        const isLossLimitSet = /** @type {HTMLInputElement} */ (
+          document.getElementById('set-loss-limit-checkbox')
+        ).checked;
+        const lossPrice = parseFloat(
+          /** @type {HTMLInputElement} */ (
+            document.getElementById('add-limit-price-down')
+          ).value
+        );
+        const lossExpirationDate = /** @type {HTMLInputElement} */ (
+          document.getElementById('add-limit-down-expiration')
+        ).value;
+        if (
+          isLossLimitSet &&
+          (isNaN(lossPrice) || lossPrice <= 0 || lossPrice >= price)
+        ) {
+          return showToast(
+            'Stop Loss price must be a valid positive number less than the purchase price.',
+            'error'
+          );
+        }
+        if (isLossLimitSet && !lossExpirationDate) {
+          return showToast(
+            'A Stop Loss limit requires an expiration date.',
+            'error'
+          );
+        }
+
+        // --- Get TP2 Values & Validate ---
+        const isProfitLimit2Set = /** @type {HTMLInputElement} */ (
+          document.getElementById('set-profit-limit-2-checkbox')
+        ).checked;
+        const profitPrice2 = parseFloat(
+          /** @type {HTMLInputElement} */ (
+            document.getElementById('add-limit-price-up-2')
+          ).value
+        );
+        const profitExpirationDate2 = /** @type {HTMLInputElement} */ (
+          document.getElementById('add-limit-up-expiration-2')
+        ).value;
+        if (
+          isProfitLimit2Set &&
+          (isNaN(profitPrice2) || profitPrice2 <= price)
+        ) {
+          return showToast(
+            'Take Profit 2 price must be a valid number greater than the purchase price.',
+            'error'
+          );
+        }
+        if (
+          isProfitLimit2Set &&
+          isProfitLimitSet &&
+          profitPrice2 <= profitPrice
+        ) {
+          return showToast(
+            'Take Profit 2 price must be greater than Take Profit 1 price.',
+            'error'
+          );
+        }
+        if (isProfitLimit2Set && !profitExpirationDate2) {
+          return showToast(
+            'A Take Profit 2 limit requires an expiration date.',
+            'error'
+          );
+        }
+
+        transaction.limit_price_up = isProfitLimitSet ? profitPrice : null;
+        transaction.limit_up_expiration = isProfitLimitSet
+          ? profitExpirationDate
+          : null;
+        transaction.limit_price_down = isLossLimitSet ? lossPrice : null;
+        transaction.limit_down_expiration = isLossLimitSet
+          ? lossExpirationDate
+          : null;
+        transaction.limit_price_up_2 = isProfitLimit2Set ? profitPrice2 : null;
+        transaction.limit_up_expiration_2 = isProfitLimit2Set
+          ? profitExpirationDate2
+          : null;
+      }
 
       const submitButton = /** @type {HTMLButtonElement} */ (
         transactionForm.querySelector('button[type="submit"]')

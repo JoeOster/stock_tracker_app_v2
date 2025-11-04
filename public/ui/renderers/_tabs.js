@@ -3,8 +3,8 @@
  * @file Renderer for the main navigation tabs.
  * @module renderers/_tabs
  */
-import { getTradingDays, getActivePersistentDates } from '../datetime.js';
 import { state } from '../../state.js'; // --- ADDED: Import state ---
+import { getActivePersistentDates, getTradingDays } from '../datetime.js';
 
 /**
  * @typedef {object} TabInfo

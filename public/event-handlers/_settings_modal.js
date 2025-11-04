@@ -6,15 +6,16 @@
 
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
-import {
-  saveSettings,
-  applyAppearanceSettings,
-  renderExchangeManagementList,
-  renderAccountHolderManagementList,
-} from '../ui/settings.js';
+import { saveSettings, applyAppearanceSettings } from '../ui/settings.js';
 import { renderAdviceSourceManagementList } from '../ui/journal-settings.js';
-import { fetchAndRenderExchanges } from './_settings_exchanges.js';
-import { fetchAndPopulateAccountHolders } from './_settings_holders.js';
+import {
+  loadExchangeSettings,
+  initializeExchangeManagementHandlers,
+} from './_settings_exchanges.js';
+import {
+  loadHolderSettings,
+  initializeHolderManagementHandlers,
+} from './_settings_holders.js';
 import { fetchAllAdviceSourcesForUser } from './_journal_settings.js';
 // --- REMOVED: Subscription panel initializer ---
 
@@ -104,7 +105,11 @@ export function initializeSettingsModalHandlers() {
     '#user-management-settings-panel'
   );
 
-  // --- Settings Modal Opening ---
+  initializeExchangeManagementHandlers();
+  initializeHolderManagementHandlers(); // Call the new handler
+  initializeStockSplitFormHandler();
+
+  // --- User Management Sub-Tab Navigation ---
   if (settingsBtn && settingsModal) {
     // ... (click listener remains the same as previous response) ...
     settingsBtn.addEventListener('click', async () => {
@@ -122,8 +127,8 @@ export function initializeSettingsModalHandlers() {
         showToast('Loading settings data...', 'info', 2000);
 
         const userSources = await Promise.all([
-          fetchAndRenderExchanges(),
-          fetchAndPopulateAccountHolders(),
+          loadExchangeSettings(),
+          loadHolderSettings(),
           fetchAllAdviceSourcesForUser(state.selectedAccountHolderId),
         ]);
 
@@ -157,9 +162,7 @@ export function initializeSettingsModalHandlers() {
         );
         if (themeSelect) themeSelect.value = state.settings.theme || 'light';
         if (fontSelect) fontSelect.value = state.settings.font || 'Inter';
-        renderExchangeManagementList();
-        renderAdviceSourceManagementList(userSources);
-        renderAccountHolderManagementList();
+        renderAdviceSourceManagementList(userSources[2]);
 
         settingsTabsContainer
           ?.querySelectorAll('.settings-tab')
@@ -357,5 +360,78 @@ export function initializeSettingsModalHandlers() {
     }
   } else {
     console.warn('Could not find user management panel for sub-tab events.');
+  }
+}
+
+function initializeStockSplitFormHandler() {
+  const stockSplitForm = document.getElementById('stock-split-form');
+  if (stockSplitForm) {
+    stockSplitForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const ticker = /** @type {HTMLInputElement} */ (
+        document.getElementById('split-ticker')
+      ).value
+        .toUpperCase()
+        .trim();
+      const split_date = /** @type {HTMLInputElement} */ (
+        document.getElementById('split-date')
+      ).value;
+      const split_from = /** @type {HTMLInputElement} */ (
+        document.getElementById('split-from')
+      ).value;
+      const split_to = /** @type {HTMLInputElement} */ (
+        document.getElementById('split-to')
+      ).value;
+      const account_holder_id = /** @type {HTMLSelectElement} */ (
+        document.getElementById('split-account-holder')
+      ).value;
+
+      if (
+        !ticker ||
+        !split_date ||
+        !split_from ||
+        !split_to ||
+        !account_holder_id
+      ) {
+        return showToast(
+          'Please fill in all fields for the stock split.',
+          'error'
+        );
+      }
+
+      const splitData = {
+        ticker,
+        split_date,
+        split_from,
+        split_to,
+        account_holder_id,
+      };
+
+      const submitButton = /** @type {HTMLButtonElement} */ (
+        stockSplitForm.querySelector('button[type="submit"]')
+      );
+      submitButton.disabled = true;
+
+      try {
+        const response = await fetch('/api/stock-split', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(splitData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Server error');
+        }
+
+        showToast('Stock split logged successfully!', 'success');
+        stockSplitForm.reset();
+      } catch (error) {
+        showToast(`Failed to log stock split: ${error.message}`, 'error');
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
   }
 }

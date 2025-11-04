@@ -16,6 +16,7 @@ import { refreshLedgerWithPL } from './_ledger.js';
 // --- END MODIFIED ---
 import { loadResearchPage } from './_research.js';
 import { loadDashboardPage } from './_dashboard_loader.js';
+import { loadImportsPage } from './imports.js';
 // --- REMOVED: import { loadJournalPage } ---
 import { fetchAndStoreAdviceSources } from './_journal_settings.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
@@ -154,7 +155,7 @@ export async function switchView(
         await loadResearchPage();
         break;
       case 'imports':
-        console.log('[Navigation] Imports tab selected.');
+        await loadImportsPage();
         break;
       case 'watchlist':
         console.log('[Navigation] Watchlist tab selected.');
