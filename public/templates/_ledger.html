@@ -4,67 +4,32 @@
     Filter and review your complete transaction history below.
   </p>
 
-  <div class="pl-summary-grid" style="margin-bottom: 2rem">
-    <div class="pl-summary-container">
-      <h3>Lifetime Realized P&L Summary</h3>
-      <table id="pl-summary-table" class="data-table" style="min-width: 300px">
-        <thead>
-          <tr>
-            <th>Exchange</th>
-            <th class="numeric">Realized P/L</th>
-          </tr>
-        </thead>
-        <tbody id="pl-summary-tbody">
-          <tr>
-            <td colspan="2">Loading...</td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td><strong>Total</strong></td>
-            <td class="numeric" id="pl-summary-total"><strong>--</strong></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-    <div class="pl-summary-container">
-      <h3>Realized P/L by Date Range</h3>
-      <div
-        class="date-range-inputs filter-bar"
-        style="padding: 0.5rem; margin-bottom: 1rem; width: 100%"
-      >
-        <label for="pl-start-date">From:</label>
-        <input type="date" id="pl-start-date" />
-        <label for="pl-end-date">To:</label>
-        <input type="date" id="pl-end-date" />
-      </div>
-      <table
-        id="pl-summary-ranged-table"
-        class="data-table"
-        style="min-width: 300px"
-      >
-        <thead>
-          <tr>
-            <th>Exchange</th>
-            <th class="numeric">Realized P/L</th>
-          </tr>
-        </thead>
-        <tbody id="pl-summary-ranged-tbody">
-          <tr>
-            <td colspan="2">Select dates...</td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td><strong>Total</strong></td>
-            <td class="numeric" id="pl-summary-ranged-total">
-              <strong>--</strong>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </div>
+        <!-- Compact P&L Summary Bar -->
+        <div class="pnl-summary-bar">
+            <div class="date-filter">
+                <label for="date-range-select">Date Range:</label>
+                <select id="date-range-select">
+                    <option value="30d">Last 30 Days</option>
+                    <option value="90d">Last 90 Days</option>
+                    <option value="ytd">Year-to-Date</option>
+                    <option value="all">All Time</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+
+            <!-- Hidden by default, shown for "Custom" selection -->
+            <div class="date-filter" id="custom-date-range" style="display:none;">
+                <label for="start-date">From:</label>
+                <input type="date" id="start-date">
+                <label for="end-date">To:</label>
+                <input type="date" id="end-date">
+            </div>
+
+            <div class="pnl-value-container">
+                <span>Realized P&L: </span>
+                <span id="pnl-value-display" class="pnl-value">--</span>
+            </div>
+        </div>
   <div class="filter-bar">
     <input
       type="text"

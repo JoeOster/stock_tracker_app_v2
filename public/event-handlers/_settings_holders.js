@@ -6,56 +6,13 @@ import { handleResponse } from '../api/api-helpers.js';
  */
 
 import { state, updateState } from '../state.js';
+import { populateAllAccountHolderDropdowns } from '../ui/dropdowns.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderAccountHolderManagementList } from '../ui/settings.js';
 import { populateSubscriptionPanel } from './_modal_manage_subscriptions.js';
 import { setActiveTab } from './_settings_modal.js';
 
 // ... (populateAllAccountHolderDropdowns and fetchAndPopulateAccountHolders are unchanged) ...
-function populateAllAccountHolderDropdowns() {
-  const holderSelects = document.querySelectorAll('.account-holder-select');
-  holderSelects.forEach(
-    /** @param {HTMLSelectElement} select */ (select) => {
-      const currentVal = select.value;
-      select.innerHTML = '';
-
-      if (select.id === 'global-account-holder-filter') {
-        const allOption = document.createElement('option');
-        allOption.value = 'all';
-        allOption.textContent = 'All Accounts';
-        select.appendChild(allOption);
-      } else {
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'Select Holder';
-        defaultOption.disabled = true;
-        defaultOption.selected = true;
-        select.appendChild(defaultOption);
-      }
-
-      const sortedHolders = Array.isArray(state.allAccountHolders)
-        ? [...state.allAccountHolders].sort((a, b) =>
-            a.name.localeCompare(b.name)
-          )
-        : [];
-
-      sortedHolders.forEach((holder) => {
-        const option = document.createElement('option');
-        option.value = String(holder.id);
-        option.textContent = holder.name;
-        select.appendChild(option);
-      });
-
-      if (select.querySelector(`option[value="${currentVal}"]`)) {
-        select.value = currentVal;
-      } else if (select.id === 'global-account-holder-filter') {
-        select.value = 'all';
-      } else {
-        select.selectedIndex = select.options[0]?.disabled ? 0 : 1;
-      }
-    }
-  );
-}
 export async function fetchAndPopulateAccountHolders() {
   try {
     const response = await fetch('/api/accounts/holders');

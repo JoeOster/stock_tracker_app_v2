@@ -162,7 +162,10 @@ export function initializeSettingsModalHandlers() {
         );
         if (themeSelect) themeSelect.value = state.settings.theme || 'light';
         if (fontSelect) fontSelect.value = state.settings.font || 'Inter';
-        renderAdviceSourceManagementList(userSources[2]);
+        const adviceSources = Array.isArray(userSources[2])
+          ? userSources[2]
+          : [];
+        renderAdviceSourceManagementList(adviceSources);
 
         settingsTabsContainer
           ?.querySelectorAll('.settings-tab')

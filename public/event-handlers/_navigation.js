@@ -20,7 +20,13 @@ import { loadImportsPage } from './imports.js';
 // --- REMOVED: import { loadJournalPage } ---
 import { fetchAndStoreAdviceSources } from './_journal_settings.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
-import { loadWatchlistPage } from './_watchlist.js';
+// import { loadWatchlistPage } from './_watchlist.js'; // To be replaced by strategyLab module
+import { initializeDashboardHandlers } from './_dashboard_init.js';
+import { initializeLedgerHandlers } from './_ledger.js';
+import { initializeOrdersHandlers } from './_orders.js';
+import { initializeAlertsHandlers } from './_alerts.js';
+import { initializeResearchHandlers } from './_research.js';
+import { initializeWatchlist } from './_watchlist.js';
 
 /**
  * Autosizes a <select> element based on the width of its selected option.
@@ -75,14 +81,14 @@ export async function switchView(
     alerts: 'alerts-page-container',
     imports: 'imports-page-container', // REMOVED: 'charts': 'charts-container',
     date: 'daily-report-container',
-    watchlist: 'watchlist-page-container',
+    strategyLab: 'strategy-lab-page-container',
     sources: 'research-page-container',
   };
 
   // @ts-ignore
   const finalContainerId =
     containerIdMap[viewType] || `${viewType}-page-container`;
-  const targetPageContainer = document.getElementById(finalContainerId);
+  let targetPageContainer; // Declare with let, no initial assignment
 
   const isTargetVisible = targetPageContainer?.style.display === 'block';
 
@@ -109,22 +115,42 @@ export async function switchView(
   updateState({ currentView: { type: viewType, value: viewValue } });
   renderTabs(state.currentView); // Update tab highlighting
 
+  const mainContent = document.getElementById('main-content');
+  if (!mainContent) {
+    console.error('[Navigation] Fatal: Main content area not found.');
+    showToast('UI Error: Main content area not found.', 'error');
+    return;
+  }
+
+  // Hide all page containers first
   document
     .querySelectorAll('.page-container')
-    .forEach((c) => /** @type {HTMLElement} */ (c.style.display = 'none'));
+    .forEach((c) => /** @type {HTMLElement} */ (c).style.display = 'none');
 
+  // Inject the HTML for the selected viewType
+  const templateHtml = state.templates[viewType];
+  if (templateHtml) {
+    mainContent.innerHTML = templateHtml; // Inject the HTML
+    console.log(`[Navigation] Injected HTML for view: ${viewType}`);
+  } else {
+    console.warn(`[Navigation] No template found for view type: ${viewType}`);
+    mainContent.innerHTML = `<p style="color: red; text-align: center; padding: 2rem;">Error: No template found for this view.</p>`;
+    return;
+  }
+
+  // Now, find the specific container within the injected HTML and display it
+  targetPageContainer = document.getElementById(finalContainerId);
   if (targetPageContainer) {
     targetPageContainer.style.display = 'block';
     console.log(`[Navigation] Displaying container: #${finalContainerId}`);
   } else {
     console.warn(
-      `[Navigation] Could not find page container with ID: ${finalContainerId}`
+      `[Navigation] Could not find page container with ID: ${finalContainerId} after injection.`
     );
     showToast(
-      `UI Error: Could not find content area for ${viewType}.`,
-      'error'
+      `UI Error: Could not find content area for ${viewType}.`,'error'
     );
-    return; // Stop if container not found
+    return;
   }
 
   // Load data specific to the view
@@ -138,28 +164,32 @@ export async function switchView(
         if (viewValue) await loadDailyReportPage(viewValue);
         else
           console.warn('[Navigation] Date view selected without a date value.');
+        // initializeDailyReportHandlers(); // Assuming this is called by loadDailyReportPage or not needed here
         break;
-      // REMOVED: case 'charts': await loadChartsPage(); break;
       case 'ledger':
-        // --- MODIFIED: Call new function ---
         await refreshLedgerWithPL();
+        initializeLedgerHandlers(); // Initialize handlers after content is loaded
         break;
-      // --- END MODIFIED ---
       case 'orders':
         await loadOrdersPage();
+        initializeOrdersHandlers(); // Initialize handlers after content is loaded
         break;
       case 'alerts':
         await loadAlertsPage();
+        initializeAlertsHandlers(); // Initialize handlers after content is loaded
         break;
       case 'sources':
         await loadResearchPage();
+        initializeResearchHandlers(); // Initialize handlers after content is loaded
         break;
       case 'imports':
         await loadImportsPage();
+        // initializeImportsHandlers(); // Assuming this is called by loadImportsPage or not needed here
         break;
-      case 'watchlist':
-        console.log('[Navigation] Watchlist tab selected.');
-        await loadWatchlistPage();
+      case 'strategyLab':
+        console.log('[Navigation] Strategy Lab tab selected.');
+        // await loadStrategyLabPage(); // Placeholder for new function
+        // initializeStrategyLab(); // Placeholder for new function
         break;
       default:
         console.warn(

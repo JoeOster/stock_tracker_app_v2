@@ -19,7 +19,7 @@ import { getActivePersistentDates, getTradingDays } from '../datetime.js';
 export const staticTabs = [
   { viewType: 'dashboard', textContent: 'Dashboard' },
   { viewType: 'sources', textContent: 'Sources' },
-  { viewType: 'watchlist', textContent: 'Watchlist' },
+  { viewType: 'strategyLab', textContent: 'Strategy Lab' },
   // --- REMOVED: { viewType: 'journal', textContent: 'Journal' }, ---
   { viewType: 'ledger', textContent: 'Ledger' },
   { viewType: 'orders', textContent: 'Orders' },

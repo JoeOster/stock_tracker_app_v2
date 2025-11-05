@@ -311,49 +311,7 @@ export async function handleCreateTradeIdeaFromTechnique(
   );
 }
 
-/**
- * Handles click on "Buy" button from a Trade Idea row.
- * @param {HTMLElement} target
- * @returns {Promise<void>}
- */
-export async function handleCreateBuyOrderFromIdea(target) {
-  // --- *** THIS IS THE FIX (Part 2) *** ---
-  // Destructure the new journalId
-  const {
-    ticker,
-    entryLow,
-    entryHigh,
-    tp1,
-    tp2,
-    sl,
-    sourceId,
-    sourceName,
-    journalId, // <-- Read the new data attribute
-  } = target.dataset;
 
-  const prefillData = {
-    // <-- This is line 333
-    sourceId: sourceId,
-    sourceName: sourceName,
-    ticker: ticker,
-    price: entryHigh || entryLow || '',
-    tp1: tp1 || null,
-    tp2: tp2 || null,
-    sl: sl || null,
-    journalId: journalId || null, // <-- Add the journalId here
-  };
-  // --- *** END FIX *** ---
-
-  updateState({ prefillOrderFromSource: prefillData });
-  await switchView('orders');
-
-  const detailsModal = document.getElementById('source-details-modal');
-  if (detailsModal) {
-    detailsModal.classList.remove('visible');
-  }
-
-  showToast(`Prefilling "Log Trade" form for ${ticker}...`, 'info');
-}
 
 /**
  * Handles click on "Paper" button from a Trade Idea row.

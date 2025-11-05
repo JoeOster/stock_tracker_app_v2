@@ -94,6 +94,8 @@ export let state = {
   allAdviceSources: [],
   journalEntries: null,
   dashboardOpenLots: [],
+  dashboardOpenOrders: [],
+  dashboardOpenOrders: [],
   researchWatchlistItems: [],
   prefillOrderFromSource: null,
   settings: {
@@ -112,6 +114,15 @@ export let state = {
 };
 
 /**
+ * Dispatches a custom event to notify listeners that the global state has been updated.
+ * @returns {void}
+ */
+export function dispatchDataUpdate() {
+  const event = new CustomEvent('dataUpdate');
+  window.dispatchEvent(event);
+}
+
+/**
  * Updates the global state by merging in a partial state object.
  * @param {Partial<AppState>} newState - An object containing the state properties to update.
  * @returns {void}
@@ -126,4 +137,5 @@ export function updateState(newState) {
   // Merge the rest of the state properties
   state = { ...state, ...newState };
   // console.log("State updated:", state); // Optional: log state changes
+  dispatchDataUpdate(); // Notify listeners of state change
 }

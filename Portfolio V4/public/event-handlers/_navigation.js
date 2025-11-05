@@ -26,9 +26,9 @@ export async function switchView(viewType) {
 
   // Load content for the new view
   switch (viewType) {
-    case 'dashboard':
-      await loadDashboardPage();
-      break;
+      case 'dashboard':
+        await loadDashboardPage();
+        break;
     case 'sources':
       await loadResearchPage();
       break;

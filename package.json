@@ -42,6 +42,7 @@
     "seed-dev": "tools\\inject_test_data.bat",
     "backup:dev": "mkdir c:\\\\portfolio_manager_bu\\\\v3\\\\dev 2>NUL & xcopy .\\\\development.db c:\\\\portfolio_manager_bu\\\\v3\\\\dev\\\\ /Y",
     "lint": "eslint . --ext .js,.mjs",
-    "format": "prettier --write . --ext .js,.mjs"
+    "format": "prettier --write . --ext .js,.mjs",
+    "format:file": "prettier --write"
   }
 }

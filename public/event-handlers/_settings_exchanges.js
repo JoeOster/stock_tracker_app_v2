@@ -7,70 +7,11 @@ import { refreshLedger } from '../api/transactions-api.js';
  */
 
 import { state, updateState } from '../state.js';
+import { populateAllExchangeDropdowns } from '../ui/dropdowns.js';
 import { showToast, showConfirmationModal } from '../ui/helpers.js';
 import { renderExchangeManagementList } from '../ui/settings.js';
 
 // ... (populateAllExchangeDropdowns and fetchAndRenderExchanges are unchanged) ...
-function populateAllExchangeDropdowns() {
-  const exchangeSelects = document.querySelectorAll(
-    'select[id*="exchange"], select#snapshot-exchange'
-  );
-  exchangeSelects.forEach(
-    /** @param {HTMLSelectElement} select */ (select) => {
-      const currentVal = select.value; // Store current value before clearing
-      select.innerHTML = ''; // Clear existing options
-      if (select.id.includes('filter')) {
-        const allOption = document.createElement('option');
-        allOption.value = '';
-        allOption.textContent = 'All Exchanges';
-        select.appendChild(allOption);
-      } else {
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'Select Exchange';
-        defaultOption.disabled = true;
-        select.appendChild(defaultOption);
-      }
-      let otherOption = null;
-      const sortedExchanges = Array.isArray(state.allExchanges)
-        ? [...state.allExchanges]
-            .filter(
-              /** @param {any} ex */ (ex) => {
-                if (ex.name.toLowerCase() === 'other') {
-                  otherOption = ex;
-                  return false;
-                }
-                return true;
-              }
-            )
-            .sort((/** @type {any} */ a, /** @type {any} */ b) =>
-              a.name.localeCompare(b.name)
-            )
-        : [];
-      sortedExchanges.forEach((ex) => {
-        const option = document.createElement('option');
-        // @ts-ignore
-        option.value = ex.name;
-        // @ts-ignore
-        option.textContent = ex.name;
-        select.appendChild(option);
-      });
-      if (otherOption) {
-        const option = document.createElement('option');
-        // @ts-ignore
-        option.value = otherOption.name;
-        // @ts-ignore
-        option.textContent = otherOption.name;
-        select.appendChild(option);
-      }
-      if (select.querySelector(`option[value="${currentVal}"]`)) {
-        select.value = currentVal;
-      } else {
-        select.selectedIndex = 0;
-      }
-    }
-  );
-}
 export async function fetchAndRenderExchanges() {
   try {
     const response = await fetch('/api/accounts/exchanges');

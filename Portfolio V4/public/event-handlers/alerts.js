@@ -72,13 +72,14 @@ export function initializeAlertsHandlers() {
     const noButton = target.closest('.alert-no-btn');
     const pendingButton = target.closest('.alert-pending-btn');
 
-            if (yesButton) {
-                await handleYesItFilled(/** @type {HTMLElement} */ (yesButton));
-            } else if (noButton) {
-                await handleDismissAlert(/** @type {HTMLElement} */ (noButton));
-            } else if (pendingButton) {
-                await handleReviewLater(/** @type {HTMLElement} */ (pendingButton));
-            }  });
+    if (yesButton) {
+      await handleYesItFilled(/** @type {HTMLElement} */ (yesButton));
+    } else if (noButton) {
+      await handleDismissAlert(/** @type {HTMLElement} */ (noButton));
+    } else if (pendingButton) {
+      await handleReviewLater(/** @type {HTMLElement} */ (pendingButton));
+    }
+  });
   console.log('[Alerts Init] Alerts page handlers initialized.');
 }
 

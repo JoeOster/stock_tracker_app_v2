@@ -64,3 +64,117 @@ export function populateAllAdviceSourceDropdowns(selectedId) {
     );
   });
 }
+
+/**
+ * Populates all account holder dropdowns with current account holders from the state.
+ * @returns {void}
+ */
+export function populateAllAccountHolderDropdowns() {
+  const holderSelects = document.querySelectorAll('.account-holder-select');
+  holderSelects.forEach(
+    /** @param {HTMLSelectElement} select */ (select) => {
+      const currentVal = select.value;
+      select.innerHTML = '';
+
+      if (select.id === 'global-account-holder-filter') {
+        const allOption = document.createElement('option');
+        allOption.value = 'all';
+        allOption.textContent = 'All Accounts';
+        select.appendChild(allOption);
+      } else {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select Holder';
+        defaultOption.disabled = true;
+        defaultOption.selected = true;
+        select.appendChild(defaultOption);
+      }
+
+      const sortedHolders = Array.isArray(state.allAccountHolders)
+        ? [...state.allAccountHolders].sort((a, b) =>
+            a.name.localeCompare(b.name)
+          )
+        : [];
+
+      sortedHolders.forEach((holder) => {
+        const option = document.createElement('option');
+        option.value = String(holder.id);
+        option.textContent = holder.name;
+        select.appendChild(option);
+      });
+
+      if (select.querySelector(`option[value="${currentVal}"]`)) {
+        select.value = currentVal;
+      } else if (select.id === 'global-account-holder-filter') {
+        select.value = 'all';
+      } else {
+        select.selectedIndex = select.options[0]?.disabled ? 0 : 1;
+      }
+    }
+  );
+}
+
+/**
+ * Populates all exchange dropdowns with current exchanges from the state.
+ * @returns {void}
+ */
+export function populateAllExchangeDropdowns() {
+  const exchangeSelects = document.querySelectorAll(
+    'select[id*="exchange"], select#snapshot-exchange'
+  );
+  exchangeSelects.forEach(
+    /** @param {HTMLSelectElement} select */ (select) => {
+      const currentVal = select.value; // Store current value before clearing
+      select.innerHTML = ''; // Clear existing options
+      if (select.id.includes('filter')) {
+        const allOption = document.createElement('option');
+        allOption.value = '';
+        allOption.textContent = 'All Exchanges';
+        select.appendChild(allOption);
+      } else {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select Exchange';
+        defaultOption.disabled = true;
+        select.appendChild(defaultOption);
+      }
+      let otherOption = null;
+      const sortedExchanges = Array.isArray(state.allExchanges)
+        ? [...state.allExchanges]
+            .filter(
+              /** @param {any} ex */ (ex) => {
+                if (ex.name.toLowerCase() === 'other') {
+                  otherOption = ex;
+                  return false;
+                }
+                return true;
+              }
+            )
+            .sort((/** @type {any} */ a, /** @type {any} */ b) =>
+              a.name.localeCompare(b.name)
+            )
+        : [];
+      sortedExchanges.forEach((ex) => {
+        const option = document.createElement('option');
+        // @ts-ignore
+        option.value = ex.name;
+        // @ts-ignore
+        option.textContent = ex.name;
+        select.appendChild(option);
+      });
+      if (otherOption) {
+        const option = document.createElement('option');
+        // @ts-ignore
+        option.value = otherOption.name;
+        // @ts-ignore
+        option.textContent = otherOption.name;
+        select.appendChild(option);
+      }
+      if (select.querySelector(`option[value="${currentVal}"]`)) {
+        select.value = currentVal;
+      } else {
+        select.selectedIndex = 0;
+      }
+    }
+  );
+}

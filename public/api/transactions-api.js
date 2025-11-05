@@ -23,13 +23,20 @@ export async function refreshLedger() {
     const res = await fetch(`/api/transactions?holder=${holderId}`);
     const transactions = await handleResponse(res);
     updateState({ transactions: transactions }); // Update state
-    renderLedgerPage(state.transactions, state.ledgerSort);
+
+    // Only render the ledger page if the ledger view is currently active
+    if (state.currentView.type === 'ledger') {
+      renderLedgerPage(state.transactions, state.ledgerSort);
+    }
   } catch (error) {
     console.error('Failed to refresh ledger:', error);
     // @ts-ignore
     showToast(`Failed to refresh ledger: ${error.message}`, 'error');
     updateState({ transactions: [] }); // Clear state on error
-    renderLedgerPage([], state.ledgerSort); // Render empty ledger
+    // Only render the ledger page if the ledger view is currently active
+    if (state.currentView.type === 'ledger') {
+      renderLedgerPage([], state.ledgerSort); // Render empty ledger
+    }
   }
 }
 

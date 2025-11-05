@@ -380,6 +380,8 @@ function initializeOrdersFormHandlers() {
       // Clear prefill state on success
       if (state.prefillOrderFromSource) {
         updateState({ prefillOrderFromSource: null });
+        // If this transaction originated from a source idea, tell the source modal to refresh
+        document.dispatchEvent(new CustomEvent('sourceDetailsShouldRefresh'));
       }
       handleFormPrefill(); // Reset form to default state
     } catch (error) {

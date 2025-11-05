@@ -1,8 +1,8 @@
 // public/ui/renderers/_dashboard_data.js
 // ... (imports are unchanged) ...
-import { state, updateState } from '../../state.js';
-import { fetchPositions } from '../../api/reporting-api.js';
 import { updatePricesForView } from '../../api/price-api.js';
+import { fetchPositions } from '../../api/reporting-api.js';
+import { state, updateState } from '../../state.js';
 import { getCurrentESTDateString } from '../datetime.js';
 import { showToast } from '../helpers.js';
 
@@ -63,13 +63,16 @@ export async function loadAndPrepareDashboardData() {
     );
     const openLots = positionData?.endOfDayPositions || [];
 
-    updateState({ dashboardOpenLots: openLots }); // Store raw lots
+    updateState({
+      dashboardOpenLots: openLots,
+      dashboardOpenOrders: positionData?.openOrders || [],
+    }); // Store raw lots and open orders
 
     if (openLots.length > 0) {
       const tickers = [...new Set(openLots.map((lot) => lot.ticker))];
       await updatePricesForView(today, tickers); // Populates state.priceCache
     }
-    return openLots;
+    return { openLots, openOrders: positionData?.openOrders || [] };
   } catch (error) {
     console.error('Error loading dashboard data:', error);
     // @ts-ignore
@@ -79,22 +82,13 @@ export async function loadAndPrepareDashboardData() {
   }
 }
 
-/**
- * --- THIS IS THE FIX ---
- * Processes raw lot data: calculates metrics, filters, groups by Ticker/Exchange, sorts, and calculates totals.
- * @param {any[]} openLots - Raw array of open lots.
- * @param {string} tickerFilter - Uppercase ticker filter string.
- * @param {string} exchangeFilter - Exchange filter string.
- * @param {string} sortValue - Sort criteria string.
- * @returns {{aggregatedLots: any[], individualLotsForTable: any[], totalUnrealizedPL: number, totalCurrentValue: number}}
- */
 export function processFilterAndSortLots(
   openLots,
+  openOrders,
   tickerFilter,
   exchangeFilter,
   sortValue
 ) {
-  // --- END FIX ---
   let totalUnrealizedPL = 0;
   let totalCurrentValue = 0;
   const aggregationMap = new Map();
@@ -134,13 +128,11 @@ export function processFilterAndSortLots(
 
       return processedLot; // Return processed individual lot for table view filtering/sorting
     })
-    // --- THIS IS THE FIX ---
     .filter(
       (lot) =>
         (!tickerFilter || lot.ticker.toUpperCase().includes(tickerFilter)) &&
         (!exchangeFilter || lot.exchange === exchangeFilter)
     );
-  // --- END FIX ---
 
   // --- Finalize Aggregated Data ---
   const aggregatedLots = Array.from(aggregationMap.values())
@@ -166,13 +158,11 @@ export function processFilterAndSortLots(
         priceData, // Attach price data to aggregated object
       };
     })
-    // --- THIS IS THE FIX ---
     .filter(
       (agg) =>
         (!tickerFilter || agg.ticker.toUpperCase().includes(tickerFilter)) &&
         (!exchangeFilter || agg.exchange === exchangeFilter)
     ); // Also filter aggregated list
-  // --- END FIX ---
 
   // --- Apply Sorting ---
   // (Sort logic is unchanged)
@@ -232,16 +222,16 @@ export function processFilterAndSortLots(
               );
             }
           }
-          return proxPercent < 0 ? Infinity : proxPercent; // Treat already passed limits as furthest away
-        };
-        return (
-          getProximityPercent(a) - getProximityPercent(b) ||
-          a.ticker.localeCompare(b.ticker)
-        );
+          return proxPercent;
+        }; // closes getProximityPercent
+        // Now compare a.proxPercent and b.proxPercent
+        const aProximity = getProximityPercent(a);
+        const bProximity = getProximityPercent(b);
+        return aProximity - bProximity;
       }
       case 'gain-desc':
         return (
-          b.unrealizedPercent - b.unrealizedPercent ||
+          b.unrealizedPercent - a.unrealizedPercent ||
           a.ticker.localeCompare(b.ticker)
         );
       case 'loss-asc':
@@ -260,5 +250,6 @@ export function processFilterAndSortLots(
     individualLotsForTable,
     totalUnrealizedPL,
     totalCurrentValue,
+    openOrders,
   };
 }

@@ -4,7 +4,7 @@
  * @module event-handlers/dashboard
  */
 
-import { state } from '../state.js';
+import state from '../state.js';
 import { handleResponse } from '../api/api-helpers.js';
 import { fetchPositions } from '../api/reporting-api.js';
 import {
@@ -12,7 +12,7 @@ import {
   deleteTransaction,
 } from '../api/transactions-api.js';
 import { updateAllPrices } from '../api/price-api.js';
-import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
+import { renderDashboardPage } from '../../ui/renderers/_dashboard_render.js';
 import {
   showToast,
   showConfirmationModal,
@@ -23,15 +23,9 @@ import { formatAccounting, formatQuantity } from '../ui/formatters.js';
 import { populateAllAdviceSourceDropdowns } from '../ui/dropdowns.js';
 import { populateEditModal } from './_modal_edit_transaction.js';
 import { dispatchDataUpdate, addDataUpdateListener } from '../_events.js'; // Import event bus
+import { loadDashboardPage } from './_dashboard_loader.js';
 
-// --- Dashboard Loader Function ---
-/**
- * Loads data for the dashboard page (which triggers the renderer).
- * @async
- */
-export async function loadDashboardPage() {
-  await renderDashboardPage();
-}
+
 
 // --- Manage Position Modal Logic (from _dashboard_init.js) ---
 async function openAndPopulateManageModal(ticker, exchange, accountHolderId) {
@@ -519,9 +513,9 @@ export function initializeDashboardHandlers() {
   }
 
   // --- Filter and Sort ---
-  filterInput?.addEventListener('input', renderDashboardPage);
-  exchangeFilter?.addEventListener('change', renderDashboardPage);
-  sortSelect?.addEventListener('change', renderDashboardPage);
+  filterInput?.addEventListener('input', loadDashboardPage);
+  exchangeFilter?.addEventListener('change', loadDashboardPage);
+  sortSelect?.addEventListener('change', loadDashboardPage);
 
   // --- Refresh Prices ---
   refreshButton?.addEventListener('click', async () => {

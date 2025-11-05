@@ -84,7 +84,7 @@ module.exports = (db, log) => {
                 SELECT daily_tx.*, parent_tx.price as parent_buy_price
                 FROM transactions AS daily_tx
                 LEFT JOIN transactions AS parent_tx ON daily_tx.parent_buy_id = parent_tx.id AND parent_tx.transaction_type = 'BUY'
-                WHERE date(daily_tx.transaction_date) = date(?) ${holderFilter.replace('AND', 'AND daily_tx.')} ORDER BY daily_tx.id;
+                WHERE date(daily_tx.transaction_date) = date(?) ${holderFilter ? holderFilter.replace('account_holder_id', 'daily_tx.account_holder_id') : ''} ORDER BY daily_tx.id;
             `;
       const dailyTransactions = await db.all(dailyTransactionsQuery, params);
       dailyTransactions.forEach((tx) => {
@@ -104,7 +104,22 @@ module.exports = (db, log) => {
                 ORDER BY ticker, purchase_date;
             `;
       const endOfDayPositions = await db.all(endOfDayPositionsQuery, params);
-      res.json({ dailyTransactions, endOfDayPositions });
+
+      // Fetch active pending orders
+      let pendingOrdersQuery = `
+                SELECT id, ticker, exchange, order_type, limit_price, quantity, created_date, expiration_date, notes, advice_source_id
+                FROM pending_orders
+                WHERE status = 'ACTIVE' AND date(created_date) <= date(?)
+                ${holderFilter}
+                ORDER BY created_date;
+            `;
+      const pendingOrders = await db.all(pendingOrdersQuery, params); // Re-use params, but ensure holderFilter is correctly applied
+
+      res.json({
+        dailyTransactions,
+        endOfDayPositions,
+        openOrders: pendingOrders,
+      });
     } catch (error) {
       // @ts-ignore
       log(`[ERROR] CRITICAL ERROR in /api/positions/:date: ${error.message}`);

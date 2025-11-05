@@ -72,11 +72,22 @@ async function handleBuyTransaction(db, log, txData, createdAt) {
     original_quantity,
     quantity_remaining,
     account_holder_id,
-    'MANUAL',
+    advice_source_id ? 'ADVICE_SOURCE' : 'MANUAL',
     createdAt,
     advice_source_id || null,
     linked_journal_id || null,
   ]);
+
+  const newTransactionId = (await db.get('SELECT last_insert_rowid() as id')).id;
+
+  // If the transaction originated from a watchlist item, update that item
+  if (txData.watchlistItemId) {
+    await db.run(
+      'UPDATE watchlist SET linked_trade_id = ? WHERE id = ?',
+      [newTransactionId, txData.watchlistItemId]
+    );
+    log(`[TRANSACTION] Watchlist item ${txData.watchlistItemId} linked to transaction ${newTransactionId}`);
+  }
 
   // --- *** ADDED THIS CALL *** ---
   // Now, archive the associated watchlist item

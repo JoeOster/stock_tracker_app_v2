@@ -44,21 +44,8 @@ export function initializeAllEventHandlers() {
       try {
         console.log('Initializing page-specific event handlers (Deferred)...');
 
-        initializeExchangeManagementHandlers();
-        initializeHolderManagementHandlers();
-        initializeJournalSettingsHandlers(); // Handles Advice Sources in Settings
-
-        initializeOrdersHandlers();
-        initializeLedgerHandlers();
-        initializeAlertsHandlers();
-        initializeDailyReportHandlers();
-
-        // --- REMOVED: initializeChartsHandlers(); ---
-        initializeResearchHandlers(); // This is now for "Sources"
-        initializeDashboardHandlers();
-        initializeWatchlist();
-        // --- REMOVED: initializeJournalHandlers() and initializeJournalSubTabHandlers() ---
-        console.log('All event handlers initialized.');
+        // Page-specific handlers will be initialized by the navigation system when their view is loaded.
+        console.log('Core event handlers initialized. Page-specific handlers deferred to navigation.');
       } catch (deferredError) {
         console.error(
           '[Init - Deferred] Error occurred during deferred handler initialization:',

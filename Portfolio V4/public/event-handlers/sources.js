@@ -361,7 +361,7 @@ function initializeModalActionHandlers(
       );
     } else if (target.closest('.create-buy-order-btn')) {
       console.log('[Modal Actions] Delegating to handleCreateBuyOrderFromIdea');
-      await handleCreateBuyOrderFromIdea(target);
+      await handleCreateBuyOrderFromIdea(target, refreshDetailsCallback);
     } else if (target.closest('.create-paper-trade-btn')) {
       console.log(
         '[Modal Actions] Delegating to handleCreatePaperTradeFromIdea'
@@ -1087,7 +1087,7 @@ async function handleCreateTradeIdeaFromBook(target, journalEntries) {
  * @param {HTMLElement} target
  * @returns {Promise<void>}
  */
-async function handleCreateBuyOrderFromIdea(target) {
+async function handleCreateBuyOrderFromIdea(target, refreshDetailsCallback) {
   // --- *** THIS IS THE FIX (Part 2) ---
   // Destructure the new journalId
   const {
@@ -1100,6 +1100,7 @@ async function handleCreateBuyOrderFromIdea(target) {
     sourceId,
     sourceName,
     journalId,
+    itemId, // <-- Add itemId to get the watchlist item ID
   } = target.dataset;
 
   const prefillData = {
@@ -1111,11 +1112,12 @@ async function handleCreateBuyOrderFromIdea(target) {
     tp2: tp2 || null,
     sl: sl || null,
     journalId: journalId || null, // <-- Add the journalId here
+    watchlistItemId: itemId, // <-- Pass the watchlist item ID
   };
   // --- *** END FIX ---
 
   updateState({ prefillOrderFromSource: prefillData });
-  await switchView('orders');
+  // await switchView('orders'); // Removed as per refactor plan
 
   const detailsModal = document.getElementById('source-details-modal');
   if (detailsModal) {
@@ -1123,6 +1125,7 @@ async function handleCreateBuyOrderFromIdea(target) {
   }
 
   showToast(`Prefilling "Log Trade" form for ${ticker}...`, 'info');
+  await refreshDetailsCallback(); // Refresh the source details modal
 }
 
 /**

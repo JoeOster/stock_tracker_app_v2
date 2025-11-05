@@ -1,128 +1,98 @@
 // /public/ui/renderers/_ledger.js
-// Version 0.1.15
 /**
- * @file Renderer for the transaction ledger.
- * @module renderers/_ledger
+ * @file UI rendering functions for the Transaction Ledger page.
+ * @module ui/renderers/_ledger
  */
-import { formatAccounting, formatQuantity } from '../formatters.js';
+
+import { state } from '../../state.js';
+import { formatAccounting } from '../formatters.js';
 
 /**
- * Renders the transaction ledger into the table.
- * @param {Array<object>} transactions - The transactions to render.
- * @param {object} sort - The sort order.
+ * Renders the main transaction ledger table.
+ * @param {Array<Object>} transactions - The list of transactions to display.
+ * @param {Object} sortConfig - The current sort configuration.
  */
-export function renderLedgerPage(transactions, sort) {
-  const ledgerBody = /** @type {HTMLTableSectionElement} */ (
-    document.querySelector('#ledger-table tbody')
-  );
-  if (!ledgerBody) return;
+export function renderLedgerPage(transactions, sortConfig) {
+  const tableBody = document.querySelector('#ledger-table tbody');
+  if (!tableBody) {
+    console.error('Ledger table body not found.');
+    return;
+  }
 
-  const ledgerFilterTicker = /** @type {HTMLInputElement} */ (
-    document.getElementById('ledger-filter-ticker')
-  );
-  const ledgerFilterStart = /** @type {HTMLInputElement} */ (
-    document.getElementById('ledger-filter-start')
-  );
-  const ledgerFilterEnd = /** @type {HTMLInputElement} */ (
-    document.getElementById('ledger-filter-end')
-  );
+  // Clear existing rows
+  tableBody.innerHTML = '';
 
-  const tickerFilter = ledgerFilterTicker
-    ? ledgerFilterTicker.value.toUpperCase()
-    : '';
-  const startDate = ledgerFilterStart ? ledgerFilterStart.value : '';
-  const endDate = ledgerFilterEnd ? ledgerFilterEnd.value : '';
+  // Apply filters
+  let filteredTransactions = [...transactions];
 
-  const filtered = transactions.filter((tx) => {
-    const tickerMatch =
-      !tickerFilter || tx.ticker.toUpperCase().includes(tickerFilter);
-    const startDateMatch = !startDate || tx.transaction_date >= startDate;
-    const endDateMatch = !endDate || tx.transaction_date <= endDate;
-    return tickerMatch && startDateMatch && endDateMatch;
-  });
+  const tickerFilter = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-ticker'))?.value.toLowerCase();
+  const startDateFilter = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-start'))?.value;
+  const endDateFilter = /** @type {HTMLInputElement} */ (document.getElementById('ledger-filter-end'))?.value;
 
-  if (sort && sort.column) {
-    filtered.sort((a, b) => {
-      let valA = a[sort.column];
-      let valB = b[sort.column];
-      if (typeof valA === 'string') {
-        valA = valA.toUpperCase();
-        valB = valB.toUpperCase();
+  if (tickerFilter) {
+    filteredTransactions = filteredTransactions.filter(tx => tx.ticker.toLowerCase().includes(tickerFilter));
+  }
+  if (startDateFilter) {
+    filteredTransactions = filteredTransactions.filter(tx => tx.transaction_date >= startDateFilter);
+  }
+  if (endDateFilter) {
+    filteredTransactions = filteredTransactions.filter(tx => tx.transaction_date <= endDateFilter);
+  }
+
+  // Apply sorting
+  if (sortConfig && sortConfig.column) {
+    filteredTransactions.sort((a, b) => {
+      const aValue = a[sortConfig.column];
+      const bValue = b[sortConfig.column];
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
       }
-      if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
-      if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
-      return 0;
+      // Numeric comparison
+      return sortConfig.direction === 'asc'
+        ? aValue - bValue
+        : bValue - aValue;
     });
   }
 
-  ledgerBody.innerHTML = '';
-  let lastDate = null;
-  filtered.forEach((tx) => {
-    const row = ledgerBody.insertRow();
-    if (tx.transaction_date !== lastDate) {
-      row.classList.add('new-date-group');
-      lastDate = tx.transaction_date;
-    }
+  if (filteredTransactions.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="7" class="no-data">No transactions found.</td></tr>';
+    return;
+  }
+
+  filteredTransactions.forEach(tx => {
+    const row = document.createElement('tr');
     row.innerHTML = `
-            <td>${tx.transaction_date}</td>
-            <td>${tx.ticker}</td>
-            <td>${tx.exchange}</td>
-            <td class="center-align">${tx.transaction_type}</td>
-            <td class="numeric">${formatQuantity(tx.quantity)}</td>
-            <td class="numeric">${formatAccounting(tx.price)}</td>
-            <td class="center-align">
-                <button class="modify-btn" data-id="${tx.id}">Edit</button>
-                <button class="delete-btn" data-id="${tx.id}">Delete</button>
-            </td>
-        `;
+      <td>${tx.transaction_date}</td>
+      <td>${tx.ticker}</td>
+      <td>${tx.exchange}</td>
+      <td class="center-align">${tx.transaction_type}</td>
+      <td class="numeric">${tx.quantity}</td>
+      <td class="numeric">${formatAccounting(tx.price)}</td>
+      <td class="center-align">
+        <button class="modify-btn" data-id="${tx.id}" title="Edit Transaction"><i class="fas fa-edit"></i></button>
+        <button class="delete-btn" data-id="${tx.id}" title="Delete Transaction"><i class="fas fa-trash-alt"></i></button>
+      </td>
+    `;
+    tableBody.appendChild(row);
   });
 }
 
 /**
- * --- ADDED: Renders the P/L summary tables on the ledger page ---
- * @param {'lifetime' | 'ranged'} type - Which table to render.
- * @param {object} plData - The data from the API ({byExchange: [], total: 0}).
+ * Renders the Realized P&L summary in the compact bar.
+ * @param {'lifetime' | 'ranged'} type - The type of P&L summary to render.
+ * @param {Object} plData - The P&L data, containing a 'total' property.
  */
 export function renderLedgerPLSummary(type, plData) {
-  let tableBody, totalCell;
-
-  if (type === 'lifetime') {
-    tableBody = /** @type {HTMLTableSectionElement} */ (
-      document.getElementById('pl-summary-tbody')
-    );
-    totalCell = document.getElementById('pl-summary-total');
-  } else {
-    tableBody = /** @type {HTMLTableSectionElement} */ (
-      document.getElementById('pl-summary-ranged-tbody')
-    );
-    totalCell = document.getElementById('pl-summary-ranged-total');
-  }
-
-  if (!tableBody || !totalCell) {
-    console.warn(`Could not find P/L summary elements for type: ${type}`);
+  const pnlValueDisplay = document.getElementById('pnl-value-display');
+  if (!pnlValueDisplay) {
+    console.error('P&L value display element not found.');
     return;
   }
 
-  if (!plData || !plData.byExchange || plData.byExchange.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="2">No data.</td></tr>`;
-    totalCell.textContent = formatAccounting(0);
-    totalCell.className = 'numeric';
-    return;
-  }
-
-  tableBody.innerHTML = plData.byExchange
-    .map(
-      (row) => `
-            <tr>
-                <td>${row.exchange}</td>
-                <td class="numeric ${row.total_pl >= 0 ? 'positive' : 'negative'}">
-                    ${formatAccounting(row.total_pl)}
-                </td>
-            </tr>
-        `
-    )
-    .join('');
-
-  totalCell.textContent = formatAccounting(plData.total);
-  totalCell.className = `numeric ${plData.total >= 0 ? 'positive' : 'negative'}`;
+  const totalPL = plData.total || 0;
+  pnlValueDisplay.textContent = `${totalPL >= 0 ? '+' : ''}${formatAccounting(totalPL)}`;
+  pnlValueDisplay.className = `pnl-value ${totalPL >= 0 ? 'profit' : 'loss'}`;
 }

@@ -7,7 +7,6 @@
 
 import { state } from '../state.js';
 import { showToast } from '../ui/helpers.js';
-import { renderOpenOrders } from '../ui/renderers/_orders.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 
 // --- REFACFOR: Import new handler functions ---
@@ -28,11 +27,6 @@ export async function loadOrdersPage() {
     '[loadOrdersPage] Accessing state inside function:',
     state ? 'Exists' : 'MISSING!'
   );
-
-  const tableBody = document.querySelector('#pending-orders-table tbody');
-  if (tableBody)
-    tableBody.innerHTML =
-      '<tr><td colspan="7">Loading open orders...</td></tr>';
 
   // --- MODIFICATION: Wrap prefill logic in setTimeout ---
   setTimeout(() => {
@@ -204,25 +198,21 @@ export async function loadOrdersPage() {
       console.warn(
         "[loadOrdersPage] 'All Accounts' selected, will not fetch pending orders."
       );
-      renderOpenOrders([]);
       console.log('[loadOrdersPage] Finished (All Accounts).');
       return;
     }
-    const orders = await fetchPendingOrders(holderId);
-    console.log('[loadOrdersPage] Fetched orders:', orders);
-    renderOpenOrders(orders);
+    // No longer fetching or rendering pending orders
     console.log('[loadOrdersPage] Finished successfully.');
   } catch (error) {
     console.error('[loadOrdersPage] Error during execution:', error);
     const err = /** @type {Error} */ (error);
     showToast(`Error loading orders page: ${err.message}`, 'error');
-    if (tableBody) {
-      tableBody.innerHTML =
-        '<tr><td colspan="7">Error loading open orders.</td></tr>';
-    }
     console.log('[loadOrdersPage] Finished with error.');
   }
 }
+
+import { populateAllAccountHolderDropdowns } from '../ui/dropdowns.js';
+import { populateAllExchangeDropdowns } from '../ui/dropdowns.js';
 
 /**
  * Initializes all event listeners for the Orders page.
@@ -233,6 +223,8 @@ export function initializeOrdersHandlers() {
     initializeOrdersFormHandlers();
     initializeOrdersTableHandlers();
     initializeOrdersModalHandlers();
+    populateAllAccountHolderDropdowns(); // Populate account holder dropdown
+    populateAllExchangeDropdowns(); // Populate exchange dropdown
   } catch (error) {
     console.error('[Orders Init] CRITICAL ERROR during initialization:', error);
   }

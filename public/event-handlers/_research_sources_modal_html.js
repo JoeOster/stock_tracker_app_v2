@@ -242,7 +242,7 @@ export function _renderModalTradeIdeas(
           .filter(Boolean)
           .join(' / ') || '--';
 
-      const isLinkedToRealTrade = linkedTxTickers.has(item.ticker);
+      const isLinkedToRealTrade = !!item.linked_trade_id;
       const isLinkedToPaperTrade = paperTradeTickers.has(item.ticker);
 
       const technique = item.journal_entry_id

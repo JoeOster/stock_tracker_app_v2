@@ -15,81 +15,88 @@ import { showToast, showConfirmationModal } from '../ui/helpers.js';
 
 // --- ADDED: Function to fetch and render ranged P/L summary ---
 /**
- * Fetches and renders the ranged P/L summary table.
+ * Fetches and renders the ranged P/L summary in the compact bar.
  * @async
  */
 async function fetchAndRenderRangedPL() {
-  const startDateEl = /** @type {HTMLInputElement} */ (
-    document.getElementById('pl-start-date')
-  );
-  const endDateEl = /** @type {HTMLInputElement} */ (
-    document.getElementById('pl-end-date')
-  );
-  const tableBody = /** @type {HTMLTableSectionElement} */ (
-    document.getElementById('pl-summary-ranged-tbody')
-  );
-  const totalCell = document.getElementById('pl-summary-ranged-total');
+  const dateRangeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('date-range-select'));
+  const startDateInput = /** @type {HTMLInputElement} */ (document.getElementById('start-date'));
+  const endDateInput = /** @type {HTMLInputElement} */ (document.getElementById('end-date'));
+  const pnlValueDisplay = document.getElementById('pnl-value-display');
 
-  if (!startDateEl || !endDateEl || !tableBody || !totalCell) {
-    console.warn('Missing ranged P/L elements.');
+  if (!dateRangeSelect || !startDateInput || !endDateInput || !pnlValueDisplay) {
+    console.warn('Missing P/L summary bar elements.');
     return;
   }
 
-  const startDate = startDateEl.value;
-  const endDate = endDateEl.value;
+  let startDate;
+  let endDate;
+  const today = new Date();
+  const currentYear = today.getFullYear();
+
+  switch (dateRangeSelect.value) {
+    case '30d':
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 30);
+      break;
+    case '90d':
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 90);
+      break;
+    case 'ytd':
+      startDate = new Date(currentYear, 0, 1); // January 1st of current year
+      break;
+    case 'all':
+      startDate = null; // Or a very old date, depending on API
+      endDate = null;
+      break;
+    case 'custom':
+      startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+      endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+      break;
+    default:
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 30);
+  }
+
+  // Format dates to YYYY-MM-DD for the API
+  const formatApiDate = (date) => date ? date.toISOString().split('T')[0] : null;
+  const apiStartDate = formatApiDate(startDate);
+  const apiEndDate = formatApiDate(endDate || today); // Default end date to today if not custom
+
   const holderId = state.selectedAccountHolderId;
 
-  if (!startDate || !endDate || !holderId || holderId === 'all') {
-    tableBody.innerHTML = '<tr><td colspan="2">Select dates...</td></tr>';
-    totalCell.textContent = '--';
-    totalCell.className = 'numeric';
+  if (!holderId || holderId === 'all') {
+    pnlValueDisplay.textContent = '--';
+    pnlValueDisplay.className = 'pnl-value';
     return;
   }
 
-  tableBody.innerHTML = '<tr><td colspan="2">Loading...</td></tr>';
+  pnlValueDisplay.textContent = 'Loading...';
+  pnlValueDisplay.className = 'pnl-value';
+
   try {
     const response = await fetch('/api/reporting/realized_pl/summary', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        startDate: startDate,
-        endDate: endDate,
+        startDate: apiStartDate,
+        endDate: apiEndDate,
         accountHolderId: holderId,
       }),
     });
     const plData = await handleResponse(response);
     renderLedgerPLSummary('ranged', plData);
   } catch (error) {
-    console.error('Failed to render ranged P/L Summary:', error);
+    console.error('Failed to fetch ranged P/L Summary:', error);
     // @ts-ignore
     showToast(`Error fetching ranged P/L: ${error.message}`, 'error');
-    tableBody.innerHTML = '<tr><td colspan="2">Error loading.</td></tr>';
+    pnlValueDisplay.textContent = 'Error';
+    pnlValueDisplay.className = 'pnl-value loss';
   }
 }
 
-// --- ADDED: Function to fetch and render lifetime P/L summary ---
-/**
- * Fetches and renders the lifetime P/L summary table.
- * @async
- */
-async function fetchAndRenderLifetimePL() {
-  const holderId = state.selectedAccountHolderId;
-  if (!holderId || holderId === 'all') {
-    renderLedgerPLSummary('lifetime', { byExchange: [], total: 0 });
-    return;
-  }
-  try {
-    const response = await fetch(
-      `/api/reporting/realized_pl/summary?holder=${holderId}`
-    );
-    const plData = await handleResponse(response);
-    renderLedgerPLSummary('lifetime', plData);
-  } catch (error) {
-    console.error('Failed to render lifetime P/L Summary:', error);
-    // @ts-ignore
-    showToast(`Error fetching lifetime P/L: ${error.message}`, 'error');
-  }
-}
+
 
 // --- MODIFIED: Add P/L fetches to refreshLedger ---
 /**
@@ -101,7 +108,6 @@ export async function refreshLedgerWithPL() {
   // Refresh the main transaction list
   await refreshLedger();
   // ALSO refresh the P/L summary tables
-  await fetchAndRenderLifetimePL();
   await fetchAndRenderRangedPL(); // This will re-render based on current date inputs
 }
 
@@ -126,18 +132,30 @@ export function initializeLedgerHandlers() {
   );
   const editModal = document.getElementById('edit-modal');
 
-  // --- ADDED: P/L Date Pickers ---
-  const plStartDate = /** @type {HTMLInputElement} */ (
-    document.getElementById('pl-start-date')
-  );
-  const plEndDate = /** @type {HTMLInputElement} */ (
-    document.getElementById('pl-end-date')
-  );
+  const dateRangeSelect = /** @type {HTMLSelectElement} */ (document.getElementById('date-range-select'));
+  const customDateRangeDiv = /** @type {HTMLDivElement} */ (document.getElementById('custom-date-range'));
+  const startDateInput = /** @type {HTMLInputElement} */ (document.getElementById('start-date'));
+  const endDateInput = /** @type {HTMLInputElement} */ (document.getElementById('end-date'));
 
-  if (plStartDate)
-    plStartDate.addEventListener('change', fetchAndRenderRangedPL);
-  if (plEndDate) plEndDate.addEventListener('change', fetchAndRenderRangedPL);
-  // --- END ADDED ---
+  /**
+   * Handles changes in the date filter dropdown or custom date inputs.
+   */
+  function handleDateRangeChange() {
+    const selectedValue = dateRangeSelect.value;
+
+    // Show or hide the custom date inputs
+    customDateRangeDiv.style.display = (selectedValue === 'custom') ? 'flex' : 'none';
+
+    // Fetch and display data based on the new selection
+    fetchAndRenderRangedPL();
+  }
+
+  if (dateRangeSelect) dateRangeSelect.addEventListener('change', handleDateRangeChange);
+  if (startDateInput) startDateInput.addEventListener('change', handleDateRangeChange);
+  if (endDateInput) endDateInput.addEventListener('change', handleDateRangeChange);
+
+  // Initial call to set up the date range display and fetch data
+  handleDateRangeChange();
 
   /**
    * Applies the current filter values and re-renders the ledger.
@@ -312,4 +330,12 @@ export function initializeLedgerHandlers() {
       });
     }
   }
+
+  // Listen for global data updates and re-render the ledger
+  window.addEventListener('dataUpdate', () => {
+    if (state.currentView.type === 'ledger') { // Only re-render if ledger is the active view
+      console.log('[Ledger Init] dataUpdate event received. Re-rendering ledger.');
+      refreshLedgerWithPL();
+    }
+  });
 }

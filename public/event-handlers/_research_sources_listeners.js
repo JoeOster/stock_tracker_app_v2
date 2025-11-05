@@ -147,7 +147,7 @@ function initializeModalActionHandlers(
       );
     } else if (target.closest('.create-buy-order-btn')) {
       console.log('[Modal Actions] Delegating to handleCreateBuyOrderFromIdea');
-      await handleCreateBuyOrderFromIdea(target);
+      await handleCreateBuyOrderFromIdea(target, refreshDetailsCallback);
     } else if (target.closest('.create-paper-trade-btn')) {
       console.log(
         '[Modal Actions] Delegating to handleCreatePaperTradeFromIdea'

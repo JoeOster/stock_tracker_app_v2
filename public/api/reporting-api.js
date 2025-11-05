@@ -25,7 +25,7 @@ export async function fetchDailyPerformance(date, holderId) {
  * @async
  * @param {string} date - The date for the report in 'YYYY-MM-DD' format.
  * @param {string|number} holderId - The ID of the account holder.
- * @returns {Promise<{dailyTransactions: any[], endOfDayPositions: any[]}>} A promise that resolves to an object containing dailyTransactions and endOfDayPositions.
+ * @returns {Promise<{dailyTransactions: any[], endOfDayPositions: any[], openOrders: any[]}>} A promise that resolves to an object containing dailyTransactions, endOfDayPositions, and openOrders.
  */
 export async function fetchPositions(date, holderId) {
   const response = await fetch(
@@ -36,7 +36,8 @@ export async function fetchPositions(date, holderId) {
   if (
     !data ||
     !Array.isArray(data.dailyTransactions) ||
-    !Array.isArray(data.endOfDayPositions)
+    !Array.isArray(data.endOfDayPositions) ||
+    !Array.isArray(data.openOrders)
   ) {
     console.error('Received invalid data structure for position data:', data);
     throw new Error('Invalid data structure received for position data.');

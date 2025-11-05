@@ -96,7 +96,7 @@ async function initialize() {
       imports,
       ledger,
       orders,
-      watchlist, // REMOVED: charts
+      strategyLab, // REMOVED: charts
       research,
       dashboard,
       // Modal templates
@@ -147,10 +147,10 @@ async function initialize() {
             ? res.text()
             : Promise.reject(`_orders.html: ${res.statusText}`)
         ),
-        fetch('./templates/_watchlist.html' + cacheBust).then((res) =>
+        fetch('./templates/_strategy_lab.html' + cacheBust).then((res) =>
           res.ok
             ? res.text()
-            : Promise.reject(`_watchlist.html: ${res.statusText}`)
+            : Promise.reject(`_strategy_lab.html: ${res.statusText}`)
         ),
         fetch('./templates/_research.html' + cacheBust).then((res) =>
           res.ok
@@ -257,16 +257,20 @@ async function initialize() {
     );
 
     // Inject page templates
-    mainContent.innerHTML =
-      dashboard +
-      alerts +
-      dailyReport +
-      imports +
-      ledger +
-      orders +
-      watchlist +
-      research; // REMOVED: charts
-    console.log('[App Main] Page templates injected.');
+    updateState({
+      templates: {
+        dashboard,
+        alerts,
+        dailyReport,
+        imports,
+        ledger,
+        orders,
+        strategyLab,
+        sources: research, // Map 'sources' viewType to 'research' template
+      },
+    });
+    // mainContent.innerHTML will be set by switchView
+    console.log('[App Main] Page templates stored in state.');
 
     // Inject concatenated modal templates
     modalContainer.innerHTML =

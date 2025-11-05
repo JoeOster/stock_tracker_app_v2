@@ -266,7 +266,7 @@ export async function handleCreateTradeIdeaFromBook(target, journalEntries) {
  * @param {HTMLElement} target
  * @returns {Promise<void>}
  */
-export async function handleCreateBuyOrderFromIdea(target) {
+export async function handleCreateBuyOrderFromIdea(target, refreshDetailsCallback) {
   // --- *** THIS IS THE FIX (Part 2) *** ---
   // Destructure the new journalId
   const {
@@ -302,6 +302,7 @@ export async function handleCreateBuyOrderFromIdea(target) {
   }
 
   showToast(`Prefilling "Log Trade" form for ${ticker}...`, 'info');
+  await refreshDetailsCallback(); // Refresh the source details modal
 }
 
 /**

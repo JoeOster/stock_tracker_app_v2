@@ -363,3 +363,31 @@ export function createTableRowHTML_InfoOnly(lot) {
         </tr>
     `;
 }
+
+/**
+ * Creates the HTML for a single open order table row.
+ * @param {object} order - The open order data.
+ * @returns {string} HTML string for the table row.
+ */
+export function createOpenOrderTableRowHTML(order) {
+  const logoSrc = exchangeLogoMap[order.exchange] || defaultLogo;
+  const orderTypeClass =
+    order.order_type === 'BUY_LIMIT' ? 'positive' : 'negative'; // Assuming SELL_LIMIT or similar for negative
+
+  return `
+        <tr class="open-order-row" data-order-id="${order.id}">
+            <td class="reconciliation-checkbox-cell center-align sticky-col"></td>
+            <td class="sticky-col col-ticker">${order.ticker}</td>
+            <td class="col-exchange"><img src="${logoSrc}" alt="${order.exchange}" title="${order.exchange}" class="exchange-logo-small"> ${order.exchange}</td>
+            <td class="col-date">${order.created_date}</td>
+            <td class="numeric col-price ${orderTypeClass}">${order.order_type.replace('_', ' ')} @ ${formatAccounting(order.limit_price)}</td>
+            <td class="numeric col-qty center-align">${formatQuantity(order.quantity)}</td>
+            <td class="numeric current-price col-price">--</td>
+            <td class="numeric unrealized-pl-combined col-pl">Open Order</td>
+            <td class="numeric col-limits">Exp: ${order.expiration_date || '--'}</td>
+            <td class="center-align actions-cell sticky-col">
+                <button class="cancel-order-btn" data-order-id="${order.id}">Cancel</button>
+            </td>
+        </tr>
+    `;
+}

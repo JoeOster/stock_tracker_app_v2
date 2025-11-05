@@ -1,14 +1,16 @@
-﻿import { refreshLedger } from '../api/transactions-api.js';
+import { refreshLedger } from '../api/transactions-api.js';
+import { addPendingOrder, fetchPendingOrders } from '../api/orders-api.js';
 // /public/event-handlers/_orders_form.js
 /**
  * @file Initializes event handlers for the "Log Executed Trade" form on the Orders page.
  * @module event-handlers/_orders_form
  */
 
-import { state, updateState } from '../state.js';
+import { state, updateState, dispatchDataUpdate } from '../state.js';
 import { showToast } from '../ui/helpers.js';
 import { getCurrentESTDateString } from '../ui/datetime.js';
 import { loadWatchlistPage } from './_watchlist.js';
+import { renderPendingOrdersTable } from '../ui/renderers/_orders_render.js';
 
 /**
  * Initializes event listeners for the "Log Executed Trade" form.
@@ -28,11 +30,11 @@ export function initializeOrdersFormHandlers() {
     transactionTypeSelect.addEventListener('change', () => {
       if (transactionTypeSelect.value === 'DIVIDEND') {
         limitOrderGroups.forEach(
-          (group) => (/** @type {HTMLElement} */ (group).style.display = 'none')
+          (group) => /** @type {HTMLElement} */ (group.style.display = 'none')
         );
       } else {
         limitOrderGroups.forEach(
-          (group) => (/** @type {HTMLElement} */ (group).style.display = '')
+          (group) => /** @type {HTMLElement} */ (group.style.display = '')
         );
       }
     });
@@ -289,6 +291,7 @@ export function initializeOrdersFormHandlers() {
         // Refresh other views
         await refreshLedger();
         await loadWatchlistPage();
+        dispatchDataUpdate();
       } catch (error) {
         const err = /** @type {Error} */ (error);
         showToast(`Failed to log transaction: ${err.message}`, 'error');
@@ -343,4 +346,112 @@ export function initializeOrdersFormHandlers() {
   } else {
     console.warn('[Orders Init] Add transaction form not found.');
   }
+
+  /**
+   * Initializes event listeners for the "Add New Pending Order" form.
+   * @returns {void}
+   */
+  function initializeAddPendingOrderFormHandler() {
+    const pendingOrderForm = /** @type {HTMLFormElement | null} */ (
+      document.getElementById('add-pending-order-form')
+    );
+
+    if (pendingOrderForm) {
+      pendingOrderForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const accountHolder = /** @type {HTMLSelectElement} */ (
+          document.getElementById('add-pending-order-account-holder')
+        ).value;
+        const createdDate = /** @type {HTMLInputElement} */ (
+          document.getElementById('pending-order-created-date')
+        ).value;
+        const ticker = /** @type {HTMLInputElement} */ (
+          document.getElementById('pending-order-ticker')
+        ).value
+          .toUpperCase()
+          .trim();
+        const exchange = /** @type {HTMLSelectElement} */ (
+          document.getElementById('pending-order-exchange')
+        ).value;
+        const orderType = /** @type {HTMLSelectElement} */ (
+          document.getElementById('pending-order-type')
+        ).value;
+        const limitPrice = parseFloat(
+          /** @type {HTMLInputElement} */ (
+            document.getElementById('pending-order-limit-price')
+          ).value
+        );
+        const quantity = parseFloat(
+          /** @type {HTMLInputElement} */ (
+            document.getElementById('pending-order-quantity')
+          ).value
+        );
+        const expirationDate = /** @type {HTMLInputElement} */ (
+          document.getElementById('pending-order-expiration-date')
+        ).value || null;
+        const notes = /** @type {HTMLTextAreaElement} */ (
+          document.getElementById('pending-order-notes')
+        ).value || null;
+        const adviceSourceId = /** @type {HTMLSelectElement} */ (
+          document.getElementById('pending-order-advice-source')
+        ).value || null;
+
+        if (
+          !accountHolder ||
+          !createdDate ||
+          !ticker ||
+          !exchange ||
+          !orderType ||
+          isNaN(limitPrice) ||
+          limitPrice <= 0 ||
+          isNaN(quantity) ||
+          quantity <= 0
+        ) {
+          return showToast(
+            'Please fill in all required fields (*) with valid positive numbers for limit price and quantity.',
+            'error'
+          );
+        }
+
+        const pendingOrderData = {
+          account_holder_id: accountHolder,
+          ticker: ticker,
+          exchange: exchange,
+          order_type: orderType,
+          limit_price: limitPrice,
+          quantity: quantity,
+          created_date: createdDate,
+          expiration_date: expirationDate,
+          notes: notes,
+          advice_source_id: adviceSourceId,
+        };
+
+        const submitButton = /** @type {HTMLButtonElement} */ (
+          pendingOrderForm.querySelector('button[type="submit"]')
+        );
+        submitButton.disabled = true;
+
+        try {
+          await addPendingOrder(pendingOrderData);
+          showToast('Pending order added successfully!', 'success');
+          pendingOrderForm.reset();
+          // Refresh the pending orders table
+          const currentHolderId = state.selectedAccountHolderId;
+          const pendingOrders = await fetchPendingOrders(currentHolderId);
+          renderPendingOrdersTable(pendingOrders);
+          dispatchDataUpdate();
+        } catch (error) {
+          const err = /** @type {Error} */ (error);
+          showToast(`Failed to add pending order: ${err.message}`, 'error');
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+    } else {
+      console.warn('[Orders Init] Add pending order form not found.');
+    }
+  }
+
+  initializeAddPendingOrderFormHandler();
 }

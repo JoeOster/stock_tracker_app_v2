@@ -93,7 +93,6 @@ export function initializeDashboardHandlers() {
 
   // --- Sub-Tab Switching ---
   if (subTabsContainer && dashboardContainer) {
-    // ... (this listener is unchanged) ...
     subTabsContainer.addEventListener('click', (e) => {
       const target = /** @type {HTMLElement} */ (e.target);
       if (
@@ -102,6 +101,7 @@ export function initializeDashboardHandlers() {
       ) {
         const subTabName = target.dataset.subTab;
         if (!subTabName) return;
+        console.log('[initializeDashboardHandlers] Sub-tab clicked:', subTabName);
 
         subTabsContainer
           .querySelectorAll('.sub-tab')
@@ -115,21 +115,57 @@ export function initializeDashboardHandlers() {
         if (panelToShow) {
           panelToShow.classList.add('active');
         }
+        // Re-render dashboard page for the newly active sub-tab
+        renderDashboardPage(subTabName);
       }
     });
   }
 
+  // Initial render of the dashboard based on the initially active sub-tab
+  const initialActiveSubTab = dashboardContainer?.querySelector('.sub-tab.active')?.dataset.subTab || 'dashboard-card-view';
+  console.log('[initializeDashboardHandlers] Initial active sub-tab:', initialActiveSubTab);
+  renderDashboardPage(initialActiveSubTab);
+
+  /**
+   * Gets the ID of the currently active dashboard sub-tab.
+   * @returns {string} The ID of the active sub-tab, defaults to 'dashboard-card-view'.
+   */
+  const getActiveDashboardSubTab = () => {
+    const activeTabElement = dashboardContainer?.querySelector('.sub-tab-panel.active');
+    const activeSubTabId = activeTabElement?.id || 'dashboard-card-view';
+    console.log('[getActiveDashboardSubTab] Returning:', activeSubTabId);
+    return activeSubTabId;
+  };
+
   // --- Filter and Sort ---
-  filterInput?.addEventListener('input', renderDashboardPage);
-  // --- THIS IS THE FIX ---
-  exchangeFilter?.addEventListener('change', renderDashboardPage);
-  // --- END FIX ---
-  sortSelect?.addEventListener('change', renderDashboardPage);
+  filterInput?.addEventListener('input', () => {
+    const activeTab = getActiveDashboardSubTab();
+    console.log('[initializeDashboardHandlers] Filter input changed. Calling renderDashboardPage with:', activeTab);
+    renderDashboardPage(activeTab);
+  });
+  exchangeFilter?.addEventListener('change', () => {
+    const activeTab = getActiveDashboardSubTab();
+    console.log('[initializeDashboardHandlers] Exchange filter changed. Calling renderDashboardPage with:', activeTab);
+    renderDashboardPage(activeTab);
+  });
+  sortSelect?.addEventListener('change', () => {
+    const activeTab = getActiveDashboardSubTab();
+    console.log('[initializeDashboardHandlers] Sort select changed. Calling renderDashboardPage with:', activeTab);
+    renderDashboardPage(activeTab);
+  });
 
   // --- Refresh Prices ---
   refreshButton?.addEventListener('click', async () => {
     showToast('Refreshing prices...', 'info', 2000);
     await updateAllPrices(); // updateAllPrices now calls renderDashboardPage itself if needed
+  });
+
+  // Listen for global data updates and re-render the dashboard
+  window.addEventListener('dataUpdate', () => {
+    if (state.currentView.type === 'dashboard') { // Only re-render if dashboard is the active view
+      console.log('[Dashboard Init] dataUpdate event received. Re-rendering dashboard.');
+      renderDashboardPage();
+    }
   });
 
   // ... (rest of file: handleActionClick, table sorting, checkbox logic are unchanged) ...

@@ -37,9 +37,9 @@ export function renderAdviceSourceManagementList(sources) {
     return;
   }
 
-  const sortedSources = [...sources].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  const sortedSources = sources
+    .filter((source) => source != null)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   sortedSources.forEach((source) => {
     if (!source) return; // Skip if source is undefined
