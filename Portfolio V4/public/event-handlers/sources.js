@@ -1663,7 +1663,7 @@ function _renderModalNotes(sourceNotes, source) {
  * @param {object} details - The aggregated data from the API.
  * @returns {string} The full HTML string for the modal's content.
  */
-export function generateSourceDetailsHTML(details) {
+export export function generateSourceDetailsHTML(details) {
   // Destructure all the data we need
   const {
     source,

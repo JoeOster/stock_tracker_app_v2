@@ -12,7 +12,7 @@ import {
   deleteTransaction,
 } from '../api/transactions-api.js';
 import { updateAllPrices } from '../api/price-api.js';
-import { renderDashboardPage } from '../../ui/renderers/_dashboard_render.js';
+import { renderDashboardPage } from '../ui/renderers/_dashboard_render.js';
 import {
   showToast,
   showConfirmationModal,
@@ -525,6 +525,7 @@ export function initializeDashboardHandlers() {
 
   // --- Delegated Click Handler for Modals and Actions (from _dashboard_modals.js) ---
   const handleActionClick = async (e) => {
+    console.log('[handleActionClick] Click event triggered.', e.target);
     const target = /** @type {HTMLElement} */ (e.target);
     const holderId = state.selectedAccountHolderId;
 
@@ -536,175 +537,97 @@ export function initializeDashboardHandlers() {
       return;
     }
 
-    const sellBtn = target.closest('.sell-from-lot-btn');
-    const selectiveSellBtn = target.closest('.selective-sell-btn');
-    const limitBtn = target.closest('.set-limit-btn');
-    const editBtn = target.closest('.edit-buy-btn');
-    const historyBtn = target.closest('.sales-history-btn');
+    const sellPositionBtn = target.closest('.sell-position-btn');
+    const editPositionBtn = target.closest('.edit-position-btn');
     const manageLotsBtn = target.closest('.manage-position-btn');
-    const deleteBtn = target.closest('.delete-buy-btn');
 
-    // --- Sell Button Logic (Individual Lot) ---
-    if (sellBtn) {
-      const { buyId } = /** @type {HTMLElement} */ (sellBtn).dataset;
-      const lotData = state.dashboardOpenLots.find(
-        (lot) => String(lot.id) === buyId
-      );
-      if (!lotData) {
-        return showToast('Error: Could not find original lot data.', 'error');
-      }
-      populateSellFromPositionModal(lotData);
-    }
-    // --- Selective Sell Button Logic (Aggregated Card) ---
-    else if (selectiveSellBtn) {
+    console.log('[handleActionClick] sellPositionBtn:', sellPositionBtn);
+    console.log('[handleActionClick] editPositionBtn:', editPositionBtn);
+
+    // --- Sell Position Button Logic ---
+    if (sellPositionBtn) {
+      console.log('[handleActionClick] Sell button detected.', sellPositionBtn);
       const {
         ticker,
         exchange,
         lots: encodedLots,
-      } = /** @type {HTMLElement} */ (selectiveSellBtn).dataset;
+      } = /** @type {HTMLElement} */ (sellPositionBtn).dataset;
       if (!ticker || !exchange || !encodedLots) {
-        return;
+        console.error('[handleActionClick] Missing data for sell action.', { ticker, exchange, encodedLots });
+        return showToast('Error: Missing data for sell action.', 'error');
       }
       if (state.selectedAccountHolderId === 'all') {
-        return;
+        console.warn('[handleActionClick] Account holder not selected for sell.');
+        return showToast(
+          'Please select a specific account holder to sell positions.',
+          'error'
+        );
       }
 
       let underlyingLots = [];
       try {
-        const lotIdArray = encodedLots.split(',').map((id) => parseInt(id, 10));
-        underlyingLots = state.dashboardOpenLots.filter((p) =>
-          lotIdArray.includes(p.id)
-        );
-      } catch {
-        return;
+        underlyingLots = JSON.parse(decodeURIComponent(encodedLots));
+        console.log('[handleActionClick] Decoded lots for sell:', underlyingLots);
+      } catch (error) {
+        console.error('Error parsing lots data for sell:', error);
+        return showToast('Error: Invalid lot data for sell.', 'error');
       }
+      console.log('[handleActionClick] Calling populateSelectiveSellModal.');
       populateSelectiveSellModal(ticker, underlyingLots);
     }
-    // --- Limits Button Logic (Single Lot Card or Table Row) ---
-    else if (limitBtn) {
-      const lotId = /** @type {HTMLElement} */ (limitBtn).dataset.id;
-      const lotData = state.dashboardOpenLots.find(
-        (lot) => String(lot.id) === lotId
-      );
-      populateEditModal(lotData, true);
-    }
-    // --- Edit Button Logic (Single Lot Card or Table Row) ---
-    else if (editBtn) {
-      const lotId = /** @type {HTMLElement} */ (editBtn).dataset.id;
-      const lotData = state.dashboardOpenLots.find(
-        (lot) => String(lot.id) === lotId
-      );
-      await populateAllAdviceSourceDropdowns();
-      populateEditModal(lotData, false);
-    }
-    // --- Sales History Button Logic (Table Row) ---
-    else if (historyBtn) {
-      const buyId = /** @type {HTMLElement} */ (historyBtn).dataset.buyId;
-      if (!buyId) return;
-      const lotData = state.dashboardOpenLots.find(
-        (lot) => String(lot.id) === buyId
-      );
-      if (!lotData) {
-        showToast('Could not find original purchase details.', 'error');
-        return;
+    // --- Edit Position Button Logic ---
+    else if (editPositionBtn) {
+      console.log('[handleActionClick] Edit button detected.', editPositionBtn);
+      const {
+        ticker,
+        exchange,
+        lots: encodedLots,
+      } = /** @type {HTMLElement} */ (editPositionBtn).dataset;
+      if (!ticker || !exchange || !encodedLots) {
+        console.error('[handleActionClick] Missing data for edit action.', { ticker, exchange, encodedLots });
+        return showToast('Error: Missing data for edit action.', 'error');
       }
-
-      const salesHistoryModal = document.getElementById('sales-history-modal');
-      if (!salesHistoryModal) return;
-
-      /** @type {HTMLElement} */ (
-        document.getElementById('sales-history-title')
-      ).textContent = `Sales History for ${lotData.ticker} Lot`;
-      /** @type {HTMLElement} */ (
-        document.getElementById('sales-history-ticker')
-      ).textContent = lotData.ticker;
-      /** @type {HTMLElement} */ (
-        document.getElementById('sales-history-buy-date')
-      ).textContent = lotData.purchase_date;
-      /** @type {HTMLElement} */ (
-        document.getElementById('sales-history-buy-qty')
-      ).textContent = formatQuantity(
-        lotData.original_quantity ?? lotData.quantity
-      );
-      /** @type {HTMLElement} */ (
-        document.getElementById('sales-history-buy-price')
-      ).textContent = formatAccounting(lotData.cost_basis);
-
-      const salesBody = /** @type {HTMLTableSectionElement} */ (
-        document.getElementById('sales-history-body')
-      );
-      salesBody.innerHTML =
-        '<tr><td colspan="4">Loading sales history...</td></tr>';
-      salesHistoryModal.classList.add('visible');
-
-      try {
-        const sales = await fetchSalesForLot(
-          buyId,
-          state.selectedAccountHolderId
-        );
-        if (sales.length === 0) {
-          salesBody.innerHTML =
-            '<tr><td colspan="4">No sales recorded for this lot.</td></tr>';
-        } else {
-          salesBody.innerHTML = sales
-            .map(
-              (sale) => `
-                        <tr>
-                            <td>${sale.transaction_date}</td>
-                            <td class="numeric">${formatQuantity(sale.quantity)}</td>
-                            <td class="numeric">${formatAccounting(sale.price)}</td>
-                            <td class="numeric ${sale.realizedPL >= 0 ? 'positive' : 'negative'}">${formatAccounting(sale.realizedPL)}</td>
-                        </tr>
-                    `
-            )
-            .join('');
-        }
-      } catch (error) {
-        // @ts-ignore
-        showToast(`Error fetching sales history: ${error.message}`, 'error');
-        salesBody.innerHTML =
-          '<tr><td colspan="4">Error loading sales history.</td></tr>';
-      }
-    }
-    // --- Manage Position Button Logic (Aggregated Card) ---
-    else if (deleteBtn) {
-      const transactionId = /** @type {HTMLElement} */ (deleteBtn).dataset.id;
-      if (!transactionId) return;
-
-      showConfirmationModal(
-        'Delete Transaction?',
-        'Are you sure you want to delete this BUY transaction? All associated SELL records will also be deleted. This cannot be undone.',
-        async () => {
-          try {
-            const result = await deleteTransaction(transactionId, holderId);
-            showToast(result.message, 'success');
-            // Trigger a full dashboard refresh
-            dispatchDataUpdate();
-          } catch (error) {
-            console.error('Error deleting transaction:', error);
-            // @ts-ignore
-            showToast(`Error: ${error.message}`, 'error');
-          }
-        }
-      );
-      return; // Stop further processing
-    } else if (manageLotsBtn) {
-      const button = /** @type {HTMLElement} */ (manageLotsBtn);
-      const { ticker, exchange } = button.dataset;
-      const accountHolderId = state.selectedAccountHolderId;
-
-      if (!ticker || !exchange) {
-        showToast('Error: Missing data for position management view.', 'error');
-        return;
-      }
-      if (accountHolderId === 'all') {
-        showToast(
-          'Please select a specific account holder to manage lots.',
+      if (state.selectedAccountHolderId === 'all') {
+        console.warn('[handleActionClick] Account holder not selected for edit.');
+        return showToast(
+          'Please select a specific account holder to edit positions.',
           'error'
         );
-        return;
       }
-      await openAndPopulateManageModal(ticker, exchange, accountHolderId);
+
+      let underlyingLots = [];
+      try {
+        underlyingLots = JSON.parse(decodeURIComponent(encodedLots));
+        console.log('[handleActionClick] Decoded lots for edit:', underlyingLots);
+      } catch (error) {
+        console.error('Error parsing lots data for edit:', error);
+        return showToast('Error: Invalid lot data for edit.', 'error');
+      }
+
+      if (underlyingLots.length > 0) {
+        const firstLot = underlyingLots[0];
+        console.log('[handleActionClick] First lot for edit:', firstLot);
+        const fullLotData = state.dashboardOpenLots.find(
+          (lot) => String(lot.id) === String(firstLot.id)
+        );
+        if (fullLotData) {
+          console.log('[handleActionClick] Found full lot data for edit.', fullLotData);
+          await populateAllAdviceSourceDropdowns();
+          populateEditModal(fullLotData, false);
+          console.log('[handleActionClick] populateEditModal called.');
+        } else {
+          console.error('[handleActionClick] Could not find full lot data for editing.', firstLot);
+          showToast('Error: Could not find full lot data for editing.', 'error');
+        }
+      } else {
+        console.warn('[handleActionClick] No lots available to edit for this position.');
+        showToast('No lots available to edit for this position.', 'error');
+      }
+    }
+    // --- Manage Button (currently disabled, but keeping the block for future expansion) ---
+    else if (manageLotsBtn) {
+      console.log('[handleActionClick] Manage button clicked (disabled).');
+      showToast('Manage functionality is currently disabled.', 'info');
     }
   };
   cardGrid?.addEventListener('click', handleActionClick);

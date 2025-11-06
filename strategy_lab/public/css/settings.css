@@ -1,0 +1,33 @@
+.sub-tabs {
+  display: flex;
+  border-bottom: 1px solid #444;
+  margin-bottom: 1rem;
+}
+
+.sub-tab {
+  padding: 0.75rem 1.25rem;
+  border: none;
+  background-color: transparent;
+  color: #f0f0f0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.sub-tab:hover {
+  background-color: #3a3a3a;
+}
+
+.sub-tab.active {
+  color: #4e8af7;
+  border-bottom-color: #4e8af7;
+}
+
+.sub-tab-panel {
+  display: none;
+}
+
+.sub-tab-panel.active {
+  display: block;
+}

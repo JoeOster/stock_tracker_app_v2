@@ -1,0 +1,47 @@
+/* public/css/base/_utilities.css */
+/* ... (existing styles for .loader, @keyframes spin, #toast-container, .toast, etc.) ... */
+
+/* --- ADDED: Read-Only Mode for "All Accounts" --- */
+
+/* * When 'read-only' class is on the body, disable all
+ * primary action buttons and inputs.
+ */
+.read-only button,
+.read-only input,
+.read-only select,
+.read-only textarea {
+  /* Make them look disabled */
+  opacity: 0.7;
+  /* Prevent all interaction */
+  pointer-events: none;
+  cursor: not-allowed !important; /* Force cursor */
+}
+
+/* * Re-enable specific elements that MUST work in read-only mode:
+ * - The global account filter itself
+ * - Main navigation tabs
+ * - Filter/sort controls
+ * - Settings modal close button
+ * - Chart zoom modal close button
+ */
+.read-only #global-account-holder-filter,
+.read-only .header-left label[for='global-account-holder-filter'],
+.read-only .tab,
+.read-only .filter-bar input,
+.read-only .filter-bar select,
+.read-only .filter-bar button,
+.read-only #settings-btn,
+.read-only #settings-modal .close-button,
+.read-only #chart-zoom-modal .close-button {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: auto !important;
+}
+
+/* * Specifically allow pointer events on the select,
+ * but keep its buttons disabled
+ */
+.read-only #global-account-holder-filter {
+  cursor: pointer !important;
+}
+/* --- END ADDED --- */

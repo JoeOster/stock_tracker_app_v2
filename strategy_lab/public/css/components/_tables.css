@@ -1,0 +1,188 @@
+/* public/css/components/_tables.css */
+/* Contains all general and sticky styles for tables, using a separate border model. */
+
+table {
+  width: 100%;
+  border-collapse: separate; /* Use separate for styling sticky borders */
+  border-spacing: 0;
+  min-width: 900px; /* Adjusted minimum width, specific tables might override */
+  border: 1px solid var(--container-border);
+  border-radius: 8px;
+  margin-bottom: 1rem; /* Add some space below tables */
+  font-size: 0.95em; /* Slightly smaller font for dense tables */
+}
+
+th,
+td {
+  border-style: solid;
+  border-color: var(--container-border);
+  border-width: 0 1px 1px 0; /* Bottom and right borders */
+  padding: 10px 12px; /* Adjusted padding */
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: middle; /* Align cell content vertically */
+}
+
+/* Remove right border on last cell of each row */
+th:last-child,
+td:last-child {
+  border-right-width: 0;
+}
+/* Remove bottom border on last row of tbody/tfoot */
+tbody tr:last-child td,
+tfoot tr:last-child td {
+  border-bottom-width: 0;
+}
+/* Add left border back to first cell */
+th:first-child,
+td:first-child {
+  border-left-width: 1px;
+}
+/* Add top border to header row cells */
+thead tr:first-child th {
+  border-top-width: 1px;
+}
+/* Round corners on table */
+thead tr:first-child th:first-child {
+  border-top-left-radius: 8px;
+}
+thead tr:first-child th:last-child {
+  border-top-right-radius: 8px;
+}
+tbody tr:last-child td:first-child,
+tfoot tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+tbody tr:last-child td:last-child,
+tfoot tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+th {
+  background-color: var(--table-header-bg);
+  font-weight: 600;
+  color: var(--heading-color);
+  border-bottom-width: 2px; /* Thicker bottom border for header */
+  border-bottom-color: var(--primary-color);
+}
+
+thead th {
+  /* Make header sticky */
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+tbody tr:nth-child(even) {
+  background-color: var(--table-row-even-bg);
+}
+tbody tr:hover {
+  /* Subtle hover effect */
+  background-color: var(--info-panel-bg);
+}
+
+tfoot td {
+  /* Style footer cells */
+  font-weight: 600;
+  background-color: var(--table-header-bg);
+  border-top: 2px solid var(--container-border); /* Separator for footer */
+}
+
+/* --- Utility Classes --- */
+.numeric {
+  text-align: right;
+}
+.positive {
+  color: var(--positive-color);
+  font-weight: 600;
+}
+.negative {
+  color: var(--negative-color);
+  font-weight: 600;
+}
+.actions-cell {
+  text-align: center; /* MODIFIED: Added text-align */
+  vertical-align: middle; /* MODIFIED: Added vertical-align */
+}
+.center-align {
+  text-align: center;
+}
+
+/* Table Section Headers (like in Daily Report) */
+.table-section-header {
+  text-align: center !important; /* Force centering */
+  font-size: 1.1rem; /* Slightly larger */
+  font-weight: 600;
+  background-color: var(--info-panel-bg); /* Different background */
+  color: var(--heading-color);
+  border-bottom: 1px solid var(--container-border); /* Regular bottom border */
+}
+/* Specific targeting for Daily Report headers if needed */
+#stock-table th[colspan] {
+  background-color: var(--info-panel-bg);
+}
+
+/* --- Sticky Column Base Styles --- */
+/* Apply .sticky-col class in renderers for cells needing stickiness */
+.sticky-col {
+  position: sticky;
+  z-index: 2;
+  background-color: var(--container-bg); /* Default background matches row */
+}
+/* Ensure header sticky cells have correct background */
+thead .sticky-col {
+  z-index: 3; /* Header above body */
+  background-color: var(--table-header-bg);
+}
+/* Ensure even row sticky cells have correct background */
+tbody tr:nth-child(even) .sticky-col {
+  background-color: var(--table-row-even-bg);
+}
+/* Ensure footer sticky cells have correct background */
+tfoot .sticky-col {
+  z-index: 3; /* Footer above body */
+  background-color: var(--table-header-bg);
+}
+
+/* Ensure hover applies correctly to sticky cells */
+tbody tr:hover .sticky-col {
+  background-color: var(--info-panel-bg); /* Match row hover background */
+}
+
+/* Example Sticky assignments (add specific offsets in component CSS) */
+/* .sticky-col-left-0 { left: 0; } */
+/* .sticky-col-left-1 { left: 50px; } Adjust based on previous column width */
+/* .sticky-col-right-0 { right: 0; } */
+
+/* Specific Table Overrides (Move relevant rules from component CSS here if desired) */
+
+/* Example: Small logos in tables */
+.exchange-logo-small {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  margin-right: 5px; /* Add some space */
+  object-fit: contain;
+}
+
+/* Table Actions Button size */
+.actions-cell button {
+  padding: 5px 8px; /* Smaller buttons in tables */
+  font-size: 0.9em;
+  margin: 0 2px; /* Add small horizontal margin */
+}
+/* public/css/components/_tables.css */
+/* Contains all general and sticky styles for tables, using a separate border model. */
+
+table {
+  width: 100%;
+  border-collapse: separate; /* Use separate for styling sticky borders */
+  border-spacing: 0;
+  /* min-width: 900px; */ /* REMOVE default min-width, let component CSS define it */
+  table-layout: fixed; /* <-- ADD THIS to standardize the layout model */
+  border: 1px solid var(--container-border);
+  border-radius: 8px;
+  margin-bottom: 1rem; /* Add some space below tables */
+  font-size: 0.95em; /* Slightly smaller font for dense tables */
+}
+/* ... rest of _tables.css ... */

@@ -1,0 +1,16 @@
+/* public/css/components/_orders.css */
+
+#orders-page-container h2 {
+  text-align: center;
+  font-size: 1.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* --- ADDITION: Make all labels on this page bold --- */
+#orders-page-container label {
+  font-weight: bold;
+}
+/* --- END ADDITION --- */
+
+/* Contains styles specific to the Orders page. */
+/* This file is a placeholder for any future, specific styling needs. */

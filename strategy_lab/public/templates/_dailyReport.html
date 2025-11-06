@@ -1,0 +1,68 @@
+<div id="daily-report-container" class="page-container" style="display: none">
+  <h2 id="table-title"></h2>
+
+  <div class="summary-container" id="daily-performance-summary"></div>
+  <table id="stock-table">
+    <thead>
+      <tr>
+        <th colspan="7" class="table-section-header">Daily Transaction Log</th>
+      </tr>
+      <tr>
+        <th data-sort="ticker">Ticker</th>
+        <th data-sort="exchange">Exchange</th>
+        <th data-sort="transaction_type" class="center-align">Action</th>
+        <th class="numeric" data-sort="quantity" data-type="numeric">Qty</th>
+        <th class="numeric" data-sort="price" data-type="numeric">Price</th>
+        <th class="numeric" data-sort="realizedPL" data-type="numeric">
+          Realized P/L
+        </th>
+      </tr>
+    </thead>
+    <tbody id="log-body"></tbody>
+    <thead>
+      <tr>
+        <th
+          colspan="8"
+          class="table-section-header"
+          id="positions-summary-title"
+        >
+          Open Lots
+        </th>
+      </tr>
+      <tr>
+        <th data-sort="ticker">Ticker</th>
+        <th data-sort="exchange">Exchange</th>
+        <th data-sort="purchase_date">Purchase Date</th>
+        <th class="numeric" data-sort="cost_basis" data-type="numeric">
+          Basis
+        </th>
+        <th class="numeric" data-sort="quantity_remaining" data-type="numeric">
+          Qty
+        </th>
+        <th class="numeric" data-sort="current-price" data-type="numeric">
+          Current Price
+        </th>
+        <th
+          class="numeric"
+          data-sort="unrealized-pl-dollar"
+          data-type="numeric"
+        >
+          Unrealized P/L ($ | %)
+        </th>
+        <th class="numeric">Limits (Up/Down)</th>
+      </tr>
+    </thead>
+    <tbody id="positions-summary-body"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="7" style="text-align: right; font-weight: bold">
+          Total Unrealized P/L
+        </td>
+        <td id="unrealized-pl-total" class="numeric">--</td>
+      </tr>
+    </tfoot>
+  </table>
+  <div id="portfolio-summary" style="margin-top: 1rem">
+    <button id="refresh-prices-btn">Refresh Prices</button>
+  </div>
+</div>

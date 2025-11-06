@@ -6,16 +6,16 @@
 
 // --- IMPORTS (FIX) ---
 // Added all missing imports to resolve "Cannot find name" errors
-import { state, updateState } from '../state.js';
-import { switchView } from '../event-handlers/_navigation.js';
-import {
-  saveSubscriptions,
-  populateSubscriptionPanel,
-} from '../event-handlers/_modal_manage_subscriptions.js';
-import { showToast, showConfirmationModal } from './helpers.js';
 import { handleResponse } from '../api/api-helpers.js';
 import { refreshLedger } from '../api/transactions-api.js';
+import {
+  populateSubscriptionPanel,
+  saveSubscriptions,
+} from '../event-handlers/_modal_manage_subscriptions.js';
+import { switchView } from '../event-handlers/_navigation.js';
 import { setActiveTab } from '../event-handlers/_settings_modal.js';
+import { state, updateState } from '../state.js';
+import { showConfirmationModal, showToast } from './helpers.js';
 // --- END IMPORTS ---
 
 // ---
@@ -918,8 +918,8 @@ export function applyAppearanceSettings() {
   document.body.style.setProperty('--font-family-base', fontVar);
   const appTitle = document.getElementById('app-title');
   const baseTitle = state.settings.familyName
-    ? `${state.settings.familyName} Portfolio Tracker`
-    : 'Portfolio Tracker';
+    ? `${state.settings.familyName} test`
+    : 'test';
   if (appTitle) {
     appTitle.textContent = baseTitle;
   }

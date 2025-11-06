@@ -1,0 +1,255 @@
+/* public/css/components/_forms.css */
+/* Contains general styles for forms, inputs, and buttons. */
+
+/* --- General Input & Button Styles --- */
+input,
+select {
+  padding: 10px;
+  border: 1px solid var(--container-border);
+  border-radius: 8px;
+  font-size: 16px;
+  background-color: var(--container-bg);
+  color: var(--text-color);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Add custom arrow for select dropdowns */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); /* Simple dropdown arrow */
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 1em;
+  padding-right: 2.5em; /* Make space for the arrow */
+}
+
+button {
+  padding: 10px 15px;
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  background-color: var(--primary-color);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+button:disabled {
+  background-color: var(--text-muted-color);
+  border-color: var(--text-muted-color);
+  cursor: not-allowed;
+}
+
+.delete-btn {
+  background-color: var(--negative-color);
+  border-color: var(--negative-color);
+}
+
+.delete-btn:hover {
+  background-color: #d73737; /* Slightly darker red on hover */
+  border-color: #d73737;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  border-color: var(--container-border);
+  color: var(--text-muted-color);
+}
+
+.cancel-btn:hover {
+  background-color: var(--info-panel-bg);
+  border-color: var(--container-border);
+  color: var(--text-color);
+}
+
+/* --- Form Group & Layout Styles --- */
+.form-group {
+  text-align: left;
+  margin-bottom: 15px;
+  display: flex; /* Use flexbox for alignment */
+  flex-direction: column; /* Stack label above input/select */
+  gap: 5px; /* Space between label and input/select */
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0; /* Remove default margin if previously set */
+  font-weight: 500;
+  font-size: 0.9em;
+  color: var(--text-muted-color); /* Slightly muted label color */
+}
+
+.form-group-with-button {
+  display: flex;
+  align-items: flex-end; /* Align input and button baseline */
+  gap: 5px;
+}
+
+.form-group-with-button input {
+  flex-grow: 1;
+}
+.form-group-with-button button {
+  flex-shrink: 0;
+}
+
+.form-group-with-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-group-with-checkbox input[type='checkbox'] {
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* --- Specific Form Layouts --- */
+
+/* Ledger & Orders Page Single-Row Forms */
+#add-transaction-form,
+#add-pending-order-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end; /* Align baselines */
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+/* --- MODIFICATION: Use direct child selector (>) --- */
+#add-transaction-form > input,
+#add-transaction-form > select,
+#add-pending-order-form > input,
+#add-pending-order-form > select {
+  flex: 1 1 150px; /* Allow shrinking but base width 150px */
+  min-width: 120px; /* Prevent becoming too small */
+}
+/* --- END MODIFICATION --- */
+
+/* Limit Order Group (within #add-transaction-form) */
+.form-row-divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--container-border);
+  margin: 10px 0;
+}
+
+/* --- MODIFICATION: Removed flex-basis: 100% --- */
+.limit-order-group {
+  display: grid;
+  /* 5 columns: Checkbox, Label, Price(150px), Exp Label, Date(130px) */
+  grid-template-columns: auto auto 150px auto 130px;
+  align-items: baseline; /* Align along the baseline */
+  gap: 10px 15px; /* row-gap column-gap (increased column gap) */
+  /* flex-basis: 100%; <-- REMOVED */
+}
+/* --- END MODIFICATION --- */
+
+.limit-order-group label {
+  flex-shrink: 0; /* Don't shrink labels */
+  font-size: 0.9em;
+  color: var(--text-muted-color);
+  white-space: nowrap; /* Prevent labels from wrapping */
+}
+
+.limit-order-group input[type='checkbox'] {
+  width: auto;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.limit-order-group input[type='number'] {
+  width: 100%; /* Make input fill its 150px grid cell */
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+.limit-order-group input[type='date'] {
+  width: 100%; /* Make date input fill its 130px cell */
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+/* Settings Modal "Add" Form (used for Exchange/Holder) */
+.add-item-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 1rem;
+  align-items: center; /* Align input and button */
+}
+
+.add-item-form input {
+  flex-grow: 1;
+}
+.add-item-form button {
+  flex-shrink: 0;
+}
+
+/* Snapshot Page Form */
+#add-snapshot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Importer Reconciliation Table Statuses */
+.status-duplicate {
+  color: var(--negative-color);
+  font-weight: 600;
+}
+
+.status-resolved {
+  color: var(--positive-color);
+  font-weight: 600;
+}
+
+.status-ignored {
+  color: var(--text-muted-color);
+  text-decoration: line-through;
+}
+
+.status-invalid {
+  color: var(--negative-color);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: help;
+}
+
+/* Filter Bar Styles (Consolidated Base) */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping */
+  gap: 1rem; /* Consistent gap */
+  align-items: center;
+  padding: 0.75rem 1rem; /* Consistent padding */
+  background-color: var(--info-panel-bg); /* Consistent background */
+  border-radius: 8px; /* Consistent border radius */
+  border: 1px solid var(--container-border); /* Consistent border */
+  margin-bottom: 1.5rem; /* Consistent margin */
+}
+/* Input/Select styling within the bar */
+.filter-bar input,
+.filter-bar select {
+  flex: 1 1 auto; /* Allow elements to grow and shrink */
+  max-width: 250px; /* Sensible max width */
+  margin-bottom: 0; /* Override form-group margin if needed */
+  padding: 8px; /* Slightly smaller padding */
+  width: auto; /* Override default width: 100% */
+}
+/* Label styling */
+.filter-bar label {
+  margin-bottom: 0; /* Align label better */
+  white-space: nowrap; /* Prevent label wrapping */
+}
+/* Button styling */
+.filter-bar button {
+  flex-shrink: 0; /* Prevent button from shrinking */
+  padding: 8px 12px; /* Match input padding height */
+}

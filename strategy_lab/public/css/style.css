@@ -1,0 +1,26 @@
+/* style.css - Main Import File */
+
+/* --- BASE STYLES --- */
+@import url('./base/_themes.css');
+@import url('./base/_base.css');
+
+/* --- COMPONENT STYLES --- */
+@import url('./components/_header.css');
+@import url('./components/_tabs.css'); /* Main tabs */
+@import url('./components/_sub-tabs.css'); /* ADDED: Sub-tabs */
+@import url('./components/_forms.css');
+@import url('./components/_tables.css');
+@import url('./components/_table-widths.css');
+@import url('./components/_modals.css');
+@import url('./components/_ledger.css');
+@import url('./components/_orders.css');
+@import url('./components/_daily-report.css');
+@import url('./components/_importers.css');
+@import url('./components/_dashboard.css');
+@import url('./components/_research.css');
+@import url('./components/_modal_manage_position.css');
+/* --- ADDED: New watchlist styles --- */
+@import url('./components/_watchlist.css');
+
+/* --- UTILITIES --- */
+@import url('./base/_utilities.css');

@@ -1,0 +1,184 @@
+<div id="orders-page-container" class="page-container" style="display: none">
+  <h2>Log Trade / View Orders</h2>
+  <p class="subtitle">Log executed trades and view your open limit orders.</p>
+  <h3>Log Executed Trade</h3>
+  <form id="add-transaction-form">
+    <input type="hidden" id="add-tx-linked-journal-id" />
+    <select
+      id="add-tx-account-holder"
+      class="account-holder-select"
+      required
+    ></select>
+    <input type="date" id="transaction-date" required />
+    <input type="text" id="ticker" placeholder="Ticker" required />
+    <select id="exchange" required></select>
+    <select id="transaction-type">
+      <option value="BUY">BUY</option>
+      <option value="SELL">SELL</option>
+      <option value="DIVIDEND">DIVIDEND</option>
+    </select>
+    <input
+      type="number"
+      id="quantity"
+      placeholder="Quantity"
+      step="any"
+      min="0.00001"
+      required
+    />
+    <input
+      type="number"
+      id="price"
+      placeholder="Price Per Share"
+      step="any"
+      min="0.01"
+      required
+    />
+    <button type="submit">Log Transaction</button>
+
+    <div class="form-row-divider"></div>
+
+    <div
+      class="form-group"
+      id="add-tx-advice-source-group"
+      style="
+        flex-basis: 100%;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+      "
+    >
+      <label for="add-tx-advice-source">Link to Advice Source (Optional)</label>
+      <select id="add-tx-advice-source" class="advice-source-select">
+        <option value="">(None/Manual Entry)</option>
+      </select>
+    </div>
+    <p
+      id="add-tx-source-locked-display"
+      style="
+        flex-basis: 100%;
+        text-align: center;
+        color: var(--text-muted-color);
+        font-weight: bold;
+        display: none;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      "
+    >
+      Source Locked: <span id="locked-source-name"></span>
+    </p>
+
+    <div class="limit-order-group">
+      <input
+        type="checkbox"
+        id="set-profit-limit-checkbox"
+        title="Set Take Profit Limit 1"
+      />
+      <label for="add-limit-price-up">Take Profit 1:</label>
+      <input
+        type="number"
+        id="add-limit-price-up"
+        step="any"
+        placeholder="Price"
+      />
+      <label for="add-limit-up-expiration">Exp:</label>
+      <input type="date" id="add-limit-up-expiration" />
+    </div>
+    <div class="limit-order-group">
+      <input
+        type="checkbox"
+        id="set-loss-limit-checkbox"
+        title="Set Stop Loss Limit"
+      />
+      <label for="add-limit-price-down">Stop Loss:</label>
+      <input
+        type="number"
+        id="add-limit-price-down"
+        step="any"
+        placeholder="Price"
+      />
+      <label for="add-limit-down-expiration">Exp:</label>
+      <input type="date" id="add-limit-down-expiration" />
+    </div>
+    <div class="limit-order-group">
+      <input
+        type="checkbox"
+        id="set-profit-limit-2-checkbox"
+        title="Set Take Profit Limit 2"
+      />
+      <label for="add-limit-price-up-2">Take Profit 2:</label>
+      <input
+        type="number"
+        id="add-limit-price-up-2"
+        step="any"
+        placeholder="Price (Optional)"
+      />
+      <label for="add-limit-up-expiration-2">Exp:</label>
+      <input type="date" id="add-limit-up-expiration-2" />
+    </div>
+  </form>
+
+  <h3>Add New Pending Order</h3>
+  <form id="add-pending-order-form">
+    <select
+      id="add-pending-order-account-holder"
+      class="account-holder-select"
+      required
+    ></select>
+    <input type="date" id="pending-order-created-date" required />
+    <input type="text" id="pending-order-ticker" placeholder="Ticker" required />
+    <select id="pending-order-exchange" required></select>
+    <select id="pending-order-type" required>
+      <option value="BUY_LIMIT">Buy Limit</option>
+      <option value="SELL_LIMIT">Sell Limit</option>
+    </select>
+    <input
+      type="number"
+      id="pending-order-limit-price"
+      placeholder="Limit Price"
+      step="any"
+      min="0.01"
+      required
+    />
+    <input
+      type="number"
+      id="pending-order-quantity"
+      placeholder="Quantity"
+      step="any"
+      min="0.00001"
+      required
+    />
+    <label for="pending-order-expiration-date">Expiration Date (Optional):</label>
+    <input type="date" id="pending-order-expiration-date" />
+    <textarea
+      id="pending-order-notes"
+      placeholder="Notes (Optional)"
+      rows="3"
+    ></textarea>
+    <label for="pending-order-advice-source">Link to Advice Source (Optional)</label>
+    <select id="pending-order-advice-source" class="advice-source-select">
+      <option value="">(None/Manual Entry)</option>
+    </select>
+    <button type="submit">Add Pending Order</button>
+  </form>
+
+  <h3>Open Limit Orders</h3>
+  <div class="table-container">
+    <table id="pending-orders-table" class="data-table">
+      <thead>
+        <tr>
+          <th data-sort="created_date">Created Date</th>
+          <th data-sort="ticker">Ticker</th>
+          <th data-sort="order_type">Type</th>
+          <th data-sort="limit_price">Limit Price</th>
+          <th data-sort="quantity">Quantity</th>
+          <th data-sort="expiration_date">Expiration</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Pending orders will be rendered here -->
+      </tbody>
+    </table>
+  </div>
+</div>
