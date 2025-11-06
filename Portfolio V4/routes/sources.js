@@ -133,18 +133,22 @@ module.exports = (db, log) => {
       if (journalEntryIds.length > 0) {
         const placeholders = journalEntryIds.map(() => '?').join(',');
         linkedTransactions = await db.all(
-          `SELECT * FROM transactions 
-                     WHERE account_holder_id = ?
-                     AND (advice_source_id = ? OR linked_journal_id IN (${placeholders}))
-                     ORDER BY transaction_date DESC`,
+          `SELECT transactions.*, ads.name AS advice_source_name
+                     FROM transactions
+                     LEFT JOIN advice_sources AS ads ON transactions.advice_source_id = ads.id
+                     WHERE transactions.account_holder_id = ?
+                     AND (transactions.advice_source_id = ? OR transactions.linked_journal_id IN (${placeholders}))
+                     ORDER BY transactions.transaction_date DESC`,
           [holderId, id, ...journalEntryIds]
         );
       } else {
         // No journal entries, just fetch items linked to the source
         linkedTransactions = await db.all(
-          `SELECT * FROM transactions 
-                     WHERE advice_source_id = ? AND account_holder_id = ?
-                     ORDER BY transaction_date DESC`,
+          `SELECT transactions.*, ads.name AS advice_source_name
+                     FROM transactions
+                     LEFT JOIN advice_sources AS ads ON transactions.advice_source_id = ads.id
+                     WHERE transactions.advice_source_id = ? AND transactions.account_holder_id = ?
+                     ORDER BY transactions.transaction_date DESC`,
           [id, holderId]
         );
       }
