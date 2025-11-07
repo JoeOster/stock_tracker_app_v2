@@ -18,7 +18,9 @@ export function initializeSubTabs(container, templateMap = {}) {
       if (targetElement) {
         targetElement.innerHTML = content;
       } else {
-        console.error(`Target element #${targetElementId} not found for sub-tab ${tabId}`);
+        console.error(
+          `Target element #${targetElementId} not found for sub-tab ${tabId}`
+        );
       }
     } catch (error) {
       console.error(`Failed to load sub-tab content for ${tabId}:`, error);
@@ -29,7 +31,9 @@ export function initializeSubTabs(container, templateMap = {}) {
     container.querySelectorAll('.sub-tab-content').forEach((contentDiv) => {
       contentDiv.style.display = 'none';
     });
-    const targetContentDiv = container.querySelector(`#${tabId}-sub-tab-content`);
+    const targetContentDiv = container.querySelector(
+      `#${tabId}-sub-tab-content`
+    );
     if (targetContentDiv) {
       targetContentDiv.style.display = 'block';
       loadSubTabContent(tabId, `${tabId}-sub-tab-content`);
@@ -39,7 +43,9 @@ export function initializeSubTabs(container, templateMap = {}) {
   if (subTabsContainer) {
     // Set the initial state when the component is initialized
     const activeTab = subTabsContainer.querySelector('.sub-tab.active');
-    let initialTabId = activeTab ? (activeTab.dataset.tab || activeTab.dataset.subTab) : null;
+    let initialTabId = activeTab
+      ? activeTab.dataset.tab || activeTab.dataset.subTab
+      : null;
 
     if (!initialTabId) {
       // If no active tab is explicitly set, activate the first one

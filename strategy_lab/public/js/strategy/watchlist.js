@@ -1,1 +1,111 @@
-import { authenticatedFetch } from \'../app-main.js\';\n\nexport function initializeWatchlist() {\n  const addTickerInput = document.getElementById(\'add-ticker-input\');\n  const addTickerButton = document.getElementById(\'add-ticker-button\');\n  const watchlistTableBody = document.querySelector(\'#watchlist-table tbody\');\n  const errorMessageElement = document.getElementById(\'watchlist-error-message\');\n\n  // Function to fetch and render the watchlist\n  async function fetchAndRenderWatchlist() {\n    try {\n      const response = await authenticatedFetch(\'/api/watchlist\');\n      if (response.ok) {\n        const watchlist = await response.json();\n        watchlistTableBody.innerHTML = \'\'; // Clear existing entries\n        if (watchlist.length === 0) {\n          watchlistTableBody.innerHTML = \'<tr><td colspan=\"7\">No tickers in watchlist. Add one above!</td></tr>\';\n        } else {\n          watchlist.forEach((item) => {\n            const row = `\n              <tr>\n                <td>${item.ticker}</td>\n                <td>${item.currentPrice || \'N/A\'}</td>\n                <td>${item.priceChangeStart || \'N/A\'}</td>\n                <td>${item.percentChangeStart || \'N/A\'}</td>\n                <td>${item.priceChangeDay || \'N/A\'}</td>\n                <td>${item.percentChangeDay || \'N/A\'}</td>\n                <td><button class=\"remove-ticker-button\" data-ticker=\"${item.ticker}\">Remove</button></td>\n              </tr>\n            `;\n            watchlistTableBody.insertAdjacentHTML(\'beforeend\', row);\n          });\n        }\n      } else {\n        errorMessageElement.textContent = \'Failed to load watchlist.\';\n      }\n    } catch (error) {\n      console.error(\'Error fetching watchlist:\', error);\n      errorMessageElement.textContent = \'Error fetching watchlist.\';\n    }\n  }\n\n  // Function to add a ticker to the watchlist\n  async function addTicker() {\n    const ticker = addTickerInput.value.trim().toUpperCase();\n    if (!ticker) {\n      errorMessageElement.textContent = \'Please enter a ticker symbol.\';\n      return;\n    }\n\n    try {\n      const response = await authenticatedFetch(\'/api/watchlist\', {\n        method: \'POST\',\n        body: JSON.stringify({ ticker }),\n      });\n\n      if (response.ok) {\n        addTickerInput.value = \'\';\n        errorMessageElement.textContent = \'\';\n        fetchAndRenderWatchlist(); // Refresh the list\n      } else {\n        const errorData = await response.json();\n        errorMessageElement.textContent = errorData.message || \'Failed to add ticker.\';\n      }\n    } catch (error) {\n      console.error(\'Error adding ticker:\', error);\n      errorMessageElement.textContent = \'Error adding ticker.\';\n    }\n  }\n\n  // Function to remove a ticker from the watchlist\n  async function removeTicker(ticker) {\n    try {\n      const response = await authenticatedFetch(\`/api/watchlist/${ticker}\`, {\n        method: \'DELETE\',\n      });\n\n      if (response.ok) {\n        errorMessageElement.textContent = \'\';\n        fetchAndRenderWatchlist(); // Refresh the list\n      } else {\n        const errorData = await response.json();\n        errorMessageElement.textContent = errorData.message || \'Failed to remove ticker.\';\n      }\n    } catch (error) {\n      console.error(\'Error removing ticker:\', error);\n      errorMessageElement.textContent = \'Error removing ticker.\';\n    }\n  }\n\n  // Event listeners\n  addTickerButton.addEventListener(\'click\', addTicker);\n  addTickerInput.addEventListener(\'keypress\', (event) => {\n    if (event.key === \'Enter\') {\n      addTicker();\n    }\n  });\n\n  watchlistTableBody.addEventListener(\'click\', (event) => {\n    if (event.target.classList.contains(\'remove-ticker-button\')) {\n      const tickerToRemove = event.target.dataset.ticker;\n      if (confirm(`Are you sure you want to remove ${tickerToRemove} from your watchlist?`)) {\n        removeTicker(tickerToRemove);\n      }\n    }\n  });\n\n  // Initial load\n  fetchAndRenderWatchlist();\n\n  // Set AAPL as default if watchlist is empty on initial load\n  // This will be handled by the backend when fetching initial watchlist\n  // For now, we'll just ensure the input box has AAPL as a placeholder\n  addTickerInput.placeholder = \'Add Ticker (e.g., AAPL)\';\n}\n
+import { authenticatedFetch } from '../../app-main.js';
+
+export function initializeWatchlist() {
+  const addTickerInput = document.getElementById('add-ticker-input');
+  const addTickerButton = document.getElementById('add-ticker-button');
+  const watchlistTableBody = document.querySelector('#watchlist-table tbody');
+  const errorMessageElement = document.getElementById(
+    'watchlist-error-message'
+  );
+
+  // Function to fetch and render the watchlist
+  async function fetchAndRenderWatchlist() {
+    try {
+      const response = await authenticatedFetch('/api/watchlist');
+      if (response.ok) {
+        const watchlist = await response.json();
+        watchlistTableBody.innerHTML = ''; // Clear existing entries
+        if (watchlist.length === 0) {
+          watchlistTableBody.innerHTML =
+            '<tr><td colspan="7">No tickers in watchlist. Add one above!</td></tr>';
+        } else {
+          watchlist.forEach((item) => {
+            const row = `
+              <tr>
+                <td>${item.ticker}</td>
+                <td>${item.currentPrice || 'N/A'}</td>
+                <td>${item.priceChangeStart || 'N/A'}</td>
+                <td>${item.percentChangeStart || 'N/A'}</td>
+                <td>${item.percentChangeDay || 'N/A'}</td>
+                <td>${item.percentChangeDay || 'N/A'}</td>
+                <td><button class="remove-ticker-button" data-ticker="${item.ticker}">Remove</button></td>
+              </tr>
+            `;
+            watchlistTableBody.insertAdjacentHTML('beforeend', row);
+          });
+        }
+      } else {
+        errorMessageElement.textContent = 'Failed to load watchlist.';
+      }
+    } catch (error) {
+      console.error('Error fetching watchlist:', error);
+      errorMessageElement.textContent = 'Error fetching watchlist.';
+    }
+  }
+
+  // Function to add a ticker to the watchlist
+  async function addTicker() {
+    const ticker = addTickerInput.value.trim().toUpperCase();
+
+    if (!ticker) {
+      errorMessageElement.textContent = 'Ticker symbol is required.';
+      return;
+    }
+
+    try {
+      const response = await authenticatedFetch('/api/watchlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ticker }),
+      });
+
+      if (response.ok) {
+        addTickerInput.value = ''; // Clear input
+        errorMessageElement.textContent = ''; // Clear error
+        fetchAndRenderWatchlist(); // Refresh watchlist
+      } else {
+        const errorData = await response.json();
+        errorMessageElement.textContent =
+          errorData.message || 'Failed to add ticker.';
+      }
+    } catch (error) {
+      console.error('Error adding ticker:', error);
+      errorMessageElement.textContent = 'Error adding ticker.';
+    }
+  }
+
+  // Event Listeners
+  addTickerButton.addEventListener('click', addTicker);
+  addTickerInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+      addTicker();
+    }
+  });
+
+  watchlistTableBody.addEventListener('click', async (event) => {
+    if (event.target.classList.contains('remove-ticker-button')) {
+      const tickerToRemove = event.target.dataset.ticker;
+      try {
+        const response = await authenticatedFetch(
+          `/api/watchlist/${tickerToRemove}`,
+          {
+            method: 'DELETE',
+          }
+        );
+        if (response.ok) {
+          fetchAndRenderWatchlist(); // Refresh watchlist
+        } else {
+          errorMessageElement.textContent = 'Failed to remove ticker.';
+        }
+      } catch (error) {
+        console.error('Error removing ticker:', error);
+        errorMessageElement.textContent = 'Error removing ticker.';
+      }
+    }
+  });
+
+  // Initial load
+  fetchAndRenderWatchlist();
+}

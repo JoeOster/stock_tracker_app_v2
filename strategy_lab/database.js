@@ -146,4 +146,9 @@ async function removeWatchlistItem(userId, ticker) {
   );
 }
 
-module.exports = { initializeDatabase, getWatchlist, addWatchlistItem, removeWatchlistItem };
+module.exports = {
+  initializeDatabase,
+  getWatchlist,
+  addWatchlistItem,
+  removeWatchlistItem,
+};

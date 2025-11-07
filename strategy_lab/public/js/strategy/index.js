@@ -1,1 +1,5 @@
-import { initializeWatchlist } from './watchlist.js';\n\nexport function initializeStrategyLab() {\n  initializeWatchlist();\n}\n
+import { initializeWatchlist } from './watchlist.js';
+
+export function initializeStrategyLab() {
+  initializeWatchlist();
+}

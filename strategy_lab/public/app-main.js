@@ -261,7 +261,7 @@ async function initializeAppContent() {
         // Define sub-tab templates based on the main tab
         if (tabId === 'strategy') {
           subTabTemplateMap = {
-            'watchlist': 'templates/_watchlist.html',
+            watchlist: 'templates/_watchlist.html',
             'paper-trades': 'templates/_papertrades.html',
           };
         }
