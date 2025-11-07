@@ -28,15 +28,12 @@ export function initializeSubTabs(container, templateMap = {}) {
   }
 
   function showTab(tabId) {
-    container.querySelectorAll('.sub-tab-content').forEach((contentDiv) => {
-      contentDiv.style.display = 'none';
+    container.querySelectorAll('.sub-tab-panel').forEach((panel) => {
+      panel.style.display = 'none';
     });
-    const targetContentDiv = container.querySelector(
-      `#${tabId}-sub-tab-content`
-    );
-    if (targetContentDiv) {
-      targetContentDiv.style.display = 'block';
-      loadSubTabContent(tabId, `${tabId}-sub-tab-content`);
+    const targetPanel = container.querySelector(`#${tabId}`);
+    if (targetPanel) {
+      targetPanel.style.display = 'block';
     }
   }
 

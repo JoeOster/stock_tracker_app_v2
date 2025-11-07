@@ -12,11 +12,13 @@ async function loadAccountHolders() {
   const holders = await response.json();
   const holderList = document.getElementById('account-holder-list');
   holderList.innerHTML = '';
-  holders.forEach((holder) => {
-    const li = document.createElement('li');
-    li.textContent = holder.name;
-    holderList.appendChild(li);
-  });
+  if (Array.isArray(holders)) {
+    holders.forEach((holder) => {
+      const li = document.createElement('li');
+      li.textContent = holder.name;
+      holderList.appendChild(li);
+    });
+  }
 }
 
 async function addAccountHolder() {

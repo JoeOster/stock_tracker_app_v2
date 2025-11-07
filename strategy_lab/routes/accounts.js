@@ -4,10 +4,13 @@ const router = express.Router();
 module.exports = (db, log) => {
   router.get('/', async (req, res) => {
     try {
-      const holders = await db.all(
-        'SELECT * FROM accounts WHERE user_id = ? ORDER BY name',
-        req.user.id
-      );
+      let holders = [];
+      if (req.user && req.user.id) {
+        holders = await db.all(
+          'SELECT * FROM accounts WHERE user_id = ? ORDER BY name',
+          req.user.id
+        );
+      }
       res.json(holders);
     } catch (error) {
       log(`[ERROR] Failed to fetch accounts: ${error.message}`);

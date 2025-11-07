@@ -161,55 +161,6 @@
   object-fit: contain;
 }
 
-/* Styles for the Add Ticker form within its section */
-.add-ticker-section .add-watchlist-item-form {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-}
-.add-ticker-section .add-watchlist-item-form > div {
-  /* Target the direct child div containing the grid */
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px 15px;
-  align-items: end;
-}
-.add-ticker-section .add-watchlist-item-form .form-group {
-  margin-bottom: 0;
-}
-
-/* Make Ticker span full width */
-.add-ticker-section
-  .add-watchlist-item-form
-  .form-group:has(.add-watchlist-ticker-input) {
-  grid-column: span 2;
-}
-/* Make Stop Loss span full width */
-.add-ticker-section
-  .add-watchlist-item-form
-  .form-group:has(.add-watchlist-rec-stop-loss-input) {
-  grid-column: span 2;
-}
-.add-ticker-section .add-watchlist-item-form .form-group-with-checkbox {
-  grid-column: 1 / 3;
-  margin-top: 5px;
-}
-.add-ticker-section
-  .add-watchlist-item-form
-  div:has(> .add-watchlist-ticker-button) {
-  grid-column: 2 / 3;
-  text-align: right;
-}
-.add-ticker-section .add-watchlist-item-form input,
-.add-ticker-section .add-watchlist-item-form select {
-  padding: 6px 8px;
-  font-size: 0.9em;
-}
-.add-ticker-section .add-watchlist-item-form button {
-  padding: 6px 12px;
-  font-size: 0.9em;
-}
-
 /* --- Styles for content WITHIN source-details-modal-content (Below the top grid) --- */
 #source-details-modal-content h4,
 #source-details-modal-content h5 {

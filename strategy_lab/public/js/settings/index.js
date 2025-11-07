@@ -1,5 +1,6 @@
 import { initializeAppearanceSettings } from './appearance.js';
 import { initializeUserManagement } from './user-management.js';
+import { authenticatedFetch } from '../../app-main.js';
 
 export function initializeSettings() {
   initializeAppearanceSettings();
@@ -17,7 +18,7 @@ export function initializeSettings() {
           font: fontSelector.value,
         };
 
-        const response = await fetch('/api/settings', {
+        const response = await authenticatedFetch('/api/settings', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

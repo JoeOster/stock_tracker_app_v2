@@ -19,12 +19,14 @@ export async function initializeAppearanceSettings() {
     try {
       const response = await fetch('/api/themes');
       const themes = await response.json();
-      themes.forEach((theme) => {
-        const option = document.createElement('option');
-        option.value = theme.data_theme;
-        option.textContent = theme.name;
-        themeSelector.appendChild(option);
-      });
+      if (Array.isArray(themes)) {
+        themes.forEach((theme) => {
+          const option = document.createElement('option');
+          option.value = theme.data_theme;
+          option.textContent = theme.name;
+          themeSelector.appendChild(option);
+        });
+      }
 
       if (settings.theme) {
         themeSelector.value = settings.theme;
@@ -42,12 +44,14 @@ export async function initializeAppearanceSettings() {
     try {
       const response = await fetch('/api/fonts');
       availableFonts = await response.json(); // Store fonts with sizes
-      availableFonts.forEach((font) => {
-        const option = document.createElement('option');
-        option.value = font.font_family;
-        option.textContent = font.name;
-        fontSelector.appendChild(option);
-      });
+      if (Array.isArray(availableFonts)) {
+        availableFonts.forEach((font) => {
+          const option = document.createElement('option');
+          option.value = font.font_family;
+          option.textContent = font.name;
+          fontSelector.appendChild(option);
+        });
+      }
 
       if (settings.font) {
         fontSelector.value = settings.font;

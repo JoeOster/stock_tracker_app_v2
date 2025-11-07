@@ -19,8 +19,5 @@
 @import url('./components/_dashboard.css');
 @import url('./components/_research.css');
 @import url('./components/_modal_manage_position.css');
-/* --- ADDED: New watchlist styles --- */
-@import url('./components/_watchlist.css');
-
 /* --- UTILITIES --- */
 @import url('./base/_utilities.css');

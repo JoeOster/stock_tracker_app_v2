@@ -1,21 +1,10 @@
 import { initializeSettings } from './js/settings/index.js';
-import { initializeStrategyLab } from './js/strategy/index.js';
+
 import { initializeSubTabs } from './js/utils.js';
 
 const tabs = [
-  { name: 'Dashboard', template: 'templates/_dashboard.html', id: 'dashboard' },
-  {
-    name: 'Strategy Lab',
-    template: 'templates/_strategylab.html',
-    id: 'strategy',
-  },
   // strategylab is the old watchlist tab
   // the daily history tab is dropped for this app for now
-  { name: 'Ledger', template: 'templates/_ledger.html', id: 'ledger' },
-  { name: 'Orders', template: 'templates/_orders.html', id: 'orders' },
-  { name: 'Sources', template: 'templates/_research.html', id: 'sourced' },
-  { name: 'Alerts', template: 'templates/_alerts.html', id: 'alerts' },
-  { name: 'Imports', template: 'templates/_imports.html', id: 'imports' },
   {
     name: 'Settings',
     template: 'templates/_modal_settings.html',
@@ -41,7 +30,7 @@ let isAuthenticated = false; // eslint-disable-line no-unused-vars
 let currentUserId = null; // To store the ID of the currently selected user
 
 // Function to make authenticated API requests
-async function authenticatedFetch(url, options = {}) {
+export async function authenticatedFetch(url, options = {}) {
   const token = localStorage.getItem('accessToken');
   const headers = {
     ...options.headers,
@@ -52,6 +41,12 @@ async function authenticatedFetch(url, options = {}) {
   } else if (!window.authEnabled && currentUserId) {
     // If authentication is disabled, send the currentUserId for development purposes
     headers['X-User-Id'] = currentUserId;
+    console.log(
+      'authenticatedFetch: Sending X-User-Id:',
+      currentUserId,
+      'authEnabled:',
+      window.authEnabled
+    );
   }
 
   const response = await fetch(url, { ...options, headers });
@@ -71,6 +66,12 @@ async function checkAuth() {
   const configResponse = await fetch('/api/config');
   const config = await configResponse.json();
   window.authEnabled = config.enableAuth;
+  console.log(
+    'checkAuth: window.authEnabled =',
+    window.authEnabled,
+    'currentUserId =',
+    currentUserId
+  );
 
   if (!window.authEnabled) {
     // If auth is disabled, show user switcher and initialize app
@@ -94,9 +95,16 @@ async function checkAuth() {
 
 async function populateUserSwitcher() {
   try {
-    const response = await authenticatedFetch('/api/dev/users');
+    let response;
+    if (!window.authEnabled) {
+      // If auth is disabled, fetch dev users without X-User-Id header initially
+      response = await fetch('/api/dev/users');
+    } else {
+      response = await authenticatedFetch('/api/dev/users');
+    }
     if (response.ok) {
       const users = await response.json();
+      console.log('populateUserSwitcher: fetched users:', users);
       userSwitcher.innerHTML = ''; // Clear existing options
       users.forEach((user) => {
         const option = document.createElement('option');
@@ -109,10 +117,18 @@ async function populateUserSwitcher() {
       if (storedUserId && users.some((user) => user.id == storedUserId)) {
         currentUserId = storedUserId;
         userSwitcher.value = storedUserId;
+        console.log(
+          'populateUserSwitcher: currentUserId set from localStorage:',
+          currentUserId
+        );
       } else if (users.length > 0) {
         currentUserId = users[0].id;
         userSwitcher.value = users[0].id;
         localStorage.setItem('currentDevUserId', users[0].id);
+        console.log(
+          'populateUserSwitcher: currentUserId set from first user:',
+          currentUserId
+        );
       }
     } else {
       console.error('Failed to fetch dev users:', await response.text());
@@ -255,16 +271,9 @@ async function initializeAppContent() {
     .querySelectorAll('#main-content > .page-container')
     .forEach((container) => {
       if (container.querySelector('.sub-tabs')) {
-        const tabId = container.id.replace('-page-container', '');
         let subTabTemplateMap = {};
 
         // Define sub-tab templates based on the main tab
-        if (tabId === 'strategy') {
-          subTabTemplateMap = {
-            watchlist: 'templates/_watchlist.html',
-            'paper-trades': 'templates/_papertrades.html',
-          };
-        }
         // Add other sub-tab template maps here as needed
 
         initializeSubTabs(container, subTabTemplateMap);
@@ -272,7 +281,6 @@ async function initializeAppContent() {
     });
 
   initializeSettings();
-  initializeStrategyLab();
 }
 
 async function initializeApp() {
