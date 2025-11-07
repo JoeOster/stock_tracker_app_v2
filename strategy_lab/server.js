@@ -3,7 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { initializeDatabase } = require('./database.js');
-const authenticateToken = require('./services/authMiddleware');
+const { authenticateToken } = require('./services/authService');
+const { setupCronJobs } = require('./services/cronJobs');
 const { setupCronJobs } = require('./services/cronJobs');
 
 const app = express();
@@ -15,6 +16,7 @@ async function main() {
   try {
     db = await initializeDatabase();
     console.log('Database initialized successfully.');
+    setupCronJobs(db, console.log);
     setupCronJobs(db, console.log);
 
     app.use(express.json()); // Middleware to parse JSON bodies

@@ -31,10 +31,10 @@ async function backupDatabase(db, log) {
   let backupDir;
   if (process.env.NODE_ENV === 'production') {
     // Linux/Pi path (Ensure this path exists or script creates it)
-    backupDir = path.join(__dirname, '..', '..', 'backups', 'prod'); // Relative to strategy_lab
+    backupDir = '/home/pi/portfolio_manager_bu/v3/prod'; // Example path, adjust if needed
   } else {
     // Windows development path
-    backupDir = path.join(__dirname, '..', '..', 'backups', 'dev'); // Relative to strategy_lab
+    backupDir = 'C:/portfolio_manager_bu/v3/dev'; // Ensure this matches your dev backup script
   }
 
   try {
@@ -263,9 +263,8 @@ function setupCronJobs(db, log) {
   if (process.env.NODE_ENV !== 'test') {
     // --- EOD Price Capture for Sold Stocks ---
     cron.schedule(
-      '2 16 * * 1-5',
+      '2 16 * * 1-5', // M-F at 4:02 PM ET
       () => {
-        // M-F at 4:02 PM ET
         log('[Cron EOD] Triggered EOD price capture.');
         const today = new Date().toLocaleDateString('en-CA', {
           timeZone: 'America/New_York',
@@ -277,9 +276,8 @@ function setupCronJobs(db, log) {
 
     // --- Order and Journal Watcher ---
     cron.schedule(
-      '*/5 9-19 * * 1-5',
+      '*/5 9-19 * * 1-5', // M-F, every 5 mins, 9am-7:55pm ET
       () => {
-        // M-F, every 5 mins, 9am-7:55pm ET
         log('[Cron Watcher] Triggered watcher.');
         runWatcher(db, log); // Pass db and log
       },
@@ -290,15 +288,12 @@ function setupCronJobs(db, log) {
 
     // --- Nightly Database Backup ---
     cron.schedule(
-      '0 2 * * *',
+      '0 2 * * *', // Daily at 2:00 AM ET
       () => {
-        // Daily at 2:00 AM ET
         log('[Cron Backup] Triggered nightly backup.');
         backupDatabase(db, log); // Pass db and log
       },
-      {
-        timezone: 'America/New_York',
-      }
+      { timezone: 'America/New_York' }
     );
 
     log(
