@@ -34,6 +34,13 @@
 /* ADDED: Ensure the content container can manage positioned children */
 .sub-tab-content {
   position: relative;
+  border: none; /* Remove any explicit borders */
+  outline: none; /* Remove any outlines */
+}
+
+.sub-tab-content > * {
+  border: none; /* Ensure children also don't have borders */
+  outline: none; /* Ensure children also don't have outlines */
 }
 
 /* MODIFIED: Hide panels using visibility and position instead of display */

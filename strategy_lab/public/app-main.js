@@ -1,4 +1,5 @@
 import { initializeSettings } from './js/settings/index.js';
+import { initializeStrategyLab } from './js/strategy/index.js';
 import { initializeSubTabs } from './js/utils.js';
 
 const tabs = [
@@ -254,11 +255,24 @@ async function initializeAppContent() {
     .querySelectorAll('#main-content > .page-container')
     .forEach((container) => {
       if (container.querySelector('.sub-tabs')) {
-        initializeSubTabs(container);
+        const tabId = container.id.replace('-page-container', '');
+        let subTabTemplateMap = {};
+
+        // Define sub-tab templates based on the main tab
+        if (tabId === 'strategy') {
+          subTabTemplateMap = {
+            'watchlist': 'templates/_watchlist.html',
+            'paper-trades': 'templates/_papertrades.html',
+          };
+        }
+        // Add other sub-tab template maps here as needed
+
+        initializeSubTabs(container, subTabTemplateMap);
       }
     });
 
   initializeSettings();
+  initializeStrategyLab();
 }
 
 async function initializeApp() {

@@ -106,4 +106,44 @@ async function initializeDatabase() {
   return db;
 }
 
-module.exports = { initializeDatabase };
+/**
+ * Retrieves all watchlist items for a given user.
+ * @param {number} userId - The ID of the user.
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of watchlist items.
+ */
+async function getWatchlist(userId) {
+  const db = await initializeDatabase();
+  return db.all('SELECT * FROM watchlist WHERE user_id = ?', userId);
+}
+
+/**
+ * Adds a new ticker to the user's watchlist.
+ * @param {number} userId - The ID of the user.
+ * @param {string} ticker - The ticker symbol to add.
+ * @returns {Promise<void>} A promise that resolves when the item is added.
+ */
+async function addWatchlistItem(userId, ticker) {
+  const db = await initializeDatabase();
+  await db.run(
+    'INSERT INTO watchlist (user_id, ticker) VALUES (?, ?)',
+    userId,
+    ticker
+  );
+}
+
+/**
+ * Removes a ticker from the user's watchlist.
+ * @param {number} userId - The ID of the user.
+ * @param {string} ticker - The ticker symbol to remove.
+ * @returns {Promise<void>} A promise that resolves when the item is removed.
+ */
+async function removeWatchlistItem(userId, ticker) {
+  const db = await initializeDatabase();
+  await db.run(
+    'DELETE FROM watchlist WHERE user_id = ? AND ticker = ?',
+    userId,
+    ticker
+  );
+}
+
+module.exports = { initializeDatabase, getWatchlist, addWatchlistItem, removeWatchlistItem };

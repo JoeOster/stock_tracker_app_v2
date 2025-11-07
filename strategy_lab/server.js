@@ -51,6 +51,9 @@ async function main() {
     const accountsRouter = require('./routes/accounts.js')(db, console.log);
     app.use('/api/accounts', accountsRouter);
 
+    const watchlistRouter = require('./routes/watchlist.js');
+    app.use('/api', watchlistRouter);
+
     // API endpoints
     app.get('/api/themes', async (req, res) => {
       try {

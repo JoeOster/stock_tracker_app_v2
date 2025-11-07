@@ -1,27 +1,57 @@
-export function initializeSubTabs(container) {
+export function initializeSubTabs(container, templateMap = {}) {
   console.log('Initializing sub-tabs for container:', container);
   const subTabsContainer = container.querySelector('.sub-tabs');
-  const subTabContent = container.querySelector('.sub-tab-content');
 
-  function showTab(tabId) {
-    if (!subTabContent) return;
-    subTabContent.querySelectorAll('.sub-tab-panel').forEach((panel) => {
-      if (panel.id === tabId) {
-        panel.classList.add('active');
-      } else {
-        panel.classList.remove('active');
+  async function loadSubTabContent(tabId, targetElementId) {
+    const templatePath = templateMap[tabId];
+    if (!templatePath) {
+      console.warn(`No template found for sub-tab ID: ${tabId}`);
+      return;
+    }
+    try {
+      const response = await fetch(templatePath);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    });
+      const content = await response.text();
+      const targetElement = container.querySelector(`#${targetElementId}`);
+      if (targetElement) {
+        targetElement.innerHTML = content;
+      } else {
+        console.error(`Target element #${targetElementId} not found for sub-tab ${tabId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to load sub-tab content for ${tabId}:`, error);
+    }
   }
 
-  if (subTabsContainer && subTabContent) {
+  function showTab(tabId) {
+    container.querySelectorAll('.sub-tab-content').forEach((contentDiv) => {
+      contentDiv.style.display = 'none';
+    });
+    const targetContentDiv = container.querySelector(`#${tabId}-sub-tab-content`);
+    if (targetContentDiv) {
+      targetContentDiv.style.display = 'block';
+      loadSubTabContent(tabId, `${tabId}-sub-tab-content`);
+    }
+  }
+
+  if (subTabsContainer) {
     // Set the initial state when the component is initialized
     const activeTab = subTabsContainer.querySelector('.sub-tab.active');
-    if (activeTab) {
-      const tabId = activeTab.dataset.tab || activeTab.dataset.subTab;
-      if (tabId) {
-        showTab(tabId);
+    let initialTabId = activeTab ? (activeTab.dataset.tab || activeTab.dataset.subTab) : null;
+
+    if (!initialTabId) {
+      // If no active tab is explicitly set, activate the first one
+      const firstTab = subTabsContainer.querySelector('.sub-tab');
+      if (firstTab) {
+        firstTab.classList.add('active');
+        initialTabId = firstTab.dataset.tab || firstTab.dataset.subTab;
       }
+    }
+
+    if (initialTabId) {
+      showTab(initialTabId);
     }
 
     // Handle tab clicks
@@ -41,18 +71,6 @@ export function initializeSubTabs(container) {
           tab.classList.add('active');
           // Show the corresponding panel
           showTab(tabId);
-
-          // After showing the panel, initialize any sub-tabs within it
-          const newPanel = subTabContent.querySelector(`#${tabId}`);
-          if (newPanel) {
-            const nestedSubTabs = newPanel.querySelectorAll('.sub-tabs');
-            nestedSubTabs.forEach((nestedContainer) => {
-              // Pass the parent of the .sub-tabs container to the initializer
-              if (nestedContainer.parentElement) {
-                initializeSubTabs(nestedContainer.parentElement);
-              }
-            });
-          }
         }
       }
     });
