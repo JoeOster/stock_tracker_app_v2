@@ -1,7 +1,9 @@
 import { initializeAppearanceSettings } from './appearance.js';
+import { initializeUserManagement } from './user-management.js';
 
 export function initializeSettings() {
   initializeAppearanceSettings();
+  initializeUserManagement();
 
   const saveButton = document.getElementById('save-settings-button');
   if (saveButton) {
@@ -30,7 +32,6 @@ export function initializeSettings() {
         // We can show a success message to the user.
         // For now, we just log it to the console.
         console.log('Settings saved successfully.');
-
       } catch (error) {
         console.error('Failed to save settings:', error);
       }

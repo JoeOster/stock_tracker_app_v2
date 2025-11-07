@@ -31,12 +31,27 @@
   font-weight: 600; /* Add weight to active/hover */
 }
 
-/* Sub-tab content panel (hidden by default) */
-.sub-tab-panel {
-  display: none;
+/* ADDED: Ensure the content container can manage positioned children */
+.sub-tab-content {
+  position: relative;
 }
 
-/* Active sub-tab content panel (visible) */
+/* MODIFIED: Hide panels using visibility and position instead of display */
+.sub-tab-panel {
+  /* display: none; */ /* Old method */
+  visibility: hidden;
+  position: absolute;
+  width: 100%;
+  left: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* MODIFIED: Show active panel */
 .sub-tab-panel.active {
-  display: block;
+  /* display: block; */ /* Old method */
+  visibility: visible;
+  position: static; /* Bring back into the layout flow */
+  width: auto;
+  opacity: 1;
 }

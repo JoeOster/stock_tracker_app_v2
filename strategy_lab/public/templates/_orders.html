@@ -125,7 +125,12 @@
       required
     ></select>
     <input type="date" id="pending-order-created-date" required />
-    <input type="text" id="pending-order-ticker" placeholder="Ticker" required />
+    <input
+      type="text"
+      id="pending-order-ticker"
+      placeholder="Ticker"
+      required
+    />
     <select id="pending-order-exchange" required></select>
     <select id="pending-order-type" required>
       <option value="BUY_LIMIT">Buy Limit</option>
@@ -147,14 +152,18 @@
       min="0.00001"
       required
     />
-    <label for="pending-order-expiration-date">Expiration Date (Optional):</label>
+    <label for="pending-order-expiration-date"
+      >Expiration Date (Optional):</label
+    >
     <input type="date" id="pending-order-expiration-date" />
     <textarea
       id="pending-order-notes"
       placeholder="Notes (Optional)"
       rows="3"
     ></textarea>
-    <label for="pending-order-advice-source">Link to Advice Source (Optional)</label>
+    <label for="pending-order-advice-source"
+      >Link to Advice Source (Optional)</label
+    >
     <select id="pending-order-advice-source" class="advice-source-select">
       <option value="">(None/Manual Entry)</option>
     </select>

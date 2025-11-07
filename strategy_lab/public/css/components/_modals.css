@@ -89,6 +89,59 @@
 
 /* --- Specific Modal Z-indices --- */
 
+/* Login Modal - Highest Z-index to ensure it's always on top */
+#login-modal {
+  z-index: 10000; /* Higher than any other modal */
+}
+
+#login-modal .modal-content {
+  max-width: 400px; /* Smaller content area for login */
+  text-align: center;
+}
+
+#login-modal input {
+  width: calc(100% - 20px); /* Full width minus padding */
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+
+#login-modal button {
+  width: calc(50% - 10px); /* Half width for two buttons */
+  padding: 10px;
+  margin: 5px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+#login-modal #login-button {
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+#login-modal #login-button:hover {
+  background-color: var(--button-primary-hover-bg);
+}
+
+#login-modal #register-button {
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}
+
+#login-modal #register-button:hover {
+  background-color: var(--button-secondary-hover-bg);
+}
+
+#login-modal #auth-message {
+  margin-top: 15px;
+  font-weight: bold;
+}
+
 /* Settings, Advice, Chart Zoom, Sales History (Old), Source Details, Selective Sell */
 /* These open directly from the main app, use the base content z-index */
 #settings-modal .modal-content,

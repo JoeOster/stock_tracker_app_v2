@@ -8,16 +8,37 @@
     <link rel="stylesheet" href="css/settings.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&family=Inter:wght@400;500;600&family=Lato&family=Open+Sans&family=Roboto&family=Intel+One+Mono&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dancing+Script&family=Inter:wght@400;500;600&family=Lato&family=Open+Sans&family=Roboto&family=Intel+One+Mono&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <header class="header">
+      <div class="header-left">
+        <div id="user-switcher-container" style="display: none">
+          <label for="user-switcher">Switch User:</label>
+          <select id="user-switcher"></select>
+        </div>
+      </div>
       <div class="header-center">
         <h1>Strategy Lab</h1>
       </div>
+      <div class="header-right"></div>
     </header>
     <div id="tabs-container" class="tabs"></div>
     <main id="main-content"></main>
+    <div id="login-modal" class="modal">
+      <div class="modal-content">
+        <h2>Login / Register</h2>
+        <input type="text" id="auth-username" placeholder="Username" />
+        <input type="password" id="auth-password" placeholder="Password" />
+        <button id="login-button">Login</button>
+        <button id="register-button">Register</button>
+        <p id="auth-message" style="color: red"></p>
+      </div>
+    </div>
+
     <script type="module" src="app-main.js"></script>
   </body>
 </html>

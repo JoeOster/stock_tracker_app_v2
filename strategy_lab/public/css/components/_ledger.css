@@ -10,50 +10,50 @@
 
 /* --- Compact P&L Summary Bar --- */
 .pnl-summary-bar {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 15px 20px;
-    background-color: var(--component-bg-color);
-    border-bottom: 1px solid var(--border-color);
-    font-size: 14px;
-    flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 15px 20px;
+  background-color: var(--component-bg-color);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+  flex-wrap: wrap; /* Allow items to wrap on smaller screens */
 }
 
 .pnl-summary-bar label {
-    font-weight: 600;
-    color: var(--text-color-light);
+  font-weight: 600;
+  color: var(--text-color-light);
 }
 
 .pnl-summary-bar select,
-.pnl-summary-bar input[type="date"] {
-    padding: 8px 12px;
-    border: 1px solid var(--input-border-color);
-    border-radius: 4px;
-    font-size: 14px;
-    background-color: var(--input-bg-color);
-    color: var(--text-color);
+.pnl-summary-bar input[type='date'] {
+  padding: 8px 12px;
+  border: 1px solid var(--input-border-color);
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: var(--input-bg-color);
+  color: var(--text-color);
 }
 
 .date-filter {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* The main P&L value display, pushed to the right */
 .pnl-value-container {
-    margin-left: auto;
-    font-size: 18px;
-    font-weight: bold;
-    text-align: right;
+  margin-left: auto;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: right;
 }
 
 /* Dynamic coloring for profit/loss */
 .pnl-value.profit {
-    color: var(--profit-color); /* Green */
+  color: var(--profit-color); /* Green */
 }
 
 .pnl-value.loss {
-    color: var(--loss-color); /* Red */
+  color: var(--loss-color); /* Red */
 }

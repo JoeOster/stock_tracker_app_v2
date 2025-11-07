@@ -3,7 +3,9 @@
     <button class="sub-tab active" data-tab="appearance-settings-panel">
       Appearance
     </button>
-    <button class="sub-tab" data-tab="data-settings-panel">Data Management</button>
+    <button class="sub-tab" data-tab="data-settings-panel">
+      Data Management
+    </button>
     <button class="sub-tab" data-tab="general-settings-panel">General</button>
     <button class="sub-tab" data-tab="user-management-settings-panel">
       User Management
@@ -29,17 +31,15 @@
           <label for="notification-cooldown" style="margin-top: 1rem"
             >Notification Cooldown (Min)</label
           >
-          <input
-            type="number"
-            id="notification-cooldown"
-            step="1"
-            min="1"
-          />
+          <input type="number" id="notification-cooldown" step="1" min="1" />
         </div>
       </form>
     </div>
 
-    <div id="appearance-settings-panel" class="sub-tab-panel settings-panel active">
+    <div
+      id="appearance-settings-panel"
+      class="sub-tab-panel settings-panel active"
+    >
       <h3>Appearance</h3>
       <form id="appearance-settings-form" class="settings-grid">
         <div class="form-group">
@@ -101,16 +101,12 @@
               />
             </div>
             <div class="form-group form-group-span-2">
-              <label for="new-source-description"
-                >Description (Optional)</label
-              >
+              <label for="new-source-description">Description (Optional)</label>
               <textarea id="new-source-description" rows="2"></textarea>
             </div>
 
             <div class="form-group form-group-span-2">
-              <label for="new-source-image-path"
-                >Image Path (Optional)</label
-              >
+              <label for="new-source-image-path">Image Path (Optional)</label>
               <input
                 type="text"
                 id="new-source-image-path"
@@ -199,9 +195,7 @@
             </div>
             <div id="new-source-panel-book" class="dynamic-source-panel">
               <div class="form-group">
-                <label for="new-source-book-author"
-                  >Author (Optional)</label
-                >
+                <label for="new-source-book-author">Author (Optional)</label>
                 <input type="text" id="new-source-book-author" />
               </div>
               <div class="form-group">
@@ -268,9 +262,7 @@
               placeholder="New Exchange Name"
               required
             />
-            <button type="button" id="add-exchange-btn">
-              Add Exchange
-            </button>
+            <button type="button" id="add-exchange-btn">Add Exchange</button>
           </form>
           <ul
             id="exchange-list"
@@ -281,11 +273,12 @@
       </div>
     </div>
 
-    <div id="user-management-settings-panel" class="sub-tab-panel settings-panel">
+    <div
+      id="user-management-settings-panel"
+      class="sub-tab-panel settings-panel"
+    >
       <div class="sub-tabs">
-        <button class="sub-tab active" data-sub-tab="users-panel">
-          Users
-        </button>
+        <button class="sub-tab active" data-sub-tab="users-panel">Users</button>
         <button
           class="sub-tab"
           data-sub-tab="subscriptions-panel"
@@ -329,10 +322,7 @@
           <h2 id="subscriptions-panel-title">
             Manage Subscribed Sources for --
           </h2>
-          <p
-            class="subtitle"
-            style="text-align: left; margin: -10px 0 15px 0"
-          >
+          <p class="subtitle" style="text-align: left; margin: -10px 0 15px 0">
             Select the global sources you want to see for this user.
           </p>
           <div
@@ -347,8 +337,8 @@
             "
           >
             <p>
-              Select a user from the 'Users' tab and click 'Subscriptions'
-              to manage them here.
+              Select a user from the 'Users' tab and click 'Subscriptions' to
+              manage them here.
             </p>
           </div>
         </div>

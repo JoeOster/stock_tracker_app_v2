@@ -19,7 +19,7 @@ export async function initializeAppearanceSettings() {
     try {
       const response = await fetch('/api/themes');
       const themes = await response.json();
-      themes.forEach(theme => {
+      themes.forEach((theme) => {
         const option = document.createElement('option');
         option.value = theme.data_theme;
         option.textContent = theme.name;
@@ -42,7 +42,7 @@ export async function initializeAppearanceSettings() {
     try {
       const response = await fetch('/api/fonts');
       availableFonts = await response.json(); // Store fonts with sizes
-      availableFonts.forEach(font => {
+      availableFonts.forEach((font) => {
         const option = document.createElement('option');
         option.value = font.font_family;
         option.textContent = font.name;
@@ -52,18 +52,34 @@ export async function initializeAppearanceSettings() {
       if (settings.font) {
         fontSelector.value = settings.font;
         // Apply font size from settings
-        const selectedFont = availableFonts.find(f => f.font_family === settings.font);
+        const selectedFont = availableFonts.find(
+          (f) => f.font_family === settings.font
+        );
         if (selectedFont) {
-          document.documentElement.style.setProperty('--font-family-base', selectedFont.font_family);
-          document.documentElement.style.setProperty('--font-size-base', `${selectedFont.font_size}em`);
+          document.documentElement.style.setProperty(
+            '--font-family-base',
+            selectedFont.font_family
+          );
+          document.documentElement.style.setProperty(
+            '--font-size-base',
+            `${selectedFont.font_size}em`
+          );
         }
       }
 
       fontSelector.addEventListener('change', (event) => {
-        const selectedFont = availableFonts.find(f => f.font_family === event.target.value);
+        const selectedFont = availableFonts.find(
+          (f) => f.font_family === event.target.value
+        );
         if (selectedFont) {
-          document.documentElement.style.setProperty('--font-family-base', selectedFont.font_family);
-          document.documentElement.style.setProperty('--font-size-base', `${selectedFont.font_size}em`);
+          document.documentElement.style.setProperty(
+            '--font-family-base',
+            selectedFont.font_family
+          );
+          document.documentElement.style.setProperty(
+            '--font-size-base',
+            `${selectedFont.font_size}em`
+          );
         }
       });
     } catch (error) {
