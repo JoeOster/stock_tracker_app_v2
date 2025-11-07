@@ -261,18 +261,18 @@ _(**Dependency:** Depends on `Ledger` to have data.)_
 ### **J. API Data Feeding & Cron Jobs**
 
 _(**Dependency:** Core data input for the application. Requires external API keys.)_
-[ ] **Dependencies:** Install `node-fetch` and `bottleneck`.
-[ ] **Environment Variables:** Ensure `FINNHUB_API_KEY`, `FINNHUB_API_KEY_2`, and `API_CALLS_PER_MINUTE` are configured in `.env.template` and `.env`.
-[ ] **`priceService.js`:** Create `strategy_lab/services/priceService.js` by adapting `Portfolio V4/services/priceService.js`. This will include:
+[x] **Dependencies:** Install `node-fetch` and `bottleneck`.
+[x] **Environment Variables:** Ensure `FINNHUB_API_KEY`, `FINNHUB_API_KEY_2`, and `API_CALLS_PER_MINUTE` are configured in `.env.template` and `.env`.
+[x] **`priceService.js`:** Create `strategy_lab/services/priceService.js` by adapting `Portfolio V4/services/priceService.js`. This will include:
     -   API key rotation and load balancing.
     -   Rate limiting using `bottleneck`.
     -   In-memory caching for price data.
     -   `getPrices` function for fetching current prices.
-[ ] **`cronJobs.js`:** Create `strategy_lab/services/cronJobs.js` by adapting `Portfolio V4/services/cronJobs.js`. This will include:
+[x] **`cronJobs.js`:** Create `strategy_lab/services/cronJobs.js` by adapting `Portfolio V4/services/cronJobs.js`. This will include:
     -   Scheduling database backups.
     -   Scheduling EOD price capture (using `priceService`).
     -   Scheduling order and journal watcher (using `priceService`).
-[ ] **Integration:**
+[x] **Integration:**
     -   Modify `strategy_lab/server.js` to import and call `setupCronJobs` from `strategy_lab/services/cronJobs.js` during application initialization.
     -   Ensure `db` instance is passed to cron job functions.
 [ ] **Module Sign-off:**
@@ -283,6 +283,8 @@ _(**Dependency:** Core data input for the application. Requires external API key
     - [ ] **Unit Test Coverage:** Tests created and coverage meets >= 67%.
     - [ ] **UAC Verification:** Passed all relevant API/Cron scripts in `docs/Strategy-Lab_UAC.md`.
     - [ ] **Smoke Test:** Passed all **Refactor Smoke Test** checks.
+
+**Note on Authentication:** The authentication feature has been implemented and integrated into `strategy_lab/server.js`, including conditional enabling via `ENABLE_AUTH` environment variable and a development user switcher. This fulfills the 'True User Authentication' feature listed in Phase 4.
 
 ---
 

@@ -18,9 +18,7 @@ module.exports = (db, log) => {
   router.post('/', async (req, res) => {
     const { name } = req.body;
     if (!name || name.trim() === '') {
-      return res
-        .status(400)
-        .json({ message: 'Account name cannot be empty.' });
+      return res.status(400).json({ message: 'Account name cannot be empty.' });
     }
     try {
       const result = await db.run(
@@ -32,9 +30,7 @@ module.exports = (db, log) => {
     } catch (error) {
       log(`[ERROR] Failed to add account: ${error.message}`);
       if (error.code === 'SQLITE_CONSTRAINT') {
-        res
-          .status(409)
-          .json({ message: 'Account name already exists.' });
+        res.status(409).json({ message: 'Account name already exists.' });
       } else {
         res.status(500).json({ message: 'Error adding account holder.' });
       }
