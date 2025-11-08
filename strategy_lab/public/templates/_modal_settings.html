@@ -1,39 +1,42 @@
 <div id="settings-page">
   <div class="sub-tabs">
-    <button class="sub-tab active" data-tab="appearance-settings-panel">
+    <button class="sub-tab" data-tab="appearance-settings-panel">
       Appearance
     </button>
     <button class="sub-tab" data-tab="data-settings-panel">
       Data Management
     </button>
-    <button class="sub-tab" data-tab="general-settings-panel">General</button>
+    <button class="sub-tab active" data-tab="general-settings-panel">General</button>
     <button class="sub-tab" data-tab="user-management-settings-panel">
       User Management
     </button>
   </div>
   <div class="sub-tab-content">
-    <div id="general-settings-panel" class="sub-tab-panel settings-panel">
+    <div id="general-settings-panel" class="sub-tab-panel settings-panel active">
       <h3>General Settings</h3>
       <form id="general-settings-form" class="settings-grid">
         <div class="form-group">
           <label for="family-name">Family Name (App Title)</label>
-          <input type="text" id="family-name" />
-          <label for="take-profit-percent" style="margin-top: 1rem"
-            >Default Take Profit %</label
-          >
-          <input type="number" id="take-profit-percent" step="1" min="0" />
+          <input type="text" id="family-name" maxlength="40" />
+        </div>
+        <div class="form-group">
+          <label for="take-profit-percent">Default Take Profit %</label>
+          <div class="form-group-inline">
+            <input type="number" id="take-profit-percent" step="1" min="0" maxlength="4" />
+            <span>%</span>
+          </div>
           <label for="stop-loss-percent" style="margin-top: 1rem"
             >Default Stop Loss %</label
           >
-          <input type="number" id="stop-loss-percent" step="1" min="0" />
-        </div>
-        <div class="form-group">
+          <div class="form-group-inline">
+            <input type="number" id="stop-loss-percent" step="1" min="0" max="999" maxlength="4" />
+            <span>%</span>
+          </div>
           <label for="notification-cooldown" style="margin-top: 1rem"
             >Notification Cooldown (Min)</label
           >
-          <input type="number" id="notification-cooldown" step="1" min="1" />
+          <input type="number" id="notification-cooldown" step="1" min="1" max="99999" maxlength="5" />
         </div>
-      </form>
     </div>
 
     <div

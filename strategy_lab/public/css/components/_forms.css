@@ -105,6 +105,22 @@ button:disabled {
   gap: 10px;
 }
 
+.form-group-inline {
+  display: flex;
+  align-items: center;
+  gap: 5px; /* Adjust as needed for spacing between input and % */
+}
+
+.form-group-inline input {
+  flex-grow: 1; /* Allow input to take available space */
+}
+
+.form-group-inline span {
+  flex-shrink: 0; /* Prevent the % sign from shrinking */
+  color: var(--text-muted-color);
+  font-size: 0.9em;
+}
+
 .form-group-with-checkbox input[type='checkbox'] {
   width: auto;
   flex-shrink: 0;
@@ -252,4 +268,19 @@ button:disabled {
 .filter-bar button {
   flex-shrink: 0; /* Prevent button from shrinking */
   padding: 8px 12px; /* Match input padding height */
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two equal columns */
+  gap: 20px 30px; /* Row gap, Column gap */
+  margin-top: 1.5rem;
+}
+
+.settings-grid .form-group {
+  margin-bottom: 0; /* Remove default margin as grid gap handles spacing */
+}
+
+#general-settings-panel .form-group-inline input[type='number'] {
+  max-width: 80px; /* Adjust as needed */
 }
