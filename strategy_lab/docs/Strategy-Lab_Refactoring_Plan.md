@@ -1,30 +1,20 @@
-# Strategy Lab Refactor Plan (Final)
+# Strategy Lab Refactor Plan
 
-## Core Mandates
+This document is a living guide for refactoring the V4 application into a robust **Strategy Lab** architecture. It outlines the key issues, migration strategy, and development principles.
 
-- **`strategy_lab` Folder Only:** All development and refactoring work will take place _exclusively_ within the `strategy_lab` folder. The parent folder containing the original application is to be used as a "blueprint" or for reference ONLY.
-- **Copy, Don't Move:** When the refactoring plan mentions using code from the parent folder (e.g., from `public/event-handlers/`), this means the relevant code should be **copied** into the appropriate module within `strategy_lab` and then adapted, not moved. The `strategy_lab` application must be entirely self-contained.
-- **Explicit Instructions & No Getting Ahead:** The agent will not execute any plan steps (e.g., creating branches, modifying files) without explicit, step-by-step approval from the user. The agent's role is to assist, not to automate without consent. Do not get ahead of the user; wait for explicit instructions before taking significant actions like creating branches or modifying code.
+## Guiding Principles
 
-Note: This app used to be called Portfolio manager/ New Name is Strategy Lab
+- **Servant-Led Execution:** The agent (Gemini) will not execute any plan steps without explicit, step-by-step approval from the user.
+- **The Plan is a Guide:** This document is our source of truth, but it is flexible. We will update it as we go.
+- **`strategy_lab` Folder Only:** All work will occur exclusively within the `strategy_lab` folder. The parent folder is a "blueprint" for reference only.
+- **Self-Contained Application:** Code from the parent folder will be **copied** and adapted, not moved, ensuring `strategy_lab` is fully self-contained.
+- **Agent Self-Correction:** After writing a file, the agent will perform a self-correction check against our plans (`V4_Migration_Map.md`, `Strategy-Lab_Wiring_Guide.md`) to fix errors before finalizing.
+- **Always Pass IDs:** Functions that act on an existing entity must only accept its primary ID to prevent stale data bugs.
+- **State Read/Write Separation:** Page load functions read data into `state`. UI event handlers must use `dispatchDataUpdate()` to write or modify state.
+- **Remediation Logging:** For any identified bugs or inconsistencies, an entry will be created in `docs/remediation_log.md`. This log will define the issue and the step-by-step plan to fix it, and we will follow those steps.
+- **LLM Issue Recovery:** When a major LLM issue (e.g., context loss) occurs, a log will be created in `docs/remediation_log.md` to document the issue and the planned remediation steps. The agent will then follow these steps to recover and will add a "Finished" marker upon task completion for clarity.
 
 This document outlines the migration plan for refactoring the current, flawed **V4** application into a new, robust **Strategy Lab** architecture. This plan refactors the existing **V4.0** codebase, using the **V3.0** codebase only as a "blueprint" to find lost logic.
-
-## Key Issues to Address
-
-This Strategy Lab refactoring effort is designed to fix the critical issues created by the original **V3 -> V4** refactor.
-
-- **Tab Monoliths:** The V4 `public/event-handlers/` directory contains massive, unmaintainable files (e.g., `dashboard.js`, `sources.js`).
-- **Missing Functionality:** The initial V3 -> V4 refactor failed to migrate all V3 functionality (e.g., the "Imports" tab is non-functional).
-- **Nomenclature Confusion:** The terms "Watchlist" and "Pending Orders" are ambiguous. This will be fixed by renaming:
-  - "Watchlist" tab -> **"Strategy Lab" tab**.
-  - "Orders" tab -> **"Limit Orders" tab**.
-  - This decouples "Real Positions" from "Paper Trades" and "Watchlist" (of tickers).
-- **Unlinked Strategies:** A "Strategy" (journal entry) is not programmatically linked to the "Limit Orders" it generates. This will be fixed by adding a `journal_entry_id` to the `pending_orders` table.
-- **"ID vs. Object" Ambiguity:** Functions inconsistently accept IDs or full objects, leading to stale data bugs.
-- **Agent Errors:** `ReferenceError` and `TypeError` bugs are common from cross-wired or missing code. This plan's guardrails are designed to prevent them.
-
----
 
 ## Guardrails & Sign-off (Master Checklist Definition)
 
@@ -39,6 +29,22 @@ All refactoring tasks will be done on a **per-module basis**. Each module must p
 5. **Unit Test Coverage:** Unit tests have been created for the new module files and meet the **67% or greater** coverage.
 6. **UAC Verification:** The module has passed all its specific test scripts defined in `docs/Strategy-Lab_UAC.md`.
 7. **Smoke Test:** The module passes the full **Refactor Smoke Test** (see below) to ensure no regressions.
+
+---
+
+## Key Issues to Address
+
+This Strategy Lab refactoring effort is designed to fix the critical issues created by the original **V3 -> V4** refactor.
+
+- **Tab Monoliths:** The V4 `public/event-handlers/` directory contains massive, unmaintainable files (e.g., `dashboard.js`, `sources.js`).
+- **Missing Functionality:** The initial V3 -> V4 refactor failed to migrate all V3 functionality (e.g., the "Imports" tab is non-functional).
+- **Nomenclature Confusion:** The terms "Watchlist" and "Pending Orders" are ambiguous. This will be fixed by renaming:
+  - "Watchlist" tab -> **"Strategy Lab" tab**.
+  - "Orders" tab -> **"Limit Orders" tab**.
+  - This decouples "Real Positions" from "Paper Trades" and "Watchlist" (of tickers).
+- **Unlinked Strategies:** A "Strategy" (journal entry) is not programmatically linked to the "Limit Orders" it generates. This will be fixed by adding a `journal_entry_id` to the `pending_orders` table.
+- **"ID vs. Object" Ambiguity:** Functions inconsistently accept IDs or full objects, leading to stale data bugs.
+- **Agent Errors:** `ReferenceError` and `TypeError` bugs are common from cross-wired or missing code. This plan's guardrails are designed to prevent them.
 
 ---
 
@@ -104,12 +110,6 @@ All refactoring must adhere to these rules.
   - **Reasoning:** This eliminates the "ID vs. Full Object" ambiguity and prevents "stale data" bugs by forcing the function to get fresh data.
 - [ ] **Principle 2: State Read/Write Separation.**
   - **Rule:** Module loader functions (`load...Page`) read data and populate `state`. All other functions (modal submits, button clicks) must call `dispatchDataUpdate()` instead of mutating state directly.
-- [ ] **Principle 3: Agent Self-Correction Loop**
-  - **Rule:** After the agent (Gemini) _writes_ a new module file, it will perform a **self-correction check** (re-read file, check for redactions, check against `V4_Migration_Map.md` and `Strategy-Lab_Wiring_Guide.md`) and fix any errors _before_ presenting the code.
-- [ ] **Principle 4: The Plan as Persistent State**
-  - **Rule:** The `Strategy Lab Refactor Plan.md` file is our **single source of truth for the project\'s state**. After every action, the agent will provide an updated plan with the correct box checked, which the servant will save.
-- [ ] **Principle 5: Servant-Led Execution.**
-  - **Rule:** The agent (Gemini) will not execute any plan steps (e.g., creating branches, modifying files) without explicit, step-by-step approval from the servant (the user). The agent's role is to assist, not to automate without consent.
 
 ---
 
@@ -153,6 +153,29 @@ This approach ensures that tab management logic is kept out of `server.js` and r
 ## **Phase 3: Module-by-Module Migration (Strategy Lab)**
 
 This phase refactors the V4 "monoliths" from `public/event-handlers/` into the new `public/js/` structure in a logical, dependency-first order.
+
+### **Proposed `public/js/` Directory Structure**
+
+```
+public/
+└── js/
+    ├── strategyLab/
+    │   ├── index.js         (Entry point, exports init and loader)
+    │   ├── handlers.js      (UI event listeners for Paper Trades/Watchlist)
+    │   ├── renderers.js     (HTML generation for tables)
+    │   └── api.js           (Dedicated API calls for strategyLab)
+    │
+    └── settings/
+        ├── index.js         (Entry point, exports initializeSettings)
+        ├── appearance.js    (Handles theme/font switching logic)
+        ├── holders.js       (Handles "Account Holders" logic)
+        ├── exchanges.js     (Handles "Exchanges" logic)
+        ├── data-management.js (Handles "Data Management" logic, including Sources and Users)
+        ├── sources.js       (Handles "Sources" logic, a sub-module of Data Management)
+        ├── users.js         (Handles "Users" logic, a sub-module of Data Management)
+        ├── renderers.js     (Renders tables/dropdowns for all settings)
+        └── api.js           (API calls for settings, holders, exchanges)
+```
 
 ---
 

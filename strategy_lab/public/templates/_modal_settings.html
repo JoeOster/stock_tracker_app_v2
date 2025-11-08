@@ -3,16 +3,18 @@
     <button class="sub-tab" data-tab="appearance-settings-panel">
       Appearance
     </button>
-    <button class="sub-tab" data-tab="data-settings-panel">
+    <button class="sub-tab active" data-tab="data-settings-panel">
       Data Management
     </button>
-    <button class="sub-tab active" data-tab="general-settings-panel">General</button>
     <button class="sub-tab" data-tab="user-management-settings-panel">
       User Management
     </button>
   </div>
   <div class="sub-tab-content">
-    <div id="general-settings-panel" class="sub-tab-panel settings-panel active">
+    <div
+      id="general-settings-panel"
+      class="sub-tab-panel settings-panel"
+    >
       <h3>General Settings</h3>
       <form id="general-settings-form" class="settings-grid">
         <div class="form-group">
@@ -22,27 +24,45 @@
         <div class="form-group">
           <label for="take-profit-percent">Default Take Profit %</label>
           <div class="form-group-inline">
-            <input type="number" id="take-profit-percent" step="1" min="0" maxlength="4" />
+            <input
+              type="number"
+              id="take-profit-percent"
+              step="1"
+              min="0"
+              maxlength="4"
+            />
             <span>%</span>
           </div>
           <label for="stop-loss-percent" style="margin-top: 1rem"
             >Default Stop Loss %</label
           >
           <div class="form-group-inline">
-            <input type="number" id="stop-loss-percent" step="1" min="0" max="999" maxlength="4" />
+            <input
+              type="number"
+              id="stop-loss-percent"
+              step="1"
+              min="0"
+              max="999"
+              maxlength="4"
+            />
             <span>%</span>
           </div>
           <label for="notification-cooldown" style="margin-top: 1rem"
             >Notification Cooldown (Min)</label
           >
-          <input type="number" id="notification-cooldown" step="1" min="1" max="99999" maxlength="5" />
+          <input
+            type="number"
+            id="notification-cooldown"
+            step="1"
+            min="1"
+            max="99999"
+            maxlength="5"
+          />
         </div>
+      </form>
     </div>
 
-    <div
-      id="appearance-settings-panel"
-      class="sub-tab-panel settings-panel active"
-    >
+    <div id="appearance-settings-panel" class="sub-tab-panel settings-panel">
       <h3>Appearance</h3>
       <form id="appearance-settings-form" class="settings-grid">
         <div class="form-group">
@@ -68,18 +88,19 @@
       </form>
     </div>
 
-    <div id="data-settings-panel" class="sub-tab-panel settings-panel">
+    <div id="data-settings-panel" class="sub-tab-panel settings-panel active">
       <div class="sub-tabs">
         <button class="sub-tab active" data-sub-tab="sources-panel">
-          Advice Sources
+          Sources
         </button>
         <button class="sub-tab" data-sub-tab="exchanges-panel">
           Exchanges
         </button>
+        <button class="sub-tab" data-sub-tab="users-panel">Users</button>
       </div>
       <div class="sub-tab-content">
         <div id="sources-panel" class="sub-tab-panel active">
-          <h4>Manage Advice Sources</h4>
+          <h4>Manage Sources</h4>
           <form id="add-new-source-form" class="form-grid">
             <div class="form-group form-group-span-2">
               <label for="new-source-name">Source Name</label>
@@ -272,6 +293,11 @@
             class="management-list"
             style="margin-top: 1rem"
           ></ul>
+        </div>
+
+        <div id="users-panel" class="sub-tab-panel">
+          <h4>Manage Users (Data Management)</h4>
+          <p>Content for managing users within Data Management.</p>
         </div>
       </div>
     </div>
