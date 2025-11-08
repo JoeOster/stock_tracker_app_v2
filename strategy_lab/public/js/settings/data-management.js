@@ -1,6 +1,6 @@
 import { initializeSubTabs } from '../utils.js';
 import { initializeExchanges } from './exchanges.js';
-import { initializeHolders } from './holders.js';
+import { initializeUserManagement } from './user-management.js';
 import { initializeSources } from './sources.js'; // Import initializeSources
 
 export function initializeDataManagement() {
@@ -22,7 +22,7 @@ export function initializeDataManagement() {
               initializeExchanges();
               break;
             case 'users-panel':
-              initializeHolders();
+              initializeUserManagement();
               break;
             // Add cases for other sub-tabs within Data Management if needed
           }

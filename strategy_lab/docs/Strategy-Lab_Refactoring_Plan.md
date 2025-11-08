@@ -1,14 +1,14 @@
 # Strategy Lab Refactor Plan
 
-This document is a living guide for refactoring the V4 application into a robust **Strategy Lab** architecture. It outlines the key issues, migration strategy, and development principles.
+This document is a living guide for the creation of "Strategy Lab". It outlines the key issues, migration strategy, and development principles.
 
 ## Guiding Principles
 
 - **Servant-Led Execution:** The agent (Gemini) will not execute any plan steps without explicit, step-by-step approval from the user.
 - **The Plan is a Guide:** This document is our source of truth, but it is flexible. We will update it as we go.
-- **`strategy_lab` Folder Only:** All work will occur exclusively within the `strategy_lab` folder. The parent folder is a "blueprint" for reference only.
-- **Self-Contained Application:** Code from the parent folder will be **copied** and adapted, not moved, ensuring `strategy_lab` is fully self-contained.
-- **Agent Self-Correction:** After writing a file, the agent will perform a self-correction check against our plans (`V4_Migration_Map.md`, `Strategy-Lab_Wiring_Guide.md`) to fix errors before finalizing.
+- **`strategy_lab` Folder Only:** All work will occur exclusively within the `strategy_lab` folder. Any parent folder that gets exposed is a blueprint" for reference only.
+- **Self-Contained Application:** `strategy_lab` is fully self-contained .
+- **Agent Self-Correction:** Before writing a file, the agent will perform a self-correction check against our plans (`V4_Migration_Map.md`, `Strategy-Lab_Wiring_Guide.md`) to fix errors before finalizing.
 - **Always Pass IDs:** Functions that act on an existing entity must only accept its primary ID to prevent stale data bugs.
 - **State Read/Write Separation:** Page load functions read data into `state`. UI event handlers must use `dispatchDataUpdate()` to write or modify state.
 - **Remediation Logging:** For any identified bugs or inconsistencies, an entry will be created in `docs/remediation_log.md`. This log will define the issue and the step-by-step plan to fix it, and we will follow those steps.
@@ -170,11 +170,11 @@ public/
         ├── appearance.js    (Handles theme/font switching logic)
         ├── holders.js       (Handles "Account Holders" logic)
         ├── exchanges.js     (Handles "Exchanges" logic)
+        ├── renderers.js     (Renders tables/dropdowns for all settings)
+        ├── api.js           (API calls for settings, holders, exchanges)
         ├── data-management.js (Handles "Data Management" logic, including Sources and Users)
         ├── sources.js       (Handles "Sources" logic, a sub-module of Data Management)
-        ├── users.js         (Handles "Users" logic, a sub-module of Data Management)
-        ├── renderers.js     (Renders tables/dropdowns for all settings)
-        └── api.js           (API calls for settings, holders, exchanges)
+        └── user-management.js (Handles "User Management" logic)
 ```
 
 ---

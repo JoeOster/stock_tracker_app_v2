@@ -116,13 +116,19 @@ if (Test-Path $edgeLogFile) {
     Remove-Item $edgeLogFile
 }
 
-$edgeArgs = "--remote-debugging-port=9222 --user-data-dir=`"$edgeProfileDir`" --enable-logging --v=1"
+$edgeArgs = @(
+    "--remote-debugging-port=9222",
+    "--user-data-dir=`"$edgeProfileDir`"",
+    "--enable-logging",
+    "--v=1"
+)
 
 Write-Log "Launching Edge. The script will wait for you to close the browser."
 Write-Log "Browser console logs will be saved to: $edgeLogFile"
 
 # Use -Wait to pause the script until the Edge process (and all its children) exit.
-Start-Process -FilePath $edgePath -ArgumentList $edgeArgs, "http://localhost:8080" -Wait
+$fullEdgeArgs = $edgeArgs + "http://localhost:8080"
+Start-Process -FilePath $edgePath -ArgumentList $fullEdgeArgs -Wait
 
 
 # --- Automatic Cleanup (Runs AFTER Edge is closed) ---

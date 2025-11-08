@@ -61,6 +61,19 @@ async function loadTemplates() {
 }
 
 function switchTab(tabId) {
+  // Handle settings tab as a modal
+  if (tabId === 'settings') {
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal) {
+      settingsModal.style.display = 'block';
+      // Initialize settings when modal is opened
+      initializeSettings();
+    }
+    // Do not hide other page containers or deactivate other tabs when opening modal
+    return;
+  }
+
+  // For regular tabs, hide all page containers and deactivate all tabs
   document.querySelectorAll('.page-container').forEach((container) => {
     container.style.display = 'none';
   });
@@ -85,6 +98,25 @@ tabsContainer.addEventListener('click', (event) => {
   if (event.target.classList.contains('tab')) {
     const tabId = event.target.dataset.tabId;
     switchTab(tabId);
+  }
+});
+
+// Add event listener for the settings modal close button
+document.addEventListener('DOMContentLoaded', () => {
+  const settingsModal = document.getElementById('settings-modal');
+  if (settingsModal) {
+    const closeButton = settingsModal.querySelector('.close-button');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+      });
+    }
+    // Close modal if user clicks outside of it
+    window.addEventListener('click', (event) => {
+      if (event.target === settingsModal) {
+        settingsModal.style.display = 'none';
+      }
+    });
   }
 });
 

@@ -1,389 +1,89 @@
-<div id="settings-page">
-  <div class="sub-tabs">
-    <button class="sub-tab" data-tab="appearance-settings-panel">
-      Appearance
-    </button>
-    <button class="sub-tab active" data-tab="data-settings-panel">
-      Data Management
-    </button>
-    <button class="sub-tab" data-tab="user-management-settings-panel">
-      User Management
-    </button>
-  </div>
-  <div class="sub-tab-content">
-    <div
-      id="general-settings-panel"
-      class="sub-tab-panel settings-panel"
-    >
-      <h3>General Settings</h3>
-      <form id="general-settings-form" class="settings-grid">
-        <div class="form-group">
-          <label for="family-name">Family Name (App Title)</label>
-          <input type="text" id="family-name" maxlength="40" />
-        </div>
-        <div class="form-group">
-          <label for="take-profit-percent">Default Take Profit %</label>
-          <div class="form-group-inline">
-            <input
-              type="number"
-              id="take-profit-percent"
-              step="1"
-              min="0"
-              maxlength="4"
-            />
-            <span>%</span>
-          </div>
-          <label for="stop-loss-percent" style="margin-top: 1rem"
-            >Default Stop Loss %</label
-          >
-          <div class="form-group-inline">
-            <input
-              type="number"
-              id="stop-loss-percent"
-              step="1"
-              min="0"
-              max="999"
-              maxlength="4"
-            />
-            <span>%</span>
-          </div>
-          <label for="notification-cooldown" style="margin-top: 1rem"
-            >Notification Cooldown (Min)</label
-          >
-          <input
-            type="number"
-            id="notification-cooldown"
-            step="1"
-            min="1"
-            max="99999"
-            maxlength="5"
-          />
-        </div>
-      </form>
+<div id="settings-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-button">&times;</span>
+    <h2>Settings</h2>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="general-settings-panel">General</button>
+      <button class="tab" data-tab="appearance-settings-panel">Appearance</button>
+      <button class="tab" data-tab="data-management-settings-panel">Data Management</button>
     </div>
 
-    <div id="appearance-settings-panel" class="sub-tab-panel settings-panel">
-      <h3>Appearance</h3>
-      <form id="appearance-settings-form" class="settings-grid">
-        <div class="form-group">
-          <label for="theme-selector">Theme</label>
-          <select id="theme-selector">
+    <div class="tab-content">
+      <div id="general-settings-panel" class="tab-panel active">
+        <h3>General Settings</h3>
+        <!-- Content for General Settings -->
+        <div class="settings-section">
+          <h4>Application Preferences</h4>
+          <label for="theme-select">Theme:</label>
+          <select id="theme-select">
             <option value="light">Light</option>
             <option value="dark">Dark</option>
-            <option value="sepia">Sepia</option>
-            <option value="contrast">High Contrast (Dark)</option>
-            <option value="high-contrast">High Contrast (Light)</option>
+          </select>
+          <label for="font-size-select">Font Size:</label>
+          <select id="font-size-select">
+            <option value="small">Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="font-selector">Font</label>
-          <select id="font-selector">
-            <option value="Inter">Inter (Default)</option>
-            <option value="Roboto">Roboto</option>
-            <option value="Lato">Lato</option>
-            <option value="Open Sans">Open Sans</option>
-            <option value="System">System</option>
-          </select>
-        </div>
-      </form>
-    </div>
-
-    <div id="data-settings-panel" class="sub-tab-panel settings-panel active">
-      <div class="sub-tabs">
-        <button class="sub-tab active" data-sub-tab="sources-panel">
-          Sources
-        </button>
-        <button class="sub-tab" data-sub-tab="exchanges-panel">
-          Exchanges
-        </button>
-        <button class="sub-tab" data-sub-tab="users-panel">Users</button>
       </div>
-      <div class="sub-tab-content">
-        <div id="sources-panel" class="sub-tab-panel active">
-          <h4>Manage Sources</h4>
-          <form id="add-new-source-form" class="form-grid">
-            <div class="form-group form-group-span-2">
-              <label for="new-source-name">Source Name</label>
-              <input type="text" id="new-source-name" required />
-            </div>
+
+      <div id="appearance-settings-panel" class="tab-panel">
+        <h3>Appearance Settings</h3>
+        <!-- Content for Appearance Settings -->
+        <div class="settings-section">
+          <h4>Theme & Layout</h4>
+          <p>Manage your application's visual theme and layout preferences here.</p>
+        </div>
+      </div>
+
+      <div id="data-management-settings-panel" class="tab-panel">
+        <h3>Data Management</h3>
+        <div class="sub-tabs">
+          <button class="sub-tab active" data-sub-tab="exchanges-panel">Exchanges</button>
+          <button class="sub-tab" data-sub-tab="sources-panel">Sources</button>
+          <button class="sub-tab" data-sub-tab="users-panel">Users</button>
+        </div>
+
+        <div class="sub-tab-content">
+          <div id="exchanges-panel" class="sub-tab-panel active">
+            <h4>Manage Exchanges</h4>
+            <!-- Content for Exchanges -->
+            <div id="exchange-list"></div>
+            <input type="text" id="new-exchange-name" placeholder="New Exchange Name" />
+            <button id="add-exchange-btn">Add Exchange</button>
+          </div>
+
+          <div id="sources-panel" class="sub-tab-panel">
+            <h4>Manage Sources</h4>
             <div class="form-group">
-              <label for="new-source-type">Source Type</label>
-              <select id="new-source-type" required>
-                <option value="">-- Select Type --</option>
-                <option value="Person">Person</option>
-                <option value="Group">Group</option>
-                <option value="Book">Book</option>
-                <option value="Website">Website</option>
+              <label for="source-type">Source Type:</label>
+              <select id="source-type">
+                <option value="">-- Select Source Type --</option>
+                <option value="person">Person</option>
+                <option value="group">Group</option>
+                <option value="book">Book</option>
+                <option value="website">Website</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="new-source-url">URL (Optional)</label>
-              <input
-                type="text"
-                id="new-source-url"
-                placeholder="https://..."
-              />
-            </div>
-            <div class="form-group form-group-span-2">
-              <label for="new-source-description">Description (Optional)</label>
-              <textarea id="new-source-description" rows="2"></textarea>
+
+            <div id="dynamic-fields">
+              <!-- Dynamic fields will be loaded here based on source type -->
             </div>
 
-            <div class="form-group form-group-span-2">
-              <label for="new-source-image-path">Image Path (Optional)</label>
-              <input
-                type="text"
-                id="new-source-image-path"
-                placeholder="e.g., /images/contacts/default.png"
-              />
-            </div>
-            <div id="new-source-panel-person" class="dynamic-source-panel">
-              <div class="form-group">
-                <label for="new-source-contact-email"
-                  >Contact Email (Optional)</label
-                >
-                <input type="email" id="new-source-contact-email" />
-              </div>
-              <div class="form-group">
-                <label for="new-source-contact-phone"
-                  >Contact Phone (Optional)</label
-                >
-                <input type="tel" id="new-source-contact-phone" />
-              </div>
-              <div class="form-group">
-                <label for="new-source-contact-app-type"
-                  >Contact App (Optional)</label
-                >
-                <select id="new-source-contact-app-type">
-                  <option value="">-- None --</option>
-                  <option value="Signal">Signal</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Telegram">Telegram</option>
-                  <option value="Discord">Discord</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div class="form-group form-group-span-2">
-                <label for="new-source-contact-app-handle"
-                  >App Handle (Optional)</label
-                >
-                <input
-                  type="text"
-                  id="new-source-contact-app-handle"
-                  placeholder="e.g., @username or +1234567890"
-                />
-              </div>
-            </div>
-            <div id="new-source-panel-group" class="dynamic-source-panel">
-              <div class="form-group">
-                <label for="new-source-group-person"
-                  >Primary Contact (Optional)</label
-                >
-                <input type="text" id="new-source-group-person" />
-              </div>
-              <div class="form-group">
-                <label for="new-source-group-email"
-                  >Contact Email (Optional)</label
-                >
-                <input type="email" id="new-source-group-email" />
-              </div>
-              <div class="form-group">
-                <label for="new-source-group-phone"
-                  >Contact Phone (Optional)</label
-                >
-                <input type="tel" id="new-source-group-phone" />
-              </div>
-              <div class="form-group">
-                <label for="new-source-group-app-type"
-                  >Contact App (Optional)</label
-                >
-                <select id="new-source-group-app-type">
-                  <option value="">-- None --</option>
-                  <option value="Signal">Signal</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Telegram">Telegram</option>
-                  <option value="Discord">Discord</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div class="form-group form-group-span-2">
-                <label for="new-source-group-app-handle"
-                  >App Handle (Optional)</label
-                >
-                <input
-                  type="text"
-                  id="new-source-group-app-handle"
-                  placeholder="e.g., @username or +1234567890"
-                />
-              </div>
-            </div>
-            <div id="new-source-panel-book" class="dynamic-source-panel">
-              <div class="form-group">
-                <label for="new-source-book-author">Author (Optional)</label>
-                <input type="text" id="new-source-book-author" />
-              </div>
-              <div class="form-group">
-                <label for="new-source-book-isbn">ISBN (Optional)</label>
-                <input type="text" id="new-source-book-isbn" />
-              </div>
-              <div class="form-group form-group-span-2">
-                <label for="new-source-book-websites"
-                  >Website Links (Optional, one per line)</label
-                >
-                <textarea id="new-source-book-websites" rows="3"></textarea>
-              </div>
-              <div class="form-group form-group-span-2">
-                <label for="new-source-book-pdfs"
-                  >PDF/Document Links (Optional, one per line)</label
-                >
-                <textarea id="new-source-book-pdfs" rows="3"></textarea>
-              </div>
-            </div>
-            <div id="new-source-panel-website" class="dynamic-source-panel">
-              <div class="form-group form-group-span-2">
-                <label for="new-source-website-websites"
-                  >Relevant Links (Optional, one per line)</label
-                >
-                <textarea
-                  id="new-source-website-websites"
-                  rows="3"
-                  placeholder="e.g., Specific articles, tools..."
-                ></textarea>
-              </div>
-              <div class="form-group form-group-span-2">
-                <label for="new-source-website-pdfs"
-                  >Saved Documents (Optional, one per line)</label
-                >
-                <textarea
-                  id="new-source-website-pdfs"
-                  rows="3"
-                  placeholder="e.g., Links to saved charts, reports..."
-                ></textarea>
-              </div>
-            </div>
-            <div
-              class="form-group form-group-span-2"
-              style="text-align: right; margin-top: 1rem"
-            >
-              <button type="submit">Add Source</button>
-            </div>
-          </form>
-          <hr />
-          <h4>Existing Sources</h4>
-          <div id="advice-source-list-container">
-            <ul id="advice-source-list" class="management-list">
-              <li>Loading...</li>
-            </ul>
+            <button id="add-source-btn">Add Source</button>
           </div>
-        </div>
 
-        <div id="exchanges-panel" class="sub-tab-panel">
-          <h4>Manage Exchanges</h4>
-          <form id="add-exchange-form" class="add-item-form">
-            <input
-              type="text"
-              id="new-exchange-name"
-              placeholder="New Exchange Name"
-              required
-            />
-            <button type="button" id="add-exchange-btn">Add Exchange</button>
-          </form>
-          <ul
-            id="exchange-list"
-            class="management-list"
-            style="margin-top: 1rem"
-          ></ul>
-        </div>
-
-        <div id="users-panel" class="sub-tab-panel">
-          <h4>Manage Users (Data Management)</h4>
-          <p>Content for managing users within Data Management.</p>
-        </div>
-      </div>
-    </div>
-
-    <div
-      id="user-management-settings-panel"
-      class="sub-tab-panel settings-panel"
-    >
-      <div class="sub-tabs">
-        <button class="sub-tab active" data-sub-tab="users-panel">Users</button>
-        <button
-          class="sub-tab"
-          data-sub-tab="subscriptions-panel"
-          style="display: none"
-        >
-          Subscriptions
-        </button>
-      </div>
-      <div class="sub-tab-content">
-        <div id="users-panel" class="sub-tab-panel active">
-          <h4>Manage Account Holders</h4>
-          <form id="add-holder-form" class="add-item-form">
-            <input
-              type="text"
-              id="new-holder-name"
-              placeholder="New Account Holder Name"
-              required
-            />
-            <button type="button" id="add-account-holder-btn">
-              Add Account Holder
-            </button>
-          </form>
-          <label
-            style="
-              font-weight: 500;
-              font-size: 0.9em;
-              color: var(--text-muted-color);
-              margin-top: 1.5rem;
-              display: block;
-            "
-          >
-            Select default user and manage existing users:
-          </label>
-          <div id="account-holder-list-container" style="padding-top: 10px">
-            <ul id="account-holder-list" class="management-list">
-              <li>Loading...</li>
-            </ul>
-          </div>
-        </div>
-        <div id="subscriptions-panel" class="sub-tab-panel">
-          <h2 id="subscriptions-panel-title">
-            Manage Subscribed Sources for --
-          </h2>
-          <p class="subtitle" style="text-align: left; margin: -10px 0 15px 0">
-            Select the global sources you want to see for this user.
-          </p>
-          <div
-            id="subscriptions-panel-list-container"
-            style="
-              max-height: 50vh;
-              overflow-y: auto;
-              border: 1px solid var(--container-border);
-              border-radius: 6px;
-              padding: 10px;
-              background-color: var(--info-panel-bg);
-            "
-          >
-            <p>
-              Select a user from the 'Users' tab and click 'Subscriptions' to
-              manage them here.
-            </p>
+          <div id="users-panel" class="sub-tab-panel">
+            <h4>Manage Users (Account Holders)</h4>
+            <!-- Content for Users (Account Holders) -->
+            <div id="account-holder-list"></div>
+            <input type="text" id="new-holder-name" placeholder="New Account Holder Name" />
+            <button id="add-account-holder-btn">Add Account Holder</button>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-  <div
-    class="page-actions"
-    style="
-      border-top: 1px solid var(--container-border);
-      padding-top: 1.5rem;
-      margin-top: 1.5rem;
-    "
-  >
-    <div class="modal-actions-right">
-      <button id="save-settings-button">Save</button>
     </div>
   </div>
 </div>

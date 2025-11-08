@@ -1,33 +1,174 @@
-.sub-tabs {
-  display: flex;
-  border-bottom: 1px solid #444;
-  margin-bottom: 1rem;
+/* Modal Styles */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1000; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+  padding-top: 60px;
 }
 
-.sub-tab {
-  padding: 0.75rem 1.25rem;
-  border: none;
-  background-color: transparent;
-  color: #f0f0f0;
+.modal-content {
+  background-color: #fefefe;
+  margin: 5% auto; /* 15% from the top and centered */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%; /* Could be more or less, depending on screen size */
+  max-width: 800px; /* Max width for larger screens */
+  border-radius: 8px;
+  position: relative;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.close-button {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: black;
+  text-decoration: none;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-  border-bottom: 2px solid transparent;
 }
 
-.sub-tab:hover {
-  background-color: #3a3a3a;
+/* Tab Styles within Modal */
+.modal-content .tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 15px;
 }
 
-.sub-tab.active {
-  color: #4e8af7;
-  border-bottom-color: #4e8af7;
+.modal-content .tab {
+  background-color: #f1f1f1;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 10px 15px;
+  transition: 0.3s;
+  font-size: 17px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  margin-right: 5px;
 }
 
-.sub-tab-panel {
+.modal-content .tab:hover {
+  background-color: #ddd;
+}
+
+.modal-content .tab.active {
+  background-color: #ccc;
+  border-bottom: 1px solid #ccc;
+}
+
+.modal-content .tab-panel {
+  display: none;
+  padding: 6px 12px;
+  border-top: none;
+}
+
+.modal-content .tab-panel.active {
+  display: block;
+}
+
+/* Sub-tab Styles within Modal */
+.modal-content .sub-tabs {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.modal-content .sub-tab {
+  background-color: #e0e0e0;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  transition: 0.3s;
+  font-size: 14px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  margin-right: 3px;
+}
+
+.modal-content .sub-tab:hover {
+  background-color: #d0d0d0;
+}
+
+.modal-content .sub-tab.active {
+  background-color: #c0c0c0;
+  border-bottom: 1px solid #c0c0c0;
+}
+
+.modal-content .sub-tab-content {
+  padding: 5px 0;
+}
+
+.modal-content .sub-tab-panel {
   display: none;
 }
 
-.sub-tab-panel.active {
+.modal-content .sub-tab-panel.active {
   display: block;
+}
+
+/* Form Group Styles */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Ensure padding doesn't affect overall width */
+}
+
+.form-group textarea {
+  resize: vertical; /* Allow vertical resizing */
+}
+
+button {
+  background-color: #4CAF50; /* Green */
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+.settings-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.settings-section h4 {
+  margin-top: 0;
+  color: #333;
 }
